@@ -7,7 +7,13 @@
         type="primary" 
         @click="router.push({ name: 'name-generator' })"
         style="width: 200px; margin: 10px">
-        ✨ 生成
+        ✨ 起个名字
+      </el-button>
+      <el-button 
+        type="primary"
+        @click="router.push({ name: 'taohua' })"
+        style="width: 200px; margin: 10px">
+        🌸 看看桃花
       </el-button>
       <!-- 预留其他功能按钮位置 -->
     </el-card>
