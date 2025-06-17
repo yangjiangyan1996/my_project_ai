@@ -16,4 +16,7 @@ public class SuanTaoHuaVO {
     
     // 建议列表
     private List<String> advice;
+
+    //对象目标的评价
+    private List<TargetVO> targetVo;
 }

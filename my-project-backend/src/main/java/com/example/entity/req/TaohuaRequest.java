@@ -1,31 +1,29 @@
 package com.example.entity.req;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import java.time.LocalDate;
+
+import java.util.List;
 
 @Data
 public class TaohuaRequest {
-    // 姓名（可选）
+    // 姓名
     private String name;
-
-    // 性别（必填）
-    @NotBlank(message = "性别不能为空")
+    // 性别 (female/male)
     private String gender;
-
-    // 出生日期（必填）
-    @NotNull(message = "出生日期不能为空")
-    private LocalDate birthDate;
-
-    // 出生时辰（0-23）
-    @NotNull(message = "出生时辰不能为空")
+    // 出生日期 (ISO 8601格式)
+    private String birthDate;
+    // 出生时辰 (0-23)
     private Integer birthHour;
-
-    // 感情状态（必填）
-    @NotBlank(message = "感情状态不能为空")
+    // 关系类型
     private String relationship;
-
-    // 附加说明（可选）
+    // 附加信息
     private String additionalInfo;
+    // 目标姓名（可选）
+    private String targetName;
+    // 目标性别（可选）
+    private String targetGender;
+    // 目标出生日期（可选）
+    private String targetBirthDate;
+    // 目标人员列表
+    private List<TargetPerson> targets;
 }
