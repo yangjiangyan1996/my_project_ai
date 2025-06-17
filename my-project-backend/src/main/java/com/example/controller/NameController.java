@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 public class NameController {
     @PostMapping("/generateName")
     public NameResponse generateName(@RequestBody UserInput input) {
+        //TODO yang 接入ai模型生成中文名字
         // 构造示例prompt
         String prompt = String.format("请根据以下信息帮我取中文名：姓氏%s，性别%s，出生时间%d年%d月%d日%d时。希望名字%s",
                 input.getLastName(), input.getGender(), input.getBirthYear(),
