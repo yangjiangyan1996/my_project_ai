@@ -9,17 +9,14 @@
 
       <el-form ref="formRef" :model="formData" :rules="rules">
         <el-row :gutter="24">
-          <!-- 表单字段 -->
+          <!-- 姓名 -->
           <el-col :md="12" :sm="24">
             <el-form-item label="姓名" prop="name">
-              <el-input
-                v-model="formData.name"
-                placeholder="请输入您的姓名（可选）"
-                clearable
-              />
+              <el-input v-model="formData.name" placeholder="请输入姓名（可选）" clearable />
             </el-form-item>
           </el-col>
 
+          <!-- 性别 -->
           <el-col :md="12" :sm="24">
             <el-form-item label="性别" prop="gender">
               <el-radio-group v-model="formData.gender">
@@ -29,6 +26,7 @@
             </el-form-item>
           </el-col>
 
+          <!-- 出生日期 -->
           <el-col :md="12" :sm="24">
             <el-form-item label="出生日期" prop="birthDate">
               <el-date-picker
@@ -41,13 +39,10 @@
             </el-form-item>
           </el-col>
 
+          <!-- 出生时辰 -->
           <el-col :md="12" :sm="24">
             <el-form-item label="出生时辰" prop="birthHour">
-              <el-select
-                v-model="formData.birthHour"
-                placeholder="请选择时辰"
-                style="width: 100%"
-              >
+              <el-select v-model="formData.birthHour" placeholder="请选择时辰" style="width: 100%">
                 <el-option
                   v-for="item in hourOptions"
                   :key="item.value"
@@ -58,11 +53,13 @@
             </el-form-item>
           </el-col>
 
+          <!-- 感情状态 -->
           <el-col :span="24">
             <el-form-item label="感情状态" prop="relationship">
               <el-select
                 v-model="formData.relationship"
                 placeholder="请选择当前状态"
+                @change="handleRelationshipChange"
               >
                 <el-option label="单身" value="single" />
                 <el-option label="有目标" value="target" />
@@ -73,21 +70,17 @@
             </el-form-item>
           </el-col>
 
+          <!-- 有目标：单个对象信息 -->
           <el-col :span="24" v-if="formData.relationship === 'target'">
             <el-card class="target-form">
               <div class="sub-title">💘 目标对象信息</div>
-              
               <el-row :gutter="24">
                 <el-col :md="12" :sm="24">
                   <el-form-item label="对方姓名" prop="targetName">
-                    <el-input
-                      v-model="formData.targetName"
-                      placeholder="请输入对方姓名"
-                      clearable
-                    />
+                    <el-input v-model="formData.targetName" placeholder="请输入对方姓名" clearable />
                   </el-form-item>
                 </el-col>
-              
+
                 <el-col :md="12" :sm="24">
                   <el-form-item label="对方性别" prop="targetGender">
                     <el-radio-group v-model="formData.targetGender">
@@ -96,7 +89,7 @@
                     </el-radio-group>
                   </el-form-item>
                 </el-col>
-              
+
                 <el-col :md="12" :sm="24">
                   <el-form-item label="对方生日" prop="targetBirthDate">
                     <el-date-picker
@@ -108,14 +101,14 @@
                     />
                   </el-form-item>
                 </el-col>
-              
+
                 <el-col :span="24">
                   <el-form-item label="对方爱好">
                     <el-input
                       v-model="formData.targetHobbies"
                       type="textarea"
                       :rows="2"
-                      placeholder="请输入对方的兴趣爱好（例如：阅读、运动）"
+                      placeholder="请输入对方的兴趣爱好"
                     />
                   </el-form-item>
                 </el-col>
@@ -123,13 +116,75 @@
             </el-card>
           </el-col>
 
+          <!-- 有一群目标：多个对象信息 -->
+          <el-col :span="24" v-if="formData.relationship === 'targets'">
+            <el-card class="target-form multi-target-wrapper">
+              <div class="sub-title">💘 多位目标对象信息</div>
+              <div
+                v-for="(target, index) in formData.targets"
+                :key="index"
+                class="target-form"
+              >
+                <div class="form-header">
+                  <div class="target-number">对象 {{ index + 1 }}</div>
+                  <el-button type="danger" size="small" @click="removeTarget(index)">❌ 移除</el-button>
+                </div>
+
+                <el-row :gutter="24">
+                  <el-col :md="12" :sm="24">
+                    <el-form-item :label="`对方姓名`">
+                      <el-input v-model="target.name" placeholder="请输入姓名" />
+                    </el-form-item>
+                  </el-col>
+
+                  <el-col :md="12" :sm="24">
+                    <el-form-item :label="`对方性别`">
+                      <el-radio-group v-model="target.gender">
+                        <el-radio-button label="male">男</el-radio-button>
+                        <el-radio-button label="female">女</el-radio-button>
+                      </el-radio-group>
+                    </el-form-item>
+                  </el-col>
+
+                  <el-col :md="12" :sm="24">
+                    <el-form-item :label="`对方生日`">
+                      <el-date-picker
+                        v-model="target.birthDate"
+                        type="date"
+                        value-format="YYYY-MM-DD"
+                        placeholder="选择日期"
+                        style="width: 100%"
+                      />
+                    </el-form-item>
+                  </el-col>
+
+                  <el-col :span="24">
+                    <el-form-item label="对方爱好">
+                      <el-input
+                        v-model="target.hobbies"
+                        type="textarea"
+                        :rows="2"
+                        placeholder="请输入兴趣爱好"
+                      />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+              </div>
+
+              <div class="add-target-btn">
+                <el-button @click="addNewTarget">➕ 添加对象</el-button>
+              </div>
+            </el-card>
+          </el-col>
+
+          <!-- 附加说明 -->
           <el-col :span="24">
             <el-form-item label="附加说明">
               <el-input
                 v-model="formData.additionalInfo"
                 type="textarea"
                 :rows="3"
-                placeholder="请输入您的问题（例如：我想知道何时脱单）"
+                placeholder="请输入您的问题"
               />
             </el-form-item>
           </el-col>
@@ -146,6 +201,7 @@
       </el-form>
     </el-card>
 
+    <!-- 分析结果 -->
     <el-card class="result-card" v-if="analysisResult">
       <template #header>
         <div class="result-header">
@@ -161,7 +217,11 @@
         <div class="detail-item">
           <span class="label">💡 提升建议：</span>
           <ul class="advice-list">
-            <li v-for="(item, index) in analysisResult.advice" :key="index" class="advice-item">
+            <li
+              v-for="(item, index) in analysisResult.advice"
+              :key="index"
+              class="advice-item"
+            >
               {{ item }}
             </li>
             <span v-if="!analysisResult.advice?.length">暂无特别建议</span>
@@ -174,8 +234,12 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
+
+const formRef = ref(null)
+const loading = ref(false)
+const analysisResult = ref(null)
 
 const formData = reactive({
   name: '',
@@ -183,7 +247,14 @@ const formData = reactive({
   birthDate: '',
   birthHour: '',
   relationship: '',
-  additionalInfo: ''
+  additionalInfo: '',
+  // “有目标”
+  targetName: '',
+  targetGender: '',
+  targetBirthDate: '',
+  targetHobbies: '',
+  // “有一群目标”
+  targets: []
 })
 
 const rules = reactive({
@@ -196,29 +267,50 @@ const rules = reactive({
   targetBirthDate: [{ required: true, message: '请选择对方生日', trigger: 'change' }]
 })
 
-const loading = ref(false)
-const analysisResult = ref('')
-const formRef = ref(null)
-
 const hourOptions = Array.from({ length: 24 }, (_, i) => ({
   value: i,
   label: `${i.toString().padStart(2, '0')}:00`
 }))
 
+const handleRelationshipChange = (val) => {
+  if (val === 'targets') {
+    ElMessageBox.confirm('朋友，看好你！', '温馨提示', {
+      confirmButtonText: '开始记录',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(() => {
+      if (!formData.targets.length) {
+        formData.targets.push({ name: '', gender: '', birthDate: '', hobbies: '' })
+      }
+    }).catch(() => {
+      formData.relationship = ''
+    })
+  }
+}
+
+const addNewTarget = () => {
+  formData.targets.push({ name: '', gender: '', birthDate: '', hobbies: '' })
+}
+
+const removeTarget = (index) => {
+  formData.targets.splice(index, 1)
+}
+
 const submitForm = async () => {
   try {
     await formRef.value.validate()
     loading.value = true
-    
-    const response = await axios.post('/api/auth/taohua/kanTaohua', {
+
+    const payload = {
       ...formData,
       birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString() : ''
-    })
+    }
 
-    analysisResult.value = response.data
-  } catch (error) {
-    console.error(error)
-    ElMessage.error(error.response?.data?.message || '分析失败，请稍后重试')
+    const res = await axios.post('/api/auth/taohua/kanTaohua', payload)
+    analysisResult.value = res.data
+  } catch (err) {
+    console.error(err)
+    ElMessage.error(err.response?.data?.message || '提交失败，请重试')
   } finally {
     loading.value = false
   }
@@ -266,49 +358,61 @@ const submitForm = async () => {
   padding: 1.5rem;
   background: #fff8f9;
   border-radius: 12px;
-
-  .result-title {
-    color: #e83e8c;
-    margin-bottom: 1.2rem;
-  }
-
-  .detail-item {
-    margin: 1rem 0;
-    .label {
-      color: #6d4c67;
-      font-weight: 500;
-    }
-    .value {
-      color: #9e6b8e;
-    }
-  }
-
-  .advice-list {
-    margin-top: 0.5rem;
-    .advice-item {
-      padding: 0.5rem 0;
-      border-bottom: 1px dashed #f0d6e1;
-    }
-  }
 }
 
-@media (max-width: 768px) {
-  .container {
-    padding: 0;
-  }
-  
-  .card-header h2 {
-    font-size: 1.4rem;
-  }
+.result-title {
+  color: #e83e8c;
+  margin-bottom: 1.2rem;
+}
+
+.detail-item {
+  margin: 1rem 0;
+}
+
+.detail-item .label {
+  color: #6d4c67;
+  font-weight: 500;
+}
+
+.detail-item .value {
+  color: #9e6b8e;
+}
+
+.advice-list {
+  margin-top: 0.5rem;
+}
+
+.advice-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed #f0d6e1;
 }
 
 .target-form {
   margin-top: 1.5rem;
   background: linear-gradient(135deg, #fff0f9 0%, #ffeef6 100%);
-  .sub-title {
-    color: #e83e8c;
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
-  }
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.sub-title {
+  color: #e83e8c;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.multi-target-wrapper {
+  margin-top: 1.5rem;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.add-target-btn {
+  text-align: center;
+  margin-top: 1rem;
 }
 </style>
