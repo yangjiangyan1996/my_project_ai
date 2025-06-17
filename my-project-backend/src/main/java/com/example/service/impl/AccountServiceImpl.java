@@ -57,13 +57,15 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Account account = this.findAccountByNameOrEmail(username);
-        if(account == null)
+        if(account == null) {
             throw new UsernameNotFoundException("用户名或密码错误");
-        return User
+        }
+        UserDetails build = User
                 .withUsername(username)
                 .password(account.getPassword())
                 .roles(account.getRole())
                 .build();
+        return build;
     }
 
     /**
@@ -178,10 +180,14 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      * @return 账户实体
      */
     public Account findAccountByNameOrEmail(String text){
-        return this.query()
-                .eq("username", text).or()
-                .eq("email", text)
-                .one();
+        String password = passwordEncoder.encode("123456");
+        Account c = new Account(1,"root",password,"1776080295@qq.com","user",new Date());
+        return c;
+        //todo yang open test
+//        return this.query()
+//                .eq("username", text).or()
+//                .eq("email", text)
+//                .one();
     }
 
     /**

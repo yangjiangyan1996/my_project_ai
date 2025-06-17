@@ -26,27 +26,49 @@ const defaultFailure = (message, status, url) => {
 }
 
 function takeAccessToken() {
-    const str = localStorage.getItem(authItemName) || sessionStorage.getItem(authItemName);
-    if(!str) return null
-    const authObj = JSON.parse(str)
-    if(new Date(authObj.expire) <= new Date()) {
-        deleteAccessToken()
-        ElMessage.warning("登录状态已过期，请重新登录！")
-        return null
+    const sessionTokenStr = sessionStorage.getItem(authItemName);
+    let result = null;
+
+    try {
+        if (sessionTokenStr) {
+            const sessionTokenObj = JSON.parse(sessionTokenStr);
+            const expireTime = new Date(sessionTokenObj?.expire).getTime();
+            if (expireTime > Date.now()) {
+                result = sessionTokenObj.token;
+            }
+        } else {
+            const localTokenStr = localStorage.getItem(authItemName);
+            if (localTokenStr) {
+                const localToken = JSON.parse(localTokenStr);
+                const expireTime = new Date(localToken?.expire).getTime();
+                if (expireTime > Date.now()) {
+                    result = localToken.token;
+                }
+            }
+        }
+    } catch (e) {
+        console.error("读取 token 时出错", e);
     }
-    return authObj.token
+
+    return result;
 }
 
+
+
 function storeAccessToken(remember, token, expire){
-    const authObj = {
-        token: token,
-        expire: expire
-    }
+  const authObj = {
+    token: token,
+    expire: expire,
+    time: new Date().getTime()
+  }
     const str = JSON.stringify(authObj)
-    if(remember)
+    if(remember) {
+        console.log("localStorage， 存储token", authItemName, str)
         localStorage.setItem(authItemName, str)
-    else
+    } else {
+        console.log("sessionStorage 存储token", authItemName, str)
         sessionStorage.setItem(authItemName, str)
+    }
 }
 
 function deleteAccessToken(redirect = false) {
@@ -62,7 +84,7 @@ function internalPost(url, data, headers, success, failure, error = defaultError
         if(data.code === 200) {
             success(data.data)
         } else if(data.code === 401) {
-            failure('登录状态已过期，请重新登录！')
+            failure('登录状态已过期，请重新登录2！')
             deleteAccessToken(true)
         } else {
             failure(data.message, data.code, url)
@@ -75,7 +97,7 @@ function internalGet(url, headers, success, failure, error = defaultError){
         if(data.code === 200) {
             success(data.data)
         } else if(data.code === 401) {
-            failure('登录状态已过期，请重新登录！')
+            failure('登录状态已过期，请重新登录3！')
             deleteAccessToken(true)
         } else {
             failure(data.message, data.code, url)
@@ -116,4 +138,14 @@ function unauthorized() {
     return !takeAccessToken()
 }
 
-export { post, get, login, logout, unauthorized }
+export { post, get, login, logout, unauthorized, takeAccessToken }
+
+axios.interceptors.request.use(config => {
+    var token = takeAccessToken();
+    console.log('正在发送请求:',token, config);
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})

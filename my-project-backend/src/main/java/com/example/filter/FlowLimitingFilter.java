@@ -58,8 +58,9 @@ public class FlowLimitingFilter extends HttpFilter {
      */
     private boolean tryCount(String address) {
         synchronized (address.intern()) {
-            if(Boolean.TRUE.equals(template.hasKey(Const.FLOW_LIMIT_BLOCK + address)))
-                return false;
+            //todo yang redis部署后open
+//            if(Boolean.TRUE.equals(template.hasKey(Const.FLOW_LIMIT_BLOCK + address)))
+//                return false;
             String counterKey = Const.FLOW_LIMIT_COUNTER + address;
             String blockKey = Const.FLOW_LIMIT_BLOCK + address;
             return utils.limitPeriodCheck(counterKey, blockKey, block, limit, period);

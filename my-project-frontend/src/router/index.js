@@ -1,3 +1,4 @@
+// 修复后的路由配置结构
 import { createRouter, createWebHistory } from 'vue-router'
 import { unauthorized } from "@/net";
 
@@ -27,19 +28,26 @@ const router = createRouter({
             path: '/index',
             name: 'index',
             component: () => import('@/views/IndexView.vue'),
+        }, {
+            path: '/name-generator',
+            name: 'name-generator',
+            component: () => import('@/views/NameGenerator.vue'),
+            //meta: { requiresAuth: true }
+            meta: { layout: 'EmptyLayout' } // 使用空白布局
+
         }
     ]
 })
 
+// 导航守卫正确定义在路由实例之后
 router.beforeEach((to, from, next) => {
-    const isUnauthorized = unauthorized()
-    if(to.name.startsWith('welcome') && !isUnauthorized) {
-        next('/index')
-    } else if(to.fullPath.startsWith('/index') && isUnauthorized) {
-        next('/')
-    } else {
-        next()
-    }
+  if (to.matched.some(record => record.meta.requiresAuth) && unauthorized()) {
+    next({ name: 'welcome-login' })
+  } else if (to.name === 'welcome' && !unauthorized()) {
+    next('/index')
+  } else {
+    next()
+  }
 })
 
 export default router

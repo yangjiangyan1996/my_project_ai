@@ -173,7 +173,8 @@ public class JwtUtils {
             return false;
         Date now = new Date();
         long expire = Math.max(time.getTime() - now.getTime(), 0);
-        template.opsForValue().set(Const.JWT_BLACK_LIST + uuid, "", expire, TimeUnit.MILLISECONDS);
+        //todo yang redis部署后open
+        //template.opsForValue().set(Const.JWT_BLACK_LIST + uuid, "", expire, TimeUnit.MILLISECONDS);
         return true;
     }
 
@@ -183,6 +184,8 @@ public class JwtUtils {
      * @return 是否操作成功
      */
     private boolean isInvalidToken(String uuid){
-        return Boolean.TRUE.equals(template.hasKey(Const.JWT_BLACK_LIST + uuid));
+        //todo yang redis部署后open
+        return false;
+        //return Boolean.TRUE.equals(template.hasKey(Const.JWT_BLACK_LIST + uuid));
     }
 }
