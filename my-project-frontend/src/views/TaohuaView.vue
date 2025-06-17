@@ -73,6 +73,56 @@
             </el-form-item>
           </el-col>
 
+          <el-col :span="24" v-if="formData.relationship === 'target'">
+            <el-card class="target-form">
+              <div class="sub-title">💘 目标对象信息</div>
+              
+              <el-row :gutter="24">
+                <el-col :md="12" :sm="24">
+                  <el-form-item label="对方姓名" prop="targetName">
+                    <el-input
+                      v-model="formData.targetName"
+                      placeholder="请输入对方姓名"
+                      clearable
+                    />
+                  </el-form-item>
+                </el-col>
+              
+                <el-col :md="12" :sm="24">
+                  <el-form-item label="对方性别" prop="targetGender">
+                    <el-radio-group v-model="formData.targetGender">
+                      <el-radio-button label="male">男</el-radio-button>
+                      <el-radio-button label="female">女</el-radio-button>
+                    </el-radio-group>
+                  </el-form-item>
+                </el-col>
+              
+                <el-col :md="12" :sm="24">
+                  <el-form-item label="对方生日" prop="targetBirthDate">
+                    <el-date-picker
+                      v-model="formData.targetBirthDate"
+                      type="date"
+                      placeholder="选择日期"
+                      value-format="YYYY-MM-DD"
+                      style="width: 100%"
+                    />
+                  </el-form-item>
+                </el-col>
+              
+                <el-col :span="24">
+                  <el-form-item label="对方爱好">
+                    <el-input
+                      v-model="formData.targetHobbies"
+                      type="textarea"
+                      :rows="2"
+                      placeholder="请输入对方的兴趣爱好（例如：阅读、运动）"
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-card>
+          </el-col>
+
           <el-col :span="24">
             <el-form-item label="附加说明">
               <el-input
@@ -140,7 +190,10 @@ const rules = reactive({
   gender: [{ required: true, message: '请选择性别', trigger: 'change' }],
   birthDate: [{ required: true, message: '请选择出生日期', trigger: 'change' }],
   birthHour: [{ required: true, message: '请选择出生时辰', trigger: 'change' }],
-  relationship: [{ required: true, message: '请选择感情状态', trigger: 'change' }]
+  relationship: [{ required: true, message: '请选择感情状态', trigger: 'change' }],
+  targetName: [{ required: true, message: '请输入对方姓名', trigger: 'blur' }],
+  targetGender: [{ required: true, message: '请选择对方性别', trigger: 'change' }],
+  targetBirthDate: [{ required: true, message: '请选择对方生日', trigger: 'change' }]
 })
 
 const loading = ref(false)
@@ -246,6 +299,16 @@ const submitForm = async () => {
   
   .card-header h2 {
     font-size: 1.4rem;
+  }
+}
+
+.target-form {
+  margin-top: 1.5rem;
+  background: linear-gradient(135deg, #fff0f9 0%, #ffeef6 100%);
+  .sub-title {
+    color: #e83e8c;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
   }
 }
 </style>
