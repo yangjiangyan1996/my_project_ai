@@ -9,14 +9,12 @@
 
       <el-form ref="formRef" :model="formData" :rules="rules">
         <el-row :gutter="24">
-          <!-- 姓名 -->
           <el-col :md="12" :sm="24">
             <el-form-item label="姓名" prop="name">
               <el-input v-model="formData.name" placeholder="请输入您的姓名（可选）" clearable />
             </el-form-item>
           </el-col>
 
-          <!-- 性别 -->
           <el-col :md="12" :sm="24">
             <el-form-item label="性别" prop="gender">
               <el-radio-group v-model="formData.gender">
@@ -26,14 +24,12 @@
             </el-form-item>
           </el-col>
 
-          <!-- 出生日期 -->
           <el-col :md="12" :sm="24">
             <el-form-item label="出生日期" prop="birthDate">
               <el-date-picker v-model="formData.birthDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width: 100%" />
             </el-form-item>
           </el-col>
 
-          <!-- 出生时辰 -->
           <el-col :md="12" :sm="24">
             <el-form-item label="出生时辰" prop="birthHour">
               <el-select v-model="formData.birthHour" placeholder="请选择时辰" style="width: 100%">
@@ -42,7 +38,6 @@
             </el-form-item>
           </el-col>
 
-          <!-- 感情状态 -->
           <el-col :span="24">
             <el-form-item label="感情状态" prop="relationship">
               <el-select v-model="formData.relationship" placeholder="请选择当前状态" @change="handleRelationshipChange">
@@ -55,73 +50,45 @@
             </el-form-item>
           </el-col>
 
-          <!-- 单个目标信息 -->
-          <el-col :span="24" v-if="formData.relationship === 'target'">
+          <el-col :span="24" v-if="showTargetForm">
             <el-card class="target-form">
-              <div class="sub-title">💘 目标对象信息</div>
-              <el-row :gutter="24">
-                <el-col :md="12" :sm="24">
-                  <el-form-item label="对方姓名" prop="targetName">
-                    <el-input v-model="formData.targetName" placeholder="请输入对方姓名" clearable />
-                  </el-form-item>
-                </el-col>
-                <el-col :md="12" :sm="24">
-                  <el-form-item label="对方性别" prop="targetGender">
-                    <el-radio-group v-model="formData.targetGender">
-                      <el-radio-button label="male">男</el-radio-button>
-                      <el-radio-button label="female">女</el-radio-button>
-                    </el-radio-group>
-                  </el-form-item>
-                </el-col>
-                <el-col :md="12" :sm="24">
-                  <el-form-item label="对方生日" prop="targetBirthDate">
-                    <el-date-picker v-model="formData.targetBirthDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width: 100%" />
-                  </el-form-item>
-                </el-col>
-              </el-row>
-            </el-card>
-          </el-col>
+              <div class="form-header">
+                <div class="sub-title">💘 目标对象信息</div>
+                <el-button v-if="formData.relationship === 'targets'" @click="addNewTarget" type="success" plain>➕ 添加目标</el-button>
+              </div>
+              <div v-for="(target, index) in formData.targets" :key="index" class="multi-target-wrapper">
+                <el-row :gutter="24">
+                  <el-col :md="12" :sm="24">
+                    <el-form-item label="对方姓名">
+                      <el-input v-model="target.targetName" placeholder="请输入对方姓名" clearable />
+                    </el-form-item>
+                  </el-col>
 
-          <!-- 多个目标信息 -->
-          <el-col :span="24" v-if="formData.relationship === 'targets'">
-            <el-card class="target-form">
-              <div class="sub-title">💘 一群目标信息</div>
-              <el-button type="text" @click="multiVisible = !multiVisible">{{ multiVisible ? '收起' : '展开' }}多目标表单</el-button>
+                  <el-col :md="12" :sm="24">
+                    <el-form-item label="对方性别">
+                      <el-radio-group v-model="target.targetGender">
+                        <el-radio-button label="male">男</el-radio-button>
+                        <el-radio-button label="female">女</el-radio-button>
+                      </el-radio-group>
+                    </el-form-item>
+                  </el-col>
 
-              <div v-if="multiVisible">
-                <div v-for="(target, index) in formData.targets" :key="index" class="multi-target-wrapper">
-                  <el-row :gutter="24">
-                    <el-col :md="12" :sm="24">
-                      <el-form-item :label="`目标${index + 1}姓名`">
-                        <el-input v-model="target.name" clearable />
-                      </el-form-item>
-                    </el-col>
-                    <el-col :md="12" :sm="24">
-                      <el-form-item :label="`目标${index + 1}性别`">
-                        <el-radio-group v-model="target.gender">
-                          <el-radio-button label="male">男</el-radio-button>
-                          <el-radio-button label="female">女</el-radio-button>
-                        </el-radio-group>
-                      </el-form-item>
-                    </el-col>
-                    <el-col :md="12" :sm="24">
-                      <el-form-item :label="`目标${index + 1}生日`">
-                        <el-date-picker v-model="target.birthDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
-                      </el-form-item>
-                    </el-col>
-                    <el-col :span="24">
-                      <el-button type="danger" text @click="removeTarget(index)">移除此目标</el-button>
-                    </el-col>
-                  </el-row>
-                </div>
-                <div class="add-target-btn">
-                  <el-button @click="addNewTarget">➕ 添加目标</el-button>
-                </div>
+                  <el-col :md="12" :sm="24">
+                    <el-form-item label="对方生日">
+                      <el-date-picker v-model="target.targetBirthDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width: 100%" />
+                    </el-form-item>
+                  </el-col>
+
+                  <el-col :span="24">
+                    <el-form-item label="对方爱好">
+                      <el-input v-model="target.targetHobbies" type="textarea" :rows="2" placeholder="请输入对方的兴趣爱好（例如：阅读、运动）" />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
               </div>
             </el-card>
           </el-col>
 
-          <!-- 附加说明 -->
           <el-col :span="24">
             <el-form-item label="附加说明">
               <el-input v-model="formData.additionalInfo" type="textarea" :rows="3" placeholder="请输入您的问题（例如：我想知道何时脱单）" />
@@ -135,7 +102,6 @@
       </el-form>
     </el-card>
 
-    <!-- 结果展示卡片 -->
     <el-card class="result-card" v-if="analysisResult">
       <template #header>
         <div class="result-header">
@@ -145,17 +111,27 @@
       <div class="result-content">
         <h4 class="result-title">{{ analysisResult.analysis }}</h4>
         <div class="detail-item">
+          <span class="label">⭐ 桃花指数：</span>
+          <span class="value">{{ analysisResult.index }} 星</span>
+        </div>
+        <div class="detail-item">
           <span class="label">📌 幸运方位：</span>
           <span class="value">{{ analysisResult.luckyDirection || '等待探索' }}</span>
         </div>
         <div class="detail-item">
           <span class="label">💡 提升建议：</span>
           <ul class="advice-list">
-            <li v-for="(item, index) in analysisResult.advice" :key="index" class="advice-item">
-              {{ item }}
-            </li>
+            <li v-for="(item, index) in analysisResult.advice" :key="index" class="advice-item">{{ item }}</li>
             <span v-if="!analysisResult.advice?.length">暂无特别建议</span>
           </ul>
+        </div>
+        <div v-if="analysisResult.targetVoList?.length">
+          <h4 class="result-title">🎯 目标评价</h4>
+          <div class="detail-item" v-for="(target, idx) in analysisResult.targetVoList" :key="idx">
+            <span class="label">姓名：</span><span class="value">{{ target.targetName }}</span>
+            <div class="label">分析：</div>
+            <div class="value">{{ target.analysis }}</div>
+          </div>
         </div>
       </div>
     </el-card>
@@ -164,18 +140,8 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
-
-const formRef = ref(null)
-const loading = ref(false)
-const analysisResult = ref(null)
-const multiVisible = ref(false)
-
-const hourOptions = Array.from({ length: 24 }, (_, i) => ({
-  value: i,
-  label: `${i.toString().padStart(2, '0')}:00`
-}))
 
 const formData = reactive({
   name: '',
@@ -184,13 +150,10 @@ const formData = reactive({
   birthHour: '',
   relationship: '',
   additionalInfo: '',
-  // 单目标
-  targetName: '',
-  targetGender: '',
-  targetBirthDate: '',
-  // 多目标
   targets: []
 })
+
+const showTargetForm = ref(false)
 
 const rules = reactive({
   gender: [{ required: true, message: '请选择性别', trigger: 'change' }],
@@ -199,53 +162,53 @@ const rules = reactive({
   relationship: [{ required: true, message: '请选择感情状态', trigger: 'change' }]
 })
 
-const handleRelationshipChange = (val) => {
-  multiVisible.value = false
-  formData.targetName = ''
-  formData.targetGender = ''
-  formData.targetBirthDate = ''
-  formData.targets = []
-}
+const loading = ref(false)
+const analysisResult = ref('')
+const formRef = ref(null)
 
-const addNewTarget = () => {
-  formData.targets.push({
-    name: '',
-    gender: '',
-    birthDate: ''
-  })
-}
-
-const removeTarget = (index) => {
-  formData.targets.splice(index, 1)
-}
+const hourOptions = Array.from({ length: 24 }, (_, i) => ({
+  value: i,
+  label: `${i.toString().padStart(2, '0')}:00`
+}))
 
 const submitForm = async () => {
-  await formRef.value.validate()
-  loading.value = true
-
   try {
-    const payload = { ...formData }
-    // 格式化生日日期
-    if (payload.birthDate) {
-      payload.birthDate = new Date(payload.birthDate).toISOString()
-    }
-    if (formData.relationship === 'target' && payload.targetBirthDate) {
-      payload.targetBirthDate = new Date(payload.targetBirthDate).toISOString()
-    }
-    if (formData.relationship === 'targets') {
-      payload.targets = formData.targets.map(target => ({
-        ...target,
-        birthDate: target.birthDate ? new Date(target.birthDate).toISOString() : ''
-      }))
+    await formRef.value.validate()
+    loading.value = true
+
+    const payload = {
+      ...formData,
+      birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString() : '',
+      targets: formData.relationship === 'target' ? [formData.targets[0]] : formData.targets
     }
 
-    const { data } = await axios.post('/api/auth/taohua/kanTaohua', payload)
-    analysisResult.value = data
-  } catch (err) {
-    ElMessage.error(err.response?.data?.message || '提交失败')
+    const response = await axios.post('/api/auth/taohua/kanTaohua', payload)
+    analysisResult.value = response.data
+  } catch (error) {
+    console.error(error)
+    ElMessage.error(error.response?.data?.message || '分析失败，请稍后重试')
   } finally {
     loading.value = false
   }
+}
+
+const handleRelationshipChange = async (val) => {
+  showTargetForm.value = false
+  formData.targets = []
+
+  if (val === 'target') {
+    await ElMessageBox.alert('加油哥们', '提示', { confirmButtonText: '确定' })
+    formData.targets.push({})
+    showTargetForm.value = true
+  } else if (val === 'targets') {
+    await ElMessageBox.alert('牛逼，朋友！', '提示', { confirmButtonText: '确定' })
+    formData.targets.push({})
+    showTargetForm.value = true
+  }
+}
+
+const addNewTarget = () => {
+  formData.targets.push({})
 }
 </script>
 
