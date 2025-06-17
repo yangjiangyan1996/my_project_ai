@@ -3,7 +3,7 @@
     <el-card class="form-card">
       <template #header>
         <div class="card-header">
-          <h2>生成系统</h2>
+          <h2>智能名字生成系统</h2>
         </div>
       </template>
 
@@ -99,7 +99,7 @@
 
       <div class="analysis-box">
         <h4>命名解析</h4>
-        <p class="analysis-text">{{ resultData.analysis }}</p>
+        <p class="analysis-text">{{ resultData.explanation}}</p>
       </div>
     </el-card>
   </div>
