@@ -110,33 +110,57 @@
       </template>
       <div class="result-content">
         <h4 class="result-title">{{ analysisResult.analysis }}</h4>
+        <!-- 桃花指数 -->
         <div class="detail-item">
           <span class="label">⭐ 桃花指数：</span>
           <span class="value">{{ analysisResult.index }} 星</span>
         </div>
+        
+        <!-- 幸运方位 -->
         <div class="detail-item">
           <span class="label">📌 幸运方位：</span>
           <span class="value">{{ analysisResult.luckyDirection || '等待探索' }}</span>
         </div>
+        
+        <!-- 提升建议 -->
         <div class="detail-item">
           <span class="label">💡 提升建议：</span>
           <ul class="advice-list">
-            <li v-for="(item, index) in analysisResult.advice" :key="index" class="advice-item">{{ item }}</li>
+            <li v-for="(item, index) in analysisResult.advice" :key="index" class="advice-item">
+              {{ item }}
+            </li>
             <span v-if="!analysisResult.advice?.length">暂无特别建议</span>
           </ul>
         </div>
-        <div v-if="analysisResult.targetVoList?.length">
+        <div v-if="analysisResult.targetVo?.length">
           <h4 class="result-title">🎯 目标评价</h4>
-          <div class="detail-item" v-for="(target, idx) in analysisResult.targetVoList" :key="idx">
+          <div class="detail-item" v-for="(target, idx) in analysisResult.targetVo" :key="idx">
             <span class="label">姓名：</span><span class="value">{{ target.targetName }}</span>
             <div class="label">分析：</div>
             <div class="value">{{ target.analysis }}</div>
+            <div class="detail-item">
+              <span class="label">TA的桃花指数：</span>
+              <span class="value">{{ target.index }} 星</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">TA的幸运方位：</span>
+              <span class="value">{{ target.luckyDirection || '待探索' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">TA的专属建议：</span>
+              <ul class="advice-list">
+                <li v-for="(item, index) in target.advice" :key="index">
+                  {{ item }}
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
     </el-card>
   </div>
 </template>
+
 
 <script setup>
 import { ref, reactive } from 'vue'
