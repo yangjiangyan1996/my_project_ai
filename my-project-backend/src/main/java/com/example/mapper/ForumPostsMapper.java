@@ -1,0 +1,13 @@
+package com.example.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.example.entity.dto.ForumPosts;
+import com.example.entity.dto.PartnerLocations;
+
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/6/18 22:33
+ */
+public interface ForumPostsMapper extends BaseMapper<ForumPosts> {}
