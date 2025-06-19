@@ -1,6 +1,7 @@
 package com.example.filter;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.example.config.Config;
 import com.example.utils.Const;
 import com.example.utils.SnowflakeIdGenerator;
 import jakarta.annotation.Resource;
@@ -17,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Set;
 
 /**
@@ -29,11 +31,10 @@ public class RequestLogFilter extends OncePerRequestFilter {
     @Resource
     SnowflakeIdGenerator generator;
 
-    private final Set<String> ignores = Set.of("/swagger-ui", "/v3/api-docs", "/unauth");
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        if(this.isIgnoreUrl(request.getServletPath())) {
+        String requestURI = request.getRequestURI();
+        if (Arrays.stream(Config.WHITE_URL).anyMatch(requestURI::startsWith)) {
             filterChain.doFilter(request, response);
         } else {
             long startTime = System.currentTimeMillis();
@@ -43,18 +44,6 @@ public class RequestLogFilter extends OncePerRequestFilter {
             this.logRequestEnd(wrapper, startTime);
             wrapper.copyBodyToResponse();
         }
-    }
-
-    /**
-     * 判定当前请求url是否不需要日志打印
-     * @param url 路径
-     * @return 是否忽略
-     */
-    private boolean isIgnoreUrl(String url){
-        for (String ignore : ignores) {
-            if(url.startsWith(ignore)) return true;
-        }
-        return false;
     }
 
     /**

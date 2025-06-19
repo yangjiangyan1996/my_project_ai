@@ -13,11 +13,10 @@ import lombok.Data;
  */
 @Data
 @TableName("ai_recommend_logs")
-public class AiRecommendLogs {
+public class AiRecommendLogs extends BaseModel{
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long userId;
     private String inputData;
     private String recommendedProjectIds;
-    private java.util.Date createdAt;
 }

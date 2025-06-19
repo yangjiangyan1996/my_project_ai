@@ -13,12 +13,11 @@ import lombok.Data;
  */
 @Data
 @TableName("forum_posts")
-public class ForumPosts {
+public class ForumPosts extends BaseModel{
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long userId;
     private String title;
     private String content;
     private String type;
-    private java.util.Date createdAt;
 }

@@ -103,8 +103,9 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         String username = info.getUsername();
         if(this.existsAccountByUsername(username)) return "该用户名已被他人使用，请重新更换";
         String password = passwordEncoder.encode(info.getPassword());
-        Account account = new Account(null, info.getUsername(),
-                password, email, Const.ROLE_DEFAULT, new Date());
+//        Account account = new Account(null, info.getUsername(),
+//                password, email, Const.ROLE_DEFAULT, new Date());
+        Account account = new Account();
         if(!this.save(account)) {
             return "内部错误，注册失败";
         } else {
@@ -180,14 +181,10 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      * @return 账户实体
      */
     public Account findAccountByNameOrEmail(String text){
-        String password = passwordEncoder.encode("123456");
-        Account c = new Account(1,"root",password,"1776080295@qq.com","user",new Date());
-        return c;
-        //todo yang open test
-//        return this.query()
-//                .eq("username", text).or()
-//                .eq("email", text)
-//                .one();
+        return this.query()
+                .eq("username", text).or()
+                .eq("email", text)
+                .one();
     }
 
     /**

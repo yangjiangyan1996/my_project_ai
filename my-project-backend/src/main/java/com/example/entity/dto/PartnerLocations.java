@@ -13,7 +13,7 @@ import lombok.Data;
  */
 @Data
 @TableName("partner_locations")
-public class PartnerLocations {
+public class PartnerLocations extends BaseModel{
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long userId;

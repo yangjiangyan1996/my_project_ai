@@ -13,11 +13,10 @@ import lombok.Data;
  */
 @Data
 @TableName("project_rankings")
-public class ProjectRankings {
+public class ProjectRankings extends BaseModel{
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long projectId;
     private String rankType;
     private Integer rankValue;
-    private java.util.Date updatedAt;
 }

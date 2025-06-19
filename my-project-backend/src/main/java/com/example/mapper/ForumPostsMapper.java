@@ -3,6 +3,7 @@ package com.example.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.entity.dto.ForumPosts;
 import com.example.entity.dto.PartnerLocations;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * @Author YangJian
@@ -10,4 +11,6 @@ import com.example.entity.dto.PartnerLocations;
  * @Email 1776080295@qq.com
  * @Date 2025/6/18 22:33
  */
+@Mapper
+
 public interface ForumPostsMapper extends BaseMapper<ForumPosts> {}
