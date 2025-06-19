@@ -9,11 +9,11 @@ import lombok.Data;
  * @Author YangJian
  * @Description
  * @Email 1776080295@qq.com
- * @Date 2025/6/18 22:05
+ * @Date 2025/6/18 22:05 副业项目表
  */
 @Data
 @TableName("projects")
-public class Projects {
+public class Projects extends BaseModel{
     @TableId(type = IdType.AUTO)
     private Long id;
     private String name;
@@ -21,6 +21,5 @@ public class Projects {
     private String description;
     private String difficulty;
     private String imageUrl;
-    private Long createdBy;
-    private java.util.Date createdAt;
+    private Integer status;
 }

@@ -1,4 +1,4 @@
-package com.example.config;
+package com.example.filter;
 
 import com.example.entity.RestBean;
 import com.example.entity.dto.Account;
@@ -8,6 +8,7 @@ import com.example.filter.RequestLogFilter;
 import com.example.service.AccountService;
 import com.example.utils.Const;
 import com.example.utils.JwtUtils;
+import com.example.config.Config;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,6 +22,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.rememberme.InvalidCookieException;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -52,11 +54,12 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                .authorizeHttpRequests(conf -> conf
-                        .requestMatchers("/api/auth/**", "/error").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().hasAnyRole(Const.ROLE_DEFAULT)
-                )
+                .authorizeHttpRequests(conf -> {
+                    for (String url : Config.WHITE_URL) {
+                        conf.requestMatchers(url).permitAll();
+                    }
+                    conf.anyRequest().authenticated();
+                })
                 .formLogin(conf -> conf
                         .loginProcessingUrl("/api/auth/login")
                         .failureHandler(this::handleProcess)

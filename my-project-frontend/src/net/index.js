@@ -79,17 +79,25 @@ function deleteAccessToken(redirect = false) {
     }
 }
 
-function internalPost(url, data, headers, success, failure, error = defaultError){
-    axios.post(url, data, { headers: headers }).then(({data}) => {
-        if(data.code === 200) {
-            success(data.data)
-        } else if(data.code === 401) {
-            failure('登录状态已过期，请重新登录2！')
+function internalPost(url, data, headers, success = () => {}, failure = defaultFailure, error = defaultError){
+    return axios.post(url, data, { headers: headers }).then(({data: responseData}) => {
+        console.log("接口响应数据:", responseData)
+        if(responseData.code === 200) {
+            success(responseData.data)
+            return responseData.data // 返回有效数据
+        } else if(responseData.code === 401) {
+            failure('登录状态已过期，请重新登录！')
             deleteAccessToken(true)
+            throw new Error('需要重新认证')
         } else {
-            failure(data.message, data.code, url)
+            failure(responseData.message, responseData.code, url)
+            throw new Error(responseData.message)
         }
-    }).catch(err => error(err))
+    }).catch(err => {
+        console.log("接口调用失败",err)
+        error(err)
+        throw err
+    })
 }
 
 function internalGet(url, headers, success, failure, error = defaultError){
@@ -119,7 +127,7 @@ function login(username, password, remember, success, failure = defaultFailure){
 }
 
 function post(url, data, success, failure = defaultFailure) {
-    internalPost(url, data, accessHeader() , success, failure)
+    return internalPost(url, data, accessHeader(), success, failure)
 }
 
 function logout(success, failure = defaultFailure){
@@ -142,7 +150,7 @@ export { post, get, login, logout, unauthorized, takeAccessToken }
 
 axios.interceptors.request.use(config => {
     var token = takeAccessToken();
-    console.log('正在发送请求:',token, config);
+    console.log('正在发送请求1:',token, config);
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`

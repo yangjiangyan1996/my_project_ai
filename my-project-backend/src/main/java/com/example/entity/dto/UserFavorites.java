@@ -13,10 +13,9 @@ import lombok.Data;
  */
 @Data
 @TableName("user_favorites")
-public class UserFavorites {
+public class UserFavorites extends BaseModel{
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long userId;
     private Long projectId;
-    private java.util.Date createdAt;
 }

@@ -13,11 +13,10 @@ import lombok.Data;
  */
 @Data
 @TableName("post_comments")
-public class PostComments {
+public class PostComments extends BaseModel{
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long postId;
     private Long userId;
     private String content;
-    private java.util.Date createdAt;
 }

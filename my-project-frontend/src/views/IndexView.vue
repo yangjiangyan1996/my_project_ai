@@ -11,35 +11,39 @@
     >
       <el-sub-menu index="1">
         <template #title><i class="el-icon-data-analysis"></i>项目展示</template>
-        <el-menu-item @click="activePanel = 'project-showcase'">热门副业</el-menu-item>
-        <el-menu-item @click="router.push({ name: 'project-ranking' })">副业榜单</el-menu-item>
+        <el-menu-item index="fuye" @click="handleMenuClick('fuye')">
+          热门副业
+        </el-menu-item>
+        <el-menu-item index="ranking" @click="handleMenuClick('ranking')">
+          副业榜单
+        </el-menu-item>
       </el-sub-menu>
 
       <el-sub-menu index="2">
         <template #title><i class="el-icon-user"></i>找人合作</template>
-        <el-menu-item @click="router.push({ name: 'partner-map' })">合作地图</el-menu-item>
-        <el-menu-item @click="router.push({ name: 'skill-match' })">技能匹配</el-menu-item>
+        <el-menu-item index="partner-map" @click="router.push({ name: 'partner-map' })">合作地图</el-menu-item>
+        <el-menu-item index="skill-match" @click="router.push({ name: 'skill-match' })">技能匹配</el-menu-item>
       </el-sub-menu>
 
       <el-sub-menu index="3">
         <template #title><i class="el-icon-guide"></i>导航工具</template>
-        <el-menu-item @click="router.push({ name: 'survey' })">副业测评</el-menu-item>
-        <el-menu-item @click="router.push({ name: 'toolbox' })">工具箱</el-menu-item>
-        <el-menu-item @click="router.push({ name: 'resources' })">资源导航</el-menu-item>
+        <el-menu-item index="fuyeceping" @click="router.push({ name: 'survey' })">副业测评</el-menu-item>
+        <el-menu-item index="gongjuxiang" @click="router.push({ name: 'toolbox' })">工具箱</el-menu-item>
+        <el-menu-item index="ziyuandaohang" @click="router.push({ name: 'resources' })">资源导航</el-menu-item>
       </el-sub-menu>
 
       <el-sub-menu index="4">
         <template #title><i class="el-icon-chat-dot-round"></i>社区互动</template>
-        <el-menu-item @click="router.push({ name: 'forum' })">圈子论坛</el-menu-item>
-        <el-menu-item @click="router.push({ name: 'qa' })">问答专区</el-menu-item>
+        <el-menu-item index="forum" @click="router.push({ name: 'forum' })">圈子论坛</el-menu-item>
+        <el-menu-item index="qa" @click="router.push({ name: 'qa' })">问答专区</el-menu-item>
       </el-sub-menu>
 
       <el-sub-menu index="5">
         <template #title><i class="el-icon-s-custom"></i>AI推荐</template>
-        <el-menu-item @click="router.push({ name: 'ai-assistant' })">副业推荐助手</el-menu-item>
+        <el-menu-item index="ai-assistant" @click="router.push({ name: 'ai-assistant' })">副业推荐助手</el-menu-item>
       </el-sub-menu>
 
-      <el-menu-item @click="router.push({ name: 'my-projects' })">
+      <el-menu-item index="wodefuye" @click="router.push({ name: 'my-projects' })">
         <i class="el-icon-folder-opened"></i>我的副业
       </el-menu-item>
 
@@ -50,54 +54,271 @@
       </el-menu-item>
     </el-menu>
 
-    <el-main class="content-panel">
-      <component :is="currentComponent" />
+     <!-- 搜索区域 -->
+     <div class="search-bar">
+      <el-input v-model="search.name" placeholder="搜索副业名称" style="width: 200px; margin-right: 10px" />
+      <el-select v-model="search.category" placeholder="选择分类" style="width: 180px; margin-right: 10px">
+        <el-option
+          v-for="item in categories"
+          :key="item"
+          :label="item"
+          :value="item"
+        />
+      </el-select>
+      <el-select
+        v-model="search.difficulties"
+        placeholder="选择难度"
+        multiple
+        style="width: 180px; margin-right: 10px"
+      >
+        <el-option
+          v-for="item in difficulties"
+          :key="item"
+          :label="item"
+          :value="item"
+        />
+      </el-select>
+      <el-button type="primary" @click="onSearch">搜索</el-button>
+    </div>
 
-      <el-card v-if="activePanel === 'project-showcase'">
-        <el-table :data="projects">
-          <el-table-column prop="name" label="项目名称" />
-          <el-table-column prop="category" label="分类" />
-          <el-table-column prop="difficulty" label="操作难度" />
-        </el-table>
-      </el-card>
+    <!-- 项目展示区域 -->
+    <div class="main-content">
+      <!-- 项目列表容器，添加滚动监听 -->
+      <div class="project-container" @scroll="handleScroll">
+        <el-row :gutter="20" class="project-list">
+          <el-col 
+            v-for="project in projectList" 
+            :key="project.id" 
+            :xs="24" :sm="12" :md="8" :lg="6"
+          >
+            <el-card class="project-card" shadow="hover">
+              <img 
+                :src="project.imageUrl" 
+                class="project-image"
+                alt="项目封面"
+              />
+              <div class="project-content">
+                <h3 class="project-title">{{ project.name }}</h3>
+                <div class="project-meta">
+                  <el-tag size="small">{{ project.category }}</el-tag>
+                  <span class="project-difficulty">{{ project.difficulty }}</span>
+                </div>
+                <p class="project-description">{{ project.description }}</p>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
 
-      <!-- 后续可扩展其他面板 -->
-
-    </el-main>
+        <!-- 加载更多提示 -->
+        <div v-if="loading" class="loading-more">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          <span>加载中...</span>
+        </div>
+        <div v-else-if="!hasMore" class="no-more">
+          没有更多数据了
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { Loading } from '@element-plus/icons-vue';
 import router from "@/router";
-import { logout } from '@/net';
+import { logout, post } from '@/net';
+import { ElMessage } from 'element-plus';
 
-const activePanel = ref('project-showcase');
-const currentComponent = ref(null); // 预留动态组件位
+const projectList = ref([]);
+const loading = ref(false);
+const currentPage = ref(1);
+const pageSize = ref(10);
+const total = ref(0);
+const hasMore = ref(true);
+const categories = ref([]);
+const difficulties = ref([]);
+const search = ref({ name: '', category: '', difficulties: [] });
 
-const projects = ref([
-  { name: '电商代运营', category: '电商', difficulty: '★★★' },
-  { name: '短视频制作', category: '新媒体', difficulty: '★★☆' },
-  { name: '摆摊卖小吃', category: '线下创业', difficulty: '★☆☆' },
-  { name: 'AI提示词训练', category: 'AI相关', difficulty: '★★★' },
-]);
+const fetchOptions = async () => {
+  try {
+    const [catRes, diffRes] = await Promise.all([
+      post('/api/auth/project/fuyeCategory'),
+      post('/api/auth/project/fuyeDifficulty')
+    ]);
+    categories.value = catRes || [];
+    difficulties.value = diffRes || [];
+  } catch (e) {
+    ElMessage.error('加载搜索选项失败');
+  }
+};
+
+// 加载项目数据
+const loadProjects = async () => {
+  if (loading.value || !hasMore.value) return;
+  
+  loading.value = true;
+  try {
+    const res = await post('/api/auth/project/show', { 
+      page: currentPage.value, 
+      size: pageSize.value 
+    });
+
+    console.log("接口返回数据:", res);
+    
+    if (!res?.records) {
+      console.warn("接口返回异常结构：", res);
+      return;
+    }
+
+    // 合并新数据
+    projectList.value = [
+      ...projectList.value,
+      ...res.records.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        description: item.description,
+        difficulty: '★'.repeat(Number(item.difficulty || 1)),
+        imageUrl: (item.imageUrl?.replace(/["]/g, '') || '/images/default-project.png')
+      }))
+    ];
+
+    total.value = res.total || 0;
+    hasMore.value = projectList.value.length < total.value;
+    currentPage.value += 1;
+  } catch (error) {
+    console.error("加载失败：", error);
+    ElMessage.error('数据加载失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const onSearch = () => {
+  loadProjects(true);
+};
+
+
+// 滚动到底部加载更多
+const handleScroll = (e) => {
+  const { scrollTop, scrollHeight, clientHeight } = e.target;
+  // 距离底部100px时加载
+  if (scrollHeight - scrollTop - clientHeight < 100 && !loading.value && hasMore.value) {
+    loadProjects();
+  }
+};
+
+// 初始化加载
+onMounted(() => {
+  loadProjects();
+});
 
 function userLogout() {
-  logout(() => router.push("/"))
+  logout(() => router.push("/"));
+}
+
+function handleMenuClick(panel) {
+  activePanel.value = panel;
 }
 </script>
 
 <style scoped>
 .index-container {
-  padding: 20px;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
+
 .nav-menu {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.main-content {
+  flex: 1;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.project-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 0 10px;
+}
+
+.project-list {
   margin-bottom: 20px;
 }
-.content-panel {
-  margin-top: 20px;
+
+.project-card {
+  margin-bottom: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
+
+.project-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 4px 4px 0 0;
+}
+
+.project-content {
+  padding: 15px;
+  flex: 1;
+}
+
+.project-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #333;
+}
+
+.project-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.project-difficulty {
+  color: #ff9900;
+  font-weight: bold;
+}
+
+.project-description {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.loading-more, .no-more {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+}
+
+.loading-more .el-icon {
+  margin-right: 5px;
+  animation: rotating 2s linear infinite;
+}
+
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .flex-grow {
   flex-grow: 1;
 }
