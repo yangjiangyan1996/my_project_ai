@@ -359,4 +359,14 @@ function handleMenuClick(panel) {
 .flex-grow {
   flex-grow: 1;
 }
+
+.search-bar {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
 </style>
