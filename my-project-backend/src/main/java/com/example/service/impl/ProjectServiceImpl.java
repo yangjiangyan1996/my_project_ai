@@ -8,9 +8,11 @@ import com.example.entity.req.ProjectListReq;
 import com.example.mapper.ProjectsMapper;
 import com.example.service.ProjectService;
 import jakarta.annotation.Resource;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 
@@ -40,8 +42,8 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
                         .select("id", "name", "category", "description", "difficulty", "image_url", "created_at")
                         .eq("status", 1)
                         .eq(req.getCategory() != null, "category", req.getCategory())
-                        .eq(req.getDifficulty() != null, "difficulty", req.getDifficulty())
-                        .like(req.getProjectName() != null, "name", req.getProjectName())
+                        .in(!CollectionUtils.isEmpty(req.getDifficulty()), "difficulty", req.getDifficulty())
+                        .like(StringUtils.isNotBlank(req.getProjectName()), "name", req.getProjectName())
                         .orderByDesc("created_at")
         );
     }

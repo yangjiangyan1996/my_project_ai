@@ -164,7 +164,9 @@ const fetchOptions = async () => {
  * 副业的列表数据
  */
 const fetchProjectListData = async (params = {}) => {
-  if (loading.value || !hasMore.value) return;
+  if (loading.value || !hasMore.value) {
+      return;
+  }
   
   loading.value = true;
   try {
@@ -210,10 +212,19 @@ const fetchProjectListData = async (params = {}) => {
 const loadProjects = async () => {
   fetchOptions();
   
-  fetchProjectListData();
+  // 初始加载带上空条件
+  fetchProjectListData({
+    category: search.value.category,
+    difficulty: search.value.difficulties,
+    projectName: search.value.name
+  });
 };
 
 const onSearch = () => {
+  currentPage.value = 1;         // 重置页码
+  projectList.value = [];        // 清空旧数据
+  hasMore.value = true;          // 恢复为“还有更多”
+
   fetchProjectListData({
     category: search.value.category,
     difficulty: search.value.difficulties,
@@ -225,9 +236,12 @@ const onSearch = () => {
 // 滚动到底部加载更多
 const handleScroll = (e) => {
   const { scrollTop, scrollHeight, clientHeight } = e.target;
-  // 距离底部100px时加载
   if (scrollHeight - scrollTop - clientHeight < 100 && !loading.value && hasMore.value) {
-    loadProjects();
+    fetchProjectListData({
+      category: search.value.category,
+      difficulty: search.value.difficulties,
+      projectName: search.value.name
+    });
   }
 };
 
