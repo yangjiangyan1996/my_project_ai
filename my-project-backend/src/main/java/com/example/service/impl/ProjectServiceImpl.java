@@ -11,6 +11,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 
 /**
  * @Author YangJian
@@ -27,6 +29,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return null;
     }
+
     @Override
     public Page<Projects> getHotFuyeProjects(Page<Projects> pageable) {
         return projectMapper.selectPage(

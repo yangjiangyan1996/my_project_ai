@@ -81,7 +81,7 @@ function deleteAccessToken(redirect = false) {
 
 function internalPost(url, data, headers, success = () => {}, failure = defaultFailure, error = defaultError){
     return axios.post(url, data, { headers: headers }).then(({data: responseData}) => {
-        console.log("接口响应数据:", responseData)
+        console.log("internalPost--->"+url+"--->接口响应数据:", responseData)
         if(responseData.code === 200) {
             success(responseData.data)
             return responseData.data // 返回有效数据
@@ -100,17 +100,25 @@ function internalPost(url, data, headers, success = () => {}, failure = defaultF
     })
 }
 
-function internalGet(url, headers, success, failure, error = defaultError){
-    axios.get(url, { headers: headers }).then(({data}) => {
-        if(data.code === 200) {
-            success(data.data)
-        } else if(data.code === 401) {
-            failure('登录状态已过期，请重新登录3！')
+
+function internalGet(url, headers, success = () => {}, failure = defaultFailure, error = defaultError) {
+    return axios.get(url, { headers: headers }).then(({data: responseData}) => {
+        console.log("internalGet--->"+url+"--->接口响应数据:", responseData)
+        if(responseData.code === 200) {
+            success(responseData.data)
+            return responseData.data // 返回有效数据
+        } else if(responseData.code === 401) {
+            failure('登录状态已过期，请重新登录！')
             deleteAccessToken(true)
+            throw new Error('需要重新认证')
         } else {
-            failure(data.message, data.code, url)
+            failure(responseData.message, responseData.code, url)
+            throw new Error(responseData.message)
         }
-    }).catch(err => error(err))
+    }).catch(err => {
+        error(err)
+        throw err
+    })
 }
 
 function login(username, password, remember, success, failure = defaultFailure){
@@ -130,16 +138,18 @@ function post(url, data, success, failure = defaultFailure) {
     return internalPost(url, data, accessHeader(), success, failure)
 }
 
+
+function get(url, success, failure = defaultFailure) {
+    return internalGet(url, accessHeader(), success, failure)
+}
+
+
 function logout(success, failure = defaultFailure){
     get('/api/auth/logout', () => {
         deleteAccessToken()
         ElMessage.success(`退出登录成功，欢迎您再次使用`)
         success()
     }, failure)
-}
-
-function get(url, success, failure = defaultFailure) {
-    internalGet(url, accessHeader(), success, failure)
 }
 
 function unauthorized() {

@@ -60,9 +60,9 @@
       <el-select v-model="search.category" placeholder="选择分类" style="width: 180px; margin-right: 10px">
         <el-option
           v-for="item in categories"
-          :key="item"
-          :label="item"
-          :value="item"
+          :key="item.code"
+          :label="item.desc"
+          :value="item.desc"
         />
       </el-select>
       <el-select
@@ -73,9 +73,9 @@
       >
         <el-option
           v-for="item in difficulties"
-          :key="item"
-          :label="item"
-          :value="item"
+          :key="item.code"
+          :label="item.desc"
+          :value="item.desc"
         />
       </el-select>
       <el-button type="primary" @click="onSearch">搜索</el-button>
@@ -126,7 +126,7 @@
 import { ref, onMounted } from 'vue';
 import { Loading } from '@element-plus/icons-vue';
 import router from "@/router";
-import { logout, post } from '@/net';
+import { logout, post, get } from '@/net';
 import { ElMessage } from 'element-plus';
 
 const projectList = ref([]);
@@ -139,21 +139,32 @@ const categories = ref([]);
 const difficulties = ref([]);
 const search = ref({ name: '', category: '', difficulties: [] });
 
+//加载下拉框的数据
 const fetchOptions = async () => {
   try {
+    const res = await get('/api/auth/project/category');
+    console.log("roject/category接口返回数据:", res);
+
     const [catRes, diffRes] = await Promise.all([
-      post('/api/auth/project/fuyeCategory'),
-      post('/api/auth/project/fuyeDifficulty')
+      get('/api/auth/project/category'),
+      get('/api/auth/project/difficulty')
     ]);
     categories.value = catRes || [];
     difficulties.value = diffRes || [];
+
+    console.log("categories",categories)
+    console.log("difficulties",difficulties)
+
   } catch (e) {
     ElMessage.error('加载搜索选项失败');
   }
 };
 
-// 加载项目数据
-const loadProjects = async () => {
+
+/**
+ * 副业的列表数据
+ */
+const fetchProjectListData = async () => {
   if (loading.value || !hasMore.value) return;
   
   loading.value = true;
@@ -192,6 +203,12 @@ const loadProjects = async () => {
   } finally {
     loading.value = false;
   }
+}
+// 加载项目数据
+const loadProjects = async () => {
+  fetchOptions();
+  
+  fetchProjectListData();
 };
 
 const onSearch = () => {
