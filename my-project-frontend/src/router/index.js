@@ -33,14 +33,17 @@ const router = createRouter({
             name: 'name-generator',
             component: () => import('@/views/NameGenerator.vue'),
             //meta: { requiresAuth: true }
-            meta: { layout: 'EmptyLayout' } // 使用空白布局
+            meta: { layout: 'EmptyLayout' } 
         },{
             path: '/taohua',
             name: 'taohua',
             component: () => import('@/views/TaohuaView.vue'),
-            meta: { layout: 'EmptyLayout' } // 使用空白布局
-
-        }
+            meta: { layout: 'EmptyLayout' }
+        },{
+            path: '/projects/:id',
+            name: 'project-detail',
+            component: () => import('@/views/ProjectDetail.vue')
+          }
     ]
 })
 

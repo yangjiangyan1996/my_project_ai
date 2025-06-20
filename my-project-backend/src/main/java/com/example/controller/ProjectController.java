@@ -4,9 +4,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.base.RespBean;
 import com.example.entity.dto.Projects;
 import com.example.entity.req.ProjectListReq;
+import com.example.entity.resp.ProjectsDetailResp;
 import com.example.entity.resp.ProjectsResp;
 import com.example.enums.ProjectEnum;
+import com.example.service.AccountService;
 import com.example.service.ProjectService;
+import com.example.service.ProjectsDetailService;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +23,16 @@ public class ProjectController {
 
 
     @Resource
+    ProjectsDetailService projectsDetailService;
+    @Resource
     private ProjectService projectService;
 
+
+    @GetMapping("/detail")
+    public RespBean<ProjectsDetailResp> showHotFuye(@RequestParam("projectId") Long projectId) {
+        ProjectsDetailResp result = projectsDetailService.selectByProjectId(projectId);
+        return RespBean.success(result);
+    }
     @PostMapping("/show")
     public RespBean<Page<ProjectsResp>> showHotFuye(@RequestBody ProjectListReq req) {
         Page<Projects> hotFuyeProjects = projectService.getHotFuyeProjects(Page.of(req.getPage() - 1, req.getSize()),req);

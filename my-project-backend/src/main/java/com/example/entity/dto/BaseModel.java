@@ -14,4 +14,5 @@ public class BaseModel {
     private java.util.Date createdAt;
     private Long modifiedBy;
     private java.util.Date modifiedAt;
+    private Integer isDeleted;
 }

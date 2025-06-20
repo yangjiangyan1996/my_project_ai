@@ -47,4 +47,11 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
                         .orderByDesc("created_at")
         );
     }
+
+    @Override
+    public boolean isProjectDown(Long projectId) {
+        Projects projects = projectMapper.selectOne(new QueryWrapper<Projects>().eq("id", projectId)
+                .eq("status", 1));
+        return projects != null;
+    }
 }

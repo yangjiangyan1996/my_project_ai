@@ -91,7 +91,7 @@
             :key="project.id" 
             :xs="24" :sm="12" :md="8" :lg="6"
           >
-            <el-card class="project-card" shadow="hover">
+            <el-card class="project-card" shadow="hover" @click="goToDetail(project)">
               <img 
                 :src="project.imageUrl" 
                 class="project-image"
@@ -138,6 +138,11 @@ const hasMore = ref(true);
 const categories = ref([]);
 const difficulties = ref([]);
 const search = ref({ name: '', category: '', difficulties: [] });
+
+//跳转到列表详情页
+function goToDetail(project) {
+  router.push({ name: 'project-detail', params: { id: project.id } });
+}
 
 //加载下拉框的数据
 const fetchOptions = async () => {

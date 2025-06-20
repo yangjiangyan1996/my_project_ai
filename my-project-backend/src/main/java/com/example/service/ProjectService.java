@@ -14,4 +14,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
  */
 public interface ProjectService extends IService<Projects>, UserDetailsService {
     Page getHotFuyeProjects(Page<Projects> pageable, ProjectListReq req);
+
+    //判断项目是否启用
+    boolean isProjectDown(Long projectId);
 }

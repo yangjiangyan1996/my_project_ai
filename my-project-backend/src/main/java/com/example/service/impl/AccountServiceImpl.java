@@ -146,6 +146,13 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         return null;
     }
 
+    @Override
+    public Account selectById(Long userId) {
+        return this.query()
+                .eq("id", userId)
+                .one();
+    }
+
     /**
      * 移除Redis中存储的邮件验证码
      * @param email 电邮
