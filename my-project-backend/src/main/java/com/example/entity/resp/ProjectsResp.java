@@ -1,8 +1,9 @@
-package com.example.entity.dto;
+package com.example.entity.resp;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
 /**
@@ -12,14 +13,12 @@ import lombok.Data;
  * @Date 2025/6/18 22:05 副业项目表
  */
 @Data
-@TableName("projects")
-public class Projects extends BaseModel{
+public class ProjectsResp {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String name;
-    private Integer category;
+    private String categoryName;
     private String description;
     private Integer difficulty;
     private String imageUrl;
-    private Integer status;
 }

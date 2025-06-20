@@ -1,33 +1,26 @@
 package com.example.controller;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.base.RespBean;
-import com.example.entity.dto.Projects;
-import com.example.entity.req.ProjectListReq;
-import com.example.entity.req.TaohuaRequest;
-import com.example.entity.req.TargetPerson;
 import com.example.entity.resp.EnumResp;
-import com.example.entity.resp.SuanTaoHuaVO;
-import com.example.entity.resp.TargetVO;
 import com.example.enums.ProjectEnum;
-import com.example.service.ProjectService;
-import jakarta.annotation.Resource;
-import org.springframework.http.ResponseEntity;
-import org.springframework.util.CollectionUtils;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.web.bind.annotation.GetMapping;
-
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/6/20 14:31
+ */
 @RestController
-@RequestMapping("/api/auth/project/")
-public class FuyeController {
-
-
-    @Resource
-    private ProjectService projectService;
+@RequestMapping("/api/auth/common/")
+public class CommonController {
 
     @GetMapping("/category")
     public RespBean<List<EnumResp>> getAllCategories() {
@@ -53,9 +46,4 @@ public class FuyeController {
         return RespBean.success(collect);
     }
 
-    @PostMapping("/show")
-    public RespBean<Page<Projects>> showHotFuye(@RequestBody ProjectListReq req) {
-        Page hotFuyeProjects = projectService.getHotFuyeProjects(Page.of(req.getPage() - 1, req.getSize()));
-        return RespBean.success(hotFuyeProjects);
-    }
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.Projects;
+import com.example.entity.req.ProjectListReq;
 import com.example.mapper.ProjectsMapper;
 import com.example.service.ProjectService;
 import jakarta.annotation.Resource;
@@ -25,19 +26,23 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
 
     @Resource
     private ProjectsMapper projectMapper;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return null;
     }
 
     @Override
-    public Page<Projects> getHotFuyeProjects(Page<Projects> pageable) {
+    public Page<Projects> getHotFuyeProjects(Page<Projects> pageable, ProjectListReq req) {
         return projectMapper.selectPage(
-            pageable,
-            new QueryWrapper<Projects>()
-                .select("id", "name", "category", "description", "difficulty", "image_url", "created_at")
-                .eq("status", 1)
-                .orderByDesc("created_at")
+                pageable,
+                new QueryWrapper<Projects>()
+                        .select("id", "name", "category", "description", "difficulty", "image_url", "created_at")
+                        .eq("status", 1)
+                        .eq(req.getCategory() != null, "category", req.getCategory())
+                        .eq(req.getDifficulty() != null, "difficulty", req.getDifficulty())
+                        .like(req.getProjectName() != null, "name", req.getProjectName())
+                        .orderByDesc("created_at")
         );
     }
 }

@@ -62,7 +62,7 @@
           v-for="item in categories"
           :key="item.code"
           :label="item.desc"
-          :value="item.desc"
+          :value="item.code"
         />
       </el-select>
       <el-select
@@ -75,7 +75,7 @@
           v-for="item in difficulties"
           :key="item.code"
           :label="item.desc"
-          :value="item.desc"
+          :value="item.code"
         />
       </el-select>
       <el-button type="primary" @click="onSearch">搜索</el-button>
@@ -142,12 +142,11 @@ const search = ref({ name: '', category: '', difficulties: [] });
 //加载下拉框的数据
 const fetchOptions = async () => {
   try {
-    const res = await get('/api/auth/project/category');
-    console.log("roject/category接口返回数据:", res);
+    const res = await get('/api/auth/common/category');
 
     const [catRes, diffRes] = await Promise.all([
-      get('/api/auth/project/category'),
-      get('/api/auth/project/difficulty')
+      get('/api/auth/common/category'),
+      get('/api/auth/common/difficulty')
     ]);
     categories.value = catRes || [];
     difficulties.value = diffRes || [];
@@ -164,14 +163,17 @@ const fetchOptions = async () => {
 /**
  * 副业的列表数据
  */
-const fetchProjectListData = async () => {
+const fetchProjectListData = async (params = {}) => {
   if (loading.value || !hasMore.value) return;
   
   loading.value = true;
   try {
     const res = await post('/api/auth/project/show', { 
       page: currentPage.value, 
-      size: pageSize.value 
+      size: pageSize.value,
+      category: params?.category,
+      difficulty: params?.difficulty,
+      projectName: params?.projectName
     });
 
     console.log("接口返回数据:", res);
@@ -187,7 +189,7 @@ const fetchProjectListData = async () => {
       ...res.records.map(item => ({
         id: item.id,
         name: item.name,
-        category: item.category,
+        category: item.categoryName,
         description: item.description,
         difficulty: '★'.repeat(Number(item.difficulty || 1)),
         imageUrl: (item.imageUrl?.replace(/["]/g, '') || '/images/default-project.png')
@@ -212,7 +214,11 @@ const loadProjects = async () => {
 };
 
 const onSearch = () => {
-  loadProjects(true);
+  fetchProjectListData({
+    category: search.value.category,
+    difficulty: search.value.difficulties,
+    projectName: search.value.name
+  });
 };
 
 

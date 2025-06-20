@@ -43,5 +43,15 @@ public class ProjectEnum {
             this.code = code;
             this.name = name;
         }
+        public static ProjectCategoryEnum getEnum(Integer code) {
+            for (ProjectCategoryEnum value : ProjectCategoryEnum.values()) {
+                if (value.getCode().equals(code)) {
+                    return value;
+                }
+            }
+            return null;
+        }
     }
+
+
 }
