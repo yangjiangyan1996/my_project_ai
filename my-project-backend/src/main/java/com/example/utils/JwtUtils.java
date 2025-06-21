@@ -6,6 +6,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.example.entity.base.UserInfo;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -72,12 +73,20 @@ public class JwtUtils {
         return calendar.getTime();
     }
 
+
+    public UserInfo toUserInfo(DecodedJWT jwt) {
+        Long id = jwt.getClaim("id").asLong();
+        String name = jwt.getClaim("name").asString();
+        String role = jwt.getClaim("role").asString();
+        return new UserInfo(id, name, role);
+    }
+
     /**
      * 根据UserDetails生成对应的Jwt令牌
      * @param user 用户信息
      * @return 令牌
      */
-    public String createJwt(UserDetails user, String username, int userId) {
+    public String createJwt(UserDetails user, String username, int userId, String role) {
         if(this.frequencyCheck(userId)) {
             Algorithm algorithm = Algorithm.HMAC256(key);
             Date expire = this.expireTime();
@@ -85,6 +94,7 @@ public class JwtUtils {
                     .withJWTId(UUID.randomUUID().toString())
                     .withClaim("id", userId)
                     .withClaim("name", username)
+                    .withClaim("role", role)
                     .withClaim("authorities", user.getAuthorities()
                             .stream()
                             .map(GrantedAuthority::getAuthority).toList())

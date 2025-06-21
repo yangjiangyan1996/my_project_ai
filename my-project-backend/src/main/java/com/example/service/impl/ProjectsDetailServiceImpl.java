@@ -20,25 +20,13 @@ import org.springframework.stereotype.Service;
 public class ProjectsDetailServiceImpl extends ServiceImpl<ProjectsDetailMapper, ProjectsDetail> implements ProjectsDetailService {
     @Resource
     private ProjectsDetailMapper projectsDetailMapper;
-    @Resource
-    AccountService accountService;
-    @Resource
-    private ProjectService projectService;
+
+
 
     @Override
-    public ProjectsDetailResp selectByProjectId(Long projectId) {
-        boolean projectDown = projectService.isProjectDown(projectId);
-        if (!projectDown) {
-            throw new ValidationException("项目已下架");
-        }
-
-        ProjectsDetailResp r = new ProjectsDetailResp();
+    public ProjectsDetail selectByProjectId(Long projectId) {
         ProjectsDetail project = projectsDetailMapper.selectOne(new QueryWrapper<ProjectsDetail>().eq("projects_id", projectId));
-        BeanUtils.copyProperties(project, r);
-
-        Account account = accountService.selectById(project.getCreatedBy());
-        r.setCreatorName(account.getNickname());
-        return r;
+        return project;
     }
 
 }

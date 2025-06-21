@@ -69,14 +69,14 @@ public class RequestLogFilter extends OncePerRequestFilter {
         JSONObject object = new JSONObject();
         request.getParameterMap().forEach((k, v) -> object.put(k, v.length > 0 ? v[0] : null));
         Object id = request.getAttribute(Const.ATTR_USER_ID);
-        if(id != null) {
-            User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            log.info("请求URL: \"{}\" ({}) | 远程IP地址: {} │ 身份: {} (UID: {}) | 角色: {} | 请求参数列表: {}",
-                    request.getServletPath(), request.getMethod(), request.getRemoteAddr(),
-                    user.getUsername(), id, user.getAuthorities(), object);
-        } else {
-            log.info("请求URL: \"{}\" ({}) | 远程IP地址: {} │ 身份: 未验证 | 请求参数列表: {}",
-                    request.getServletPath(), request.getMethod(), request.getRemoteAddr(), object);
-        }
+//        if(id != null) {
+//            User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+//            log.info("请求URL: \"{}\" ({}) | 远程IP地址: {} │ 身份: {} (UID: {}) | 角色: {} | 请求参数列表: {}",
+//                    request.getServletPath(), request.getMethod(), request.getRemoteAddr(),
+//                    user.getUsername(), id, user.getAuthorities(), object);
+//        } else {
+//            log.info("请求URL: \"{}\" ({}) | 远程IP地址: {} │ 身份: 未验证 | 请求参数列表: {}",
+//                    request.getServletPath(), request.getMethod(), request.getRemoteAddr(), object);
+//        }
     }
 }

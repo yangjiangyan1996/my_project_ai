@@ -2,6 +2,7 @@ package com.example.filter;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.example.config.Config;
+import com.example.entity.base.UserInfo;
 import com.example.utils.Const;
 import com.example.utils.JwtUtils;
 import jakarta.annotation.Resource;
@@ -42,12 +43,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String authorization = request.getHeader("Authorization");
         DecodedJWT jwt = utils.resolveJwt(authorization);
         if(jwt != null) {
-            UserDetails user = utils.toUser(jwt);
+            UserInfo userInfo = utils.toUserInfo(jwt);
+            // 写入Spring Security的上下文中
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    new UsernamePasswordAuthenticationToken(userInfo, null, null);
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            request.setAttribute(Const.ATTR_USER_ID, utils.toId(jwt));
+
+            // 仍保留原始用户ID作为请求属性（可选）
+            request.setAttribute(Const.ATTR_USER_ID, userInfo.getId());
         }
         filterChain.doFilter(request, response);
     }

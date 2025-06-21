@@ -22,9 +22,9 @@
             </div>
   
             <div class="actions">
-              <el-button :type="liked ? 'danger' : 'default'" size="small" @click="liked = !liked">
-                <i :class="liked ? 'el-icon-star-on' : 'el-icon-star-off'"></i> {{ liked ? '已点赞' : '点赞' }}
-              </el-button>
+              <el-button :type="liked ? 'danger' : 'default'" size="small" @click="handleLike">
+              <i :class="liked ? 'el-icon-star-on' : 'el-icon-star-off'"></i> {{ liked ? '已点赞' : '点赞' }}
+            </el-button>
               <el-button :type="collected ? 'primary' : 'default'" size="small" @click="collected = !collected">
                 <i :class="collected ? 'el-icon-folder-opened' : 'el-icon-folder-add'"></i> {{ collected ? '已收藏' : '收藏' }}
               </el-button>
@@ -56,6 +56,26 @@
   const detail = ref({});
   const parsedTags = ref([]);
   const liked = ref(false);
+
+async function handleLike() {
+  const tempState = !liked.value;
+  try {
+    const result = await get(`/api/auth/project/likeProject?projectId=${route.params.id}&liked=${tempState}`);
+    console.log("/api/auth/project/likeProject-----》返回数据",result)
+    if (result) {
+      liked.value = tempState;
+      if(tempState) {
+        ElMessage.success('成功');
+      } else {
+        ElMessage.success('已取消');
+      }
+    } else {
+      ElMessage.error('点赞失败');
+    }
+  } catch (err) {
+    ElMessage.error('网络请求异常');
+  }
+}
   const collected = ref(false);
   
   async function fetchDetail() {
