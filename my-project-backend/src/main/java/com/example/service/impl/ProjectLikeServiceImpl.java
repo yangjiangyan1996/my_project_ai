@@ -12,9 +12,7 @@ import org.springframework.stereotype.Service;
 public class ProjectLikeServiceImpl extends ServiceImpl<ProjectLikeMapper, ProjectLike> implements ProjectLikeService {
     @Override
     public Boolean likeProject(Long projectId, Long userId, Boolean liked) {
-        boolean exists = this.baseMapper.exists(new LambdaQueryWrapper<ProjectLike>()
-                .eq(ProjectLike::getProjectId, projectId)
-                .eq(ProjectLike::getUserId, userId));
+        boolean exists =selectByProjectIdAndUserId(projectId, userId);
         if (Boolean.TRUE.equals(liked)) {
             //先判断数据库是否存在数据，有的话直接返回true
             if (exists) {
@@ -30,5 +28,13 @@ public class ProjectLikeServiceImpl extends ServiceImpl<ProjectLikeMapper, Proje
                     .eq("user_id", userId)
                     .set("is_deleted", 1));
         }
+    }
+
+    @Override
+    public Boolean selectByProjectIdAndUserId(Long projectId, Long userId) {
+        return  this.baseMapper.exists(new LambdaQueryWrapper<ProjectLike>()
+                .eq(ProjectLike::getProjectId, projectId)
+                .eq(ProjectLike::getUserId, userId)
+                .eq(ProjectLike::getIsDeleted, 0));
     }
 }

@@ -29,6 +29,14 @@ public class ProjectController {
     private ProjectService projectService;
 
 
+    @GetMapping("/favoriteProject")
+    public RespBean<Boolean> favoriteProject(@RequestParam("projectId") Long projectId,
+                                         @RequestParam("liked") Boolean liked) {
+        UserInfo user = UserUtil.getCurrentUser();
+        Boolean result = projectFacade.favoriteProject(projectId, user.getId(), liked);
+        return RespBean.success(result);
+    }
+
     @GetMapping("/likeProject")
     public RespBean<Boolean> likeProject(@RequestParam("projectId") Long projectId,
                                          @RequestParam("liked") Boolean liked) {
@@ -40,7 +48,7 @@ public class ProjectController {
     @GetMapping("/detail")
     public RespBean<ProjectsDetailResp> showHotFuye(@RequestParam("projectId") Long projectId) {
         UserInfo user = UserUtil.getCurrentUser();
-        ProjectsDetailResp result = projectFacade.selectByProjectId(projectId);
+        ProjectsDetailResp result = projectFacade.selectByProjectId(projectId, user.getId());
         return RespBean.success(result);
     }
 

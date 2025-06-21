@@ -5,10 +5,12 @@ import com.example.entity.dto.ProjectLike;
 
 /**
  * @Author YangJian
- * @Description
+ * @Description 点赞
  * @Email 1776080295@qq.com
  * @Date 2025/6/20 17:55
  */
 public interface ProjectLikeService extends IService<ProjectLike> {
     Boolean likeProject(Long projectId, Long userId, Boolean liked);
+
+    Boolean selectByProjectIdAndUserId(Long projectId, Long userId);
 }
