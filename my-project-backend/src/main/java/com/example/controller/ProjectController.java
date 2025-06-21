@@ -1,6 +1,7 @@
 package com.example.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.Facade.ProjectFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.dto.Projects;
 import com.example.entity.req.ProjectListReq;
@@ -23,14 +24,14 @@ public class ProjectController {
 
 
     @Resource
-    ProjectsDetailService projectsDetailService;
+    ProjectFacade projectFacade;
     @Resource
     private ProjectService projectService;
 
 
     @GetMapping("/detail")
     public RespBean<ProjectsDetailResp> showHotFuye(@RequestParam("projectId") Long projectId) {
-        ProjectsDetailResp result = projectsDetailService.selectByProjectId(projectId);
+        ProjectsDetailResp result = projectFacade.selectByProjectId(projectId);
         return RespBean.success(result);
     }
     @PostMapping("/show")

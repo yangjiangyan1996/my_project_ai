@@ -28,4 +28,8 @@ public class ProjectsDetailResp {
     private Integer isFreeEntry;
     private String tags;
     private String creatorName;
+    private Boolean myLike;
+    private Boolean myFavorite;
+    private Integer likeCount;
+    private Integer favoriteCount;
 }
