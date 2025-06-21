@@ -13,7 +13,6 @@ import com.example.filter.UserUtil;
 import com.example.service.ProjectService;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,7 +33,7 @@ public class ProjectController {
     public RespBean<Boolean> likeProject(@RequestParam("projectId") Long projectId,
                                          @RequestParam("liked") Boolean liked) {
         UserInfo user = UserUtil.getCurrentUser();
-        Boolean result = projectFacade.likeProject(projectId, user.getId(),liked);
+        Boolean result = projectFacade.likeProject(projectId, user.getId(), liked);
         return RespBean.success(result);
     }
 
