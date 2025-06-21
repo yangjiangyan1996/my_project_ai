@@ -37,4 +37,11 @@ public class ProjectLikeServiceImpl extends ServiceImpl<ProjectLikeMapper, Proje
                 .eq(ProjectLike::getUserId, userId)
                 .eq(ProjectLike::getIsDeleted, 0));
     }
+
+    @Override
+    public Long selectCountByProjectId(Long projectId) {
+        return this.baseMapper.selectCount(new LambdaQueryWrapper<ProjectLike>()
+                .eq(ProjectLike::getProjectId, projectId)
+                .eq(ProjectLike::getIsDeleted, 0));
+    }
 }

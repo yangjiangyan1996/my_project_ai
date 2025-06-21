@@ -38,4 +38,11 @@ public class ProjectFavoriteServiceImpl extends ServiceImpl<ProjectFavoriteMappe
                 .eq(ProjectFavorite::getUserId, userId)
                 .eq(ProjectFavorite::getIsDeleted, 0));
     }
+
+    @Override
+    public Long selectCountByProjectId(Long projectId) {
+        return this.baseMapper.selectCount(new LambdaQueryWrapper<ProjectFavorite>()
+                .eq(ProjectFavorite::getProjectId, projectId)
+                .eq(ProjectFavorite::getIsDeleted, 0));
+    }
 }

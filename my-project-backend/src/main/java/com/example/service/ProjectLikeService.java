@@ -13,4 +13,6 @@ public interface ProjectLikeService extends IService<ProjectLike> {
     Boolean likeProject(Long projectId, Long userId, Boolean liked);
 
     Boolean selectByProjectIdAndUserId(Long projectId, Long userId);
+
+    Long selectCountByProjectId(Long projectId);
 }

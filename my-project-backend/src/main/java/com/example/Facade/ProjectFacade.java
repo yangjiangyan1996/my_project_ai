@@ -45,6 +45,8 @@ public class ProjectFacade {
         Boolean myFavorite = projectFavoriteService.selectByProjectIdAndUserId(projectId, userId);
         r.setMyFavorite(myFavorite);
 
+        r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
+        r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
         return r;
     }
 

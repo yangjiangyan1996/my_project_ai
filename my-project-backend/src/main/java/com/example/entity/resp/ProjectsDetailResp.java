@@ -30,6 +30,6 @@ public class ProjectsDetailResp {
     private String creatorName;
     private Boolean myLike;
     private Boolean myFavorite;
-    private Integer likeCount;
-    private Integer favoriteCount;
+    private Long likeCount;
+    private Long favoriteCount;
 }

@@ -23,17 +23,13 @@
   
             <div class="actions">
               <el-button :type="liked ? 'danger' : 'default'" size="small" @click="handleLike">
-                <template #default>
-                  <i :class="liked ? 'el-icon-star-on' : 'el-icon-star-off'" />
-                  <span style="margin-left: 4px">{{ liked ? '已点赞' : '点赞' }}</span>
-                </template>
+                <i :class="liked ? 'el-icon-star-on' : 'el-icon-star-off'" />
+                <span style="margin-left: 4px">{{ liked ? '已点赞' : '点赞' }}（{{ likeCount }}）</span>
               </el-button>
   
               <el-button :type="collected ? 'primary' : 'default'" size="small" @click="handleFavorite">
-                <template #default>
-                  <i :class="collected ? 'el-icon-folder-opened' : 'el-icon-folder-add'" />
-                  <span style="margin-left: 4px">{{ collected ? '已收藏' : '收藏' }}</span>
-                </template>
+                <i :class="collected ? 'el-icon-folder-opened' : 'el-icon-folder-add'" />
+                <span style="margin-left: 4px">{{ collected ? '已收藏' : '收藏' }}（{{ favoriteCount }}）</span>
               </el-button>
             </div>
           </div>
@@ -64,8 +60,9 @@
   const parsedTags = ref([]);
   const liked = ref(false);
   const collected = ref(false);
+  const likeCount = ref(0);
+  const favoriteCount = ref(0);
   
-  // 页面加载，获取详情
   async function fetchDetail() {
     const id = route.params.id;
     try {
@@ -79,18 +76,20 @@
       parsedTags.value = res.tags ? res.tags.split(',') : [];
       liked.value = !!res.myLike;
       collected.value = !!res.myFavorite;
+      likeCount.value = res.likeCount || 0;
+      favoriteCount.value = res.favoriteCount || 0;
     } catch (err) {
       ElMessage.error('加载详情失败');
     }
   }
   
-  // 点赞切换
   async function handleLike() {
     const targetState = !liked.value;
     try {
       const result = await get(`/api/auth/project/likeProject?projectId=${route.params.id}&liked=${targetState}`);
       if (result) {
         liked.value = targetState;
+        likeCount.value += targetState ? 1 : -1;
         ElMessage.success(targetState ? '点赞成功' : '已取消点赞');
       } else {
         ElMessage.error('操作失败');
@@ -100,13 +99,13 @@
     }
   }
   
-  // 收藏切换
   async function handleFavorite() {
     const targetState = !collected.value;
     try {
       const result = await get(`/api/auth/project/favoriteProject?projectId=${route.params.id}&liked=${targetState}`);
       if (result) {
         collected.value = targetState;
+        favoriteCount.value += targetState ? 1 : -1;
         ElMessage.success(targetState ? '收藏成功' : '已取消收藏');
       } else {
         ElMessage.error('操作失败');
@@ -212,7 +211,6 @@
     word-break: break-word;
   }
   
-  /* 响应式支持 */
   @media screen and (max-width: 768px) {
     .header {
       flex-direction: column;
