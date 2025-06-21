@@ -15,8 +15,10 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * 用于处理Jwt令牌的工具类
@@ -48,10 +50,11 @@ public class JwtUtils {
 
     /**
      * 让指定Jwt令牌失效
+     *
      * @param headerToken 请求头中携带的令牌
      * @return 是否操作成功
      */
-    public boolean invalidateJwt(String headerToken){
+    public boolean invalidateJwt(String headerToken) {
         String token = this.convertToken(headerToken);
         Algorithm algorithm = Algorithm.HMAC256(key);
         JWTVerifier jwtVerifier = JWT.require(algorithm).build();
@@ -65,6 +68,7 @@ public class JwtUtils {
 
     /**
      * 根据配置快速计算过期时间
+     *
      * @return 过期时间
      */
     public Date expireTime() {
@@ -76,24 +80,27 @@ public class JwtUtils {
 
     public UserInfo toUserInfo(DecodedJWT jwt) {
         Long id = jwt.getClaim("id").asLong();
+        String nikeName = jwt.getClaim("nikeName").asString();
         String name = jwt.getClaim("name").asString();
         String role = jwt.getClaim("role").asString();
-        return new UserInfo(id, name, role);
+        return new UserInfo(id, name, nikeName, role);
     }
 
     /**
      * 根据UserDetails生成对应的Jwt令牌
+     *
      * @param user 用户信息
      * @return 令牌
      */
-    public String createJwt(UserDetails user, String username, int userId, String role) {
-        if(this.frequencyCheck(userId)) {
+    public String createJwt(UserDetails user, String username, String nikeName, int userId, String role) {
+        if (this.frequencyCheck(userId)) {
             Algorithm algorithm = Algorithm.HMAC256(key);
             Date expire = this.expireTime();
             return JWT.create()
                     .withJWTId(UUID.randomUUID().toString())
                     .withClaim("id", userId)
                     .withClaim("name", username)
+                    .withClaim("nikeName", nikeName)
                     .withClaim("role", role)
                     .withClaim("authorities", user.getAuthorities()
                             .stream()
@@ -108,17 +115,18 @@ public class JwtUtils {
 
     /**
      * 解析Jwt令牌
+     *
      * @param headerToken 请求头中携带的令牌
      * @return DecodedJWT
      */
-    public DecodedJWT resolveJwt(String headerToken){
+    public DecodedJWT resolveJwt(String headerToken) {
         String token = this.convertToken(headerToken);
-        if(token == null) return null;
+        if (token == null) return null;
         Algorithm algorithm = Algorithm.HMAC256(key);
         JWTVerifier jwtVerifier = JWT.require(algorithm).build();
         try {
             DecodedJWT verify = jwtVerifier.verify(token);
-            if(this.isInvalidToken(verify.getId())) return null;
+            if (this.isInvalidToken(verify.getId())) return null;
             Map<String, Claim> claims = verify.getClaims();
             return new Date().after(claims.get("exp").asDate()) ? null : verify;
         } catch (JWTVerificationException e) {
@@ -128,6 +136,7 @@ public class JwtUtils {
 
     /**
      * 将jwt对象中的内容封装为UserDetails
+     *
      * @param jwt 已解析的Jwt对象
      * @return UserDetails
      */
@@ -142,6 +151,7 @@ public class JwtUtils {
 
     /**
      * 将jwt对象中的用户ID提取出来
+     *
      * @param jwt 已解析的Jwt对象
      * @return 用户ID
      */
@@ -153,33 +163,36 @@ public class JwtUtils {
     /**
      * 频率检测，防止用户高频申请Jwt令牌，并且采用阶段封禁机制
      * 如果已经提示无法登录的情况下用户还在刷，那么就封禁更长时间
+     *
      * @param userId 用户ID
      * @return 是否通过频率检测
      */
-    private boolean frequencyCheck(int userId){
+    private boolean frequencyCheck(int userId) {
         String key = Const.JWT_FREQUENCY + userId;
         return utils.limitOnceUpgradeCheck(key, limit_frequency, limit_base, limit_upgrade);
     }
 
     /**
      * 校验并转换请求头中的Token令牌
+     *
      * @param headerToken 请求头中的Token
      * @return 转换后的令牌
      */
-    private String convertToken(String headerToken){
-        if(headerToken == null || !headerToken.startsWith("Bearer "))
+    private String convertToken(String headerToken) {
+        if (headerToken == null || !headerToken.startsWith("Bearer "))
             return null;
         return headerToken.substring(7);
     }
 
     /**
      * 将Token列入Redis黑名单中
+     *
      * @param uuid 令牌ID
      * @param time 过期时间
      * @return 是否操作成功
      */
-    private boolean deleteToken(String uuid, Date time){
-        if(this.isInvalidToken(uuid))
+    private boolean deleteToken(String uuid, Date time) {
+        if (this.isInvalidToken(uuid))
             return false;
         Date now = new Date();
         long expire = Math.max(time.getTime() - now.getTime(), 0);
@@ -190,10 +203,11 @@ public class JwtUtils {
 
     /**
      * 验证Token是否被列入Redis黑名单
+     *
      * @param uuid 令牌ID
      * @return 是否操作成功
      */
-    private boolean isInvalidToken(String uuid){
+    private boolean isInvalidToken(String uuid) {
         //todo yang redis部署后open
         return false;
         //return Boolean.TRUE.equals(template.hasKey(Const.JWT_BLACK_LIST + uuid));

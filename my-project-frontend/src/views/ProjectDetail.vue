@@ -43,6 +43,45 @@
   
         <el-divider>风险提示</el-divider>
         <el-alert :title="detail.riskWarning" type="warning" show-icon :closable="false" />
+
+        <el-divider>评论区</el-divider>
+      <div class="comment-box">
+        <v-md-editor v-model="newComment" height="200px" />
+        <el-button class="comment-submit" type="primary" @click="submitComment">发表评论</el-button>
+
+        <div class="comment-list">
+          <div v-for="comment in comments" :key="comment.id" class="comment-item">
+            <div class="comment-header">
+              <strong>{{ comment.username }}</strong>
+              <span v-if="comment.deleted" class="deleted">该评论已被删除</span>
+              <div v-else v-html="renderMarkdown(comment.content)" class="md-content" />
+            </div>
+            <div class="comment-actions">
+              <el-button text @click="replyTo(comment.id, comment.username)">回复</el-button>
+              <el-button text @click="likeComment(comment.id)">👍 {{ comment.likes }}</el-button>
+              <el-button text v-if="comment.isMine" @click="deleteComment(comment.id)">删除</el-button>
+              <el-button text v-if="comment.replies?.length" @click="toggleExpand(comment.id)">
+                {{ expandedComments[comment.id] ? '收起回复' : '展开回复 (' + comment.replies.length + ')' }}
+              </el-button>
+            </div>
+            <div v-if="expandedComments[comment.id]" class="replies">
+              <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
+                <strong>{{ reply.username }}</strong>
+                <span v-if="reply.deleted" class="deleted">该评论已被删除</span>
+                <span v-else>
+                  <template v-if="reply.replyToName">回复 {{ reply.replyToName }}：</template>
+                  <span v-html="renderMarkdown(reply.content)" class="md-content" />
+                </span>
+                <div class="comment-actions">
+                  <el-button text @click="replyTo(reply.id, reply.username)">回复</el-button>
+                  <el-button text @click="likeComment(reply.id)">👍 {{ reply.likes }}</el-button>
+                  <el-button text v-if="reply.isMine" @click="deleteComment(reply.id)">删除</el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       </el-card>
     </div>
   </template>
@@ -50,8 +89,19 @@
   <script setup>
   import { ref, onMounted } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
-  import { get, logout } from '@/net';
+  import { get, logout,post } from '@/net';
   import { ElMessage } from 'element-plus';
+
+    import VMdEditor from '@kangc/v-md-editor';
+    import createEmojiPlugin from '@kangc/v-md-editor/lib/plugins/emoji/index';
+    import githubTheme from '@kangc/v-md-editor/lib/theme/github.js';
+    import '@kangc/v-md-editor/lib/style/base-editor.css';
+    import '@kangc/v-md-editor/lib/theme/style/github.css';
+    import '@kangc/v-md-editor/lib/plugins/emoji/emoji.css';
+    import markdownIt from 'markdown-it';
+    
+    VMdEditor.use(githubTheme);
+    VMdEditor.use(createEmojiPlugin());
   
   const route = useRoute();
   const router = useRouter();
@@ -62,7 +112,88 @@
   const collected = ref(false);
   const likeCount = ref(0);
   const favoriteCount = ref(0);
+
+
+    const comments = ref([]);
+    const newComment = ref("");
+    const replyToCommentId = ref(null);
+    const replyToUsername = ref("");
+    const expandedComments = ref({});
+    const mdParser = markdownIt();
+    const projectId = route.params.id;
+
+    onMounted(() => {
+        fetchDetail();
+        fetchComments();
+    });
+    
+    async function likeComment(commentId) {
+        try {
+            await post('/api/auth/project/commentLike', { commentId });
+            fetchComments();
+        } catch (err) {
+            ElMessage.error('点赞失败');
+        }
+    }
+
+    async function deleteComment(commentId) {
+        const id = route.params.id;
+        try {
+            const res = await get(`/api/auth/project/commentDeleted?projectId=${id}&commentId=${commentId}`);
+            if(res){
+                ElMessage.success('删除成功');
+            }
+            fetchComments();
+        } catch (err) {
+            ElMessage.error('删除失败');
+        }
+    }
+
+    function toggleExpand(commentId) {
+        expandedComments.value[commentId] = !expandedComments.value[commentId];
+    }
+
+    function renderMarkdown(text) {
+        return mdParser.render(text || '');
+    }
+
+
+    function replyTo(id, username) {
+        replyToCommentId.value = id;
+        replyToUsername.value = username;
+        newComment.value = `@${username} `;
+        console.log("回复评论",id,username ,newComment.value )
+    }
+
+    async function submitComment() {
+        if (!newComment.value.trim()) return;
+        try {
+            await post('/api/auth/project/comment', {
+            projectId,
+            content: newComment.value,
+            replyTo: replyToCommentId.value
+            });
+            newComment.value = "";
+            replyToCommentId.value = null;
+            replyToUsername.value = "";
+            fetchComments();
+        } catch (err) {
+            ElMessage.error('评论失败');
+        }
+    }
+
+    //加载评论
+    async function fetchComments() {
+        const id = route.params.id;
+        try {
+            const res = await get(`/api/auth/project/commentShow?projectId=${id}`);
+            comments.value = res || [];
+        } catch (err) {
+            ElMessage.error('加载评论失败');
+        }
+    }
   
+    //项目详情
   async function fetchDetail() {
     const id = route.params.id;
     try {
@@ -119,7 +250,6 @@
     logout(() => router.push("/"));
   }
   
-  onMounted(fetchDetail);
   </script>
   
   <style scoped>
@@ -237,5 +367,45 @@
       justify-content: center;
     }
   }
+
+
+.comment-box {
+  margin-top: 20px;
+}
+.comment-submit {
+  margin-top: 10px;
+}
+.comment-list {
+  margin-top: 20px;
+}
+.comment-item {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 10px;
+}
+.comment-header {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.comment-actions {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: #999;
+}
+.reply-item {
+  margin-left: 20px;
+  margin-top: 5px;
+  font-size: 13px;
+}
+.deleted {
+  color: #bbb;
+  font-style: italic;
+  margin-left: 10px;
+}
+.md-content {
+  line-height: 1.6;
+  word-break: break-word;
+}
   </style>
   

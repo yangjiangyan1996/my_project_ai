@@ -12,5 +12,6 @@ import java.io.Serializable;
 public class UserInfo implements Serializable {
     private Long id;
     private String username;
+    private String nikeName;
     private String role;
 }

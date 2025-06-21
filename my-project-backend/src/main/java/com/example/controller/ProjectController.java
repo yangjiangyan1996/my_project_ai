@@ -6,6 +6,8 @@ import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.dto.Projects;
 import com.example.entity.req.ProjectListReq;
+import com.example.entity.req.UserCommentProjectReq;
+import com.example.entity.resp.ProjectCommentResp;
 import com.example.entity.resp.ProjectsDetailResp;
 import com.example.entity.resp.ProjectsResp;
 import com.example.enums.ProjectEnum;
@@ -29,9 +31,35 @@ public class ProjectController {
     private ProjectService projectService;
 
 
+    @GetMapping("/commentDeleted")
+    public RespBean<Boolean> commentDeleted(@RequestParam("projectId") Long projectId,
+                                            @RequestParam("commentId") Long commentId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.commentDeleted(projectId, commentId, user.getId());
+            return RespBean.success(result);
+        } catch (Exception e) {
+            return RespBean.failure(200, e.getMessage());
+        }
+    }
+
+    @GetMapping("/commentShow")
+    public RespBean<List<ProjectCommentResp>> commentShow(@RequestParam("projectId") Long projectId) {
+        UserInfo user = UserUtil.getCurrentUser();
+        List<ProjectCommentResp> result = projectFacade.commentShow(projectId, user.getId());
+        return RespBean.success(result);
+    }
+
+    @PostMapping("/comment")
+    public RespBean<Boolean> comment(@RequestBody UserCommentProjectReq req) {
+        UserInfo user = UserUtil.getCurrentUser();
+        Boolean result = projectFacade.comment(req, user.getId(), user.getNikeName());
+        return RespBean.success(result);
+    }
+
     @GetMapping("/favoriteProject")
     public RespBean<Boolean> favoriteProject(@RequestParam("projectId") Long projectId,
-                                         @RequestParam("liked") Boolean liked) {
+                                             @RequestParam("liked") Boolean liked) {
         UserInfo user = UserUtil.getCurrentUser();
         Boolean result = projectFacade.favoriteProject(projectId, user.getId(), liked);
         return RespBean.success(result);
