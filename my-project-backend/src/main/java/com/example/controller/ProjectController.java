@@ -31,6 +31,18 @@ public class ProjectController {
     private ProjectService projectService;
 
 
+    @GetMapping("/commentLike")
+    public RespBean<Boolean> commentLike(@RequestParam("projectId") Long projectId,
+                                         @RequestParam("commentId") Long commentId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.commentLike(commentId,projectId, user.getId());
+            return RespBean.success(result);
+        } catch (Exception e) {
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
     @GetMapping("/commentDeleted")
     public RespBean<Boolean> commentDeleted(@RequestParam("projectId") Long projectId,
                                             @RequestParam("commentId") Long commentId) {
@@ -39,7 +51,7 @@ public class ProjectController {
             Boolean result = projectFacade.commentDeleted(projectId, commentId, user.getId());
             return RespBean.success(result);
         } catch (Exception e) {
-            return RespBean.failure(200, e.getMessage());
+            return RespBean.failure(999, e.getMessage());
         }
     }
 

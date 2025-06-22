@@ -111,6 +111,8 @@ function internalGet(url, headers, success = () => {}, failure = defaultFailure,
             failure('登录状态已过期，请重新登录！')
             deleteAccessToken(true)
             throw new Error('需要重新认证')
+        }else if(responseData.code === 999) {
+            failure(responseData.message)
         } else {
             failure(responseData.message, responseData.code, url)
             throw new Error(responseData.message)

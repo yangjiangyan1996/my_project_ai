@@ -12,7 +12,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
  * @Email 1776080295@qq.com
  * @Date 2025/6/18 22:54
  */
-public interface ProjectService extends IService<Projects>, UserDetailsService {
+public interface ProjectService extends IService<Projects> {
     Page getHotFuyeProjects(Page<Projects> pageable, ProjectListReq req);
 
     //判断项目是否启用

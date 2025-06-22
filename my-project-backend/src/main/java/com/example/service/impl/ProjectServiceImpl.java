@@ -30,11 +30,6 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
     private ProjectsMapper projectMapper;
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return null;
-    }
-
-    @Override
     public Page<Projects> getHotFuyeProjects(Page<Projects> pageable, ProjectListReq req) {
         return projectMapper.selectPage(
                 pageable,

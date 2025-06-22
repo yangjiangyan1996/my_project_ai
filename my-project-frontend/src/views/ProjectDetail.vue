@@ -128,8 +128,12 @@
     });
     
     async function likeComment(commentId) {
+        const id = route.params.id;
         try {
-            await post('/api/auth/project/commentLike', { commentId });
+            const res = await get(`/api/auth/project/commentLike?projectId=${id}&commentId=${commentId}`);
+            if(res){
+                ElMessage.success('点赞成功');
+            }
             fetchComments();
         } catch (err) {
             ElMessage.error('点赞失败');

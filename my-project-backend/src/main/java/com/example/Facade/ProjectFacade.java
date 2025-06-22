@@ -2,6 +2,7 @@ package com.example.Facade;
 
 import com.example.entity.dto.Account;
 import com.example.entity.dto.ProjectComment;
+import com.example.entity.dto.ProjectCommentLike;
 import com.example.entity.dto.ProjectsDetail;
 import com.example.entity.req.UserCommentProjectReq;
 import com.example.entity.resp.ProjectCommentResp;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @Author YangJian
@@ -27,6 +29,8 @@ import java.util.Map;
 @Service
 public class ProjectFacade {
 
+    @Resource
+    ProjectCommentLikeService projectCommentLikeService;
     @Resource
     ProjectCommentService projectCommentService;
     @Resource
@@ -76,13 +80,16 @@ public class ProjectFacade {
 
     public List<ProjectCommentResp> commentShow(Long projectId, Long currentUserId) {
         List<ProjectComment> all = projectCommentService.selectByProjectId(projectId);
+        List<ProjectCommentLike> likes = projectCommentLikeService.selectByProjectId(projectId);
 
         Map<Long, ProjectCommentResp> idMap = new HashMap<>();
         List<ProjectCommentResp> roots = new ArrayList<>();
 
         // 1. 映射全部评论
+        Map<Long, List<ProjectCommentLike>> commentId2LikeListMap = likes.stream().collect(Collectors.groupingBy(ProjectCommentLike::getCommentId));
+
         for (ProjectComment comment : all) {
-            ProjectCommentResp vo = convertToVO(comment, currentUserId);
+            ProjectCommentResp vo = convertToVO(comment, currentUserId,commentId2LikeListMap);
             idMap.put(vo.getId(), vo);
         }
 
@@ -107,7 +114,7 @@ public class ProjectFacade {
         return roots;
     }
 
-    private ProjectCommentResp convertToVO(ProjectComment comment, Long currentUserId) {
+    private ProjectCommentResp convertToVO(ProjectComment comment, Long currentUserId,Map<Long, List<ProjectCommentLike>> commentId2LikeListMap) {
         ProjectCommentResp vo = new ProjectCommentResp();
         vo.setId(comment.getId());
         vo.setProjectId(comment.getProjectId());
@@ -115,7 +122,7 @@ public class ProjectFacade {
         vo.setCreatedAt(comment.getCreatedAt());
         vo.setReplyTo(comment.getReplyTo());
         vo.setDeleted(comment.getIsDeleted() != 0);
-        vo.setLikes(comment.getLikes());
+        vo.setLikes(commentId2LikeListMap.containsKey(comment.getId()) ?commentId2LikeListMap.get(comment.getId()).size():0);
         vo.setIsMine(comment.getUserId().equals(currentUserId));
 
         // 获取用户昵称头像
@@ -139,5 +146,13 @@ public class ProjectFacade {
         }
         //删除评论
         return projectCommentService.updateStatus(commentId, userId, ProjectEnum.ProjectCommentStatusEnum.hide.getCode()) == 1;
+    }
+
+    public Boolean commentLike(Long commentId,Long projectId, Long userId) {
+        ProjectCommentLike l = projectCommentLikeService.selectByCommentIdAndUserId(commentId,projectId, userId);
+        if (l != null) {
+            throw  new ValidationException("已点赞，无需重复操作！");
+        }
+        return projectCommentLikeService.insert(commentId, projectId,userId);
     }
 }
