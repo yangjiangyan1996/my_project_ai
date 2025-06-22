@@ -75,7 +75,7 @@ public class ProjectFacade {
     }
 
     public Boolean comment(UserCommentProjectReq req, Long userId, String name) {
-        return projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyToId());
+        return projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyTo());
     }
 
     public List<ProjectCommentResp> commentShow(Long projectId, Long currentUserId) {

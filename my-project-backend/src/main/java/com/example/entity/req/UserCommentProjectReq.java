@@ -12,5 +12,5 @@ import lombok.Data;
 public class UserCommentProjectReq {
     private String content;
     private Long projectId;
-    private Long replyToId;
+    private Long replyTo;
 }
