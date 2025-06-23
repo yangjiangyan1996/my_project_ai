@@ -43,16 +43,26 @@
   
         <el-divider>风险提示</el-divider>
         <el-alert :title="detail.riskWarning" type="warning" show-icon :closable="false" />
-
+  
         <el-divider>评论区</el-divider>
-      <div class="comment-box">
-        <v-md-editor v-model="newComment" height="200px" />
-        <el-button class="comment-submit" type="primary" @click="submitComment">发表评论</el-button>
-
+        
+        <!-- 主评论输入框 -->
+        <div class="comment-box">
+          <v-md-editor v-model="newComment" height="200px" :placeholder="replyToCommentId ? `回复 ${replyToUsername}...` : '写下你的评论...'" />
+          <div class="comment-actions">
+            <el-button type="primary" @click="submitComment">发表评论</el-button>
+            <el-button v-if="replyToCommentId" @click="cancelReply">取消回复</el-button>
+          </div>
+        </div>
+  
         <div class="comment-list">
           <div v-for="comment in comments" :key="comment.id" class="comment-item">
             <div class="comment-header">
-              <strong>{{ comment.username }}</strong>
+              <div class="comment-user">
+                <el-avatar :src="comment.avatar" size="small" class="user-avatar">{{ comment.username.charAt(0) }}</el-avatar>
+                <strong class="username">{{ comment.username }}</strong>
+                <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
+              </div>
               <span v-if="comment.deleted" class="deleted">该评论已被删除</span>
               <div v-else v-html="renderMarkdown(comment.content)" class="md-content" />
             </div>
@@ -61,12 +71,26 @@
               <el-button text @click="likeComment(comment.id)">👍 {{ comment.likes }}</el-button>
               <el-button text v-if="comment.isMine" @click="deleteComment(comment.id)">删除</el-button>
               <el-button text v-if="comment.replies?.length" @click="toggleExpand(comment.id)">
-                {{ expandedComments[comment.id] ? '收起回复' : '展开回复 (' + comment.replies.length + ')' }}
+                {{ expandedComments[comment.id] ? '收起回复' : `展开回复 (${comment.replies.length})` }}
               </el-button>
             </div>
+  
+            <!-- 回复评论输入框 -->
+            <div v-if="activeReplyBox === comment.id" class="reply-box">
+              <v-md-editor v-model="replyContent" height="150px" :placeholder="`回复 ${replyToUsername}...`" />
+              <div class="comment-actions">
+                <el-button type="primary" size="small" @click="submitReply(comment.id)">回复</el-button>
+                <el-button size="small" @click="cancelReply">取消</el-button>
+              </div>
+            </div>
+  
             <div v-if="expandedComments[comment.id]" class="replies">
               <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-                <strong>{{ reply.username }}</strong>
+                <div class="comment-user">
+                  <el-avatar :src="reply.avatar" size="small" class="user-avatar">{{ reply.username.charAt(0) }}</el-avatar>
+                  <strong class="username">{{ reply.username }}</strong>
+                  <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
+                </div>
                 <span v-if="reply.deleted" class="deleted">该评论已被删除</span>
                 <span v-else>
                   <template v-if="reply.replyToName">回复 {{ reply.replyToName }}：</template>
@@ -77,11 +101,19 @@
                   <el-button text @click="likeComment(reply.id)">👍 {{ reply.likes }}</el-button>
                   <el-button text v-if="reply.isMine" @click="deleteComment(reply.id)">删除</el-button>
                 </div>
+  
+                <!-- 嵌套回复输入框 -->
+                <div v-if="activeReplyBox === reply.id" class="reply-box">
+                  <v-md-editor v-model="replyContent" height="150px" :placeholder="`回复 ${replyToUsername}...`" />
+                  <div class="comment-actions">
+                    <el-button type="primary" size="small" @click="submitReply(reply.id)">回复</el-button>
+                    <el-button size="small" @click="cancelReply">取消</el-button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
       </el-card>
     </div>
   </template>
@@ -89,19 +121,19 @@
   <script setup>
   import { ref, onMounted } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
-  import { get, logout,post } from '@/net';
+  import { get, logout, post } from '@/net';
   import { ElMessage } from 'element-plus';
-
-    import VMdEditor from '@kangc/v-md-editor';
-    import createEmojiPlugin from '@kangc/v-md-editor/lib/plugins/emoji/index';
-    import githubTheme from '@kangc/v-md-editor/lib/theme/github.js';
-    import '@kangc/v-md-editor/lib/style/base-editor.css';
-    import '@kangc/v-md-editor/lib/theme/style/github.css';
-    import '@kangc/v-md-editor/lib/plugins/emoji/emoji.css';
-    import markdownIt from 'markdown-it';
-    
-    VMdEditor.use(githubTheme);
-    VMdEditor.use(createEmojiPlugin());
+  import VMdEditor from '@kangc/v-md-editor';
+  import createEmojiPlugin from '@kangc/v-md-editor/lib/plugins/emoji/index';
+  import githubTheme from '@kangc/v-md-editor/lib/theme/github.js';
+  import '@kangc/v-md-editor/lib/style/base-editor.css';
+  import '@kangc/v-md-editor/lib/theme/style/github.css';
+  import '@kangc/v-md-editor/lib/plugins/emoji/emoji.css';
+  import markdownIt from 'markdown-it';
+  import emoji from 'markdown-it-emoji';
+  
+  VMdEditor.use(githubTheme);
+  VMdEditor.use(createEmojiPlugin());
   
   const route = useRoute();
   const router = useRouter();
@@ -112,144 +144,167 @@
   const collected = ref(false);
   const likeCount = ref(0);
   const favoriteCount = ref(0);
-
-
-    const comments = ref([]);
-    const newComment = ref("");
-    const replyToCommentId = ref(null);
-    const firstLevelCommentId = ref(null);
-
-    const replyToUsername = ref("");
-    const expandedComments = ref({});
-    const mdParser = markdownIt();
-    const projectId = route.params.id;
-
-    onMounted(() => {
-        fetchDetail();
+  
+  const comments = ref([]);
+  const newComment = ref("");
+  const replyContent = ref("");
+  const replyToCommentId = ref(null);
+  const replyToUsername = ref("");
+  const activeReplyBox = ref(null);
+  const expandedComments = ref({});
+  
+  // 配置 markdown-it 支持 emoji
+  const mdParser = markdownIt().use(emoji);
+  const projectId = route.params.id;
+  
+  onMounted(() => {
+    fetchDetail();
+    fetchComments();
+  });
+  
+  // 格式化时间
+  function formatTime(timeString) {
+    if (!timeString) return '';
+    const date = new Date(timeString);
+    return date.toLocaleString();
+  }
+  
+  async function likeComment(commentId) {
+    try {
+      const res = await get(`/api/auth/project/commentLike?projectId=${projectId}&commentId=${commentId}`);
+      if (res) {
+        ElMessage.success('点赞成功');
         fetchComments();
-    });
-    
-    async function likeComment(commentId) {
-        const id = route.params.id;
-        try {
-            const res = await get(`/api/auth/project/commentLike?projectId=${id}&commentId=${commentId}`);
-            if(res){
-                ElMessage.success('点赞成功');
-            }
-            fetchComments();
-        } catch (err) {
-            ElMessage.error('点赞失败');
-        }
+      }
+    } catch (err) {
+      ElMessage.error('点赞失败');
     }
-
-    async function deleteComment(commentId) {
-        const id = route.params.id;
-        try {
-            const res = await get(`/api/auth/project/commentDeleted?projectId=${id}&commentId=${commentId}`);
-            if(res){
-                ElMessage.success('删除成功');
-            }
-            fetchComments();
-        } catch (err) {
-            ElMessage.error('删除失败');
-        }
+  }
+  
+  async function deleteComment(commentId) {
+    try {
+      const res = await get(`/api/auth/project/commentDeleted?projectId=${projectId}&commentId=${commentId}`);
+      if (res) {
+        ElMessage.success('删除成功');
+        fetchComments();
+      }
+    } catch (err) {
+      ElMessage.error('删除失败');
     }
-
-    function toggleExpand(commentId) {
-        expandedComments.value[commentId] = !expandedComments.value[commentId];
-    }
-
-    function renderMarkdown(text) {
-        return mdParser.render(text || '');
-    }
-
-    function findFirstLevelCommentId(commentId) {
-        // 首先在顶级评论中查找
-        const topLevelComment = comments.value.find(c => c.id === commentId);
-        console.log("topLevelComment",topLevelComment)
-        if (topLevelComment) {
-            return  topLevelComment.id ;
-        }
-        
-        // 如果不在顶级评论中，则在回复中查找
-        for (const comment of comments.value) {
-            if (comment.replies) {
-                const foundReply = findCommentInReplies(comment.replies, commentId);
-                if (foundReply) {
-                    // 如果找到的回复是回复顶级评论，则返回顶级评论ID
-                    if (foundReply.replyTo === comment.id) {
-                        return comment.id;
-                    }
-                    // 否则继续向上查找
-                    return findFirstLevelCommentId(foundReply.replyTo);
-                }
-            }
-        }
-        
-        return -1; // 如果没有找到，返回-1
-    }
-
-    // 辅助函数：在回复树中查找评论
-    function findCommentInReplies(replies, commentId) {
-        for (const reply of replies) {
-            if (reply.id === commentId) {
-                return reply;
-            }
-            if (reply.replies) {
-                const found = findCommentInReplies(reply.replies, commentId);
-                if (found) {
-                    return found;
-                }
-            }
-        }
-        return null;
-    }
-
-    function replyTo(id, username) {
-        var topCommentId = findFirstLevelCommentId(id);
-        console.log("顶层ID", topCommentId)
-        replyToCommentId.value = id;
-        replyToUsername.value = username;
-        firstLevelCommentId.value = topCommentId;
-        newComment.value = `@${username} `;
-        console.log("回复评论",id,username ,newComment.value )
-    }
-    
-    async function submitComment() {
-        if (!newComment.value.trim()) return;
-        try {
-            await post('/api/auth/project/comment', {
-            projectId,
-            content: newComment.value,
-            replyTo: replyToCommentId.value,
-            firstLevelCommonId: firstLevelCommentId.value ?? replyToCommentId.value
-            });
-            newComment.value = "";
-            replyToCommentId.value = null;
-            replyToUsername.value = "";
-            firstLevelCommentId.value = null;
-            fetchComments();
-        } catch (err) {
-            ElMessage.error('评论失败');
-        }
-    }
-
-    //加载评论
-    async function fetchComments() {
-        const id = route.params.id;
-        try {
-            const res = await get(`/api/auth/project/commentShow?projectId=${id}`);
-            comments.value = res || [];
-        } catch (err) {
-            ElMessage.error('加载评论失败');
-        }
+  }
+  
+  function toggleExpand(commentId) {
+    expandedComments.value[commentId] = !expandedComments.value[commentId];
+  }
+  
+  function renderMarkdown(text) {
+    return mdParser.render(text || '');
+  }
+  
+  function replyTo(commentId, username) {
+    replyToCommentId.value = commentId;
+    replyToUsername.value = username;
+    activeReplyBox.value = commentId;
+    replyContent.value = `@${username} `;
+  }
+  
+  function cancelReply() {
+    replyToCommentId.value = null;
+    replyToUsername.value = "";
+    activeReplyBox.value = null;
+    replyContent.value = "";
+  }
+  
+  async function submitComment() {
+    if (!newComment.value.trim()) {
+      ElMessage.warning('评论内容不能为空');
+      return;
     }
   
-    //项目详情
-  async function fetchDetail() {
-    const id = route.params.id;
     try {
-      const res = await get(`/api/auth/project/detail?projectId=${id}`);
+      await post('/api/auth/project/comment', {
+        projectId,
+        content: newComment.value,
+        replyTo: replyToCommentId.value,
+        firstLevelCommonId: replyToCommentId.value ? findFirstLevelCommentId(replyToCommentId.value) : null
+      });
+      newComment.value = "";
+      cancelReply();
+      fetchComments();
+      ElMessage.success('评论成功');
+    } catch (err) {
+      ElMessage.error('评论失败');
+    }
+  }
+  
+  async function submitReply(commentId) {
+    if (!replyContent.value.trim()) {
+      ElMessage.warning('回复内容不能为空');
+      return;
+    }
+  
+    try {
+      await post('/api/auth/project/comment', {
+        projectId,
+        content: replyContent.value,
+        replyTo: commentId,
+        firstLevelCommonId: findFirstLevelCommentId(commentId)
+      });
+      replyContent.value = "";
+      cancelReply();
+      fetchComments();
+      ElMessage.success('回复成功');
+    } catch (err) {
+      ElMessage.error('回复失败');
+    }
+  }
+  
+  function findFirstLevelCommentId(commentId) {
+    const comment = findCommentById(commentId);
+    if (!comment) return null;
+    return comment.replyTo === -1 ? comment.id : comment.replyTo;
+  }
+  
+  function findCommentById(commentId) {
+    for (const comment of comments.value) {
+      if (comment.id === commentId) return comment;
+      if (comment.replies) {
+        const found = findCommentInReplies(comment.replies, commentId);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  
+  function findCommentInReplies(replies, commentId) {
+    for (const reply of replies) {
+      if (reply.id === commentId) return reply;
+      if (reply.replies) {
+        const found = findCommentInReplies(reply.replies, commentId);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  
+  async function fetchComments() {
+    try {
+      const res = await get(`/api/auth/project/commentShow?projectId=${projectId}`);
+      comments.value = res || [];
+      // 默认展开有回复的评论
+      comments.value.forEach(comment => {
+        if (comment.replies?.length) {
+          expandedComments.value[comment.id] = true;
+        }
+      });
+    } catch (err) {
+      ElMessage.error('加载评论失败');
+    }
+  }
+  
+  async function fetchDetail() {
+    try {
+      const res = await get(`/api/auth/project/detail?projectId=${projectId}`);
       if (!res) {
         ElMessage.error('项目不存在或已下架');
         router.push('/');
@@ -269,7 +324,7 @@
   async function handleLike() {
     const targetState = !liked.value;
     try {
-      const result = await get(`/api/auth/project/likeProject?projectId=${route.params.id}&liked=${targetState}`);
+      const result = await get(`/api/auth/project/likeProject?projectId=${projectId}&liked=${targetState}`);
       if (result) {
         liked.value = targetState;
         likeCount.value += targetState ? 1 : -1;
@@ -285,7 +340,7 @@
   async function handleFavorite() {
     const targetState = !collected.value;
     try {
-      const result = await get(`/api/auth/project/favoriteProject?projectId=${route.params.id}&liked=${targetState}`);
+      const result = await get(`/api/auth/project/favoriteProject?projectId=${projectId}&liked=${targetState}`);
       if (result) {
         collected.value = targetState;
         favoriteCount.value += targetState ? 1 : -1;
@@ -301,7 +356,6 @@
   function userLogout() {
     logout(() => router.push("/"));
   }
-  
   </script>
   
   <style scoped>
@@ -393,6 +447,114 @@
     word-break: break-word;
   }
   
+  /* 评论区域样式 */
+  .comment-box {
+    margin: 20px 0;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 15px;
+    background: #fff;
+  }
+  
+  .comment-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  
+  .comment-list {
+    margin-top: 30px;
+  }
+  
+  .comment-item {
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .comment-header {
+    margin-bottom: 10px;
+  }
+  
+  .comment-user {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .user-avatar {
+    margin-right: 8px;
+    background-color: #409EFF;
+    color: white;
+  }
+  
+  .username {
+    font-size: 14px;
+    color: #333;
+    margin-right: 10px;
+  }
+  
+  .comment-time {
+    font-size: 12px;
+    color: #999;
+  }
+  
+  .md-content {
+    line-height: 1.6;
+    word-break: break-word;
+    color: #333;
+    font-size: 14px;
+  }
+  
+  .md-content :deep(*) {
+    margin: 0;
+  }
+  
+  .md-content :deep(p) {
+    margin-bottom: 8px;
+  }
+  
+  .md-content :deep(a) {
+    color: #409EFF;
+    text-decoration: none;
+  }
+  
+  .md-content :deep(a:hover) {
+    text-decoration: underline;
+  }
+  
+  .reply-box {
+    margin: 10px 0 10px 30px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 6px;
+  }
+  
+  .reply-item {
+    margin-left: 30px;
+    margin-top: 15px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    position: relative;
+  }
+  
+  .reply-item::before {
+    content: "";
+    position: absolute;
+    left: -15px;
+    top: 15px;
+    width: 15px;
+    height: 1px;
+    background: #ddd;
+  }
+  
+  .deleted {
+    color: #bbb;
+    font-style: italic;
+    margin-left: 10px;
+  }
+  
   @media screen and (max-width: 768px) {
     .header {
       flex-direction: column;
@@ -418,46 +580,9 @@
     .actions {
       justify-content: center;
     }
+    
+    .reply-item {
+      margin-left: 15px;
+    }
   }
-
-
-.comment-box {
-  margin-top: 20px;
-}
-.comment-submit {
-  margin-top: 10px;
-}
-.comment-list {
-  margin-top: 20px;
-}
-.comment-item {
-  margin-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
-  padding-bottom: 10px;
-}
-.comment-header {
-  font-size: 14px;
-  margin-bottom: 6px;
-}
-.comment-actions {
-  display: flex;
-  gap: 10px;
-  font-size: 12px;
-  color: #999;
-}
-.reply-item {
-  margin-left: 20px;
-  margin-top: 5px;
-  font-size: 13px;
-}
-.deleted {
-  color: #bbb;
-  font-style: italic;
-  margin-left: 10px;
-}
-.md-content {
-  line-height: 1.6;
-  word-break: break-word;
-}
   </style>
-  
