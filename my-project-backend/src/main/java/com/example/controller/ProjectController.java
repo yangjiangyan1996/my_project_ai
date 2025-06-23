@@ -5,6 +5,8 @@ import com.example.Facade.ProjectFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.dto.Projects;
+import com.example.entity.req.ConcernPublisherCancelReq;
+import com.example.entity.req.ConcernPublisherReq;
 import com.example.entity.req.ProjectListReq;
 import com.example.entity.req.UserCommentProjectReq;
 import com.example.entity.resp.ProjectCommentResp;
@@ -30,6 +32,27 @@ public class ProjectController {
     @Resource
     private ProjectService projectService;
 
+    @PostMapping("/concernPublisher")
+    public RespBean<Boolean> concernPublisher(@RequestBody ConcernPublisherReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.concernPublisher(req, user.getId());
+            return RespBean.success(result);
+        } catch (Exception e) {
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
+    @PostMapping("/concernPublisherCancel")
+    public RespBean<Boolean> concernPublisherCancel(@RequestBody ConcernPublisherCancelReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.concernPublisherCancel(req, user.getId());
+            return RespBean.success(result);
+        } catch (Exception e) {
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
 
     @GetMapping("/commentLike")
     public RespBean<Boolean> commentLike(@RequestParam("projectId") Long projectId,

@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.Projects;
 import com.example.entity.req.ProjectListReq;
-import org.springframework.security.core.userdetails.UserDetailsService;
 
 /**
  * @Author YangJian

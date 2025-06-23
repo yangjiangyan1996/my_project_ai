@@ -1,13 +1,13 @@
 package com.example.Facade;
 
-import com.example.entity.dto.Account;
-import com.example.entity.dto.ProjectComment;
-import com.example.entity.dto.ProjectCommentLike;
-import com.example.entity.dto.ProjectsDetail;
+import com.example.entity.dto.*;
+import com.example.entity.req.ConcernPublisherCancelReq;
+import com.example.entity.req.ConcernPublisherReq;
 import com.example.entity.req.UserCommentProjectReq;
 import com.example.entity.resp.ProjectCommentResp;
 import com.example.entity.resp.ProjectsDetailResp;
 import com.example.enums.ProjectEnum;
+import com.example.enums.UserEnums;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 @Service
 public class ProjectFacade {
 
+    @Resource
+    UserFollowService userFollowService;
     @Resource
     ProjectCommentLikeService projectCommentLikeService;
     @Resource
@@ -60,6 +62,7 @@ public class ProjectFacade {
 
         r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
         r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
+
         return r;
     }
 
@@ -166,5 +169,21 @@ public class ProjectFacade {
             throw new ValidationException("已点赞，无需重复操作！");
         }
         return projectCommentLikeService.insert(commentId, projectId, userId);
+    }
+
+    public Boolean concernPublisher(ConcernPublisherReq req, Long id) {
+        UserFollow entity = new UserFollow();
+        entity.setFollowerId(id);
+        entity.setFolloweeId(req.getFolloweeId());
+        entity.setIsMutual(UserEnums.FollowEnum.No.getCode());
+        return userFollowService.save(entity);
+    }
+
+    public Boolean concernPublisherCancel(ConcernPublisherCancelReq req, Long userId) {
+        UserFollow useFollwe = userFollowService.selectUserByUserId(userId, req.getFolloweeId());
+        if (useFollwe.getIsMutual().equals(UserEnums.FollowEnum.Yes.getCode())) {
+            userFollowService.updateIsMutual(req.getFolloweeId(), userId, UserEnums.FollowEnum.No.getCode());
+        }
+        return userFollowService.removeUserByUserId(userId, req.getFolloweeId());
     }
 }

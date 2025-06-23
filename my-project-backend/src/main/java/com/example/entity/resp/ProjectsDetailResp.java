@@ -16,6 +16,7 @@ import lombok.Data;
 public class ProjectsDetailResp {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private Long createdBy;
     private Long projectsId;
     private String coverImageUrl;
     private String steps;

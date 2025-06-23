@@ -8,6 +8,14 @@
           <div class="basic-info">
             <h2 class="title">{{ detail.name }}</h2>
             <div class="creator">发起人：{{ detail.creatorName || '匿名' }}</div>
+            <el-button 
+              :type="isConcerned ? 'success' : 'default'"
+              size="small"
+              @click="handleConcernPublisher(detail.createdBy)"
+              style="margin-left: 8px">
+              {{ isConcerned ? '已关注' : '关注作者' }}（{{ concernCount }}）
+                <span v-if="false">{{ detail.createdBy }}</span>
+            </el-button>
   
             <div class="tags">
               <el-tag v-if="detail.isRemote" type="success">远程</el-tag>
@@ -234,6 +242,8 @@
   const collected = ref(false);
   const likeCount = ref(0);
   const favoriteCount = ref(0);
+  const isConcerned = ref(false);
+  const concernCount = ref(0);
   
   const comments = ref([]);
   const newComment = ref("");
@@ -575,9 +585,21 @@ const topLevelComment = comments.value.find(c => c.id === commentId);
     }
   }
   
+  const handleConcernPublisher = (userId) => {
+    post(`/api/auth/project/concernPublisher${isConcerned.value ? 'Cancel' : ''}`, { 
+        followeeId: userId
+      }, () => {
+      isConcerned.value = !isConcerned.value;
+      concernCount.value += isConcerned.value ? 1 : -1;
+      ElMessage.success(isConcerned.value ? '关注成功' : '已取消关注');
+    });
+  };
+
   async function fetchDetail() {
     try {
       const res = await get(`/api/auth/project/detail?projectId=${projectId}`);
+      isConcerned.value = !!res.myConcern;
+      concernCount.value = res.concernCount || 0;
       if (!res) {
         ElMessage.error('项目不存在或已下架');
         router.push('/');
