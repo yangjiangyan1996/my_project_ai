@@ -4,30 +4,6 @@ import { onMounted, provide, reactive, ref } from 'vue'
 import { get } from '@/net'
 
 
-const userInfo = reactive({
-  data: null,
-  loading: false,
-  loadUserInfo: async () => {
-  const res = await get('/api/auth/user/getCurrentUserInfo');
-  userInfo.data = res
-  }
-})
-
-provide('userInfo', userInfo)
-
-
-useDark({
-  selector: 'html',
-  attribute: 'class',
-  valueDark: 'dark',
-  valueLight: 'light'
-})
-
-useDark({
-  onChanged(dark) { useToggle(dark) }
-})
-
-
 
 const emojis = ref([
   '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
@@ -174,6 +150,33 @@ const emojis = ref([
   '🕟', '🕔', '🕠', '🕕', '🕡', '🕖', '🕢', '🕗', '🕣', '🕘',
   '🕤', '🕙', '🕥', '🕚', '🕦', '🗨️', '🗯️', '💭', '💬', '👁️‍🗨️'
 ]);
+
+const userInfo = reactive({
+  data: null,
+  loading: false,
+  loadUserInfo: async () => {
+  const res = await get('/api/auth/user/getCurrentUserInfo');
+  userInfo.data = res
+  }
+})
+
+provide('userInfo', userInfo)
+provide('emojis', emojis)
+
+
+useDark({
+  selector: 'html',
+  attribute: 'class',
+  valueDark: 'dark',
+  valueLight: 'light'
+})
+
+useDark({
+  onChanged(dark) { useToggle(dark) }
+})
+
+
+
 
 </script>
 

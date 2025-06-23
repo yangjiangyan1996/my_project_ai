@@ -24,7 +24,6 @@
               @click="handleConcernPublisher(detail.createdBy)"
               class="concern-button">
               {{ isConcerned ? '已关注' : '关注' }}
-              <span class="concern-count">（{{ concernCount }}）</span>
             </el-button>
           </div>
 
