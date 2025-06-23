@@ -128,6 +128,7 @@ import { Loading } from '@element-plus/icons-vue';
 import router from "@/router";
 import { logout, post, get } from '@/net';
 import { ElMessage } from 'element-plus';
+import { inject } from 'vue'
 
 const projectList = ref([]);
 const loading = ref(false);
@@ -138,6 +139,7 @@ const hasMore = ref(true);
 const categories = ref([]);
 const difficulties = ref([]);
 const search = ref({ name: '', category: '', difficulties: [] });
+const userInfo = inject('userInfo')
 
 //跳转到列表详情页
 function goToDetail(project) {
@@ -183,7 +185,7 @@ const fetchProjectListData = async (params = {}) => {
       projectName: params?.projectName
     });
 
-    console.log("接口返回数据:", res);
+    //console.log("接口返回数据:", res);
     
     if (!res?.records) {
       console.warn("接口返回异常结构：", res);
@@ -252,8 +254,15 @@ const handleScroll = (e) => {
 
 // 初始化加载
 onMounted(() => {
+  if (!userInfo.data) {
+    userInfo.loadUserInfo()
+    console.log("user",userInfo)
+  }
   loadProjects();
 });
+
+
+
 
 function userLogout() {
   logout(() => router.push("/"));

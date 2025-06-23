@@ -63,10 +63,10 @@ function storeAccessToken(remember, token, expire){
   }
     const str = JSON.stringify(authObj)
     if(remember) {
-        console.log("localStorage， 存储token", authItemName, str)
+        //console.log("localStorage， 存储token", authItemName, str)
         localStorage.setItem(authItemName, str)
     } else {
-        console.log("sessionStorage 存储token", authItemName, str)
+        //console.log("sessionStorage 存储token", authItemName, str)
         sessionStorage.setItem(authItemName, str)
     }
 }
@@ -81,7 +81,7 @@ function deleteAccessToken(redirect = false) {
 
 function internalPost(url, data, headers, success = () => {}, failure = defaultFailure, error = defaultError){
     return axios.post(url, data, { headers: headers }).then(({data: responseData}) => {
-        console.log("internalPost--->"+url+"--->接口响应数据:", responseData)
+        //console.log("internalPost--->"+url+"--->接口响应数据:", responseData)
         if(responseData.code === 200) {
             success(responseData.data)
             return responseData.data // 返回有效数据
@@ -162,7 +162,7 @@ export { post, get, login, logout, unauthorized, takeAccessToken }
 
 axios.interceptors.request.use(config => {
     var token = takeAccessToken();
-    console.log('正在发送请求1:',token, config);
+    // console.log('正在发送请求1:',token, config);
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`

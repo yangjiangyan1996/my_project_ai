@@ -1,6 +1,7 @@
 package com.example.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.example.entity.base.UserInfo;
 import com.example.entity.dto.Account;
 import com.example.entity.vo.request.ConfirmResetVO;
 import com.example.entity.vo.request.EmailRegisterVO;
@@ -15,5 +16,4 @@ public interface AccountService extends IService<Account>, UserDetailsService {
     String resetConfirm(ConfirmResetVO info);
 
     Account selectById(Long userId);
-
 }
