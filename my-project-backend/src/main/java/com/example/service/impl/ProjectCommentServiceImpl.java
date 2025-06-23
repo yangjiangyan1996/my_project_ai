@@ -19,7 +19,7 @@ import java.util.List;
 @Service
 public class ProjectCommentServiceImpl extends ServiceImpl<ProjectCommentMapper, ProjectComment> implements ProjectCommentService {
     @Override
-    public Boolean comment(Long projectId, Long userId, String userName, String content, Long replyToId) {
+    public Boolean comment(Long projectId, Long userId, String userName, String content, Long replyToId,Long firstLevelCommonId) {
         ProjectComment replyToComment = null;
         if (replyToId != null) {
             replyToComment = this.baseMapper.selectById(replyToId);
@@ -30,6 +30,7 @@ public class ProjectCommentServiceImpl extends ServiceImpl<ProjectCommentMapper,
         projectComment.setUsername(userName);
         projectComment.setContent(content);
         projectComment.setReplyTo(replyToId);
+        projectComment.setFirstLevelCommonId(firstLevelCommonId);
         projectComment.setReplyToUserId(replyToComment != null ? replyToComment.getUserId() : null);
         projectComment.setReplyToUsername(replyToComment != null ? replyToComment.getUsername() : null);
         projectComment.setLikes(0);

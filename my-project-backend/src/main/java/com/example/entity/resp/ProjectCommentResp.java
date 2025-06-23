@@ -17,6 +17,7 @@ public class ProjectCommentResp {
     private Integer likes;           // 点赞数
     private Long replyTo;            // 回复的评论ID（如为 null 表示主评论）
     private String replyToName;      // 被回复用户昵称（仅回复评论时有值）
+    private Long  firstLevelCommonId;
     private Date createdAt;          // 评论时间
     private List<ProjectCommentResp> replies; // 子评论列表
 }

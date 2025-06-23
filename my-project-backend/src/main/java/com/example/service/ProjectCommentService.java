@@ -12,7 +12,7 @@ import java.util.List;
  * @Date 2025/6/21 16:37
  */
 public interface ProjectCommentService extends IService<ProjectComment> {
-    Boolean comment(Long projectId, Long userId, String userName, String content, Long replyToId);
+    Boolean comment(Long projectId, Long userId, String userName, String content, Long replyToId, Long firstLevelCommonId);
 
     List<ProjectComment> selectByProjectId(Long projectId);
 

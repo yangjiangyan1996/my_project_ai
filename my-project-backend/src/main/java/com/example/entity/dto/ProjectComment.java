@@ -12,6 +12,7 @@ public class ProjectComment extends BaseModel {
     private Long id;
     private Long projectId;
     private Long userId;
+    private Long firstLevelCommonId;
     private String username;
     private String content;
     private Long replyTo;

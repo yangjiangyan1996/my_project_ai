@@ -14,10 +14,7 @@ import jakarta.validation.ValidationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -75,11 +72,14 @@ public class ProjectFacade {
     }
 
     public Boolean comment(UserCommentProjectReq req, Long userId, String name) {
-        return projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyTo());
+        return projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyTo(),req.getFirstLevelCommonId());
     }
 
     public List<ProjectCommentResp> commentShow(Long projectId, Long currentUserId) {
-        List<ProjectComment> all = projectCommentService.selectByProjectId(projectId);
+        List<ProjectComment> all = projectCommentService.selectByProjectId(projectId)
+                .stream()
+                .sorted(Comparator.comparing(ProjectComment::getCreatedAt))
+                .collect(Collectors.toList());
         List<ProjectCommentLike> likes = projectCommentLikeService.selectByProjectId(projectId);
 
         Map<Long, ProjectCommentResp> idMap = new HashMap<>();
@@ -88,30 +88,36 @@ public class ProjectFacade {
         // 1. 映射全部评论
         Map<Long, List<ProjectCommentLike>> commentId2LikeListMap = likes.stream().collect(Collectors.groupingBy(ProjectCommentLike::getCommentId));
 
-        for (ProjectComment comment : all) {
-            ProjectCommentResp vo = convertToVO(comment, currentUserId,commentId2LikeListMap);
-            idMap.put(vo.getId(), vo);
-        }
+        // 构建第一层评论（replyTo=0）
+        Map<Long, ProjectCommentResp> firstLevelMap = all.stream()
+                .filter(c -> c.getReplyTo() < 0)
+                .sorted(Comparator.comparing(ProjectComment::getCreatedAt))
+                .collect(Collectors.toMap(
+                        ProjectComment::getId,
+                        c -> convertToVO(c, currentUserId, commentId2LikeListMap)
+                ));
 
-        // 2. 构建评论树
-        for (ProjectComment comment : all) {
-            Long replyTo = comment.getReplyTo();
-            ProjectCommentResp vo = idMap.get(comment.getId());
-            if (replyTo == null || replyTo == 0) {
-                roots.add(vo);
-            } else {
-                ProjectCommentResp parent = idMap.get(replyTo);
-                if (parent != null) {
-                    if (parent.getReplies() == null) {
-                        parent.setReplies(new ArrayList<>());
-                    }
-                    vo.setReplyToName(parent.getUsername());
-                    parent.getReplies().add(vo);
-                }
+        // 构建第二层评论（first_level_common_id对应第一层ID）
+        Map<Long, List<ProjectCommentResp>> secondLevelMap = all.stream()
+                .filter(c -> c.getReplyTo() > 0)
+                .sorted(Comparator.comparing(ProjectComment::getCreatedAt))
+                .collect(Collectors.groupingBy(
+                        ProjectComment::getFirstLevelCommonId,
+                        Collectors.mapping(
+                                c -> convertToVO(c, currentUserId, commentId2LikeListMap),
+                                Collectors.toList()
+                        )
+                ));
+
+        // 组装评论树
+        secondLevelMap.forEach((firstLevelId, replies) -> {
+            ProjectCommentResp parent = firstLevelMap.get(firstLevelId);
+            if (parent != null) {
+                parent.setReplies(replies);
             }
-        }
+        });
 
-        return roots;
+        return new ArrayList<>(firstLevelMap.values());
     }
 
     private ProjectCommentResp convertToVO(ProjectComment comment, Long currentUserId,Map<Long, List<ProjectCommentLike>> commentId2LikeListMap) {
@@ -124,6 +130,7 @@ public class ProjectFacade {
         vo.setDeleted(comment.getIsDeleted() != 0);
         vo.setLikes(commentId2LikeListMap.containsKey(comment.getId()) ?commentId2LikeListMap.get(comment.getId()).size():0);
         vo.setIsMine(comment.getUserId().equals(currentUserId));
+        vo.setFirstLevelCommonId(comment.getFirstLevelCommonId());
 
         // 获取用户昵称头像
         Account account = accountService.selectById(comment.getUserId());

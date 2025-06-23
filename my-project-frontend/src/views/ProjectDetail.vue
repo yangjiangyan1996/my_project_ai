@@ -117,6 +117,8 @@
     const comments = ref([]);
     const newComment = ref("");
     const replyToCommentId = ref(null);
+    const firstLevelCommentId = ref(null);
+
     const replyToUsername = ref("");
     const expandedComments = ref({});
     const mdParser = markdownIt();
@@ -161,25 +163,71 @@
         return mdParser.render(text || '');
     }
 
+    function findFirstLevelCommentId(commentId) {
+        // 首先在顶级评论中查找
+        const topLevelComment = comments.value.find(c => c.id === commentId);
+        console.log("topLevelComment",topLevelComment)
+        if (topLevelComment) {
+            return  topLevelComment.id ;
+        }
+        
+        // 如果不在顶级评论中，则在回复中查找
+        for (const comment of comments.value) {
+            if (comment.replies) {
+                const foundReply = findCommentInReplies(comment.replies, commentId);
+                if (foundReply) {
+                    // 如果找到的回复是回复顶级评论，则返回顶级评论ID
+                    if (foundReply.replyTo === comment.id) {
+                        return comment.id;
+                    }
+                    // 否则继续向上查找
+                    return findFirstLevelCommentId(foundReply.replyTo);
+                }
+            }
+        }
+        
+        return -1; // 如果没有找到，返回-1
+    }
+
+    // 辅助函数：在回复树中查找评论
+    function findCommentInReplies(replies, commentId) {
+        for (const reply of replies) {
+            if (reply.id === commentId) {
+                return reply;
+            }
+            if (reply.replies) {
+                const found = findCommentInReplies(reply.replies, commentId);
+                if (found) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
 
     function replyTo(id, username) {
+        var topCommentId = findFirstLevelCommentId(id);
+        console.log("顶层ID", topCommentId)
         replyToCommentId.value = id;
         replyToUsername.value = username;
+        firstLevelCommentId.value = topCommentId;
         newComment.value = `@${username} `;
         console.log("回复评论",id,username ,newComment.value )
     }
-
+    
     async function submitComment() {
         if (!newComment.value.trim()) return;
         try {
             await post('/api/auth/project/comment', {
             projectId,
             content: newComment.value,
-            replyTo: replyToCommentId.value
+            replyTo: replyToCommentId.value,
+            firstLevelCommonId: firstLevelCommentId.value ?? replyToCommentId.value
             });
             newComment.value = "";
             replyToCommentId.value = null;
             replyToUsername.value = "";
+            firstLevelCommentId.value = null;
             fetchComments();
         } catch (err) {
             ElMessage.error('评论失败');

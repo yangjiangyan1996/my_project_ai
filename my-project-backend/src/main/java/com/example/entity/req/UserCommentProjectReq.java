@@ -13,4 +13,5 @@ public class UserCommentProjectReq {
     private String content;
     private Long projectId;
     private Long replyTo;
+    private Long firstLevelCommonId;
 }
