@@ -47,12 +47,30 @@
         <el-divider>评论区</el-divider>
         
         <!-- 主评论输入框 -->
-        <div class="comment-box">
+        <!-- <div class="comment-box">
           <v-md-editor v-model="newComment" height="200px" :placeholder="replyToCommentId ? `回复 ${replyToUsername}...` : '写下你的评论...'" />
           <div class="comment-actions">
             <el-button type="primary" @click="submitComment">发表评论</el-button>
             <el-button v-if="replyToCommentId" @click="cancelReply">取消回复</el-button>
           </div>
+        </div> -->
+        <!-- 知乎风格主评论输入框 -->
+        <div class="zhihu-comment-editor">
+            <div class="editor-header">
+                <div class="avatar">{{ userInitial }}</div>
+                <span>{{ replyToCommentId ? `回复 ${replyToUsername}` : '写下你的评论...' }}</span>
+            </div>
+            <el-input
+                v-model="newComment"
+                type="textarea"
+                placeholder="写下你的评论（支持 Markdown）"
+                :autosize="{ minRows: 5, maxRows: 10 }"
+                class="markdown-textarea"
+            />
+            <div class="editor-footer">
+                <button class="cancel-button" v-if="replyToCommentId" @click="cancelReply">取消</button>
+                <button class="submit-button" @click="submitComment">发布</button>
+            </div>
         </div>
   
         <div class="comment-list">
@@ -76,13 +94,31 @@
             </div>
   
             <!-- 回复评论输入框 -->
-            <div v-if="activeReplyBox === comment.id" class="reply-box">
+            <!-- <div v-if="activeReplyBox === comment.id" class="reply-box">
               <v-md-editor v-model="replyContent" height="150px" :placeholder="`回复 ${replyToUsername}...`" />
               <div class="comment-actions">
                 <el-button type="primary" size="small" @click="submitReply(comment.id)">回复</el-button>
                 <el-button size="small" @click="cancelReply">取消</el-button>
               </div>
-            </div>
+            </div> -->
+            <div v-if="activeReplyBox === comment.id" class="zhihu-reply-editor">
+                <div class="editor-header">
+                    <div class="avatar">{{ userInitial }}</div>
+                    <span>回复 {{ replyToUsername }}</span>
+                </div>
+                <el-input
+                    v-model="replyContent"
+                    type="textarea"
+                    :placeholder="`回复 ${replyToUsername}...`"
+                    :autosize="{ minRows: 4, maxRows: 8 }"
+                    class="markdown-textarea"
+                />
+                <div class="editor-footer">
+                    <button class="cancel-button" @click="cancelReply">取消</button>
+                    <button class="submit-button" @click="submitReply(activeReplyBox)">发布</button>
+                </div>
+                </div>
+
   
             <div v-if="expandedComments[comment.id]" class="replies">
               <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
@@ -103,13 +139,33 @@
                 </div>
   
                 <!-- 嵌套回复输入框 -->
-                <div v-if="activeReplyBox === reply.id" class="reply-box">
+                <!-- <div v-if="activeReplyBox === reply.id" class="reply-box">
                   <v-md-editor v-model="replyContent" height="150px" :placeholder="`回复 ${replyToUsername}...`" />
                   <div class="comment-actions">
                     <el-button type="primary" size="small" @click="submitReply(reply.id)">回复</el-button>
                     <el-button size="small" @click="cancelReply">取消</el-button>
                   </div>
+                </div> -->
+                <!-- 知乎风格回复评论输入框 -->
+                <div v-if="activeReplyBox === reply.id" class="zhihu-reply-editor">
+                    <div class="editor-header">
+                        <div class="avatar">{{ userInitial }}</div>
+                        <span>回复 {{ replyToUsername }}</span>
+                    </div>
+                    <el-input
+                        v-model="replyContent"
+                        type="textarea"
+                        :placeholder="`回复 ${replyToUsername}...`"
+                        :autosize="{ minRows: 4, maxRows: 8 }"
+                        class="markdown-textarea"
+                    />
+                    <div class="editor-footer">
+                        <button class="cancel-button" @click="cancelReply">取消</button>
+                        <button class="submit-button" @click="submitReply(activeReplyBox)">发布</button>
+                    </div>
                 </div>
+
+
               </div>
             </div>
           </div>
@@ -260,10 +316,48 @@
   }
   
   function findFirstLevelCommentId(commentId) {
-    const comment = findCommentById(commentId);
-    if (!comment) return null;
-    return comment.replyTo === -1 ? comment.id : comment.replyTo;
+//     const comment = findCommentById(commentId);
+//     if (!comment) return null;
+//     return comment.replyTo === -1 ? comment.id : comment.replyTo;
+// 首先在顶级评论中查找
+const topLevelComment = comments.value.find(c => c.id === commentId);
+        console.log("topLevelComment",topLevelComment)
+        if (topLevelComment) {
+            return  topLevelComment.id ;
+        }
+        
+        // 如果不在顶级评论中，则在回复中查找
+        for (const comment of comments.value) {
+            if (comment.replies) {
+                const foundReply = findCommentInReplies(comment.replies, commentId);
+                if (foundReply) {
+                    // 如果找到的回复是回复顶级评论，则返回顶级评论ID
+                    if (foundReply.replyTo === comment.id) {
+                        return comment.id;
+                    }
+                    // 否则继续向上查找
+                    return findFirstLevelCommentId(foundReply.replyTo);
+                }
+            }
+        }
+        
+        return -1; // 如果没有找到，返回-1
   }
+    // 辅助函数：在回复树中查找评论
+    function findCommentInReplies(replies, commentId) {
+        for (const reply of replies) {
+            if (reply.id === commentId) {
+                return reply;
+            }
+            if (reply.replies) {
+                const found = findCommentInReplies(reply.replies, commentId);
+                if (found) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
   
   function findCommentById(commentId) {
     for (const comment of comments.value) {
@@ -276,16 +370,16 @@
     return null;
   }
   
-  function findCommentInReplies(replies, commentId) {
-    for (const reply of replies) {
-      if (reply.id === commentId) return reply;
-      if (reply.replies) {
-        const found = findCommentInReplies(reply.replies, commentId);
-        if (found) return found;
-      }
-    }
-    return null;
-  }
+//   function findCommentInReplies(replies, commentId) {
+//     for (const reply of replies) {
+//       if (reply.id === commentId) return reply;
+//       if (reply.replies) {
+//         const found = findCommentInReplies(reply.replies, commentId);
+//         if (found) return found;
+//       }
+//     }
+//     return null;
+//   }
   
   async function fetchComments() {
     try {
