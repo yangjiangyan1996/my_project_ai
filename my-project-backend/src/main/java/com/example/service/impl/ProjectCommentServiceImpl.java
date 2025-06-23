@@ -3,12 +3,15 @@ package com.example.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ProjectComment;
+import com.example.entity.dto.ProjectFavorite;
 import com.example.mapper.ProjectCommentMapper;
 import com.example.service.ProjectCommentService;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @Author YangJian
@@ -60,5 +63,17 @@ public class ProjectCommentServiceImpl extends ServiceImpl<ProjectCommentMapper,
         c.setModifiedAt(new Date());
         c.setModifiedBy(userId);
         return this.baseMapper.update(c, new QueryWrapper<ProjectComment>().eq("id", commentId));
+    }
+
+    @Override
+    public Map<Long, Long> selectCommentCountByProjectIds(List<Long> projectIds) {
+        List<ProjectComment> projectLikes = this.baseMapper.selectList(
+                new QueryWrapper<ProjectComment>()
+                        .in("project_id", projectIds)
+                        .eq("is_deleted",0)
+        );
+        //根据projectId分类，获取map,key是projectId, value是数量
+        return projectLikes.stream().collect(Collectors.groupingBy(ProjectComment::getProjectId, Collectors.counting()));
+
     }
 }

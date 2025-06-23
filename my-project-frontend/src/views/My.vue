@@ -52,26 +52,46 @@
 
     <div class="content-tabs">
       <el-tabs v-model="activeTab">
-        <el-tab-pane label="我的动态" name="activities">
-          <div class="activity-item">
-            <div class="activity-type">赞同了回答</div>
-            <div class="activity-time">2025-06-16 15:03</div>
+        <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
+          <div class="infinite-list" v-infinite-scroll="loadMore">
+            <div class="activity-item" v-for="(item, index) in publishList" :key="index">
+            <div class="activity-type">{{ item.categoryName }}</div>
+            <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
             <div class="activity-content">
-              <h3 class="activity-title">我35了，应该算是大龄女了吧，我应该妥协吗？</h3>
-              <div class="activity-detail">
-                <p>回答内容摘要...</p>
-              </div>
+              <h3 class="activity-title">{{ item.name }}</h3>
+              <div class="activity-detail">{{ item.description }}</div>
               <div class="activity-meta">
-                <span>已赞同 27</span>
-                <span>6 条评论</span>
+                <span>已赞同 {{ item.likeCount }}</span>
+                <span>{{ item.commentCount }} 条评论</span>
+                <span>收藏 {{ item.favoriteCount }}</span>
                 <el-button type="text" size="small">分享</el-button>
-                <el-button type="text" size="small">收藏</el-button>
                 <el-button type="text" size="small">喜欢</el-button>
               </div>
             </div>
           </div>
+          </div>
         </el-tab-pane>
-        <el-tab-pane label="个人成就" name="achievements">
+        <el-tab-pane label="我收藏的" name="myFavorites">
+          <div class="achievements-container">
+            <div class="achievement-item">
+              <div class="achievement-count">5</div>
+              <div class="achievement-label">次赞同</div>
+            </div>
+            <div class="achievement-item">
+              <div class="achievement-count">112</div>
+              <div class="achievement-label">次喜欢</div>
+            </div>
+            <div class="achievement-item">
+              <div class="achievement-count">15</div>
+              <div class="achievement-label">次收藏</div>
+            </div>
+            <div class="achievement-item">
+              <div class="achievement-count">15</div>
+              <div class="achievement-label">次公共编辑</div>
+            </div>
+          </div>
+        </el-tab-pane>
+         <el-tab-pane label="我点赞的" name="myLike">
           <div class="achievements-container">
             <div class="achievement-item">
               <div class="achievement-count">5</div>
@@ -112,9 +132,40 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { post } from '@/net'
 
-const activeTab = ref('activities')
+const publishList = ref([])
+const page = ref(1)
+const size = ref(10)
+const total = ref(0)
+const loading = ref(false)
+
+const loadMore = () => {
+  if (!loading.value && page.value * size.value < total.value) {
+    page.value++
+    fetchData()
+  }
+}
+
+const fetchData = async () => {
+  try {
+    loading.value = true
+    const res = await post('/api/auth/my/myPublished', {
+      page: page.value,
+      size: size.value
+    })
+    console.log("res",res)
+    publishList.value.push(...res.records)
+    total.value = res.total
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchData)
+
+const activeTab = ref('myPublish')
 </script>
 
 <style scoped>

@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.Projects;
 import com.example.entity.req.ProjectListReq;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -14,6 +16,10 @@ import com.example.entity.req.ProjectListReq;
 public interface ProjectService extends IService<Projects> {
     Page getHotFuyeProjects(Page<Projects> pageable, ProjectListReq req);
 
+    Page getMyProjects(Page<Projects> pageable, Long userId);
+
     //判断项目是否启用
     boolean isProjectDown(Long projectId);
+
+    List<Projects> selectByProjectIds(List<Long> projectIds);
 }

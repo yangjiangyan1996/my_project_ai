@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.ProjectComment;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @Author YangJian
@@ -19,4 +20,6 @@ public interface ProjectCommentService extends IService<ProjectComment> {
     ProjectComment selectByProjectAndCommentId(Long projectId, Long commentId);
 
     Integer updateStatus(Long commentId, Long userId, Integer code);
+
+    Map<Long, Long> selectCommentCountByProjectIds(List<Long> projectIds);
 }

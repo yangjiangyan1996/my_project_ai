@@ -1,7 +1,11 @@
 package com.example.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.ProjectLike;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * @Author YangJian
@@ -15,4 +19,8 @@ public interface ProjectLikeService extends IService<ProjectLike> {
     Boolean selectByProjectIdAndUserId(Long projectId, Long userId);
 
     Long selectCountByProjectId(Long projectId);
+
+    Page<ProjectLike> getMyProjects(Page<ProjectLike> of, Long userId);
+
+    Map<Long, Long> selectLikeCountByProjectIds(List<Long> projectIds);
 }

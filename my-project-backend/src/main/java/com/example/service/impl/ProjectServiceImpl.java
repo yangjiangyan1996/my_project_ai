@@ -12,6 +12,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.util.List;
+
 
 /**
  * @Author YangJian
@@ -40,9 +42,24 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
     }
 
     @Override
+    public Page getMyProjects(Page<Projects> pageable, Long userId) {
+        return projectMapper.selectPage(
+                pageable,
+                new QueryWrapper<Projects>()
+                        .eq("created_by", userId)
+                        .orderByDesc("created_at")
+        );
+    }
+
+    @Override
     public boolean isProjectDown(Long projectId) {
         Projects projects = projectMapper.selectOne(new QueryWrapper<Projects>().eq("id", projectId)
                 .eq("status", 1));
         return projects != null;
+    }
+
+    @Override
+    public List<Projects> selectByProjectIds(List<Long> projectIds) {
+        return this.baseMapper.selectList(new QueryWrapper<Projects>().in("id", projectIds).eq("status", 1).eq("is_deleted", 0));
     }
 }

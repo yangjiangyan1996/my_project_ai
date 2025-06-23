@@ -1,12 +1,19 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.entity.dto.ProjectFavorite;
 import com.example.entity.dto.ProjectLike;
 import com.example.mapper.ProjectLikeMapper;
 import com.example.service.ProjectLikeService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ProjectLikeServiceImpl extends ServiceImpl<ProjectLikeMapper, ProjectLike> implements ProjectLikeService {
@@ -43,5 +50,26 @@ public class ProjectLikeServiceImpl extends ServiceImpl<ProjectLikeMapper, Proje
         return this.baseMapper.selectCount(new LambdaQueryWrapper<ProjectLike>()
                 .eq(ProjectLike::getProjectId, projectId)
                 .eq(ProjectLike::getIsDeleted, 0));
+    }
+
+    @Override
+    public Page<ProjectLike> getMyProjects(Page<ProjectLike> pageable, Long userId) {
+        return this.baseMapper.selectPage(
+                pageable,
+                new QueryWrapper<ProjectLike>()
+                        .eq("user_id", userId)
+                        .orderByDesc("created_at")
+        );
+    }
+
+    @Override
+    public Map<Long, Long> selectLikeCountByProjectIds(List<Long> projectIds) {
+        List<ProjectLike> projectLikes = this.baseMapper.selectList(
+                new QueryWrapper<ProjectLike>()
+                        .in("project_id", projectIds)
+                        .eq("is_deleted",0)
+        );
+        //根据projectId分类，获取map,key是projectId, value是数量
+        return projectLikes.stream().collect(Collectors.groupingBy(ProjectLike::getProjectId, Collectors.counting()));
     }
 }

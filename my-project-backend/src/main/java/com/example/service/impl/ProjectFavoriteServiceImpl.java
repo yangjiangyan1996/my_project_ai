@@ -1,13 +1,20 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ProjectFavorite;
 import com.example.entity.dto.ProjectLike;
+import com.example.entity.dto.Projects;
 import com.example.mapper.ProjectFavoriteMapper;
 import com.example.service.ProjectFavoriteService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ProjectFavoriteServiceImpl extends ServiceImpl<ProjectFavoriteMapper, ProjectFavorite> implements ProjectFavoriteService {
@@ -44,5 +51,26 @@ public class ProjectFavoriteServiceImpl extends ServiceImpl<ProjectFavoriteMappe
         return this.baseMapper.selectCount(new LambdaQueryWrapper<ProjectFavorite>()
                 .eq(ProjectFavorite::getProjectId, projectId)
                 .eq(ProjectFavorite::getIsDeleted, 0));
+    }
+
+    @Override
+    public Page<ProjectFavorite> getMyProjects(Page<ProjectFavorite> pageable, Long userId) {
+        return this.baseMapper.selectPage(
+                pageable,
+                new QueryWrapper<ProjectFavorite>()
+                        .eq("user_id", userId)
+                        .orderByDesc("created_at")
+        );
+    }
+
+    @Override
+    public Map<Long, Long> selectFavoriteCountByProjectIds(List<Long> projectIds) {
+        List<ProjectFavorite> projectLikes = this.baseMapper.selectList(
+                new QueryWrapper<ProjectFavorite>()
+                        .in("project_id", projectIds)
+                        .eq("is_deleted",0)
+        );
+        //根据projectId分类，获取map,key是projectId, value是数量
+        return projectLikes.stream().collect(Collectors.groupingBy(ProjectFavorite::getProjectId, Collectors.counting()));
     }
 }
