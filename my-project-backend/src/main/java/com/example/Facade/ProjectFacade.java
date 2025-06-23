@@ -72,18 +72,15 @@ public class ProjectFacade {
     }
 
     public Boolean comment(UserCommentProjectReq req, Long userId, String name) {
-        return projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyTo(),req.getFirstLevelCommonId());
+        return projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyTo(), req.getFirstLevelCommonId());
     }
 
     public List<ProjectCommentResp> commentShow(Long projectId, Long currentUserId) {
         List<ProjectComment> all = projectCommentService.selectByProjectId(projectId)
                 .stream()
-                .sorted(Comparator.comparing(ProjectComment::getCreatedAt))
                 .collect(Collectors.toList());
         List<ProjectCommentLike> likes = projectCommentLikeService.selectByProjectId(projectId);
 
-        Map<Long, ProjectCommentResp> idMap = new HashMap<>();
-        List<ProjectCommentResp> roots = new ArrayList<>();
 
         // 1. 映射全部评论
         Map<Long, List<ProjectCommentLike>> commentId2LikeListMap = likes.stream().collect(Collectors.groupingBy(ProjectCommentLike::getCommentId));
@@ -91,7 +88,6 @@ public class ProjectFacade {
         // 构建第一层评论（replyTo=0）
         Map<Long, ProjectCommentResp> firstLevelMap = all.stream()
                 .filter(c -> c.getReplyTo() < 0)
-                .sorted(Comparator.comparing(ProjectComment::getCreatedAt))
                 .collect(Collectors.toMap(
                         ProjectComment::getId,
                         c -> convertToVO(c, currentUserId, commentId2LikeListMap)
@@ -100,7 +96,6 @@ public class ProjectFacade {
         // 构建第二层评论（first_level_common_id对应第一层ID）
         Map<Long, List<ProjectCommentResp>> secondLevelMap = all.stream()
                 .filter(c -> c.getReplyTo() > 0)
-                .sorted(Comparator.comparing(ProjectComment::getCreatedAt))
                 .collect(Collectors.groupingBy(
                         ProjectComment::getFirstLevelCommonId,
                         Collectors.mapping(
@@ -110,17 +105,27 @@ public class ProjectFacade {
                 ));
 
         // 组装评论树
-        secondLevelMap.forEach((firstLevelId, replies) -> {
-            ProjectCommentResp parent = firstLevelMap.get(firstLevelId);
-            if (parent != null) {
-                parent.setReplies(replies);
+        List<ProjectCommentResp> result = new ArrayList<>();
+        for (Long firstCommentId : firstLevelMap.keySet()) {
+            ProjectCommentResp firstLevel = firstLevelMap.get(firstCommentId);
+            if (secondLevelMap.containsKey(firstCommentId)) {
+                List<ProjectCommentResp> secondList = secondLevelMap.get(firstCommentId);
+                if (secondList != null) {
+                    List<ProjectCommentResp> collect = secondList.stream()
+                            .sorted(Comparator.comparing(ProjectCommentResp::getCreatedAt))
+                            .collect(Collectors.toList());
+                    firstLevel.setReplies(collect);
+                }
             }
-        });
+            result.add(firstLevel);
+        }
 
-        return new ArrayList<>(firstLevelMap.values());
+        return result.stream()
+                .sorted(Comparator.comparing(ProjectCommentResp::getCreatedAt))
+                .collect(Collectors.toList());
     }
 
-    private ProjectCommentResp convertToVO(ProjectComment comment, Long currentUserId,Map<Long, List<ProjectCommentLike>> commentId2LikeListMap) {
+    private ProjectCommentResp convertToVO(ProjectComment comment, Long currentUserId, Map<Long, List<ProjectCommentLike>> commentId2LikeListMap) {
         ProjectCommentResp vo = new ProjectCommentResp();
         vo.setId(comment.getId());
         vo.setProjectId(comment.getProjectId());
@@ -128,7 +133,7 @@ public class ProjectFacade {
         vo.setCreatedAt(comment.getCreatedAt());
         vo.setReplyTo(comment.getReplyTo());
         vo.setDeleted(comment.getIsDeleted() != 0);
-        vo.setLikes(commentId2LikeListMap.containsKey(comment.getId()) ?commentId2LikeListMap.get(comment.getId()).size():0);
+        vo.setLikes(commentId2LikeListMap.containsKey(comment.getId()) ? commentId2LikeListMap.get(comment.getId()).size() : 0);
         vo.setIsMine(comment.getUserId().equals(currentUserId));
         vo.setFirstLevelCommonId(comment.getFirstLevelCommonId());
 
@@ -155,11 +160,11 @@ public class ProjectFacade {
         return projectCommentService.updateStatus(commentId, userId, ProjectEnum.ProjectCommentStatusEnum.hide.getCode()) == 1;
     }
 
-    public Boolean commentLike(Long commentId,Long projectId, Long userId) {
-        ProjectCommentLike l = projectCommentLikeService.selectByCommentIdAndUserId(commentId,projectId, userId);
+    public Boolean commentLike(Long commentId, Long projectId, Long userId) {
+        ProjectCommentLike l = projectCommentLikeService.selectByCommentIdAndUserId(commentId, projectId, userId);
         if (l != null) {
-            throw  new ValidationException("已点赞，无需重复操作！");
+            throw new ValidationException("已点赞，无需重复操作！");
         }
-        return projectCommentLikeService.insert(commentId, projectId,userId);
+        return projectCommentLikeService.insert(commentId, projectId, userId);
     }
 }
