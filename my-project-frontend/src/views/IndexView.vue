@@ -43,8 +43,8 @@
         <el-menu-item index="ai-assistant" @click="router.push({ name: 'ai-assistant' })">副业推荐助手</el-menu-item>
       </el-sub-menu>
 
-      <el-menu-item index="wodefuye" @click="router.push({ name: 'my-projects' })">
-        <i class="el-icon-folder-opened"></i>我的副业
+      <el-menu-item index="wodefuye" @click="router.push({ name: 'my' })">
+        <i class="el-icon-folder-opened"></i>我的
       </el-menu-item>
 
       <div class="flex-grow" />
