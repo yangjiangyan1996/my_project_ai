@@ -370,16 +370,6 @@ const topLevelComment = comments.value.find(c => c.id === commentId);
     return null;
   }
   
-//   function findCommentInReplies(replies, commentId) {
-//     for (const reply of replies) {
-//       if (reply.id === commentId) return reply;
-//       if (reply.replies) {
-//         const found = findCommentInReplies(reply.replies, commentId);
-//         if (found) return found;
-//       }
-//     }
-//     return null;
-//   }
   
   async function fetchComments() {
     try {
@@ -561,9 +551,14 @@ const topLevelComment = comments.value.find(c => c.id === commentId);
   }
   
   .comment-item {
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #f0f0f0;
+    /* margin-bottom: 25px; */
+    /* padding-bottom: 15px; */
+    /* border-bottom: 1px solid #f0f0f0; */
+    margin-bottom: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   }
   
   .comment-header {
