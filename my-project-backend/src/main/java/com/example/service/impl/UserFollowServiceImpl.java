@@ -1,5 +1,6 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.UserFollow;
@@ -35,5 +36,13 @@ public class UserFollowServiceImpl extends ServiceImpl<UserFollowMapper, UserFol
                 .eq("follower_id", followerId)
                 .eq("followee_id", followeeId)
                 .eq("is_deleted", 0));
+    }
+
+    @Override
+    public Boolean selectByUserIdAndFollowedId(Long followerId, Long followeeId) {
+        return this.baseMapper.exists(new LambdaQueryWrapper<UserFollow>()
+                .eq(UserFollow::getFollowerId, followerId)
+                .eq(UserFollow::getFolloweeId, followeeId)
+                .eq(UserFollow::getIsDeleted, 0));
     }
 }

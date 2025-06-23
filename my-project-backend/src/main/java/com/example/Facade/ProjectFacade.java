@@ -63,6 +63,8 @@ public class ProjectFacade {
         r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
         r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
 
+        Boolean followed = userFollowService.selectByUserIdAndFollowedId(userId, project.getCreatedBy());
+        r.setFollowed(followed);
         return r;
     }
 
