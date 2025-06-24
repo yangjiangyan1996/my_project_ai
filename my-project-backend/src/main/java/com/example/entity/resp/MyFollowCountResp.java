@@ -12,6 +12,8 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class MyFollowCountResp {
+    //关注数
     private Integer followerCount;
+    //被关注数
     private Integer followeeCount;
 }

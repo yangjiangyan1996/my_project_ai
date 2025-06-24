@@ -120,11 +120,11 @@
     <div class="sidebar">
       <div class="sidebar-section">
         <h3 class="sidebar-title">关注了</h3>
-        <div class="sidebar-count">48</div>
+        <div class="sidebar-count">{{ followerCount }}</div>
       </div>
       <div class="sidebar-section">
         <h3 class="sidebar-title">关注者</h3>
-        <div class="sidebar-count">7</div>
+        <div class="sidebar-count">{{ followeeCount }}</div>
       </div>
       <div class="sidebar-section">
         <h3 class="sidebar-title">赞助的 Live</h3>
@@ -139,6 +139,10 @@ import { ref, onMounted } from 'vue'
 import { post } from '@/net'
 
 const activeTab = ref('myPublish')
+
+// 关注数状态
+const followerCount = ref(0)  // 关注者数量（被关注数）
+const followeeCount = ref(0)  // 关注了数量（关注数）
 
 // 我发布的相关状态
 const publishList = ref([])
@@ -163,6 +167,17 @@ const likeSize = ref(10)
 const likeTotal = ref(0)
 const likeLoading = ref(false)
 const noMoreLike = ref(false)
+
+// 获取关注数
+const fetchFollowCount = async () => {
+  try {
+    const res = await post('/api/auth/my/myFollowCount')
+    followerCount.value = res.followerCount || 0
+    followeeCount.value = res.followeeCount || 0
+  } catch (error) {
+    console.error('获取关注数失败:', error)
+  }
+}
 
 // 加载更多我发布的内容
 const loadMore = () => {
@@ -253,6 +268,7 @@ const handleTabChange = (tab) => {
 
 onMounted(() => {
   fetchPublishData()
+  fetchFollowCount()  // 页面加载时获取关注数
 })
 </script>
 
