@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.Projects;
 import com.example.entity.dto.UserFollow;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -18,4 +20,8 @@ public interface UserFollowService extends IService<UserFollow> {
     Boolean updateIsMutual(Long followeeId, Long userId, Integer code);
 
     Boolean selectByUserIdAndFollowedId(Long userId, Long createdBy);
+
+    List<UserFollow> selectByFollowerId(Long userId);
+
+    List<UserFollow> selectByFolloweeId(Long userId);
 }

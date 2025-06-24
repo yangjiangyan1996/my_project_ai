@@ -51,64 +51,67 @@
     </div>
 
     <div class="content-tabs">
-      <el-tabs v-model="activeTab">
+      <el-tabs v-model="activeTab" @tab-click="handleTabChange">
         <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
-          <div class="infinite-list" v-infinite-scroll="loadMore">
-            <div class="activity-item" v-for="(item, index) in publishList" :key="index">
-            <div class="activity-type">{{ item.categoryName }}</div>
-            <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
-            <div class="activity-content">
-              <h3 class="activity-title">{{ item.name }}</h3>
-              <div class="activity-detail">{{ item.description }}</div>
-              <div class="activity-meta">
-                <span>已赞同 {{ item.likeCount }}</span>
-                <span>{{ item.commentCount }} 条评论</span>
-                <span>收藏 {{ item.favoriteCount }}</span>
-                <el-button type="text" size="small">分享</el-button>
-                <el-button type="text" size="small">喜欢</el-button>
+          <div class="infinite-list" v-infinite-scroll="loadMore" :infinite-scroll-disabled="noMorePublish">
+            <div class="activity-item" v-for="(item, index) in publishList" :key="'publish-'+index">
+              <div class="activity-type">{{ item.categoryName }}</div>
+              <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
+              <div class="activity-content">
+                <h3 class="activity-title">{{ item.name }}</h3>
+                <div class="activity-detail">{{ item.description }}</div>
+                <div class="activity-meta">
+                  <span>已赞同 {{ item.likeCount }}</span>
+                  <span>{{ item.commentCount }} 条评论</span>
+                  <span>收藏 {{ item.favoriteCount }}</span>
+                  <el-button type="text" size="small">分享</el-button>
+                  <el-button type="text" size="small">喜欢</el-button>
+                </div>
               </div>
             </div>
-          </div>
-          </div>
-        </el-tab-pane>
-        <el-tab-pane label="我收藏的" name="myFavorites">
-          <div class="achievements-container">
-            <div class="achievement-item">
-              <div class="achievement-count">5</div>
-              <div class="achievement-label">次赞同</div>
-            </div>
-            <div class="achievement-item">
-              <div class="achievement-count">112</div>
-              <div class="achievement-label">次喜欢</div>
-            </div>
-            <div class="achievement-item">
-              <div class="achievement-count">15</div>
-              <div class="achievement-label">次收藏</div>
-            </div>
-            <div class="achievement-item">
-              <div class="achievement-count">15</div>
-              <div class="achievement-label">次公共编辑</div>
-            </div>
+            <div v-if="noMorePublish" class="no-more">没有更多内容了</div>
           </div>
         </el-tab-pane>
-         <el-tab-pane label="我点赞的" name="myLike">
-          <div class="achievements-container">
-            <div class="achievement-item">
-              <div class="achievement-count">5</div>
-              <div class="achievement-label">次赞同</div>
+        
+        <el-tab-pane label="我收藏的" name="myFavorites" v-loading="favoritesLoading">
+          <div class="infinite-list" v-infinite-scroll="loadMoreFavorites" :infinite-scroll-disabled="noMoreFavorites">
+            <div class="activity-item" v-for="(item, index) in favoritesList" :key="'favorites-'+index">
+              <div class="activity-type">{{ item.categoryName }}</div>
+              <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
+              <div class="activity-content">
+                <h3 class="activity-title">{{ item.name }}</h3>
+                <div class="activity-detail">{{ item.description }}</div>
+                <div class="activity-meta">
+                  <span>已赞同 {{ item.likeCount }}</span>
+                  <span>{{ item.commentCount }} 条评论</span>
+                  <span>收藏 {{ item.favoriteCount }}</span>
+                  <el-button type="text" size="small">分享</el-button>
+                  <el-button type="text" size="small">喜欢</el-button>
+                </div>
+              </div>
             </div>
-            <div class="achievement-item">
-              <div class="achievement-count">112</div>
-              <div class="achievement-label">次喜欢</div>
+            <div v-if="noMoreFavorites" class="no-more">没有更多内容了</div>
+          </div>
+        </el-tab-pane>
+        
+        <el-tab-pane label="我点赞的" name="myLike" v-loading="likeLoading">
+          <div class="infinite-list" v-infinite-scroll="loadMoreLike" :infinite-scroll-disabled="noMoreLike">
+            <div class="activity-item" v-for="(item, index) in likeList" :key="'like-'+index">
+              <div class="activity-type">{{ item.categoryName }}</div>
+              <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
+              <div class="activity-content">
+                <h3 class="activity-title">{{ item.name }}</h3>
+                <div class="activity-detail">{{ item.description }}</div>
+                <div class="activity-meta">
+                  <span>已赞同 {{ item.likeCount }}</span>
+                  <span>{{ item.commentCount }} 条评论</span>
+                  <span>收藏 {{ item.favoriteCount }}</span>
+                  <el-button type="text" size="small">分享</el-button>
+                  <el-button type="text" size="small">喜欢</el-button>
+                </div>
+              </div>
             </div>
-            <div class="achievement-item">
-              <div class="achievement-count">15</div>
-              <div class="achievement-label">次收藏</div>
-            </div>
-            <div class="achievement-item">
-              <div class="achievement-count">15</div>
-              <div class="achievement-label">次公共编辑</div>
-            </div>
+            <div v-if="noMoreLike" class="no-more">没有更多内容了</div>
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -135,37 +138,122 @@
 import { ref, onMounted } from 'vue'
 import { post } from '@/net'
 
-const publishList = ref([])
-const page = ref(1)
-const size = ref(10)
-const total = ref(0)
-const loading = ref(false)
+const activeTab = ref('myPublish')
 
+// 我发布的相关状态
+const publishList = ref([])
+const publishPage = ref(1)
+const publishSize = ref(10)
+const publishTotal = ref(0)
+const loading = ref(false)
+const noMorePublish = ref(false)
+
+// 我收藏的相关状态
+const favoritesList = ref([])
+const favoritesPage = ref(1)
+const favoritesSize = ref(10)
+const favoritesTotal = ref(0)
+const favoritesLoading = ref(false)
+const noMoreFavorites = ref(false)
+
+// 我点赞的相关状态
+const likeList = ref([])
+const likePage = ref(1)
+const likeSize = ref(10)
+const likeTotal = ref(0)
+const likeLoading = ref(false)
+const noMoreLike = ref(false)
+
+// 加载更多我发布的内容
 const loadMore = () => {
-  if (!loading.value && page.value * size.value < total.value) {
-    page.value++
-    fetchData()
+  if (!loading.value && publishPage.value * publishSize.value < publishTotal.value) {
+    publishPage.value++
+    fetchPublishData()
+  } else {
+    noMorePublish.value = true
   }
 }
 
-const fetchData = async () => {
+// 加载更多我收藏的内容
+const loadMoreFavorites = () => {
+  if (!favoritesLoading.value && favoritesPage.value * favoritesSize.value < favoritesTotal.value) {
+    favoritesPage.value++
+    fetchFavoritesData()
+  } else {
+    noMoreFavorites.value = true
+  }
+}
+
+// 加载更多我点赞的内容
+const loadMoreLike = () => {
+  if (!likeLoading.value && likePage.value * likeSize.value < likeTotal.value) {
+    likePage.value++
+    fetchLikeData()
+  } else {
+    noMoreLike.value = true
+  }
+}
+
+// 获取我发布的数据
+const fetchPublishData = async () => {
   try {
     loading.value = true
     const res = await post('/api/auth/my/myPublished', {
-      page: page.value,
-      size: size.value
+      page: publishPage.value,
+      size: publishSize.value
     })
-    console.log("res",res)
     publishList.value.push(...res.records)
-    total.value = res.total
+    publishTotal.value = res.total
+    noMorePublish.value = publishPage.value * publishSize.value >= res.total
   } finally {
     loading.value = false
   }
 }
 
-onMounted(fetchData)
+// 获取我收藏的数据
+const fetchFavoritesData = async () => {
+  try {
+    favoritesLoading.value = true
+    const res = await post('/api/auth/my/myFavorites', {
+      page: favoritesPage.value,
+      size: favoritesSize.value
+    })
+    favoritesList.value.push(...res.records)
+    favoritesTotal.value = res.total
+    noMoreFavorites.value = favoritesPage.value * favoritesSize.value >= res.total
+  } finally {
+    favoritesLoading.value = false
+  }
+}
 
-const activeTab = ref('myPublish')
+// 获取我点赞的数据
+const fetchLikeData = async () => {
+  try {
+    likeLoading.value = true
+    const res = await post('/api/auth/my/myLike', {
+      page: likePage.value,
+      size: likeSize.value
+    })
+    likeList.value.push(...res.records)
+    likeTotal.value = res.total
+    noMoreLike.value = likePage.value * likeSize.value >= res.total
+  } finally {
+    likeLoading.value = false
+  }
+}
+
+// 切换标签页
+const handleTabChange = (tab) => {
+  if (tab.paneName === 'myFavorites' && favoritesList.value.length === 0) {
+    fetchFavoritesData()
+  } else if (tab.paneName === 'myLike' && likeList.value.length === 0) {
+    fetchLikeData()
+  }
+}
+
+onMounted(() => {
+  fetchPublishData()
+})
 </script>
 
 <style scoped>
@@ -313,5 +401,17 @@ const activeTab = ref('myPublish')
   color: #8590a6;
   font-size: 14px;
   padding: 10px 0;
+}
+
+.no-more {
+  text-align: center;
+  color: #8590a6;
+  padding: 10px 0;
+  font-size: 14px;
+}
+
+.infinite-list {
+  max-height: 600px;
+  overflow-y: auto;
 }
 </style>

@@ -7,6 +7,7 @@ import com.example.entity.base.UserInfo;
 import com.example.entity.dto.Projects;
 import com.example.entity.req.ConcernPublisherReq;
 import com.example.entity.req.MyPublishedPageReq;
+import com.example.entity.resp.MyFollowCountResp;
 import com.example.entity.resp.MyPublishedResp;
 import com.example.entity.resp.ProjectsResp;
 import com.example.enums.ProjectEnum;
@@ -35,23 +36,23 @@ public class MyController {
     @Resource
     private MyFacade myFacade;
 
+    @PostMapping("/myFollowCount")
+    public RespBean<MyFollowCountResp> myFollowCount() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            MyFollowCountResp hotFuyeProjects = myFacade.myFollowCount(user.getId());
+            return RespBean.success(hotFuyeProjects);
+        } catch (Exception e) {
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
     @PostMapping("/myLike")
     public RespBean<Page<MyPublishedResp>> myLike(@RequestBody MyPublishedPageReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            Page<Projects> hotFuyeProjects = myFacade.myLike(req, user.getId());
-            List<MyPublishedResp> collect = hotFuyeProjects.getRecords().stream().map(v -> {
-                MyPublishedResp projectsResp = new MyPublishedResp();
-                BeanUtils.copyProperties(v, projectsResp);
-                ProjectEnum.ProjectCategoryEnum difficultyEnum = ProjectEnum.ProjectCategoryEnum.getEnum(v.getCategory());
-                projectsResp.setCategoryName(difficultyEnum == null ? "未定义" : difficultyEnum.getName());
-                return projectsResp;
-            }).collect(Collectors.toList());
-
-            Page<MyPublishedResp> result = Page.of(req.getPage() - 1, req.getSize());
-            result.setTotal(hotFuyeProjects.getTotal());
-            result.setRecords(collect);
-            return RespBean.success(result);
+            Page<MyPublishedResp> hotFuyeProjects = myFacade.myLike(req, user.getId());
+            return RespBean.success(hotFuyeProjects);
         } catch (Exception e) {
             return RespBean.failure(999, e.getMessage());
         }
@@ -62,19 +63,8 @@ public class MyController {
     public RespBean<Page<MyPublishedResp>> myFavorites(@RequestBody MyPublishedPageReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            Page<Projects> hotFuyeProjects = myFacade.myFavorites(req, user.getId());
-            List<MyPublishedResp> collect = hotFuyeProjects.getRecords().stream().map(v -> {
-                MyPublishedResp projectsResp = new MyPublishedResp();
-                BeanUtils.copyProperties(v, projectsResp);
-                ProjectEnum.ProjectCategoryEnum difficultyEnum = ProjectEnum.ProjectCategoryEnum.getEnum(v.getCategory());
-                projectsResp.setCategoryName(difficultyEnum == null ? "未定义" : difficultyEnum.getName());
-                return projectsResp;
-            }).collect(Collectors.toList());
-
-            Page<MyPublishedResp> result = Page.of(req.getPage() - 1, req.getSize());
-            result.setTotal(hotFuyeProjects.getTotal());
-            result.setRecords(collect);
-            return RespBean.success(result);
+            Page<MyPublishedResp> hotFuyeProjects = myFacade.myFavorites(req, user.getId());
+            return RespBean.success(hotFuyeProjects);
         } catch (Exception e) {
             return RespBean.failure(999, e.getMessage());
         }
