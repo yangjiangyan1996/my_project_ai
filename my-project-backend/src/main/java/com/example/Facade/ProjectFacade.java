@@ -47,15 +47,16 @@ public class ProjectFacade {
     AccountService accountService;
 
     public ProjectsDetailResp selectByProjectId(Long projectId, Long userId) {
-        boolean projectDown = projectService.isProjectDown(projectId);
-        if (!projectDown) {
-//            throw new ValidationException("项目已下架");
+        Projects projectDown = projectService.selectByProjectId(projectId);
+        if (projectDown == null) {
             return new ProjectsDetailResp();
         }
+
         ProjectsDetailResp r = new ProjectsDetailResp();
         ProjectsDetail project = projectsDetailService.selectByProjectId(projectId);
         BeanUtils.copyProperties(project, r);
 
+        r.setImageUrl(projectDown.getImageUrl());
         Account account = accountService.selectById(project.getCreatedBy());
         r.setCreatorName(account.getNickname());
 
@@ -201,6 +202,8 @@ public class ProjectFacade {
         pd.setDescription(req.getDescription());
         pd.setDifficulty(req.getDifficulty());
         pd.setImageUrl(req.getImageUrl());
+        pd.setCreatedBy(userId);
+        pd.setModifiedBy(userId);
         pd.setStatus(ProjectEnum.ProjectStatusEnum.WAITING.getCode());
 
         boolean save = projectService.save(pd);
@@ -220,6 +223,8 @@ public class ProjectFacade {
         pdd.setIsRemote(req.getIsRemote());
         pdd.setIsFreeEntry(req.getIsFreeEntry());
         pdd.setTags(req.getTags());
+        pdd.setCreatedBy(userId);
+        pdd.setModifiedBy(userId);
         return projectsDetailService.save(pdd);
     }
 }

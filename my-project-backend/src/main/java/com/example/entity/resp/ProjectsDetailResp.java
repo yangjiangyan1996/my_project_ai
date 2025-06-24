@@ -18,7 +18,7 @@ public class ProjectsDetailResp {
     private Long id;
     private Long createdBy;
     private Long projectsId;
-    private String coverImageUrl;
+    private String imageUrl;
     private String steps;
     private String tools;
     private String timePerDay;

@@ -308,7 +308,7 @@ const submitForm = () => {
       post('/api/auth/project/createFindCollage', requestData)
         .then(() => {
           ElMessage.success('创建成功')
-          router.push('/projects')
+          goBack()
         })
         .catch(err => {
           ElMessage.error(err.message || '提交失败')

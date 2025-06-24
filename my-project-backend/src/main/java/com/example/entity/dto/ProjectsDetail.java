@@ -17,7 +17,6 @@ public class ProjectsDetail extends BaseModel {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long projectsId;
-    private String coverImageUrl;
     private String steps;
     private String tools;
     private String timePerDay;

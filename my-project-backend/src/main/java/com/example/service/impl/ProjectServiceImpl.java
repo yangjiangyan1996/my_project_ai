@@ -59,6 +59,12 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
     }
 
     @Override
+    public Projects selectByProjectId(Long projectId) {
+        return projectMapper.selectOne(new QueryWrapper<Projects>().eq("id", projectId)
+                .eq("status", 1));
+    }
+
+    @Override
     public List<Projects> selectByProjectIds(List<Long> projectIds) {
         return this.baseMapper.selectList(new QueryWrapper<Projects>().in("id", projectIds).eq("status", 1).eq("is_deleted", 0));
     }

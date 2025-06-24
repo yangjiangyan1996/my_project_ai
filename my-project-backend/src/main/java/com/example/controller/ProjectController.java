@@ -131,6 +131,7 @@ public class ProjectController {
             ProjectsDetailResp result = projectFacade.selectByProjectId(projectId, user.getId());
             return RespBean.success(result);
         } catch (Exception e) {
+            log.error("ProjectController#detail,error,projectId:{}", projectId,e);
             return RespBean.failure(999, e.getMessage());
         }
     }

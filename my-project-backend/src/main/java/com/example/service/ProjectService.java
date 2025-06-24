@@ -21,5 +21,7 @@ public interface ProjectService extends IService<Projects> {
     //判断项目是否启用
     boolean isProjectDown(Long projectId);
 
+    Projects selectByProjectId(Long projectId);
+
     List<Projects> selectByProjectIds(List<Long> projectIds);
 }

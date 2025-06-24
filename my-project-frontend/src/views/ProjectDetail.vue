@@ -1,10 +1,11 @@
 <template>
   <div class="index-container">
+    <el-button @click="goBack" class="back-button">返回</el-button>
     <el-button @click="userLogout" class="logout-button">退出登录</el-button>
 
     <el-card class="project-detail-card">
       <div class="header">
-        <img :src="detail.coverImageUrl || '/images/default-project.png'" class="cover-image" />
+        <img :src="detail.imageUrl || '/images/default-project.png'" class="cover-image" />
         <div class="basic-info">
           <h2 class="title">{{ detail.name }}</h2>
           
@@ -28,8 +29,8 @@
           </div>
 
           <div class="tags">
-            <el-tag v-if="detail.isRemote" type="success">远程</el-tag>
-            <el-tag v-if="detail.isFreeEntry" type="info">零门槛</el-tag>
+            <!-- <el-tag v-if="detail.isRemote" type="success">远程</el-tag> -->
+            <!-- <el-tag v-if="detail.isFreeEntry" type="info">零门槛</el-tag> -->
             <el-tag v-for="tag in parsedTags" :key="tag" type="warning">{{ tag }}</el-tag>
           </div>
 
@@ -212,6 +213,12 @@ onMounted(async () => {
   fetchDetail();
   fetchComments();
 });
+
+
+// 返回
+const goBack = () => {
+  router.go(-1)
+}
 
 function insertEmojiToNewComment(emoji) {
   newComment.value += emoji;
@@ -770,5 +777,12 @@ function userLogout() {
   .concern-button {
     align-self: flex-end;
   }
+}
+
+.back-button {
+  position: absolute;
+  left: 30px;
+  top: 30px;
+  z-index: 1000;
 }
 </style>
