@@ -1,14 +1,12 @@
 package com.example.controller;
 
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.ProjectFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.dto.Projects;
-import com.example.entity.req.ConcernPublisherCancelReq;
-import com.example.entity.req.ConcernPublisherReq;
-import com.example.entity.req.ProjectListReq;
-import com.example.entity.req.UserCommentProjectReq;
+import com.example.entity.req.*;
 import com.example.entity.resp.MyPublishedResp;
 import com.example.entity.resp.ProjectCommentResp;
 import com.example.entity.resp.ProjectsDetailResp;
@@ -17,6 +15,7 @@ import com.example.enums.ProjectEnum;
 import com.example.filter.UserUtil;
 import com.example.service.ProjectService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
+@Slf4j
 @RequestMapping("/api/auth/project/")
 public class ProjectController {
 
@@ -32,6 +32,21 @@ public class ProjectController {
     ProjectFacade projectFacade;
     @Resource
     private ProjectService projectService;
+
+
+
+    @PostMapping("/createFindCollage")
+    public RespBean<Boolean> createFindCollage(@RequestBody CreateFindCollageReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.createFindCollage(req, user.getId());
+            return RespBean.success(result);
+        } catch (Exception e) {
+            log.error("ProjectController#createFindCollage,req:{}", JSON.toJSONString(req),e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
 
     @PostMapping("/concernPublisher")
     public RespBean<Boolean> concernPublisher(@RequestBody ConcernPublisherReq req) {

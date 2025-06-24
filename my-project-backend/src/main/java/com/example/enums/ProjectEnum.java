@@ -13,6 +13,23 @@ public class ProjectEnum {
      * 难度等级
      */
     @Getter
+    public enum ProjectStatusEnum {
+        WAITING(1, "待审核"),
+        PUBLISHING(2, "发布"),
+        NO(3, "禁用"),
+        ;
+        private Integer code;
+        private String name;
+
+        ProjectStatusEnum(Integer code, String name) {
+            this.code = code;
+            this.name = name;
+        }
+    }
+    /**
+     * 难度等级
+     */
+    @Getter
     public enum ProjectDifficultyEnum {
         ONE(1, "★"),
         TWO(2, "★★"),

@@ -15,6 +15,6 @@ public class Config {
             "/api/auth/register",
             "/api/auth/verifyEmail",
             "/api/auth/sendVerifyEmail",
-            "/api/public/**"
+            "/api/unauth/**"
     };
 }

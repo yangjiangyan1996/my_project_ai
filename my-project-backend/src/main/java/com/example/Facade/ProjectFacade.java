@@ -1,8 +1,10 @@
 package com.example.Facade;
 
+import com.alibaba.fastjson2.JSON;
 import com.example.entity.dto.*;
 import com.example.entity.req.ConcernPublisherCancelReq;
 import com.example.entity.req.ConcernPublisherReq;
+import com.example.entity.req.CreateFindCollageReq;
 import com.example.entity.req.UserCommentProjectReq;
 import com.example.entity.resp.ProjectCommentResp;
 import com.example.entity.resp.ProjectsDetailResp;
@@ -13,6 +15,7 @@ import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -188,5 +191,35 @@ public class ProjectFacade {
             userFollowService.updateIsMutual(req.getFolloweeId(), userId, UserEnums.FollowEnum.No.getCode());
         }
         return userFollowService.removeUserByUserId(userId, req.getFolloweeId());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean createFindCollage(CreateFindCollageReq req, Long userId) {
+        Projects pd = new Projects();
+        pd.setName(req.getName());
+        pd.setCategory(req.getCategory());
+        pd.setDescription(req.getDescription());
+        pd.setDifficulty(req.getDifficulty());
+        pd.setImageUrl(req.getImageUrl());
+        pd.setStatus(ProjectEnum.ProjectStatusEnum.WAITING.getCode());
+
+        boolean save = projectService.save(pd);
+        if (! save) {
+            return false;
+        }
+
+        ProjectsDetail pdd = new ProjectsDetail();
+        pdd.setProjectsId(pd.getId());
+        pdd.setCoverImageUrl(JSON.toJSONString(req.getCoverImageUrl()));
+        pdd.setSteps(req.getSteps());
+        pdd.setTools(req.getTools());
+        pdd.setTimePerDay(req.getTimePerDay());
+        pdd.setIncomeEstimate(req.getIncomeEstimate());
+        pdd.setTargetAudience(req.getTargetAudience());
+        pdd.setRiskWarning(req.getRiskWarning());
+        pdd.setIsRemote(req.getIsRemote());
+        pdd.setIsFreeEntry(req.getIsFreeEntry());
+        pdd.setTags(req.getTags());
+        return projectsDetailService.save(pdd);
     }
 }

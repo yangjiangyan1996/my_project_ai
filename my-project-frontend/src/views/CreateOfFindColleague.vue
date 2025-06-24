@@ -12,20 +12,20 @@
           <el-input v-model="form.name" placeholder="请输入副业名称" />
         </el-form-item>
         
-        <el-form-item label="封面图片" prop="coverImageUrl">
+        <el-form-item label="封面图片" prop="imageUrl">
           <el-upload
             class="cover-uploader"
-            action="/api/upload"
+            action="http://localhost:8080/api/unauth/common/upload"
             :show-file-list="false"
             :on-success="handleCoverSuccess"
             :before-upload="beforeCoverUpload">
-            <img v-if="form.coverImageUrl" :src="form.coverImageUrl" class="cover-image">
+            <img v-if="form.imageUrl" :src="form.imageUrl" class="cover-image">
             <el-icon v-else class="cover-uploader-icon"><Plus /></el-icon>
           </el-upload>
         </el-form-item>
         
-        <el-form-item label="副业分类" prop="categoryId">
-          <el-select v-model="form.categoryId" placeholder="请选择分类">
+        <el-form-item label="副业分类" prop="category">
+          <el-select v-model="form.category" placeholder="请选择分类">
             <el-option
               v-for="category in categories"
               :key="category.id"
@@ -41,6 +41,14 @@
             type="textarea" 
             :rows="3" 
             placeholder="用简短的一句话描述你的副业" />
+        </el-form-item>
+        
+        <el-form-item label="难度等级" prop="difficulty">
+          <el-select v-model="form.difficulty" placeholder="请选择难度">
+            <el-option label="简单" :value="1" />
+            <el-option label="中等" :value="2" />
+            <el-option label="困难" :value="3" />
+          </el-select>
         </el-form-item>
         
         <!-- 副业属性 -->
@@ -90,20 +98,29 @@
         <el-divider>详细内容</el-divider>
         
         <el-form-item label="操作步骤" prop="steps">
-          <v-md-editor 
-            v-model="form.steps" 
-            height="400px" 
-            placeholder="详细描述副业的操作步骤..."
-            left-toolbar="undo redo clear | h bold italic strikethrough quote | ul ol table hr | link image code | save"
-          />
+          <div style="border: 1px solid #ccc; margin-bottom: 10px;">
+            <Toolbar
+              style="border-bottom: 1px solid #ccc"
+              :editor="editorRef"
+              :defaultConfig="toolbarConfig"
+              mode="default"
+            />
+            <Editor
+              style="height: 400px; overflow-y: hidden;"
+              v-model="form.steps"
+              :defaultConfig="editorConfig"
+              mode="default"
+              @onCreated="handleEditorCreated"
+            />
+          </div>
         </el-form-item>
         
         <el-form-item label="推荐工具" prop="tools">
-          <v-md-editor 
+          <el-input 
             v-model="form.tools" 
-            height="300px" 
-            placeholder="列出推荐的平台、工具或资源..."
-          />
+            type="textarea" 
+            :rows="3" 
+            placeholder="列出推荐的平台、工具或资源..." />
         </el-form-item>
         
         <el-form-item label="风险提示" prop="riskWarning">
@@ -125,48 +142,87 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick, shallowRef, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { post } from '@/net'
 import { ElMessage } from 'element-plus'
+import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
+import '@wangeditor/editor/dist/css/style.css'
 
 const router = useRouter()
 
 // 表单数据
 const form = reactive({
+  // projects表字段
   name: '',
-  coverImageUrl: '',
-  categoryId: '',
+  category: null,
   description: '',
-  isRemote: false,
-  isFreeEntry: false,
+  difficulty: 1,
+  imageUrl: '',
+  
+  // projects_detail表字段
+  steps: '',
+  tools: '',
   timePerDay: '',
   incomeEstimate: '',
   targetAudience: '',
+  riskWarning: '',
+  isRemote: true,
+  isFreeEntry: true,
   tags: [],
-  steps: '',
-  tools: '',
-  riskWarning: ''
 })
 
 // 表单验证规则
 const rules = {
   name: [{ required: true, message: '请输入副业名称', trigger: 'blur' }],
-  categoryId: [{ required: true, message: '请选择分类', trigger: 'change' }],
+  category: [{ required: true, message: '请选择分类', trigger: 'change' }],
   description: [{ required: true, message: '请输入简短描述', trigger: 'blur' }],
-  timePerDay: [{ required: true, message: '请输入每日投入时间', trigger: 'blur' }],
-  steps: [{ required: true, message: '请输入操作步骤', trigger: 'blur' }]
+  difficulty: [{ required: true, message: '请选择难度等级', trigger: 'change' }],
+  steps: [{ required: true, message: '请输入操作步骤', trigger: 'blur' }],
+  tools: [{ required: true, message: '请输入推荐工具', trigger: 'blur' }],
+  timePerDay: [{ required: true, message: '请输入每日投入时间', trigger: 'blur' }]
 }
 
 // 分类数据
 const categories = ref([
-  { id: 1, name: '线上兼职' },
-  { id: 2, name: '技能服务' },
-  { id: 3, name: '电商创业' },
+  { id: 1, name: '电商' },
+  { id: 2, name: 'AI' },
+  { id: 3, name: '新媒体' },
   { id: 4, name: '内容创作' },
   { id: 5, name: '投资理财' }
 ])
+
+// 富文本编辑器配置
+const editorRef = shallowRef()
+const toolbarConfig = {}
+const editorConfig = {
+  placeholder: '请输入操作步骤...',
+  MENU_CONF: {
+    uploadImage: {
+      server: 'http://localhost:8080/api/unauth/common/upload',
+      fieldName: 'file',
+      maxFileSize: 2 * 1024 * 1024, // 2M
+      allowedFileTypes: ['image/*'],
+      customInsert(res, insertFn) {
+        if (res && res.url) {
+          insertFn(res.url)
+        }
+      }
+    }
+  }
+}
+
+const handleEditorCreated = (editor) => {
+  editorRef.value = editor
+}
+
+// 组件销毁时，也及时销毁编辑器
+onBeforeUnmount(() => {
+  const editor = editorRef.value
+  if (editor == null) return
+  editor.destroy()
+})
 
 // 标签相关
 const tagInputVisible = ref(false)
@@ -201,7 +257,7 @@ const removeTag = (tag) => {
 
 // 封面图片上传
 const handleCoverSuccess = (response) => {
-  form.coverImageUrl = response.url
+  form.imageUrl = response.url
   ElMessage.success('上传成功')
 }
 
@@ -211,9 +267,11 @@ const beforeCoverUpload = (file) => {
 
   if (!isJPG) {
     ElMessage.error('封面图片只能是 JPG/PNG 格式!')
+    return false
   }
   if (!isLt2M) {
     ElMessage.error('封面图片大小不能超过 2MB!')
+    return false
   }
   return isJPG && isLt2M
 }
@@ -223,15 +281,40 @@ const submitForm = () => {
   formRef.value.validate((valid) => {
     if (valid) {
       submitting.value = true
-      post('/api/auth/project/create', {
-        ...form,
-        tags: form.tags.join(',')
-      }).then(() => {
-        ElMessage.success('创建成功')
-        router.push('/projects')
-      }).finally(() => {
-        submitting.value = false
-      })
+      
+      // 组装请求数据
+      const requestData = {
+        // projects表字段
+        name: form.name,
+        category: form.category,
+        description: form.description,
+        difficulty: form.difficulty,
+        imageUrl: form.imageUrl,
+        
+        // projects_detail表字段
+        steps: form.steps,
+        tools: form.tools,
+        timePerDay: form.timePerDay,
+        incomeEstimate: form.incomeEstimate,
+        targetAudience: form.targetAudience,
+        riskWarning: form.riskWarning,
+        isRemote: form.isRemote ? 1 : 0,
+        isFreeEntry: form.isFreeEntry ? 1 : 0,
+        tags: form.tags.join(','),
+        status: 0 // 0=待审核
+      }
+      
+      post('/api/auth/project/createFindCollage', requestData)
+        .then(() => {
+          ElMessage.success('创建成功')
+          router.push('/projects')
+        })
+        .catch(err => {
+          ElMessage.error(err.message || '提交失败')
+        })
+        .finally(() => {
+          submitting.value = false
+        })
     }
   })
 }
@@ -240,6 +323,10 @@ const submitForm = () => {
 const resetForm = () => {
   formRef.value.resetFields()
   form.tags = []
+  form.steps = ''
+  if (editorRef.value) {
+    editorRef.value.clear()
+  }
 }
 
 // 返回
@@ -323,5 +410,17 @@ onMounted(() => {
     height: 150px;
     line-height: 150px;
   }
+}
+</style>
+
+<style>
+/* 覆盖wangEditor的默认样式 */
+.w-e-toolbar {
+  background-color: #f5f7fa !important;
+  border-bottom: 1px solid #e4e7ed !important;
+}
+.w-e-text-container {
+  background-color: #fff !important;
+  border: none !important;
 }
 </style>
