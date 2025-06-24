@@ -205,8 +205,9 @@ const editorConfig = {
       maxFileSize: 2 * 1024 * 1024, // 2M
       allowedFileTypes: ['image/*'],
       customInsert(res, insertFn) {
-        if (res && res.url) {
-          insertFn(res.url)
+      console.log("图片",res)
+        if (res && res.data) {
+          insertFn(res.data)
         }
       }
     }
@@ -257,7 +258,7 @@ const removeTag = (tag) => {
 
 // 封面图片上传
 const handleCoverSuccess = (response) => {
-  form.imageUrl = response.url
+  form.imageUrl = response.data
   ElMessage.success('上传成功')
 }
 
@@ -269,10 +270,10 @@ const beforeCoverUpload = (file) => {
     ElMessage.error('封面图片只能是 JPG/PNG 格式!')
     return false
   }
-  if (!isLt2M) {
-    ElMessage.error('封面图片大小不能超过 2MB!')
-    return false
-  }
+  // if (!isLt2M) {
+  //   ElMessage.error('封面图片大小不能超过 2MB!')
+  //   return false
+  // }
   return isJPG && isLt2M
 }
 

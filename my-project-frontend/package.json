@@ -12,7 +12,7 @@
     "@kangc/v-md-editor": "^2.3.18",
     "@vueuse/core": "^10.3.0",
     "@wangeditor/editor": "^5.1.23",
-    "@wangeditor/editor-for-vue": "^5.1.12",
+    "@wangeditor/editor-for-vue": "next",
     "axios": "^1.4.0",
     "dayjs": "^1.11.13",
     "element-plus": "^2.10.2",

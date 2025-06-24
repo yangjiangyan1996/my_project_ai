@@ -4,6 +4,10 @@ springdoc:
   swagger-ui:
     operations-sorter: alpha
 spring:
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
   mail:
     host: smtp.163.com
     username: javastudy111@163.com
@@ -39,3 +43,5 @@ spring:
       origin: '*'
       credentials: false
       methods: '*'
+
+

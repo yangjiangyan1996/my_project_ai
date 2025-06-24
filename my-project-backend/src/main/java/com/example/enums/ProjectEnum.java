@@ -14,9 +14,9 @@ public class ProjectEnum {
      */
     @Getter
     public enum ProjectStatusEnum {
-        WAITING(1, "待审核"),
-        PUBLISHING(2, "发布"),
-        NO(3, "禁用"),
+        WAITING(0, "待审核"),
+        PUBLISHING(1, "发布"),
+        NO(2, "禁用"),
         ;
         private Integer code;
         private String name;
