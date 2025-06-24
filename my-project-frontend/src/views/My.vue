@@ -4,17 +4,31 @@
       <div class="profile-info">
         <h1 class="username">用户名</h1>
         <div class="industry">行业</div>
-        <div class="profile-actions">
+        <!-- <div class="profile-actions">
           <el-button type="text" size="small">查看详细资料</el-button>
           <el-button type="text" size="small">编辑个人资料</el-button>
 
-          <!-- ✅ 新增副业入口按钮组 -->
           <el-button type="primary" size="small" @click="goToCreateSidejob">
             💼 找副业
           </el-button>
           <el-button type="default" size="small" @click="goToJoinSidejob">
             🤝 找搭子
           </el-button>
+        </div> -->
+        <div class="sidejob-entry-card">
+          <div class="sidejob-header">
+            <el-icon size="22"><Suitcase /></el-icon>
+            <span class="sidejob-title">开启副业，赚外快</span>
+          </div>
+          <div class="sidejob-description">选择你的路径：发起副业项目，或加入有趣团队</div>
+          <div class="sidejob-buttons">
+            <el-button type="primary" size="large" @click="goToCreateSidejob">
+              💼 我要发起副业
+            </el-button>
+            <el-button type="success" size="large" @click="goToJoinSidejob">
+              🤝 我想找搭子
+            </el-button>
+          </div>
         </div>
       </div>
     </div>
@@ -454,4 +468,42 @@ onMounted(() => {
   max-height: 600px;
   overflow-y: auto;
 }
+
+.sidejob-entry-card {
+  background-color: #fefce8;
+  border: 1px solid #fde68a;
+  padding: 20px;
+  border-radius: 12px;
+  margin-top: 20px;
+  max-width: 600px;
+}
+
+.sidejob-header {
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #b45309;
+  margin-bottom: 8px;
+}
+
+.sidejob-header .el-icon {
+  margin-right: 8px;
+}
+
+.sidejob-title {
+  font-size: 20px;
+}
+
+.sidejob-description {
+  color: #92400e;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.sidejob-buttons {
+  display: flex;
+  gap: 10px;
+}
+
 </style>
