@@ -46,7 +46,8 @@ public class ProjectFacade {
     public ProjectsDetailResp selectByProjectId(Long projectId, Long userId) {
         boolean projectDown = projectService.isProjectDown(projectId);
         if (!projectDown) {
-            throw new ValidationException("项目已下架");
+//            throw new ValidationException("项目已下架");
+            return new ProjectsDetailResp();
         }
         ProjectsDetailResp r = new ProjectsDetailResp();
         ProjectsDetail project = projectsDetailService.selectByProjectId(projectId);

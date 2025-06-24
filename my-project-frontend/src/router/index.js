@@ -48,7 +48,15 @@ const router = createRouter({
             name: 'my',
             component: () => import('@/views/My.vue'),
             meta: { layout: 'EmptyLayout' }
-        },
+        },{
+            path: '/CreateOfFindColleague',
+            name: 'createOfFindColleague',
+            component: () => import('@/views/CreateOfFindColleague.vue')
+        },{
+            path: '/CreateOfFindJob',
+            name: 'createOfFindJob',
+            component: () => import('@/views/CreateOfFindJob.vue')
+        }
     ]
 })
 

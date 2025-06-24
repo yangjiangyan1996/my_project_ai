@@ -7,6 +7,14 @@
         <div class="profile-actions">
           <el-button type="text" size="small">查看详细资料</el-button>
           <el-button type="text" size="small">编辑个人资料</el-button>
+
+          <!-- ✅ 新增副业入口按钮组 -->
+          <el-button type="primary" size="small" @click="goToCreateSidejob">
+            💼 找副业
+          </el-button>
+          <el-button type="default" size="small" @click="goToJoinSidejob">
+            🤝 找搭子
+          </el-button>
         </div>
       </div>
     </div>
@@ -54,7 +62,7 @@
       <el-tabs v-model="activeTab" @tab-click="handleTabChange">
         <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
           <div class="infinite-list" v-infinite-scroll="loadMore" :infinite-scroll-disabled="noMorePublish">
-            <div class="activity-item" v-for="(item, index) in publishList" :key="'publish-'+index">
+            <div class="activity-item" v-for="(item, index) in publishList" :key="'publish-'+index" @click="goToDetail(item)">
               <div class="activity-type">{{ item.categoryName }}</div>
               <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
               <div class="activity-content">
@@ -136,6 +144,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const goToDetail = (project) => {
+  // router.push(`/project/${project.id}`)
+    router.push({ name: 'project-detail', params: { id: project.id } });
+
+}
 import { post } from '@/net'
 
 const activeTab = ref('myPublish')
@@ -167,6 +183,14 @@ const likeSize = ref(10)
 const likeTotal = ref(0)
 const likeLoading = ref(false)
 const noMoreLike = ref(false)
+
+const goToCreateSidejob = () => {
+  router.push({ name: 'createOfFindColleague' }) // 创建副业页面
+}
+
+const goToJoinSidejob = () => {
+  router.push({ name: 'sidejob-join-list' }) // 加入副业列表页
+}
 
 // 获取关注数
 const fetchFollowCount = async () => {

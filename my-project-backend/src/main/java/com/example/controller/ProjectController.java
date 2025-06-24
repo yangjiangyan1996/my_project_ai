@@ -9,6 +9,7 @@ import com.example.entity.req.ConcernPublisherCancelReq;
 import com.example.entity.req.ConcernPublisherReq;
 import com.example.entity.req.ProjectListReq;
 import com.example.entity.req.UserCommentProjectReq;
+import com.example.entity.resp.MyPublishedResp;
 import com.example.entity.resp.ProjectCommentResp;
 import com.example.entity.resp.ProjectsDetailResp;
 import com.example.entity.resp.ProjectsResp;
@@ -110,9 +111,13 @@ public class ProjectController {
 
     @GetMapping("/detail")
     public RespBean<ProjectsDetailResp> showHotFuye(@RequestParam("projectId") Long projectId) {
-        UserInfo user = UserUtil.getCurrentUser();
-        ProjectsDetailResp result = projectFacade.selectByProjectId(projectId, user.getId());
-        return RespBean.success(result);
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            ProjectsDetailResp result = projectFacade.selectByProjectId(projectId, user.getId());
+            return RespBean.success(result);
+        } catch (Exception e) {
+            return RespBean.failure(999, e.getMessage());
+        }
     }
 
     @PostMapping("/show")
