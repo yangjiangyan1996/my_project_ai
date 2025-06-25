@@ -26,7 +26,7 @@
               💼 我要发起副业
             </el-button>
             <el-button type="success" size="large" @click="goToJoinSidejob">
-              🤝 我想找搭子
+              🤝 我想找团队
             </el-button>
           </div>
         </div>
@@ -203,7 +203,7 @@ const goToCreateSidejob = () => {
 }
 
 const goToJoinSidejob = () => {
-  router.push({ name: 'sidejob-join-list' }) // 加入副业列表页
+  router.push({ name: 'createOfFindJob' }) // 加入副业列表页
 }
 
 // 获取关注数
