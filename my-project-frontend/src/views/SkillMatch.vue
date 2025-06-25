@@ -85,6 +85,7 @@ const fetchSkillMatchData = async () => {
 
       // 确保响应式更新
       skillList.value = [...skillList.value, ...newData];
+      console.log("skillList.value",skillList.value)
       page.value += 1;
       hasMore.value = res.total > skillList.value.length;
     }

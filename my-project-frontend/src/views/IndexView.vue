@@ -22,7 +22,7 @@
       <el-sub-menu index="2">
         <template #title><i class="el-icon-user"></i>找人合作</template>
         <el-menu-item index="partner-map" @click="router.push({ name: 'partner-map' })">合作地图</el-menu-item>
-        <el-menu-item index="skill-match" @click="activePanel = 'skillMatch'">技能匹配</el-menu-item>
+        <el-menu-item index="skill-match" @click="changeDisplayMode('skillMatch')">技能匹配</el-menu-item>
 
       </el-sub-menu>
 
@@ -56,7 +56,9 @@
     </el-menu>
 
      <!-- 搜索区域 -->
-     <div class="search-bar">
+       <!-- 搜索 + 项目展示：只在非技能匹配页面展示 -->
+    <div v-if="displayMode === 'project'">
+      <div class="search-bar">
       <el-input v-model="search.name" placeholder="搜索副业名称" style="width: 200px; margin-right: 10px" />
       <el-select v-model="search.category" placeholder="选择分类" style="width: 180px; margin-right: 10px">
         <el-option
@@ -80,10 +82,9 @@
         />
       </el-select>
       <el-button type="primary" @click="onSearch">搜索</el-button>
-    </div>
-
-    <!-- 项目展示区域 -->
-    <div class="main-content">
+      </div>
+      <!-- 项目展示区域 -->
+      <div class="main-content">
       <!-- 项目列表容器，添加滚动监听 -->
       <div class="project-container" @scroll="handleScroll">
         <el-row :gutter="20" class="project-list">
@@ -119,12 +120,12 @@
           没有更多数据了
         </div>
       </div>
+      </div>
     </div>
+
+    <!-- 技能匹配展示区域 -->
+    <SkillMatch v-if="displayMode === 'skillMatch'" />
   </div>
-
-
-  <!-- 技能匹配展示区域 -->
-  <SkillMatch v-if="activePanel === 'skillMatch'" />
 </template>
 
 <script setup>
@@ -136,7 +137,7 @@ import { ElMessage } from 'element-plus';
 import { inject } from 'vue'
 import SkillMatch from '@/views/SkillMatch.vue';
 
-
+const displayMode = ref('project')
 const projectList = ref([]);
 const loading = ref(false);
 const currentPage = ref(1);
@@ -149,11 +150,9 @@ const search = ref({ name: '', category: '', difficulties: [] });
 const userInfo = inject('userInfo')
 
 
-const activePanel = ref('')
-const skillList = ref([])
-const skillLoading = ref(false)
-
-
+function changeDisplayMode(mode) {
+  displayMode.value = mode;
+}
 
 //跳转到列表详情页
 function goToDetail(project) {
@@ -282,9 +281,6 @@ function userLogout() {
   logout(() => router.push("/"));
 }
 
-function handleMenuClick(panel) {
-  activePanel.value = panel;
-}
 </script>
 
 <style scoped>
