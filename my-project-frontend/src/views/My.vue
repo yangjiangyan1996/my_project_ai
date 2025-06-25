@@ -688,11 +688,16 @@ onMounted(() => {
 
 .intent-card {
   border-radius: 12px;
+  background-color: #f9f9fb; /* 更亮一些的灰白背景 */
+  border: 1px solid #dcdfe6; /* 增加边框层次 */
+  color: #333;
 }
 
 .intent-card h2 {
   margin-bottom: 20px;
-  color: #333;
+  color: #2c3e50; /* 更深的字体色 */
+  font-weight: 600;
+  font-size: 18px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -700,22 +705,26 @@ onMounted(() => {
 
 .intent-display {
   padding: 10px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
 }
 
 .intent-item {
   margin-bottom: 12px;
   display: flex;
   align-items: flex-start;
+  font-size: 14px;
 }
 
 .intent-label {
   font-weight: 500;
-  color: #666;
-  min-width: 80px;
+  color: #606266; /* 深灰更清晰 */
+  min-width: 90px;
 }
 
 .intent-value {
-  color: #333;
+  color: #303133; /* 主体文字颜色更黑一些 */
   flex: 1;
 }
 
@@ -728,7 +737,10 @@ onMounted(() => {
 }
 
 .published-tag {
-  margin-left: 10px;
+ background-color: #f0f9eb;
+  border-color: #e1f3d8;
+  color: #67c23a;
+  font-weight: 500;
 }
 
 .intent-form {
