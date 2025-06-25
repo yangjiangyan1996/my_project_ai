@@ -1,12 +1,17 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.AccountShow;
+import com.example.entity.dto.Projects;
+import com.example.enums.ProjectEnum;
+import com.example.enums.UserEnums;
 import com.example.mapper.AccountShowMapper;
 import com.example.service.AccountShowService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.util.CollectionUtils;
 
 @Service
 public class AccountShowServiceImpl extends ServiceImpl<AccountShowMapper, AccountShow> implements AccountShowService {
@@ -14,5 +19,15 @@ public class AccountShowServiceImpl extends ServiceImpl<AccountShowMapper, Accou
     @Override
     public AccountShow getByUserId(Long userId) {
         return query().eq("user_id", userId).one();
+    }
+
+    @Override
+    public Page<AccountShow> getProjectShowList(Page<AccountShow> page) {
+        return baseMapper.selectPage(
+                page,
+                new QueryWrapper<AccountShow>()
+                        .eq("status", UserEnums.AccountShowEnum.Yes.getCode())
+                        .orderByDesc("created_at")
+        );
     }
 }

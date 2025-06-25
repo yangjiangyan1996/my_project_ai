@@ -44,7 +44,7 @@ public class ProjectController {
         }
     }
 
-    @GetMapping("/projectShowList")
+    @PostMapping("/projectShowList")
     public RespBean<Page<ProjectOfMyShowGetResp>> projectShowList(@RequestBody ProjectShowListReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();

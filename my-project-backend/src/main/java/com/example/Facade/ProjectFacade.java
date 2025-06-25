@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
+import com.example.entity.resp.MyPublishedResp;
 import com.example.entity.resp.ProjectCommentResp;
 import com.example.entity.resp.ProjectOfMyShowGetResp;
 import com.example.entity.resp.ProjectsDetailResp;
@@ -262,14 +263,13 @@ public class ProjectFacade {
 
     public ProjectOfMyShowGetResp getProjectOfMyShow(Long userId) {
         AccountShow byUserId = accountShowService.getByUserId(userId);
-        ProjectOfMyShowGetResp build = ProjectOfMyShowGetResp.builder()
-                .id(byUserId.getId())
-                .audience(byUserId.getAudience())
-                .resources(byUserId.getResources())
-                .skills(byUserId.getSkills())
-                .status(byUserId.getStatus())
-                .time(byUserId.getTimePerDay())
-                .build();
+        ProjectOfMyShowGetResp build =  new ProjectOfMyShowGetResp();
+        build.setId(byUserId.getId());
+        build.setAudience(byUserId.getAudience());
+        build.setResources(byUserId.getResources());
+        build.setSkills(byUserId.getSkills());
+        build.setStatus(byUserId.getStatus());
+        build.setTime(byUserId.getTimePerDay());
         return build;
     }
 
@@ -283,7 +283,21 @@ public class ProjectFacade {
         return accountShowService.update(accountShow, new QueryWrapper<AccountShow>().eq("id", projectShowId));
     }
 
-    public Page<ProjectOfMyShowGetResp> projectShowList(Page<Object> of, ProjectShowListReq req) {
-        return null;
+    public Page<ProjectOfMyShowGetResp> projectShowList(Page<AccountShow>page, ProjectShowListReq req) {
+        Page<AccountShow> list = accountShowService.getProjectShowList(page);
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+
+        List<ProjectOfMyShowGetResp> collect = list.getRecords().stream().map(v -> {
+            ProjectOfMyShowGetResp projectsResp = new ProjectOfMyShowGetResp();
+            BeanUtils.copyProperties(v, projectsResp);
+            return projectsResp;
+        }).collect(Collectors.toList());
+
+        Page<ProjectOfMyShowGetResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(list.getTotal());
+        result.setRecords(collect);
+        return result;
     }
 }

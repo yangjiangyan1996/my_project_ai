@@ -22,7 +22,8 @@
       <el-sub-menu index="2">
         <template #title><i class="el-icon-user"></i>找人合作</template>
         <el-menu-item index="partner-map" @click="router.push({ name: 'partner-map' })">合作地图</el-menu-item>
-        <el-menu-item index="skill-match" @click="activePanel = 'skill-match'; fetchSkillList()">技能匹配</el-menu-item>
+        <el-menu-item index="skill-match" @click="activePanel = 'skillMatch'">技能匹配</el-menu-item>
+
       </el-sub-menu>
 
       <el-sub-menu index="3">
@@ -122,35 +123,8 @@
   </div>
 
 
-<!-- 技能匹配展示区域 -->
-  <el-row :gutter="20" class="skill-list">
-    <el-col 
-      v-for="skill in skillList" 
-      :key="skill.id"
-      :xs="24" :sm="12" :md="8" :lg="6"
-    >
-      <el-card class="skill-card">
-        <div class="skill-header">
-          <span class="user-id">用户ID: {{ skill.userId }}</span>
-          <el-tag :type="skill.status === '公开' ? 'success' : 'info'">{{ skill.status }}</el-tag>
-        </div>
-        <div class="skill-content">
-          <p>🕒 每日投入: {{ skill.time }}</p>
-          <p>👤 身份: {{ skill.identity }}</p>
-          <p>🛠️ 技能: 
-            <el-tag v-for="(s, index) in skill.skills" :key="index">{{ s }}</el-tag>
-          </p>
-          <p>💼 可提供: 
-            <el-tag v-for="(r, index) in skill.resources" :key="index" type="warning">{{ r }}</el-tag>
-          </p>
-        </div>
-      </el-card>
-    </el-col>
-  </el-row>
-  <div v-if="skillLoading" class="loading-more">
-    <el-icon class="is-loading"><Loading /></el-icon>
-    <span>加载中...</span>
-  </div>
+  <!-- 技能匹配展示区域 -->
+  <SkillMatch v-if="activePanel === 'skillMatch'" />
 </template>
 
 <script setup>
@@ -160,6 +134,8 @@ import router from "@/router";
 import { logout, post, get } from '@/net';
 import { ElMessage } from 'element-plus';
 import { inject } from 'vue'
+import SkillMatch from '@/views/SkillMatch.vue';
+
 
 const projectList = ref([]);
 const loading = ref(false);
@@ -177,25 +153,7 @@ const activePanel = ref('')
 const skillList = ref([])
 const skillLoading = ref(false)
 
-const fetchSkillList = async () => {
-  try {
-    skillLoading.value = true
-    const res = await get('/api/auth/user/projectShowList')
-    skillList.value = res.map(item => ({
-      id: item.id,
-      userId: item.user_id,
-      time: item.time_per_day,
-      identity: item.audience,
-      skills: item.skills.split(','),
-      status: item.status ? '公开' : '未公开',
-      resources: item.resources.split(',')
-    }))
-  } catch (e) {
-    ElMessage.error('技能数据加载失败')
-  } finally {
-    skillLoading.value = false
-  }
-}
+
 
 //跳转到列表详情页
 function goToDetail(project) {
