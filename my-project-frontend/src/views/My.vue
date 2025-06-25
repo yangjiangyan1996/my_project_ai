@@ -364,14 +364,14 @@ const cancelEdit = () => {
 }
 
 // 加载统计数据
-const loadStats = async () => {
-  try {
-    const res = await get('/api/auth/my/stats')
-    stats.value = res || {}
-  } catch (error) {
-    console.error('加载统计数据失败:', error)
-  }
-}
+// const loadStats = async () => {
+//   try {
+//     const res = await get('/api/auth/my/stats')
+//     stats.value = res || {}
+//   } catch (error) {
+//     console.error('加载统计数据失败:', error)
+//   }
+// }
 
 // 其余原有代码
 const activeTab = ref('myPublish')
@@ -498,7 +498,7 @@ const handleTabChange = (tab) => {
 onMounted(() => {
   fetchPublishData()
   fetchFollowCount()
-  loadStats()
+  // loadStats()
   loadIntentData()
 })
 </script>
