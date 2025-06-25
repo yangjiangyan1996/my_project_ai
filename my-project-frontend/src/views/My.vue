@@ -55,9 +55,9 @@
                   
                   <div class="intent-actions">
                     <el-button 
-                      v-if="!form.published"
+                      v-if="form.status === 0"
                       type="success" 
-                      @click="submitIntent(true)"
+                      @click="changeShowStatus"
                       :loading="publishing"
                     >
                       发布到广场
@@ -272,6 +272,7 @@ const submitting = ref(false)
 const publishing = ref(false)
 
 const form = ref({
+  id:'',
   audience: '',
   time: '',
   skills: '',
@@ -279,6 +280,19 @@ const form = ref({
   
   status: 1
 })
+
+// 加载用户意向数据
+const changeShowStatus = async () => {
+  try {
+    const res = await get(`/api/auth/project/changeShowStatus?projectShowId=${form.value.id}&status=1`);
+    if (res) {
+      ElMessage.success(res || '操作成功');
+      form.value.status = 1
+    }
+  } catch (error) {
+    console.error('加载意向数据失败:', error)
+  }
+}
 
 // 统计数据
 const stats = ref({
@@ -299,11 +313,12 @@ const loadIntentData = async () => {
     const res = await get('/api/auth/project/getProjectOfMyShow')
     if (res) {
       form.value = {
+        id:res.id||'',
         audience: res.audience || '',
         time: res.time || '',
         skills: res.skills || '',
         resources: res.resources || '',
-        published: res.published || false
+        status: res.published ? 1 : 0
       }
       hasSubmitted.value = true
     }
@@ -313,27 +328,21 @@ const loadIntentData = async () => {
 }
 
 // 提交意向表单
-const submitIntent = async (publish) => {
+const submitIntent = async () => {
   try {
-    if (publish) publishing.value = true
-    else submitting.value = true
+    submitting.value = true
     
-    // 调用API保存数据
-    await post('/api/auth/project/updateProjectOfMyShow', {
-      ...form.value,
-      status: publish
-    })
+    await post('/api/auth/project/updateProjectOfMyShow', form.value)
     
-    form.value.published = publish
+    form.value.status = 1
     hasSubmitted.value = true
     editMode.value = false
     
-    ElMessage.success(publish ? '已发布到广场' : '信息已保存')
+    ElMessage.success(form.value.status === 1 ? '已发布到广场' : '信息已保存')
   } catch (error) {
-    ElMessage.error('保存失败，请稍后重试')
+    ElMessage.error('操作失败，请稍后重试')
   } finally {
     submitting.value = false
-    publishing.value = false
   }
 }
 

@@ -12,6 +12,7 @@ import lombok.Data;
 @Data
 @Builder
 public class ProjectOfMyShowGetResp {
+    private Long id;
     private String audience;
     private String resources;
     private String skills;

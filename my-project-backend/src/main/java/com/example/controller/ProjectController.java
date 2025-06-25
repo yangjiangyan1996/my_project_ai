@@ -31,6 +31,19 @@ public class ProjectController {
     private ProjectService projectService;
 
 
+    @GetMapping("/changeShowStatus")
+    public RespBean<Boolean> changeShowStatus(@RequestParam("projectShowId") Long projectShowId,
+                                                             @RequestParam("status")Integer status) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.changeShowStatus(projectShowId, status, user.getId());
+            return RespBean.success(result);
+        } catch (Exception e) {
+            log.error("ProjectController#changeShowStatus,req:{}",e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
     @GetMapping("/getProjectOfMyShow")
     public RespBean<ProjectOfMyShowGetResp> getProjectOfMyShow() {
         try {

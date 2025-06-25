@@ -1,6 +1,7 @@
 package com.example.Facade;
 
 import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
 import com.example.entity.resp.ProjectCommentResp;
@@ -261,6 +262,7 @@ public class ProjectFacade {
     public ProjectOfMyShowGetResp getProjectOfMyShow(Long userId) {
         AccountShow byUserId = accountShowService.getByUserId(userId);
         ProjectOfMyShowGetResp build = ProjectOfMyShowGetResp.builder()
+                .id(byUserId.getId())
                 .audience(byUserId.getAudience())
                 .resources(byUserId.getResources())
                 .skills(byUserId.getSkills())
@@ -268,5 +270,15 @@ public class ProjectFacade {
                 .time(byUserId.getTimePerDay())
                 .build();
         return build;
+    }
+
+    public Boolean changeShowStatus(Long projectShowId, Integer status, Long userId) {
+        AccountShow as = accountShowService.getById(projectShowId);
+        if (!as.getCreatedBy().equals(userId)) {
+            return false;
+        }
+        AccountShow accountShow = new AccountShow();
+        accountShow.setStatus(status);
+        return accountShowService.update(accountShow, new QueryWrapper<AccountShow>().eq("id", projectShowId));
     }
 }
