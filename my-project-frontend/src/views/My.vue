@@ -203,7 +203,7 @@ const goToCreateSidejob = () => {
 }
 
 const goToJoinSidejob = () => {
-  router.push({ name: 'createOfFindJob' }) // 加入副业列表页
+  router.push({ name: 'createFindJob' }) // 加入副业列表页
 }
 
 // 获取关注数

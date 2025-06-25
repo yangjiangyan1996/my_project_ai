@@ -35,6 +35,18 @@ public class ProjectController {
 
 
 
+    @PostMapping("/updateProjectOfMyShow")
+    public RespBean<Boolean> updateProjectOfMyShow(@RequestBody ProjectOfMyShowUpdateReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.updateProjectOfMyShow(req, user.getId());
+            return RespBean.success(result);
+        } catch (Exception e) {
+            log.error("ProjectController#updateProjectOfMyShow,req:{}", JSON.toJSONString(req),e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
     @PostMapping("/createFindCollage")
     public RespBean<Boolean> createFindCollage(@RequestBody CreateFindCollageReq req) {
         try {

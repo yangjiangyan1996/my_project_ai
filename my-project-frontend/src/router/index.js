@@ -53,9 +53,9 @@ const router = createRouter({
             name: 'createOfFindColleague',
             component: () => import('@/views/CreateOfFindColleague.vue')
         },{
-            path: '/CreateOfFindJob',
-            name: 'createOfFindJob',
-            component: () => import('@/views/CreateOfFindJob.vue')
+            path: '/create-find-job',
+            name: 'createFindJob',
+            component: () => import('@/views/create-find-job.vue')
         }
     ]
 })

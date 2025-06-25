@@ -2,10 +2,7 @@ package com.example.Facade;
 
 import com.alibaba.fastjson2.JSON;
 import com.example.entity.dto.*;
-import com.example.entity.req.ConcernPublisherCancelReq;
-import com.example.entity.req.ConcernPublisherReq;
-import com.example.entity.req.CreateFindCollageReq;
-import com.example.entity.req.UserCommentProjectReq;
+import com.example.entity.req.*;
 import com.example.entity.resp.ProjectCommentResp;
 import com.example.entity.resp.ProjectsDetailResp;
 import com.example.enums.ProjectEnum;
@@ -29,6 +26,8 @@ import java.util.stream.Collectors;
 @Service
 public class ProjectFacade {
 
+    @Resource
+    AccountShowService accountShowService;
     @Resource
     UserFollowService userFollowService;
     @Resource
@@ -226,5 +225,18 @@ public class ProjectFacade {
         pdd.setCreatedBy(userId);
         pdd.setModifiedBy(userId);
         return projectsDetailService.save(pdd);
+    }
+
+    public Boolean updateProjectOfMyShow(ProjectOfMyShowUpdateReq req, Long id) {
+        AccountShow entity = new AccountShow();
+        entity.setUserId(id);
+        entity.setSkills(req.getSkills());
+        entity.setTimePerDay(req.getTime());
+        entity.setAudience(req.getAudience());
+        entity.setResources(req.getResources());
+        entity.setStatus(req.getStatus());
+        entity.setCreatedBy(id);
+        entity.setModifiedBy(id);
+        return accountShowService.save(entity);
     }
 }

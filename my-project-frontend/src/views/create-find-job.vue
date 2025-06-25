@@ -4,6 +4,9 @@
     <el-card class="intent-card" shadow="always">
       <h2>🧍 我的加入意向</h2>
       <el-form :model="form" label-width="100px">
+        <el-form-item label="我的身份">
+          <el-input v-model="form.audience" placeholder="如：上班族、大学生、宝妈等"></el-input>
+        </el-form-item>
         <el-form-item label="可投入时间">
           <el-input v-model="form.time" placeholder="如：每天2小时、每周末全天"></el-input>
         </el-form-item>
@@ -14,7 +17,8 @@
           <el-input v-model="form.resources" placeholder="如：设备、人脉、账号资源等"></el-input>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="submitIntent">更新显示卡</el-button>
+          <el-button type="primary" @click="submitIntent(false)">更新显示卡</el-button>
+          <el-button type="success" @click="submitIntent(true)">发布到广场</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -56,6 +60,10 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
+import { logout, post, get } from '@/net';
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const form = reactive({
   time: '',
@@ -82,9 +90,23 @@ const projects = ref([
     tags: '写作,文案,创意'
   }
 ])
+// 返回
+const goBack = () => {
+  router.go(-1)
+}
 
-const submitIntent = () => {
-  ElMessage.success('加入意向已更新！')
+const submitIntent = async (publish) => {
+  try {
+    const res = await post('/api/auth/project/updateProjectOfMyShow', {
+      ...form,
+      status: publish ? 1 : 0
+    });
+    console.log("result",res)
+    ElMessage.success(res || '操作成功');
+    goBack()
+  } catch (e) {
+    ElMessage.error(e.response?.data?.message || '请求失败');
+  }
 }
 
 const applyToProject = (id) => {
