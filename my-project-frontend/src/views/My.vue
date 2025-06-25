@@ -318,7 +318,7 @@ const loadIntentData = async () => {
         time: res.time || '',
         skills: res.skills || '',
         resources: res.resources || '',
-        status: res.published ? 1 : 0
+        status: res.status ? 1 : 0
       }
       hasSubmitted.value = true
     }
@@ -334,7 +334,7 @@ const submitIntent = async () => {
     
     await post('/api/auth/project/updateProjectOfMyShow', form.value)
     
-    form.value.status = 1
+    // form.value.status = 1
     hasSubmitted.value = true
     editMode.value = false
     
