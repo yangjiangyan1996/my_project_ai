@@ -2,6 +2,7 @@ package com.example.Facade;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
 import com.example.entity.resp.ProjectCommentResp;
@@ -280,5 +281,9 @@ public class ProjectFacade {
         AccountShow accountShow = new AccountShow();
         accountShow.setStatus(status);
         return accountShowService.update(accountShow, new QueryWrapper<AccountShow>().eq("id", projectShowId));
+    }
+
+    public Page<ProjectOfMyShowGetResp> projectShowList(Page<Object> of, ProjectShowListReq req) {
+        return null;
     }
 }

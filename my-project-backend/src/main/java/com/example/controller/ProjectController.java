@@ -44,6 +44,18 @@ public class ProjectController {
         }
     }
 
+    @GetMapping("/projectShowList")
+    public RespBean<Page<ProjectOfMyShowGetResp>> projectShowList(@RequestBody ProjectShowListReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Page<ProjectOfMyShowGetResp> result = projectFacade.projectShowList(Page.of(req.getPage() - 1, req.getSize()),req);
+            return RespBean.success(result);
+        } catch (Exception e) {
+            log.error("ProjectController#changeShowStatus,req:{}",e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
     @GetMapping("/getProjectOfMyShow")
     public RespBean<ProjectOfMyShowGetResp> getProjectOfMyShow() {
         try {
