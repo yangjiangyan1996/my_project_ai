@@ -7,10 +7,7 @@ import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.dto.Projects;
 import com.example.entity.req.*;
-import com.example.entity.resp.MyPublishedResp;
-import com.example.entity.resp.ProjectCommentResp;
-import com.example.entity.resp.ProjectsDetailResp;
-import com.example.entity.resp.ProjectsResp;
+import com.example.entity.resp.*;
 import com.example.enums.ProjectEnum;
 import com.example.filter.UserUtil;
 import com.example.service.ProjectService;
@@ -34,6 +31,17 @@ public class ProjectController {
     private ProjectService projectService;
 
 
+    @GetMapping("/getProjectOfMyShow")
+    public RespBean<ProjectOfMyShowGetResp> getProjectOfMyShow() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            ProjectOfMyShowGetResp result = projectFacade.getProjectOfMyShow(user.getId());
+            return RespBean.success(result);
+        } catch (Exception e) {
+            log.error("ProjectController#getProjectOfMyShow,req:{}",e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
 
     @PostMapping("/updateProjectOfMyShow")
     public RespBean<Boolean> updateProjectOfMyShow(@RequestBody ProjectOfMyShowUpdateReq req) {

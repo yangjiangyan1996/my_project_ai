@@ -12,7 +12,7 @@ import java.util.List;
 public class AccountShowServiceImpl extends ServiceImpl<AccountShowMapper, AccountShow> implements AccountShowService {
 
     @Override
-    public List<AccountShow> findByUserId(Long userId) {
-        return query().eq("user_id", userId).list();
+    public AccountShow getByUserId(Long userId) {
+        return query().eq("user_id", userId).one();
     }
 }

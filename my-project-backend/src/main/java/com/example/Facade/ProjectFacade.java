@@ -4,12 +4,14 @@ import com.alibaba.fastjson2.JSON;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
 import com.example.entity.resp.ProjectCommentResp;
+import com.example.entity.resp.ProjectOfMyShowGetResp;
 import com.example.entity.resp.ProjectsDetailResp;
 import com.example.enums.ProjectEnum;
 import com.example.enums.UserEnums;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -227,16 +229,44 @@ public class ProjectFacade {
         return projectsDetailService.save(pdd);
     }
 
-    public Boolean updateProjectOfMyShow(ProjectOfMyShowUpdateReq req, Long id) {
-        AccountShow entity = new AccountShow();
-        entity.setUserId(id);
+    public Boolean updateProjectOfMyShow(ProjectOfMyShowUpdateReq req, Long userId) {
+        // 字段校验
+        if (StringUtils.isAnyBlank(req.getSkills(), req.getTime(), req.getAudience(), req.getResources())
+                || req.getStatus() == null) {
+            throw new ValidationException("所有字段必须填写");
+        }
+
+        // 查询现有数据
+        AccountShow entity = accountShowService.getByUserId(userId);
+        boolean isNew = false;
+        if (entity == null) {
+            entity = new AccountShow();
+            entity.setUserId(userId);
+            entity.setCreatedBy(userId);
+            isNew = true;
+        }
+
+        // 更新字段
         entity.setSkills(req.getSkills());
         entity.setTimePerDay(req.getTime());
         entity.setAudience(req.getAudience());
         entity.setResources(req.getResources());
         entity.setStatus(req.getStatus());
-        entity.setCreatedBy(id);
-        entity.setModifiedBy(id);
-        return accountShowService.save(entity);
+        entity.setModifiedBy(userId);
+        entity.setModifiedAt(new Date());
+
+        return isNew ? accountShowService.save(entity) : accountShowService.updateById(entity);
+    }
+
+    public ProjectOfMyShowGetResp getProjectOfMyShow(Long userId) {
+        AccountShow byUserId = accountShowService.getByUserId(userId);
+        ProjectOfMyShowGetResp build = ProjectOfMyShowGetResp.builder()
+                .audience(byUserId.getAudience())
+                .resources(byUserId.getResources())
+                .skills(byUserId.getSkills())
+                .status(byUserId.getStatus())
+                .time(byUserId.getTimePerDay())
+                .build();
+        return build;
     }
 }

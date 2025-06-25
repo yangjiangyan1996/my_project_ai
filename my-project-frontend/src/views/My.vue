@@ -2,19 +2,8 @@
   <div class="profile-container">
     <div class="profile-header">
       <div class="profile-info">
-        <h1 class="username">用户名</h1>
-        <div class="industry">行业</div>
-        <!-- <div class="profile-actions">
-          <el-button type="text" size="small">查看详细资料</el-button>
-          <el-button type="text" size="small">编辑个人资料</el-button>
-
-          <el-button type="primary" size="small" @click="goToCreateSidejob">
-            💼 找副业
-          </el-button>
-          <el-button type="default" size="small" @click="goToJoinSidejob">
-            🤝 找搭子
-          </el-button>
-        </div> -->
+        <h1 class="username">{{ userInfo.data?.username || '用户名' }}</h1>
+        <div class="industry">{{ userInfo.data?.industry || '行业' }}</div>
         <div class="sidejob-entry-card">
           <div class="sidejob-header">
             <el-icon size="22"><Suitcase /></el-icon>
@@ -25,9 +14,124 @@
             <el-button type="primary" size="large" @click="goToCreateSidejob">
               💼 我要发起副业
             </el-button>
-            <el-button type="success" size="large" @click="goToJoinSidejob">
+            <el-button type="success" size="large" @click="toggleIntentForm">
               🤝 我想找团队
             </el-button>
+          </div>
+
+          <!-- 意向表单区域 -->
+          <div class="intent-section" v-if="showIntentSection">
+            <el-alert 
+              v-if="!hasSubmitted"
+              title="请先填写您的加入意向信息，让更多人了解您"
+              type="info"
+              show-icon
+              :closable="false"
+              class="intent-alert"
+            />
+            
+            <el-card class="intent-card" shadow="always">
+              <h2>🧍 我的加入意向</h2>
+              
+              <template v-if="hasSubmitted && !editMode">
+                <!-- 已提交时的展示模式 -->
+                <div class="intent-display">
+                  <div class="intent-item">
+                    <span class="intent-label">我的身份：</span>
+                    <span class="intent-value">{{ form.audience || '未填写' }}</span>
+                  </div>
+                  <div class="intent-item">
+                    <span class="intent-label">可投入时间：</span>
+                    <span class="intent-value">{{ form.time || '未填写' }}</span>
+                  </div>
+                  <div class="intent-item">
+                    <span class="intent-label">个人技能：</span>
+                    <span class="intent-value">{{ form.skills || '未填写' }}</span>
+                  </div>
+                  <div class="intent-item">
+                    <span class="intent-label">我能提供：</span>
+                    <span class="intent-value">{{ form.resources || '未填写' }}</span>
+                  </div>
+                  
+                  <div class="intent-actions">
+                    <el-button 
+                      v-if="!form.published"
+                      type="success" 
+                      @click="submitIntent(true)"
+                      :loading="publishing"
+                    >
+                      发布到广场
+                    </el-button>
+                    <el-button 
+                      type="primary" 
+                      @click="editMode = true"
+                    >
+                      编辑意向
+                    </el-button>
+                    <el-tag v-if="form.published" type="success" class="published-tag">
+                      <el-icon><SuccessFilled /></el-icon> 已发布
+                    </el-tag>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- 编辑模式 -->
+              <el-form 
+                v-if="!hasSubmitted || editMode"
+                :model="form" 
+                label-width="100px"
+                class="intent-form"
+              >
+                <el-form-item label="我的身份">
+                  <el-input 
+                    v-model="form.audience" 
+                    placeholder="如：上班族、大学生、宝妈等"
+                    clearable
+                  ></el-input>
+                </el-form-item>
+                <el-form-item label="可投入时间">
+                  <el-input 
+                    v-model="form.time" 
+                    placeholder="如：每天2小时、每周末全天"
+                    clearable
+                  ></el-input>
+                </el-form-item>
+                <el-form-item label="个人技能">
+                  <el-input 
+                    v-model="form.skills" 
+                    placeholder="如：剪辑、写作、编程、社群运营等"
+                    clearable
+                  ></el-input>
+                </el-form-item>
+                <el-form-item label="我能提供">
+                  <el-input 
+                    v-model="form.resources" 
+                    placeholder="如：设备、人脉、账号资源等"
+                    clearable
+                  ></el-input>
+                </el-form-item>
+                <el-form-item label="是否发布">
+                  <el-radio-group v-model="form.status">
+                    <el-radio :label="1">发布</el-radio>
+                    <el-radio :label="0">不发布</el-radio>
+                  </el-radio-group>
+                </el-form-item>
+                <el-form-item>
+                  <el-button 
+                    type="primary" 
+                    @click="submitIntent(false)"
+                    :loading="submitting"
+                  >
+                    {{ hasSubmitted ? '更新信息' : '保存信息' }}
+                  </el-button>
+                  <el-button 
+                    @click="cancelEdit"
+                  >
+                    取消
+                  </el-button>
+                </el-form-item>
+              </el-form>
+            </el-card>
           </div>
         </div>
       </div>
@@ -35,39 +139,39 @@
 
     <div class="stats-container">
       <div class="stats-item">
-        <div class="stats-count">0</div>
+        <div class="stats-count">{{ stats.dynamicCount || 0 }}</div>
         <div class="stats-label">动态</div>
       </div>
       <div class="stats-item">
-        <div class="stats-count">0</div>
+        <div class="stats-count">{{ stats.answerCount || 0 }}</div>
         <div class="stats-label">回答</div>
       </div>
       <div class="stats-item">
-        <div class="stats-count">0</div>
+        <div class="stats-count">{{ stats.videoCount || 0 }}</div>
         <div class="stats-label">视频</div>
       </div>
       <div class="stats-item">
-        <div class="stats-count">0</div>
+        <div class="stats-count">{{ stats.questionCount || 0 }}</div>
         <div class="stats-label">提问</div>
       </div>
       <div class="stats-item">
-        <div class="stats-count">0</div>
+        <div class="stats-count">{{ stats.articleCount || 0 }}</div>
         <div class="stats-label">文章</div>
       </div>
       <div class="stats-item">
-        <div class="stats-count">0</div>
+        <div class="stats-count">{{ stats.columnCount || 0 }}</div>
         <div class="stats-label">专栏</div>
       </div>
       <div class="stats-item">
-        <div class="stats-count">0</div>
+        <div class="stats-count">{{ stats.ideaCount || 0 }}</div>
         <div class="stats-label">想法</div>
       </div>
       <div class="stats-item">
-        <div class="stats-count">0</div>
+        <div class="stats-count">{{ stats.collectionCount || 0 }}</div>
         <div class="stats-label">收藏</div>
       </div>
       <div class="stats-item">
-        <div class="stats-count">0</div>
+        <div class="stats-count">{{ stats.followCount || 0 }}</div>
         <div class="stats-label">关注</div>
       </div>
     </div>
@@ -86,8 +190,6 @@
                   <span>已赞同 {{ item.likeCount }}</span>
                   <span>{{ item.commentCount }} 条评论</span>
                   <span>收藏 {{ item.favoriteCount }}</span>
-                  <el-button type="text" size="small">分享</el-button>
-                  <el-button type="text" size="small">喜欢</el-button>
                 </div>
               </div>
             </div>
@@ -107,8 +209,6 @@
                   <span>已赞同 {{ item.likeCount }}</span>
                   <span>{{ item.commentCount }} 条评论</span>
                   <span>收藏 {{ item.favoriteCount }}</span>
-                  <el-button type="text" size="small">分享</el-button>
-                  <el-button type="text" size="small">喜欢</el-button>
                 </div>
               </div>
             </div>
@@ -128,8 +228,6 @@
                   <span>已赞同 {{ item.likeCount }}</span>
                   <span>{{ item.commentCount }} 条评论</span>
                   <span>收藏 {{ item.favoriteCount }}</span>
-                  <el-button type="text" size="small">分享</el-button>
-                  <el-button type="text" size="small">喜欢</el-button>
                 </div>
               </div>
             </div>
@@ -142,11 +240,11 @@
     <div class="sidebar">
       <div class="sidebar-section">
         <h3 class="sidebar-title">关注了</h3>
-        <div class="sidebar-count">{{ followerCount }}</div>
+        <div class="sidebar-count">{{ followeeCount }}</div>
       </div>
       <div class="sidebar-section">
         <h3 class="sidebar-title">关注者</h3>
-        <div class="sidebar-count">{{ followeeCount }}</div>
+        <div class="sidebar-count">{{ followerCount }}</div>
       </div>
       <div class="sidebar-section">
         <h3 class="sidebar-title">赞助的 Live</h3>
@@ -157,40 +255,131 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
+import { Suitcase, SuccessFilled } from '@element-plus/icons-vue'
+import { post, get } from '@/net'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
-const goToDetail = (project) => {
-  // router.push(`/project/${project.id}`)
-    router.push({ name: 'project-detail', params: { id: project.id } });
+const userInfo = inject('userInfo')
 
+// 意向表单相关状态
+const showIntentSection = ref(false)
+const editMode = ref(false)
+const hasSubmitted = ref(false)
+const submitting = ref(false)
+const publishing = ref(false)
+
+const form = ref({
+  audience: '',
+  time: '',
+  skills: '',
+  resources: '',
+  
+  status: 1
+})
+
+// 统计数据
+const stats = ref({
+  dynamicCount: 0,
+  answerCount: 0,
+  videoCount: 0,
+  questionCount: 0,
+  articleCount: 0,
+  columnCount: 0,
+  ideaCount: 0,
+  collectionCount: 0,
+  followCount: 0
+})
+
+// 加载用户意向数据
+const loadIntentData = async () => {
+  try {
+    const res = await get('/api/auth/project/getProjectOfMyShow')
+    if (res) {
+      form.value = {
+        audience: res.audience || '',
+        time: res.time || '',
+        skills: res.skills || '',
+        resources: res.resources || '',
+        published: res.published || false
+      }
+      hasSubmitted.value = true
+    }
+  } catch (error) {
+    console.error('加载意向数据失败:', error)
+  }
 }
-import { post } from '@/net'
 
+// 提交意向表单
+const submitIntent = async (publish) => {
+  try {
+    if (publish) publishing.value = true
+    else submitting.value = true
+    
+    // 调用API保存数据
+    await post('/api/auth/project/updateProjectOfMyShow', {
+      ...form.value,
+      status: publish
+    })
+    
+    form.value.published = publish
+    hasSubmitted.value = true
+    editMode.value = false
+    
+    ElMessage.success(publish ? '已发布到广场' : '信息已保存')
+  } catch (error) {
+    ElMessage.error('保存失败，请稍后重试')
+  } finally {
+    submitting.value = false
+    publishing.value = false
+  }
+}
+
+// 切换表单显示
+const toggleIntentForm = () => {
+  showIntentSection.value = !showIntentSection.value
+  if (showIntentSection.value && !hasSubmitted.value) {
+    editMode.value = true
+  }
+}
+
+// 取消编辑
+const cancelEdit = () => {
+  if (hasSubmitted.value) {
+    editMode.value = false
+  } else {
+    showIntentSection.value = false
+  }
+}
+
+// 加载统计数据
+const loadStats = async () => {
+  try {
+    const res = await get('/api/auth/my/stats')
+    stats.value = res || {}
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+  }
+}
+
+// 其余原有代码
 const activeTab = ref('myPublish')
-
-// 关注数状态
-const followerCount = ref(0)  // 关注者数量（被关注数）
-const followeeCount = ref(0)  // 关注了数量（关注数）
-
-// 我发布的相关状态
+const followerCount = ref(0)
+const followeeCount = ref(0)
 const publishList = ref([])
 const publishPage = ref(1)
 const publishSize = ref(10)
 const publishTotal = ref(0)
 const loading = ref(false)
 const noMorePublish = ref(false)
-
-// 我收藏的相关状态
 const favoritesList = ref([])
 const favoritesPage = ref(1)
 const favoritesSize = ref(10)
 const favoritesTotal = ref(0)
 const favoritesLoading = ref(false)
 const noMoreFavorites = ref(false)
-
-// 我点赞的相关状态
 const likeList = ref([])
 const likePage = ref(1)
 const likeSize = ref(10)
@@ -198,15 +387,14 @@ const likeTotal = ref(0)
 const likeLoading = ref(false)
 const noMoreLike = ref(false)
 
+const goToDetail = (project) => {
+  router.push({ name: 'project-detail', params: { id: project.id } })
+}
+
 const goToCreateSidejob = () => {
-  router.push({ name: 'createOfFindColleague' }) // 创建副业页面
+  router.push({ name: 'createOfFindColleague' })
 }
 
-const goToJoinSidejob = () => {
-  router.push({ name: 'createFindJob' }) // 加入副业列表页
-}
-
-// 获取关注数
 const fetchFollowCount = async () => {
   try {
     const res = await post('/api/auth/my/myFollowCount')
@@ -217,7 +405,6 @@ const fetchFollowCount = async () => {
   }
 }
 
-// 加载更多我发布的内容
 const loadMore = () => {
   if (!loading.value && publishPage.value * publishSize.value < publishTotal.value) {
     publishPage.value++
@@ -227,7 +414,6 @@ const loadMore = () => {
   }
 }
 
-// 加载更多我收藏的内容
 const loadMoreFavorites = () => {
   if (!favoritesLoading.value && favoritesPage.value * favoritesSize.value < favoritesTotal.value) {
     favoritesPage.value++
@@ -237,7 +423,6 @@ const loadMoreFavorites = () => {
   }
 }
 
-// 加载更多我点赞的内容
 const loadMoreLike = () => {
   if (!likeLoading.value && likePage.value * likeSize.value < likeTotal.value) {
     likePage.value++
@@ -247,7 +432,6 @@ const loadMoreLike = () => {
   }
 }
 
-// 获取我发布的数据
 const fetchPublishData = async () => {
   try {
     loading.value = true
@@ -263,7 +447,6 @@ const fetchPublishData = async () => {
   }
 }
 
-// 获取我收藏的数据
 const fetchFavoritesData = async () => {
   try {
     favoritesLoading.value = true
@@ -279,7 +462,6 @@ const fetchFavoritesData = async () => {
   }
 }
 
-// 获取我点赞的数据
 const fetchLikeData = async () => {
   try {
     likeLoading.value = true
@@ -295,7 +477,6 @@ const fetchLikeData = async () => {
   }
 }
 
-// 切换标签页
 const handleTabChange = (tab) => {
   if (tab.paneName === 'myFavorites' && favoritesList.value.length === 0) {
     fetchFavoritesData()
@@ -304,9 +485,12 @@ const handleTabChange = (tab) => {
   }
 }
 
+// 初始化加载数据
 onMounted(() => {
   fetchPublishData()
-  fetchFollowCount()  // 页面加载时获取关注数
+  fetchFollowCount()
+  loadStats()
+  loadIntentData()
 })
 </script>
 
@@ -337,10 +521,6 @@ onMounted(() => {
 .industry {
   color: #8590a6;
   margin-bottom: 10px;
-}
-
-.profile-actions {
-  margin-top: 10px;
 }
 
 .stats-container {
@@ -375,6 +555,11 @@ onMounted(() => {
 .activity-item {
   padding: 15px 0;
   border-bottom: 1px solid #f0f2f7;
+  cursor: pointer;
+}
+
+.activity-item:hover {
+  background-color: #fafafa;
 }
 
 .activity-type {
@@ -405,31 +590,6 @@ onMounted(() => {
 
 .activity-meta > * {
   margin-right: 15px;
-}
-
-.achievements-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.achievement-item {
-  width: calc(25% - 15px);
-  text-align: center;
-  padding: 15px;
-  background: #f7f8fa;
-  border-radius: 4px;
-}
-
-.achievement-count {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 5px;
-}
-
-.achievement-label {
-  color: #8590a6;
-  font-size: 14px;
 }
 
 .sidebar {
@@ -504,6 +664,103 @@ onMounted(() => {
 .sidejob-buttons {
   display: flex;
   gap: 10px;
+  margin-bottom: 10px;
 }
 
+/* 新增意向表单样式 */
+.intent-section {
+  margin-top: 20px;
+  transition: all 0.3s ease;
+}
+
+.intent-alert {
+  margin-bottom: 15px;
+}
+
+.intent-card {
+  border-radius: 12px;
+}
+
+.intent-card h2 {
+  margin-bottom: 20px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.intent-display {
+  padding: 10px;
+}
+
+.intent-item {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.intent-label {
+  font-weight: 500;
+  color: #666;
+  min-width: 80px;
+}
+
+.intent-value {
+  color: #333;
+  flex: 1;
+}
+
+.intent-actions {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.published-tag {
+  margin-left: 10px;
+}
+
+.intent-form {
+  padding: 10px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .profile-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .sidebar {
+    grid-column: 1;
+  }
+  
+  .stats-container {
+    flex-wrap: wrap;
+  }
+  
+  .stats-item {
+    flex: 0 0 33.33%;
+  }
+  
+  .intent-item {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .intent-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .published-tag {
+    margin-left: 0;
+    margin-top: 10px;
+  }
+  
+  .sidejob-buttons {
+    flex-direction: column;
+  }
+}
 </style>

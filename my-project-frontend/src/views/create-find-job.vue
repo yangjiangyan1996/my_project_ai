@@ -1,5 +1,6 @@
 <template>
   <div class="join-sidejob-container">
+    <el-button @click="goBack" class="back-button">返回</el-button>
     <!-- 🣍 我的加入意向卡 -->
     <el-card class="intent-card" shadow="always">
       <h2>🧍 我的加入意向</h2>
@@ -148,4 +149,11 @@ const applyToProject = (id) => {
 .project-tags {
   margin-bottom: 10px;
 }
+.back-button {
+  position: absolute;
+  left: 30px;
+  top: 30px;
+  z-index: 1000;
+}
+
 </style>
