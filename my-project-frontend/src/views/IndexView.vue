@@ -11,7 +11,7 @@
     >
       <el-sub-menu index="1">
         <template #title><i class="el-icon-data-analysis"></i>项目展示</template>
-        <el-menu-item index="fuye" @click="handleMenuClick('fuye')">
+        <el-menu-item index="fuye" @click="changeDisplayMode('project')">
           热门副业
         </el-menu-item>
         <el-menu-item index="ranking" @click="handleMenuClick('ranking')">
