@@ -26,5 +26,6 @@ public class ProjectsDetail extends BaseModel {
     private Integer isRemote;
     private Integer isFreeEntry;
     private String tags;
+    private Integer needMember;
     private Integer memberNum;
 }

@@ -1,11 +1,9 @@
 package com.example.Facade;
 
-import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
-import com.example.entity.resp.MyPublishedResp;
 import com.example.entity.resp.ProjectCommentResp;
 import com.example.entity.resp.ProjectOfMyShowGetResp;
 import com.example.entity.resp.ProjectsDetailResp;
@@ -18,6 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,6 +30,10 @@ import java.util.stream.Collectors;
 @Service
 public class ProjectFacade {
 
+    @Resource
+    ProjectApplicationsService projectApplicationsService;
+    @Resource
+    ProjectMembersService projectMembersService;
     @Resource
     AccountShowService accountShowService;
     @Resource
@@ -74,6 +77,11 @@ public class ProjectFacade {
 
         Boolean followed = userFollowService.selectByUserIdAndFollowedId(userId, project.getCreatedBy());
         r.setFollowed(followed);
+
+        ProjectApplications pa = projectApplicationsService.selectByProjectIdAndUserId(projectId, userId);
+        if (pa != null) {
+            r.setApplyStatus(pa.getStatus());
+        }
         return r;
     }
 
@@ -211,12 +219,13 @@ public class ProjectFacade {
         pd.setStatus(ProjectEnum.ProjectStatusEnum.WAITING.getCode());
 
         boolean save = projectService.save(pd);
-        if (! save) {
-            return false;
+        if (!save) {
+            throw new ValidationException("保存失败");
         }
 
         ProjectsDetail pdd = new ProjectsDetail();
         pdd.setProjectsId(pd.getId());
+        pdd.setNeedMember(req.getNeedMember());
         pdd.setMemberNum(req.getMemberNum());
         pdd.setSteps(req.getSteps());
         pdd.setTools(req.getTools());
@@ -229,7 +238,23 @@ public class ProjectFacade {
         pdd.setTags(req.getTags());
         pdd.setCreatedBy(userId);
         pdd.setModifiedBy(userId);
-        return projectsDetailService.save(pdd);
+        boolean save1 = projectsDetailService.save(pdd);
+        if (!save1) {
+            throw new ValidationException("保存失败");
+        }
+
+        ProjectMembers pm = new ProjectMembers();
+        pm.setProjectId(pd.getId());
+        pm.setUserId(userId);
+        pm.setJoinTime(new Date());
+        pm.setRole(ProjectEnum.ProjectMemberRoleEnum.ADMIN.getCode());
+        pm.setCreatedBy(userId);
+        pm.setModifiedBy(userId);
+        boolean save2 = projectMembersService.save(pm);
+        if (!save2) {
+            throw new ValidationException("保存失败");
+        }
+        return true;
     }
 
     public Boolean updateProjectOfMyShow(ProjectOfMyShowUpdateReq req, Long userId) {
@@ -263,7 +288,7 @@ public class ProjectFacade {
 
     public ProjectOfMyShowGetResp getProjectOfMyShow(Long userId) {
         AccountShow byUserId = accountShowService.getByUserId(userId);
-        ProjectOfMyShowGetResp build =  new ProjectOfMyShowGetResp();
+        ProjectOfMyShowGetResp build = new ProjectOfMyShowGetResp();
         build.setId(byUserId.getId());
         build.setAudience(byUserId.getAudience());
         build.setResources(byUserId.getResources());
@@ -283,7 +308,7 @@ public class ProjectFacade {
         return accountShowService.update(accountShow, new QueryWrapper<AccountShow>().eq("id", projectShowId));
     }
 
-    public Page<ProjectOfMyShowGetResp> projectShowList(Page<AccountShow>page, ProjectShowListReq req) {
+    public Page<ProjectOfMyShowGetResp> projectShowList(Page<AccountShow> page, ProjectShowListReq req) {
         Page<AccountShow> list = accountShowService.getProjectShowList(page);
         if (list.getRecords().isEmpty()) {
             return Page.of(req.getPage() - 1, req.getSize());
@@ -308,5 +333,35 @@ public class ProjectFacade {
         result.setTotal(list.getTotal());
         result.setRecords(collect);
         return result;
+    }
+
+    public Boolean applyJoinProject(Long projectId, Long userid) {
+        ProjectsDetail pd = projectsDetailService.selectByProjectId(projectId);
+        if (pd == null) {
+            throw new ValidationException("项目不存在");
+        }
+        if (pd.getCreatedBy().equals(userid)) {
+            throw new ValidationException("不能申请加入自己的项目");
+        }
+        if (ProjectEnum.IsNeedMemberEnum.NO_NEED_MEMBER.getCode().equals(pd.getNeedMember())) {
+            throw new ValidationException("该项目不需要成员");
+        }
+
+        List<ProjectMembers> members = projectMembersService.selectByProjectIdAndNeRole(projectId, ProjectEnum.ProjectMemberRoleEnum.ADMIN.getCode());
+        if (!CollectionUtils.isEmpty(members) && pd.getMemberNum() >= members.size()) {
+            throw new ValidationException("该项目已满员");
+        }
+
+//        List<ProjectMembers> joinedMembers = projectMembersService.selectByUserId(userid);
+//        if (!CollectionUtils.isEmpty(joinedMembers) && joinedMembers.size()>=5) {
+//            throw new ValidationException("您已加入5个项目,无法再加");
+//        }
+        ProjectApplications entity = new ProjectApplications();
+        entity.setProjectId(projectId);
+        entity.setUserId(userid);
+        entity.setStatus(ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode());
+        entity.setApplyTime(new Date());
+        entity.setProcessedBy(pd.getCreatedBy());
+        return projectApplicationsService.save(entity);
     }
 }

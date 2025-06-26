@@ -1,5 +1,6 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ProjectApplications;
 import com.example.mapper.ProjectApplicationsMapper;
@@ -14,4 +15,10 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ProjectApplicationsServiceImpl extends ServiceImpl<ProjectApplicationsMapper, ProjectApplications> implements ProjectApplicationsService {
+    @Override
+    public ProjectApplications selectByProjectIdAndUserId(Long projectId, Long userId) {
+        return this.baseMapper.selectOne(new QueryWrapper<ProjectApplications>().eq("project_id", projectId)
+                .eq("user_id", userId)
+                .eq("is_deleted",0));
+    }
 }

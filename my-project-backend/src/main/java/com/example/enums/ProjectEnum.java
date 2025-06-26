@@ -9,6 +9,61 @@ import lombok.Getter;
  * @Date 2025/6/19 20:41
  */
 public class ProjectEnum {
+
+    /**
+     * 是否招纳成员，0=不需要，1=需要
+     */
+    @Getter
+    public enum IsNeedMemberEnum {
+        NO_NEED_MEMBER(0, "不需要"),
+        NEED_MEMBER(1, "需要");
+        private Integer code;
+        private String message;
+
+        IsNeedMemberEnum(Integer code, String message) {
+            this.code = code;
+            this.message = message;
+        }
+    }
+
+    /**
+     * 项目参与申请状态
+     * 状态: 0-待审核 1-已通过 2-已拒绝，3=已撤销
+     */
+    @Getter
+    public enum ProjectApplyStatusEnum {
+        WAIT_AUDIT(0, "待审核"),
+        APPROVED(1, "已通过"),
+        REJECTED(2, "已拒绝"),
+        CANCELED(3, "已撤销");
+        private final Integer code;
+        private final String message;
+
+        ProjectApplyStatusEnum(Integer code, String message) {
+            this.code = code;
+            this.message = message;
+        }
+    }
+
+    /**
+     * 项目成员角色
+     * 角色: 0-普通成员 1-管理员，2 = 发起人
+     */
+    @Getter
+    public enum ProjectMemberRoleEnum {
+
+        NORMAL(0, "普通成员"),
+        GROUP(1, "组长"),
+        ADMIN(2, "管理员");
+        private final Integer code;
+        private final String message;
+
+        ProjectMemberRoleEnum(Integer code, String message) {
+            this.code = code;
+            this.message = message;
+        }
+    }
+
     /**
      * 难度等级
      */
@@ -26,6 +81,7 @@ public class ProjectEnum {
             this.name = name;
         }
     }
+
     /**
      * 难度等级
      */
@@ -96,7 +152,6 @@ public class ProjectEnum {
             return null;
         }
     }
-
 
 
 }

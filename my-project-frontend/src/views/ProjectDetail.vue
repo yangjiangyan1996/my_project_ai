@@ -26,6 +26,19 @@
               class="concern-button">
               {{ isConcerned ? '已关注' : '关注' }}
             </el-button>
+
+            <el-button 
+              v-if="detail.memberNum > 0"
+              :type="getApplyButtonType(applyStatus)"
+              size="small"
+              @click="handleApply"
+              :loading="applyLoading"
+              :disabled="applyStatus === 3">
+              <i :class="getApplyButtonIcon(applyStatus)" />
+              <span style="margin-left: 4px">
+                {{ getApplyButtonText(applyStatus) }}
+              </span>
+            </el-button>
           </div>
 
           <div class="tags">
@@ -204,6 +217,9 @@ const projectId = route.params.id;
 const userInfo = inject('userInfo');
 const emojis = inject('emojis');
 
+const applyStatus = ref(-1); // -1-未申请 0=待审核 1-已通过 2-已拒绝
+const applyLoading = ref(false);
+
 const userInitial = computed(() => {
   return userInfo.data?.username?.charAt(0) || '匿';
 });
@@ -215,6 +231,42 @@ onMounted(async () => {
 });
 
 
+// 获取申请按钮文本
+const getApplyButtonText = (status) => {
+  switch(status) {
+    case -1: return '申请加入';
+    case 0: return '审核中...';
+    case 1: return '已加入';
+    case 2: return '已拒绝';
+    case 3: return '已撤销';
+    default: return '申请加入';
+  }
+};
+
+// 获取申请按钮类型
+const getApplyButtonType = (status) => {
+  switch(status) {
+    case -1: return 'primary';
+    case 0: return 'info';
+    case 1: return 'success';
+    case 2: return 'danger';
+    case 3: return 'warning';
+    default: return 'primary';
+  }
+};
+
+// 获取申请按钮图标
+const getApplyButtonIcon = (status) => {
+  switch(status) {
+    case -1: return 'el-icon-circle-plus-outline';
+    case 0: return 'el-icon-loading';
+    case 1: return 'el-icon-success';
+    case 2: return 'el-icon-error';
+    case 3: return 'el-icon-refresh-left';
+    default: return 'el-icon-circle-plus-outline';
+  }
+};
+
 // 返回
 const goBack = () => {
   router.go(-1)
@@ -222,10 +274,6 @@ const goBack = () => {
 
 function insertEmojiToNewComment(emoji) {
   newComment.value += emoji;
-}
-
-function insertEmojiToReplyContent(emoji) {
-  replyContent.value += emoji;
 }
 
 function formatTime(timeString) {
@@ -402,6 +450,51 @@ const handleConcernPublisher = async (userId) => {
   }
 };
 
+// 处理申请加入逻辑
+const handleApply = async () => {
+  if (applyLoading.value) return;
+  
+  try {
+    applyLoading.value = true;
+    if (applyStatus.value === -1 || applyStatus.value === 3) {
+      // 提交申请或重新申请
+      const res = await get(`/api/auth/project/applyJoinProject?projectId=${projectId}`);
+      if (res) {
+        applyStatus.value = res.status || -1;
+        const message = {
+          '-1': '申请已撤销',
+          0: '申请已提交，请等待审核',
+          1: '申请已通过',
+          2: '申请已被拒绝',
+          3: '申请已撤销'
+        }[applyStatus.value];
+        ElMessage.success(message || '操作成功');
+      }
+    } else if (applyStatus.value === 1) {
+      // 已加入状态，点击跳转到项目详情
+      router.push(`/project/${projectId}/workspace`);
+    } else if (applyStatus.value === 0) {
+      // 审核中状态，可以撤销申请
+      const confirm = await ElMessageBox.confirm(
+        '确定要撤销申请吗？', 
+        '撤销申请', 
+        { type: 'warning' }
+      );
+      if (confirm) {
+        const res = await post('/api/auth/project/cancel-apply', { projectId });
+        if (res) {
+          applyStatus.value = 3;
+          ElMessage.success('申请已撤销');
+        }
+      }
+    }
+  } catch (err) {
+    ElMessage.error('操作失败');
+  } finally {
+    applyLoading.value = false;
+  }
+};
+
 async function fetchDetail() {
   try {
     const res = await get(`/api/auth/project/detail?projectId=${projectId}`);
@@ -418,6 +511,7 @@ async function fetchDetail() {
     collected.value = !!res.myFavorite;
     likeCount.value = res.likeCount || 0;
     favoriteCount.value = res.favoriteCount || 0;
+    applyStatus.value = res.applyStatus ?? -1; 
   } catch (err) {
     ElMessage.error('加载详情失败');
   }

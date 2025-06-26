@@ -34,4 +34,6 @@ public class ProjectsDetailResp {
     private Long likeCount;
     private Long favoriteCount;
     private Boolean followed;
+    private Integer applyStatus;
+    private Integer memberNum;
 }

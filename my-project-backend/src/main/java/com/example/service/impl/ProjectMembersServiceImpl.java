@@ -1,10 +1,13 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ProjectMembers;
 import com.example.mapper.ProjectMembersMapper;
 import com.example.service.ProjectMembersService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -14,4 +17,16 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ProjectMembersServiceImpl extends ServiceImpl<ProjectMembersMapper, ProjectMembers> implements ProjectMembersService {
+    @Override
+    public List<ProjectMembers> selectByProjectIdAndNeRole(Long projectId, Integer notEqRoleCode) {
+        return this.baseMapper.selectList(new QueryWrapper<ProjectMembers>().eq("project_id", projectId)
+                .ne("role", notEqRoleCode)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public List<ProjectMembers> selectByUserId(Long userid) {
+        return this.baseMapper.selectList(new QueryWrapper<ProjectMembers>().eq("user_id", userid)
+                .eq("is_deleted", 0));
+    }
 }

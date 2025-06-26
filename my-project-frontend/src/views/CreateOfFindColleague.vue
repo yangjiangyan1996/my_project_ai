@@ -68,7 +68,15 @@
               <el-input v-model="form.incomeEstimate" placeholder="如：3000-8000元" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="24" style="margin-bottom: 15px">
+            <el-form-item label="是否招纳成员" prop="needMember">
+              <el-radio-group v-model="form.needMember">
+                <el-radio :label="1">需要</el-radio>
+                <el-radio :label="0">不需要</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8" v-if="form.needMember === 1">
             <el-form-item label="成员数量" prop="memberNum">
               <el-input 
                 v-model="form.memberNum"
@@ -314,6 +322,7 @@ const submitForm = () => {
         isFreeEntry: form.isFreeEntry ? 1 : 0,
         tags: form.tags.join(','),
         status: 0, // 0=待审核
+        needMember: form.needMember,
         memberNum: form.memberNum
       }
       

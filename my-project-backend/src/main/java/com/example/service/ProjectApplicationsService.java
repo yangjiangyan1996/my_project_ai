@@ -10,5 +10,7 @@ import com.example.entity.dto.ProjectApplications;
  * @Email 1776080295@qq.com
  * @Date 2025/6/26 11:37
  */
-public interface ProjectApplicationsService extends IService<ProjectApplications> {}
+public interface ProjectApplicationsService extends IService<ProjectApplications> {
+    ProjectApplications selectByProjectIdAndUserId(Long projectId, Long userId);
+}
 
