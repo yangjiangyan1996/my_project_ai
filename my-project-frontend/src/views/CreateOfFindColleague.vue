@@ -69,6 +69,17 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
+            <el-form-item label="成员数量" prop="memberNum">
+              <el-input 
+                v-model="form.memberNum"
+                type="number"
+                :min="1"
+                :max="1000"
+                placeholder="请输入1-1000之间的整数"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
             <el-form-item label="适合人群" prop="targetAudience">
               <el-input v-model="form.targetAudience" placeholder="如：上班族、学生" />
             </el-form-item>
@@ -302,7 +313,8 @@ const submitForm = () => {
         isRemote: form.isRemote ? 1 : 0,
         isFreeEntry: form.isFreeEntry ? 1 : 0,
         tags: form.tags.join(','),
-        status: 0 // 0=待审核
+        status: 0, // 0=待审核
+        memberNum: form.memberNum
       }
       
       post('/api/auth/project/createFindCollage', requestData)

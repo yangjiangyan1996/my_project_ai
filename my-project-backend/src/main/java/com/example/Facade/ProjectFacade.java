@@ -217,7 +217,7 @@ public class ProjectFacade {
 
         ProjectsDetail pdd = new ProjectsDetail();
         pdd.setProjectsId(pd.getId());
-//        pdd.setCoverImageUrl(JSON.toJSONString(req.getCoverImageUrl()));
+        pdd.setMemberNum(req.getMemberNum());
         pdd.setSteps(req.getSteps());
         pdd.setTools(req.getTools());
         pdd.setTimePerDay(req.getTimePerDay());

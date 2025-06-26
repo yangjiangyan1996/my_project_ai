@@ -28,4 +28,5 @@ public class CreateFindCollageReq {
     private Integer isRemote;
     private Integer isFreeEntry;
     private String tags;
+    private Integer memberNum;
 }
