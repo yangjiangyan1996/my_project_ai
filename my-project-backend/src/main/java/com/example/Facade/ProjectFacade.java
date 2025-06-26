@@ -269,7 +269,7 @@ public class ProjectFacade {
         build.setResources(byUserId.getResources());
         build.setSkills(byUserId.getSkills());
         build.setStatus(byUserId.getStatus());
-        build.setTime(byUserId.getTimePerDay());
+        build.setTimePerDay(byUserId.getTimePerDay());
         return build;
     }
 
@@ -289,9 +289,18 @@ public class ProjectFacade {
             return Page.of(req.getPage() - 1, req.getSize());
         }
 
+        List<Long> userIds = list.getRecords().stream().map(v -> v.getUserId()).collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
         List<ProjectOfMyShowGetResp> collect = list.getRecords().stream().map(v -> {
             ProjectOfMyShowGetResp projectsResp = new ProjectOfMyShowGetResp();
             BeanUtils.copyProperties(v, projectsResp);
+
+            projectsResp.setUserId(v.getUserId());
+            if (userId2UserInfoMap.containsKey(v.getUserId())) {
+                projectsResp.setUserName(userId2UserInfoMap.get(v.getUserId()).getNickname());
+            }
             return projectsResp;
         }).collect(Collectors.toList());
 

@@ -9,7 +9,7 @@
         >
           <el-card class="skill-card" shadow="hover">
             <div class="skill-header">
-              <span>用户ID: {{ skill.userId }}</span>
+              <span>用户名称: {{ skill.userName }}</span>
               <el-tag :type="skill.status === '公开' ? 'success' : 'info'">{{ skill.status }}</el-tag>
             </div>
             <div class="skill-body">
@@ -75,14 +75,16 @@ const fetchSkillMatchData = async () => {
     if (res?.records) {
       const newData = res.records.map(item => ({
         id: item.id,
-        userId: item.userId || '匿名',
-        timePerDay: item.timePerDay ? `${item.timePerDay}小时` : '未填写',
+        userId: item.userId,
+        userName: item.userName || '匿名',
+        timePerDay: item.timePerDay ? `${item.timePerDay}` : '未填写',
         audience: item.audience || '未填写',
         skills: item.skills ? item.skills.split(',') : [],
         resources: item.resources ? item.resources.split(',') : [],
         status: item.status === 1 ? '公开' : '未公开'
       }));
 
+      console.log("newData",newData)
       // 确保响应式更新
       skillList.value = [...skillList.value, ...newData];
       console.log("skillList.value",skillList.value)

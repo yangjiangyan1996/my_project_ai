@@ -14,9 +14,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ProjectOfMyShowGetResp {
     private Long id;
+    private Long userId;
+    private String userName;
     private String audience;
     private String resources;
     private String skills;
     private Integer status;
-    private String time;
+    private String timePerDay;
 }

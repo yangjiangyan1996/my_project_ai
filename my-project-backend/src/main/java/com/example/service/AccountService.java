@@ -8,6 +8,8 @@ import com.example.entity.vo.request.EmailRegisterVO;
 import com.example.entity.vo.request.EmailResetVO;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
+import java.util.List;
+
 public interface AccountService extends IService<Account>, UserDetailsService {
     Account findAccountByNameOrEmail(String text);
     String registerEmailVerifyCode(String type, String email, String address);
@@ -16,4 +18,6 @@ public interface AccountService extends IService<Account>, UserDetailsService {
     String resetConfirm(ConfirmResetVO info);
 
     Account selectById(Long userId);
+
+    List<Account> selectByIds(List<Long> userIds);
 }

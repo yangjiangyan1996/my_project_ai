@@ -1,5 +1,6 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.Account;
@@ -22,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -151,6 +153,11 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         return this.query()
                 .eq("id", userId)
                 .one();
+    }
+
+    @Override
+    public List<Account> selectByIds(List<Long> userIds) {
+        return this.baseMapper.selectList(new QueryWrapper<Account>().in("id", userIds).eq("is_deleted", 0));
     }
 
     /**

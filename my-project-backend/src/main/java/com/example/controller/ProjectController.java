@@ -40,7 +40,7 @@ public class ProjectController {
             return RespBean.success(result);
         } catch (Exception e) {
             log.error("ProjectController#changeShowStatus,req:{}",e);
-            return RespBean.failure(999, e.getMessage());
+            return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
@@ -52,7 +52,7 @@ public class ProjectController {
             return RespBean.success(result);
         } catch (Exception e) {
             log.error("ProjectController#changeShowStatus,req:{}",e);
-            return RespBean.failure(999, e.getMessage());
+            return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
@@ -64,7 +64,7 @@ public class ProjectController {
             return RespBean.success(result);
         } catch (Exception e) {
             log.error("ProjectController#getProjectOfMyShow,req:{}",e);
-            return RespBean.failure(999, e.getMessage());
+            return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
@@ -76,7 +76,7 @@ public class ProjectController {
             return RespBean.success(result);
         } catch (Exception e) {
             log.error("ProjectController#updateProjectOfMyShow,req:{}", JSON.toJSONString(req),e);
-            return RespBean.failure(999, e.getMessage());
+            return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
@@ -88,7 +88,7 @@ public class ProjectController {
             return RespBean.success(result);
         } catch (Exception e) {
             log.error("ProjectController#createFindCollage,req:{}", JSON.toJSONString(req),e);
-            return RespBean.failure(999, e.getMessage());
+            return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
@@ -100,7 +100,7 @@ public class ProjectController {
             Boolean result = projectFacade.concernPublisher(req, user.getId());
             return RespBean.success(result);
         } catch (Exception e) {
-            return RespBean.failure(999, e.getMessage());
+            return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
@@ -111,7 +111,7 @@ public class ProjectController {
             Boolean result = projectFacade.concernPublisherCancel(req, user.getId());
             return RespBean.success(result);
         } catch (Exception e) {
-            return RespBean.failure(999, e.getMessage());
+            return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
@@ -123,7 +123,7 @@ public class ProjectController {
             Boolean result = projectFacade.commentLike(commentId,projectId, user.getId());
             return RespBean.success(result);
         } catch (Exception e) {
-            return RespBean.failure(999, e.getMessage());
+            return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
@@ -135,7 +135,7 @@ public class ProjectController {
             Boolean result = projectFacade.commentDeleted(projectId, commentId, user.getId());
             return RespBean.success(result);
         } catch (Exception e) {
-            return RespBean.failure(999, e.getMessage());
+            return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
@@ -177,7 +177,7 @@ public class ProjectController {
             return RespBean.success(result);
         } catch (Exception e) {
             log.error("ProjectController#detail,error,projectId:{}", projectId,e);
-            return RespBean.failure(999, e.getMessage());
+            return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
