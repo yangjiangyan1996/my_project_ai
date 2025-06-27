@@ -32,6 +32,22 @@ public class ProjectController {
     private ProjectService projectService;
 
 
+    @GetMapping("/getMyCount")
+    public RespBean<MyCountResp> getMyCount() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            MyCountResp result = projectFacade.getMyCount(user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProjectController#getMyCount,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#getMyCount,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
     @GetMapping("/applyJoinProject")
     public RespBean<Boolean> applyJoinProject(@RequestParam("projectId") Long projectId) {
         try {

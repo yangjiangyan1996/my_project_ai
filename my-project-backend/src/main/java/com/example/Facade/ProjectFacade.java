@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
+import com.example.entity.resp.MyCountResp;
 import com.example.entity.resp.ProjectCommentResp;
 import com.example.entity.resp.ProjectOfMyShowGetResp;
 import com.example.entity.resp.ProjectsDetailResp;
@@ -363,5 +364,15 @@ public class ProjectFacade {
         entity.setApplyTime(new Date());
         entity.setProcessedBy(pd.getCreatedBy());
         return projectApplicationsService.save(entity);
+    }
+
+    public MyCountResp getMyCount(Long userId) {
+        MyCountResp result = new MyCountResp();
+        List<ProjectApplications> projectApplications = projectApplicationsService.selectByProcessedBy(userId, ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode());
+        result.setApplyCount(projectApplications.size());
+
+        List<ProjectApplications> projectApplications1 = projectApplicationsService.selectByUserId(userId,ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode());
+        result.setApplicationCount(projectApplications1.size());
+        return result;
     }
 }

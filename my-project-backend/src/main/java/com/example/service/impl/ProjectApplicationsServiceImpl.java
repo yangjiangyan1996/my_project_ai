@@ -7,6 +7,8 @@ import com.example.mapper.ProjectApplicationsMapper;
 import com.example.service.ProjectApplicationsService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -19,6 +21,22 @@ public class ProjectApplicationsServiceImpl extends ServiceImpl<ProjectApplicati
     public ProjectApplications selectByProjectIdAndUserId(Long projectId, Long userId) {
         return this.baseMapper.selectOne(new QueryWrapper<ProjectApplications>().eq("project_id", projectId)
                 .eq("user_id", userId)
+                .eq("is_deleted",0));
+    }
+
+    @Override
+    public List<ProjectApplications> selectByProcessedBy(Long userId, Integer status) {
+        return this.baseMapper.selectList(new QueryWrapper<ProjectApplications>()
+                .eq("processed_by", userId)
+                .eq("status", status)
+                .eq("is_deleted",0));
+    }
+
+    @Override
+    public List<ProjectApplications> selectByUserId(Long userId, Integer status) {
+        return this.baseMapper.selectList(new QueryWrapper<ProjectApplications>()
+                .eq("user_id", userId)
+                .eq("status", status)
                 .eq("is_deleted",0));
     }
 }

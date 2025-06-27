@@ -139,40 +139,12 @@
 
     <div class="stats-container">
       <div class="stats-item">
-        <div class="stats-count">{{ stats.dynamicCount || 0 }}</div>
-        <div class="stats-label">动态</div>
+        <div class="stats-count">{{ stats.applyCount || 0 }}</div>
+        <div class="stats-label">待审核数</div>
       </div>
       <div class="stats-item">
-        <div class="stats-count">{{ stats.answerCount || 0 }}</div>
-        <div class="stats-label">回答</div>
-      </div>
-      <div class="stats-item">
-        <div class="stats-count">{{ stats.videoCount || 0 }}</div>
-        <div class="stats-label">视频</div>
-      </div>
-      <div class="stats-item">
-        <div class="stats-count">{{ stats.questionCount || 0 }}</div>
-        <div class="stats-label">提问</div>
-      </div>
-      <div class="stats-item">
-        <div class="stats-count">{{ stats.articleCount || 0 }}</div>
-        <div class="stats-label">文章</div>
-      </div>
-      <div class="stats-item">
-        <div class="stats-count">{{ stats.columnCount || 0 }}</div>
-        <div class="stats-label">专栏</div>
-      </div>
-      <div class="stats-item">
-        <div class="stats-count">{{ stats.ideaCount || 0 }}</div>
-        <div class="stats-label">想法</div>
-      </div>
-      <div class="stats-item">
-        <div class="stats-count">{{ stats.collectionCount || 0 }}</div>
-        <div class="stats-label">收藏</div>
-      </div>
-      <div class="stats-item">
-        <div class="stats-count">{{ stats.followCount || 0 }}</div>
-        <div class="stats-label">关注</div>
+        <div class="stats-count">{{ stats.applicationCount || 0 }}</div>
+        <div class="stats-label">已申请数</div>
       </div>
     </div>
 
@@ -280,6 +252,17 @@ const form = ref({
   
   status: 1
 })
+
+// 新增获取统计数据方法
+const fetchMyCount = async () => {
+  try {
+    const res = await get('/api/auth/project/getMyCount')
+    stats.value.applyCount = res.applyCount || 0
+    stats.value.applicationCount = res.applicationCount || 0
+  } catch (error) {
+    console.error('获取统计数据失败:', error)
+  }
+}
 
 // 加载用户意向数据
 const changeShowStatus = async () => {
@@ -498,7 +481,7 @@ const handleTabChange = (tab) => {
 onMounted(() => {
   fetchPublishData()
   fetchFollowCount()
-  // loadStats()
+  fetchMyCount() // 新增调用
   loadIntentData()
 })
 </script>
