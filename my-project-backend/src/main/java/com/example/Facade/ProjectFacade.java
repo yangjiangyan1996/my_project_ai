@@ -4,10 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
-import com.example.entity.resp.MyCountResp;
-import com.example.entity.resp.ProjectCommentResp;
-import com.example.entity.resp.ProjectOfMyShowGetResp;
-import com.example.entity.resp.ProjectsDetailResp;
+import com.example.entity.resp.*;
 import com.example.enums.ProjectEnum;
 import com.example.enums.UserEnums;
 import com.example.service.*;
@@ -371,8 +368,86 @@ public class ProjectFacade {
         List<ProjectApplications> projectApplications = projectApplicationsService.selectByProcessedBy(userId, ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode());
         result.setApplyCount(projectApplications.size());
 
-        List<ProjectApplications> projectApplications1 = projectApplicationsService.selectByUserId(userId,ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode());
+        List<ProjectApplications> projectApplications1 = projectApplicationsService.selectByUserId(userId, ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode());
         result.setApplicationCount(projectApplications1.size());
         return result;
+    }
+
+    public Page<MyApplyListResp> myApplyList(Page<ProjectApplications> page, MyApplyListReq req, Long userId) {
+        Page<ProjectApplications> list = projectApplicationsService.myApplyList(page, userId, ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode());
+
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+
+        List<Long> projectIds = list.getRecords().stream().map(v -> v.getProjectId()).collect(Collectors.toList());
+
+        List<Projects> projectList = projectService.selectByProjectIds(projectIds);
+        Map<Long, Projects> projectId2ProjectsMap = projectList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v, (l1, l2) -> l2));
+
+        List<Long> userIds = list.getRecords().stream().map(v -> v.getUserId()).collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+        List<AccountShow> showList = accountShowService.selectByUserIds(userIds);
+        Map<Long, AccountShow> userId2ShowInfoMap = showList.stream().collect(Collectors.toMap(v -> v.getUserId(), v -> v));
+
+        List<MyApplyListResp> collect = list.getRecords().stream().map(v -> {
+            MyApplyListResp p = new MyApplyListResp();
+            p.setId(v.getId());
+            if (projectId2ProjectsMap.containsKey(v.getProjectId())) {
+                Projects project = projectId2ProjectsMap.get(v.getProjectId());
+                p.setProjectName(project.getName());
+                p.setDescription(project.getDescription());
+            }
+
+            p.setUserId(v.getUserId());
+            if (userId2UserInfoMap.containsKey(v.getUserId())) {
+                p.setUserName(userId2UserInfoMap.get(v.getUserId()).getNickname());
+            }
+
+            if (userId2ShowInfoMap.containsKey(v.getUserId())) {
+                AccountShow as = userId2ShowInfoMap.get(v.getUserId());
+                p.setTimePerDay(as.getTimePerDay());
+                p.setAudience(as.getAudience());
+                p.setSkills(as.getSkills());
+                p.setResources(as.getResources());
+            }
+
+            p.setStatus(v.getStatus());
+            p.setApplyTime(v.getApplyTime());
+            p.setMessage(v.getMessage());
+            return p;
+        }).collect(Collectors.toList());
+
+        Page<MyApplyListResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(list.getTotal());
+        result.setRecords(collect);
+        return result;
+
+    }
+
+    public Boolean approveApply(ApproveApplyReq req, Long id) {
+        ProjectApplications pa = projectApplicationsService.getById(req.getId());
+        if (pa == null) {
+            throw new ValidationException("申请不存在");
+        }
+        Projects project = projectService.selectByProjectId(pa.getProjectId());
+        ProjectMembers entity = new ProjectMembers();
+        entity.setProjectId(project.getId());
+        entity.setUserId(pa.getUserId());
+        entity.setJoinTime(new Date());
+        entity.setRole(ProjectEnum.ProjectMemberRoleEnum.NORMAL.getCode());
+        boolean save = projectMembersService.save(entity);
+        if (!save) {
+            throw new ValidationException("内部错误，加入失败");
+        }
+        Integer result = projectApplicationsService.updateStatus(req.getId(), ProjectEnum.ProjectApplyStatusEnum.APPROVED.getCode(), id);
+        return result == 1;
+    }
+
+    public Boolean rejectApply(ApproveApplyReq req, Long id) {
+        Integer result = projectApplicationsService.updateStatus(req.getId(), ProjectEnum.ProjectApplyStatusEnum.REJECTED.getCode(), id);
+        return result == 1;
     }
 }

@@ -8,39 +8,62 @@
 
     <div class="list-container">
       <el-card class="list-card">
-        <div class="infinite-list" v-infinite-scroll="loadMore" :infinite-scroll-disabled="noMore">
-          <div class="apply-item" v-for="(item, index) in list" :key="index">
+        <div
+          class="infinite-list"
+          v-infinite-scroll="loadMore"
+          :infinite-scroll-disabled="noMore"
+        >
+          <div
+            class="apply-item"
+            v-for="(item, index) in list"
+            :key="index"
+            @mouseenter="hoveredItem = index"
+            @mouseleave="hoveredItem = null"
+          >
             <div class="apply-header">
-              <el-avatar :src="item.avatar" size="small">{{ item.username?.charAt(0) }}</el-avatar>
+              <el-avatar :src="item.avatar" size="small">
+                {{ item.username?.charAt(0) }}
+              </el-avatar>
               <div class="user-info">
                 <div class="username">{{ item.username }}</div>
                 <div class="apply-time">{{ formatTime(item.applyTime) }}</div>
               </div>
             </div>
-            
+
             <div class="apply-content">
               <div class="project-info">
                 <span class="label">申请项目：</span>
-                <span class="value">{{ item.projectName }}</span>
+                <span class="value strong">{{ item.projectName }}</span>
               </div>
               <div class="message">
                 <span class="label">申请留言：</span>
-                <span class="value">{{ item.message || '无留言' }}</span>
+                <span class="value strong">{{ item.message || '无留言' }}</span>
               </div>
             </div>
-            
+
+            <div
+              class="hover-info"
+              v-if="hoveredItem === index"
+            >
+              <p><b>项目简介：</b>{{ item.description || '暂无' }}</p>
+              <p><b>身份：</b>{{ item.audience || '未填写' }}</p>
+              <p><b>可投入时间：</b>{{ item.timePerDay || '未填写' }}</p>
+              <p><b>技能：</b>{{ item.skills || '未填写' }}</p>
+              <p><b>资源：</b>{{ item.resources || '未填写' }}</p>
+            </div>
+
             <div class="apply-actions" v-if="item.status === 0">
               <el-button type="success" size="small" @click="handleApprove(item.id)">通过</el-button>
               <el-button type="danger" size="small" @click="handleReject(item.id)">拒绝</el-button>
             </div>
-            
+
             <div class="apply-status">
               <el-tag :type="getStatusType(item.status)" size="small">
                 {{ getStatusText(item.status) }}
               </el-tag>
             </div>
           </div>
-          
+
           <div v-if="loading" class="loading-more">
             <el-icon class="is-loading"><Loading /></el-icon>
             加载中...
@@ -67,6 +90,7 @@ const size = ref(10)
 const total = ref(0)
 const loading = ref(false)
 const noMore = ref(false)
+const hoveredItem = ref(null)
 
 const formatTime = (timeString) => {
   if (!timeString) return ''
@@ -96,11 +120,11 @@ const getStatusType = (status) => {
 const fetchList = async () => {
   try {
     loading.value = true
-    const res = await post('/api/auth/project/getApplyList', {
+    const res = await post('/api/auth/project/myApplyList', {
       page: page.value,
       size: size.value
     })
-    
+
     list.value.push(...res.records)
     total.value = res.total
     noMore.value = page.value * size.value >= res.total
@@ -123,11 +147,10 @@ const handleApprove = async (id) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    
+
     const res = await post('/api/auth/project/approveApply', { id })
     if (res) {
       ElMessage.success('操作成功')
-      // 更新本地状态
       const item = list.value.find(item => item.id === id)
       if (item) item.status = 1
     }
@@ -145,11 +168,10 @@ const handleReject = async (id) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    
+
     const res = await post('/api/auth/project/rejectApply', { id })
     if (res) {
       ElMessage.success('操作成功')
-      // 更新本地状态
       const item = list.value.find(item => item.id === id)
       if (item) item.status = 2
     }
@@ -192,6 +214,7 @@ onMounted(() => {
 .apply-item {
   padding: 16px;
   border-bottom: 1px solid #f0f2f7;
+  position: relative;
 }
 
 .apply-item:last-child {
@@ -219,7 +242,7 @@ onMounted(() => {
 }
 
 .apply-content {
-  margin-left: 42px; /* 头像宽度 + 边距 */
+  margin-left: 42px;
 }
 
 .project-info, .message {
@@ -236,6 +259,11 @@ onMounted(() => {
   color: #303133;
 }
 
+.strong {
+  color: #1f2d3d;
+  font-weight: 600;
+}
+
 .apply-actions {
   margin-top: 12px;
   margin-left: 42px;
@@ -244,6 +272,22 @@ onMounted(() => {
 .apply-status {
   margin-top: 8px;
   margin-left: 42px;
+}
+
+.hover-info {
+  position: absolute;
+  right: 20px;
+  top: 16px;
+  background: #fff;
+  border: 1px solid #ebeef5;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  border-radius: 8px;
+  z-index: 100;
+  width: 240px;
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.6;
 }
 
 .loading-more, .no-more {

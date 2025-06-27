@@ -11,4 +11,6 @@ public interface AccountShowService extends IService<AccountShow> {
     AccountShow getByUserId(Long userId);
 
     Page<AccountShow> getProjectShowList(Page<AccountShow> page);
+
+    List<AccountShow> selectByUserIds(List<Long> userIds);
 }

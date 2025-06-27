@@ -1,5 +1,6 @@
 package com.example.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.Images;
 import com.example.entity.dto.ProjectApplications;
@@ -18,5 +19,9 @@ public interface ProjectApplicationsService extends IService<ProjectApplications
     List<ProjectApplications> selectByProcessedBy(Long userId, Integer  status);
 
     List<ProjectApplications> selectByUserId(Long userId, Integer  status);
+
+    Page<ProjectApplications> myApplyList(Page<ProjectApplications> page, Long userId, Integer status);
+
+    Integer updateStatus(Long id, Integer status, Long userId);
 }
 

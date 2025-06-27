@@ -18,6 +18,7 @@ public class MyApplyListResp {
 
     private String userName;
     private Long userId;
+
     private Integer status;
     private Date applyTime;
     private String message;

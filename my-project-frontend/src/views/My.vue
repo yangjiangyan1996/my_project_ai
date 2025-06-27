@@ -17,6 +17,14 @@
             <el-button type="success" size="large" @click="toggleIntentForm">
               🤝 我想找团队
             </el-button>
+
+            <el-button type="success" size="large" @click="goToApplyList">
+              🤝 去审核（{{ stats.applyCount || 0 }}）
+            </el-button>
+
+            <el-button type="success" size="large" @click="goToApplyList">
+              🤝 进度查询
+            </el-button>
           </div>
 
           <!-- 意向表单区域 -->
@@ -137,17 +145,16 @@
       </div>
     </div>
 
-    <div class="stats-container">
-      <div class="stats-item" @click="goToApplyList">
-        <div class="stats-count">{{ stats.applyCount || 0 }}</div>
-        <div class="stats-label">待审核数</div>
-      </div>
-      <div class="stats-item">
-        <div class="stats-count">{{ stats.applicationCount || 0 }}</div>
-        <div class="stats-label">已申请数</div>
-      </div>
-    </div>
-
+  <!-- <div class="stats-container">
+              <div class="stats-item" @click="goToApplyList">
+                <div class="stats-count">{{ stats.applyCount || 0 }}</div>
+                <div class="stats-label">待审核数</div>
+              </div>
+              <div class="stats-item">
+                <div class="stats-count">{{ stats.applicationCount || 0 }}</div>
+                <div class="stats-label">已申请数</div>
+              </div>
+            </div> -->
     <div class="content-tabs">
       <el-tabs v-model="activeTab" @tab-click="handleTabChange">
         <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
