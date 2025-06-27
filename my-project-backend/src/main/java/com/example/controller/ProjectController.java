@@ -79,6 +79,22 @@ public class ProjectController {
         }
     }
 
+    @PostMapping("/myApplyList")
+    public RespBean<Page<MyApplyListResp>> myApplyList(@RequestBody MyApplyListReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+//            Page<MyApplyListResp> result = projectFacade.myApplyList(Page.of(req.getPage() - 1, req.getSize()),req, user.getId());
+//            return RespBean.success(result);
+            return null;
+        } catch (ValidationException e){
+            log.error("ProjectController#applyJoinProject,req:{}",e);
+            return RespBean.failure(999, e.getMessage());
+        }catch (Exception e) {
+            log.error("ProjectController#changeShowStatus,req:{}",e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     @PostMapping("/projectShowList")
     public RespBean<Page<ProjectOfMyShowGetResp>> projectShowList(@RequestBody ProjectShowListReq req) {
         try {

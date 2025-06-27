@@ -60,7 +60,12 @@ const router = createRouter({
             path: '/SkillMatch.vue',
             name: 'skillMatch',
             component: () => import('@/views/SkillMatch.vue')
-            }
+        },{
+            path: '/my/applyList',
+            name: 'applyList',
+            component: () => import('@/views/ApplyList.vue'),
+            meta: { requiresAuth: true }
+        }
     ]
 })
 

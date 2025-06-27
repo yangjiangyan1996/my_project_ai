@@ -138,7 +138,7 @@
     </div>
 
     <div class="stats-container">
-      <div class="stats-item">
+      <div class="stats-item" @click="goToApplyList">
         <div class="stats-count">{{ stats.applyCount || 0 }}</div>
         <div class="stats-label">待审核数</div>
       </div>
@@ -252,6 +252,11 @@ const form = ref({
   
   status: 1
 })
+
+
+const goToApplyList = () => {
+  router.push('/my/applyList')
+}
 
 // 新增获取统计数据方法
 const fetchMyCount = async () => {
