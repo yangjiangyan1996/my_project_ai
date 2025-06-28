@@ -54,6 +54,16 @@ public class ProjectApplicationsServiceImpl extends ServiceImpl<ProjectApplicati
     }
 
     @Override
+    public Page<ProjectApplications> myApplicationList(Page<ProjectApplications> page, Long userId) {
+        return baseMapper.selectPage(
+                page,
+                new QueryWrapper<ProjectApplications>()
+                        .eq("user_id", userId)
+                        .orderByDesc("apply_time")
+        );
+    }
+
+    @Override
     public Integer updateStatus(Long id, Integer status, Long userId) {
         ProjectApplications p = new ProjectApplications();
         p.setStatus(status);

@@ -79,6 +79,21 @@ public class ProjectController {
         }
     }
 
+    @PostMapping("/myApplicationList")
+    public RespBean<Page<MyApplicationListResp>> myApplicationList(@RequestBody MyApplyListReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Page<MyApplicationListResp> result = projectFacade.myApplicationList(Page.of(req.getPage() - 1, req.getSize()),req, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e){
+            log.error("ProjectController#applyJoinProject,req:{}",e);
+            return RespBean.failure(999, e.getMessage());
+        }catch (Exception e) {
+            log.error("ProjectController#changeShowStatus,req:{}",e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     @PostMapping("/myApplyList")
     public RespBean<Page<MyApplyListResp>> myApplyList(@RequestBody MyApplyListReq req) {
         try {
@@ -105,6 +120,21 @@ public class ProjectController {
             return RespBean.failure(999, e.getMessage());
         }catch (Exception e) {
             log.error("ProjectController#approveApply,req:{}",e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @PostMapping("/cancelApply")
+    public RespBean<Boolean> cancelApply(@RequestBody CancelApproveReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.cancelApply(req, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e){
+            log.error("ProjectController#cancelApply,req:{}",e);
+            return RespBean.failure(999, e.getMessage());
+        }catch (Exception e) {
+            log.error("ProjectController#cancelApply,req:{}",e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

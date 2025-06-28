@@ -22,7 +22,7 @@
               🤝 去审核（{{ stats.applyCount || 0 }}）
             </el-button>
 
-            <el-button type="success" size="large" @click="goToApplyList">
+            <el-button type="success" size="large" @click="goToApplicationList">
               🤝 进度查询
             </el-button>
           </div>
@@ -178,7 +178,7 @@
         
         <el-tab-pane label="我收藏的" name="myFavorites" v-loading="favoritesLoading">
           <div class="infinite-list" v-infinite-scroll="loadMoreFavorites" :infinite-scroll-disabled="noMoreFavorites">
-            <div class="activity-item" v-for="(item, index) in favoritesList" :key="'favorites-'+index">
+            <div class="activity-item" v-for="(item, index) in favoritesList" :key="'favorites-'+index" @click="goToDetail(item)">
               <div class="activity-type">{{ item.categoryName }}</div>
               <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
               <div class="activity-content">
@@ -197,7 +197,7 @@
         
         <el-tab-pane label="我点赞的" name="myLike" v-loading="likeLoading">
           <div class="infinite-list" v-infinite-scroll="loadMoreLike" :infinite-scroll-disabled="noMoreLike">
-            <div class="activity-item" v-for="(item, index) in likeList" :key="'like-'+index">
+            <div class="activity-item" v-for="(item, index) in likeList" :key="'like-'+index" @click="goToDetail(item)">
               <div class="activity-type">{{ item.categoryName }}</div>
               <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
               <div class="activity-content">
@@ -263,6 +263,10 @@ const form = ref({
 
 const goToApplyList = () => {
   router.push('/my/applyList')
+}
+
+const goToApplicationList = () => {
+  router.push('/my/applicationList')
 }
 
 // 新增获取统计数据方法
@@ -583,7 +587,7 @@ onMounted(() => {
 }
 
 .activity-detail {
-  color: #1a1a1a;
+  color: #837df0;
   margin: 10px 0;
 }
 

@@ -450,4 +450,45 @@ public class ProjectFacade {
         Integer result = projectApplicationsService.updateStatus(req.getId(), ProjectEnum.ProjectApplyStatusEnum.REJECTED.getCode(), id);
         return result == 1;
     }
+
+    public Page<MyApplicationListResp> myApplicationList(Page<ProjectApplications> page, MyApplyListReq req, Long userId) {
+        Page<ProjectApplications> list = projectApplicationsService.myApplicationList(page, userId);
+
+
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+
+        List<Long> projectIds = list.getRecords().stream().map(v -> v.getProjectId()).collect(Collectors.toList());
+
+        List<Projects> projectList = projectService.selectByProjectIds(projectIds);
+        Map<Long, Projects> projectId2ProjectsMap = projectList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v, (l1, l2) -> l2));
+
+        List<MyApplicationListResp> collect = list.getRecords().stream().map(v -> {
+            MyApplicationListResp p = new MyApplicationListResp();
+            p.setId(v.getId());
+            if (projectId2ProjectsMap.containsKey(v.getProjectId())) {
+                Projects project = projectId2ProjectsMap.get(v.getProjectId());
+                p.setProjectId(project.getId());
+                p.setProjectName(project.getName());
+            }
+
+            p.setStatus(v.getStatus());
+            p.setApplyTime(v.getApplyTime());
+            return p;
+        }).collect(Collectors.toList());
+
+        Page<MyApplicationListResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(list.getTotal());
+        result.setRecords(collect);
+        return result;
+    }
+
+    public Boolean cancelApply(CancelApproveReq req, Long userId) {
+        ProjectApplications p = projectApplicationsService.selectByProjectIdAndUserId(req.getProjectId(), userId);
+        if (p == null) {
+            return false;
+        }
+        return projectApplicationsService.updateStatus(p.getId(), ProjectEnum.ProjectApplyStatusEnum.CANCELED.getCode(), userId) > 0;
+    }
 }

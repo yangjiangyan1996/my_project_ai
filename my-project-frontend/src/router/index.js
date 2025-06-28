@@ -44,7 +44,7 @@ const router = createRouter({
             name: 'project-detail',
             component: () => import('@/views/ProjectDetail.vue')
           },{
-            path: '/my',
+            path: '/projects/my',
             name: 'my',
             component: () => import('@/views/My.vue'),
             meta: { layout: 'EmptyLayout' }
@@ -65,7 +65,12 @@ const router = createRouter({
             name: 'applyList',
             component: () => import('@/views/ApplyList.vue'),
             meta: { requiresAuth: true }
-        }
+        },{
+            path: '/my/applicationList',
+            name: 'applicationList',
+            component: () => import('@/views/ApplicationList.vue'),
+            meta: { requiresAuth: true }
+        },
     ]
 })
 
