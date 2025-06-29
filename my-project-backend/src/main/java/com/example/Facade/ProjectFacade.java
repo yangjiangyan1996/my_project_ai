@@ -286,6 +286,9 @@ public class ProjectFacade {
 
     public ProjectOfMyShowGetResp getProjectOfMyShow(Long userId) {
         AccountShow byUserId = accountShowService.getByUserId(userId);
+        if (byUserId == null) {
+            return null;
+        }
         ProjectOfMyShowGetResp build = new ProjectOfMyShowGetResp();
         build.setId(byUserId.getId());
         build.setAudience(byUserId.getAudience());

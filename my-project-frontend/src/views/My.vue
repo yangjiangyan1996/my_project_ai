@@ -4,6 +4,8 @@
       <div class="profile-info">
         <h1 class="username">{{ userInfo.data?.username || '用户名' }}</h1>
         <div class="industry">{{ userInfo.data?.industry || '行业' }}</div>
+        <el-button type="text" size="small"@click="goToUpdateUserInfo">编辑个人资料</el-button>
+
         <div class="sidejob-entry-card">
           <div class="sidejob-header">
             <el-icon size="22"><Suitcase /></el-icon>
@@ -261,6 +263,11 @@ const form = ref({
 })
 
 
+const goToUpdateUserInfo = () => {
+  router.push('/my/updateUserInfo')
+}
+
+
 const goToApplyList = () => {
   router.push('/my/applyList')
 }
@@ -495,6 +502,7 @@ const handleTabChange = (tab) => {
 
 // 初始化加载数据
 onMounted(() => {
+  console.log('userInfo',userInfo)
   fetchPublishData()
   fetchFollowCount()
   fetchMyCount() // 新增调用

@@ -28,4 +28,7 @@ public class Account implements BaseData {
     String phone;
     String role;
     Date registerTime;
+    String province;
+    String city;
+    String county;
 }

@@ -1,5 +1,10 @@
 package com.example.Facade;
 
+import com.example.entity.dto.Account;
+import com.example.entity.resp.UserAllInfo;
+import com.example.service.AccountService;
+import jakarta.annotation.Resource;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 /**
@@ -10,4 +15,13 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class UserFacade {
+    @Resource
+    AccountService accountService;
+    public UserAllInfo getUserAllInfo(Long id) {
+        Account userAllInfo = accountService.selectById(id);
+
+        UserAllInfo r = new UserAllInfo();
+        BeanUtils.copyProperties(userAllInfo, r);
+        return r;
+    }
 }

@@ -3,6 +3,7 @@ package com.example.controller;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.ProjectFacade;
+import com.example.config.QqMailService;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.dto.Projects;
@@ -25,12 +26,22 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/auth/project/")
 public class ProjectController {
 
-
+    @Resource
+    private QqMailService qqMailService;
     @Resource
     ProjectFacade projectFacade;
     @Resource
     private ProjectService projectService;
 
+    @GetMapping("/api/auth/project//simple")
+    public String sendSimpleMail() {
+        qqMailService.sendSimpleMail(
+                "aqawaearadf@gmail.com",
+                "测试简单邮件",
+                "这是一封来自Spring Boot的测试邮件"
+        );
+        return "简单邮件发送成功";
+    }
 
     @GetMapping("/getMyCount")
     public RespBean<MyCountResp> getMyCount() {

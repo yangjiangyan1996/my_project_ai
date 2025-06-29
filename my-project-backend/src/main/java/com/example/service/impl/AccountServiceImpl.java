@@ -7,8 +7,10 @@ import com.example.entity.dto.Account;
 import com.example.entity.vo.request.ConfirmResetVO;
 import com.example.entity.vo.request.EmailRegisterVO;
 import com.example.entity.vo.request.EmailResetVO;
+import com.example.listener.MailQueueListener;
 import com.example.mapper.AccountMapper;
 import com.example.service.AccountService;
+import com.example.service.RedisService;
 import com.example.utils.Const;
 import com.example.utils.FlowUtils;
 import jakarta.annotation.Resource;
@@ -39,7 +41,10 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     int verifyLimit;
 
     @Resource
-    AmqpTemplate rabbitTemplate;
+//    AmqpTemplate rabbitTemplate;
+    MailQueueListener mailQueueListener;
+    @Resource
+    RedisService redisService;
 
     @Resource
     StringRedisTemplate stringRedisTemplate;
@@ -84,9 +89,11 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
             Random random = new Random();
             int code = random.nextInt(899999) + 100000;
             Map<String, Object> data = Map.of("type",type,"email", email, "code", code);
-            rabbitTemplate.convertAndSend(Const.MQ_MAIL, data);
-            stringRedisTemplate.opsForValue()
-                    .set(Const.VERIFY_EMAIL_DATA + email, String.valueOf(code), 3, TimeUnit.MINUTES);
+            //rabbitTemplate.convertAndSend(Const.MQ_MAIL, data);
+            mailQueueListener.sendMailMessage(data);
+//            stringRedisTemplate.opsForValue()
+//                    .set(Const.VERIFY_EMAIL_DATA + email, String.valueOf(code), 3, TimeUnit.MINUTES);
+            redisService.saveValue(Const.VERIFY_EMAIL_DATA + email, String.valueOf(code),3, TimeUnit.MINUTES);
             return null;
         }
     }
@@ -108,6 +115,10 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 //        Account account = new Account(null, info.getUsername(),
 //                password, email, Const.ROLE_DEFAULT, new Date());
         Account account = new Account();
+        account.setUsername(info.getUsername());
+        account.setPassword(password);
+        account.setEmail(email);
+
         if(!this.save(account)) {
             return "内部错误，注册失败";
         } else {
@@ -165,8 +176,9 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      * @param email 电邮
      */
     private void deleteEmailVerifyCode(String email){
-        String key = Const.VERIFY_EMAIL_DATA + email;
-        stringRedisTemplate.delete(key);
+//        String key = Const.VERIFY_EMAIL_DATA + email;
+//        stringRedisTemplate.delete(key);
+        redisService.deleteByK(Const.VERIFY_EMAIL_DATA + email);
     }
 
     /**
@@ -176,7 +188,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      */
     private String getEmailVerifyCode(String email){
         String key = Const.VERIFY_EMAIL_DATA + email;
-        return stringRedisTemplate.opsForValue().get(key);
+        return redisService.getValue(key);
+//        return stringRedisTemplate.opsForValue().get(key);
     }
 
     /**

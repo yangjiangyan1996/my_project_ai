@@ -13,8 +13,10 @@ public class Config {
     public static final String[] WHITE_URL = {
             "/api/auth/login",
             "/api/auth/register",
+            "/api/auth/ask-code",
             "/api/auth/verifyEmail",
             "/api/auth/sendVerifyEmail",
-            "/api/unauth/**"
+            "/api/unauth/**",
+            "/api/auth/project/simple"
     };
 }

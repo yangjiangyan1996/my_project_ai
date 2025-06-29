@@ -3,7 +3,9 @@ package com.example.controller;
 import com.example.Facade.UserFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
+import com.example.entity.dto.Account;
 import com.example.entity.resp.MyCountResp;
+import com.example.entity.resp.UserAllInfo;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -20,6 +22,13 @@ public class UserController {
     @Resource
     UserFacade userFacade;
 
+
+    @GetMapping("/getUserAllInfo")
+    public RespBean<UserAllInfo> getUserAllInfo() {
+        UserInfo user = UserUtil.getCurrentUser();
+        UserAllInfo u = userFacade.getUserAllInfo(user.getId());
+        return RespBean.success(u);
+    }
 
 
     @GetMapping("/getCurrentUserInfo")

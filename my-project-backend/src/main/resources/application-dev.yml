@@ -8,10 +8,27 @@ spring:
     multipart:
       max-file-size: 5MB
       max-request-size: 10MB
+#  mail:
+#    host: smtp.163.com
+#    username: javastudy111@163.com
+#    password: ettlpogcfemwcjfi
   mail:
-    host: smtp.163.com
-    username: javastudy111@163.com
-    password: VKQFYZMUSUZGSGEG
+    host: smtp.qq.com                  # QQ邮箱SMTP服务器地址
+    port: 587                           # 端口号(587或465)
+    username: 1776080295@qq.com          # 您的QQ邮箱地址
+    password: ettlpogcfemwcjfi   # 16位授权码，不是QQ密码
+    protocol: smtp
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true                    # 需要认证
+          starttls:
+            enable: true                # 启用STARTTLS加密
+            required: true              # 必须使用STARTTLS
+          connectiontimeout: 5000       # 连接超时(毫秒)
+          timeout: 5000                 # 读写超时(毫秒)
+          writetimeout: 5000           # 写超时(毫秒)
   rabbitmq:
     addresses: localhost
     username: admin
