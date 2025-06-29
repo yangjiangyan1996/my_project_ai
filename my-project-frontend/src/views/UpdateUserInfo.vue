@@ -38,16 +38,17 @@
           <el-input v-model="userForm.phone" placeholder="请输入手机号"></el-input>
         </el-form-item>
 
-        <el-form-item label="头像" prop="avatar_url">
+        <el-form-item label="头像" prop="avatarUrl">
           <el-upload
             class="avatar-uploader"
-            action="/api/upload"
+            action="http://localhost:8080/api/unauth/common/upload"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
             :before-upload="beforeAvatarUpload"
-          >
-            <img v-if="userForm.avatar_url" :src="userForm.avatar_url" class="avatar">
+            :headers="uploadHeaders">
+            <img v-if="userForm.avatarUrl" :src="userForm.avatarUrl" class="avatar">
             <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            <div class="upload-tip" v-if="!userForm.avatarUrl">点击上传头像</div>
           </el-upload>
         </el-form-item>
 
@@ -87,7 +88,7 @@ const userForm = ref({
   username: '',
   sex: 0,
   nickname: '',
-  avatar_url: '',
+  avatarUrl: '',
   email: '',
   phone: '',
   province: '',
@@ -123,7 +124,7 @@ const fetchUserInfo = async () => {
       username: res.username,
       sex: res.sex || 0,
       nickname: res.nickname || '',
-      avatar_url: res.avatar_url || '',
+      avatarUrl: res.avatarUrl || '',
       email: res.email || '',
       phone: res.phone || '',
       province: res.province || '',
@@ -140,8 +141,11 @@ const fetchUserInfo = async () => {
 
 // 头像上传成功
 const handleAvatarSuccess = (response) => {
-  userForm.value.avatar_url = response.data.url
-  ElMessage.success('头像上传成功')
+    console.log("上传成功",response)
+    console.log("上传成功-userForm",userForm.avatarUrl)
+  userForm.value.avatarUrl = response.data
+  console.log("上传成功-userForm",userForm.avatarUrl)
+  ElMessage.success('上传成功')
 }
 
 // 头像上传前校验

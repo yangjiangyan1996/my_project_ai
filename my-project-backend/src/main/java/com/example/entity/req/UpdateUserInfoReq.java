@@ -1,26 +1,21 @@
-package com.example.entity.resp;
+package com.example.entity.req;
 
 import lombok.Data;
-
-import java.util.Date;
 
 /**
  * @Author YangJian
  * @Description
  * @Email 1776080295@qq.com
- * @Date 2025/6/29 13:53
+ * @Date 2025/6/29 14:31
  */
 @Data
-public class UserAllInfo {
+public class UpdateUserInfoReq {
     Long id;
     String username;
     String nickname;
-    String avatarUrl;
     Integer sex;
-    String email;
+    String avatarUrl;
     String phone;
-    String role;
-    Date registerTime;
     String province;
     String city;
     String county;

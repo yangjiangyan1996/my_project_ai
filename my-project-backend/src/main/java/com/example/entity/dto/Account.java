@@ -23,6 +23,7 @@ public class Account implements BaseData {
     String username;
     String password;
     String nickname;
+    Integer sex;
     String avatarUrl;
     String email;
     String phone;
