@@ -86,7 +86,7 @@ const router = useRouter()
 const userForm = ref({
   id: '',
   username: '',
-  sex: 0,
+  sex: '',
   nickname: '',
   avatarUrl: '',
   email: '',
@@ -156,9 +156,7 @@ const beforeAvatarUpload = (file) => {
   if (!isJpgOrPng) {
     ElMessage.error('头像图片只能是 JPG/PNG 格式!')
   }
-  if (!isLt2M) {
-    ElMessage.error('头像图片大小不能超过 2MB!')
-  }
+  
 
   return isJpgOrPng && isLt2M
 }
