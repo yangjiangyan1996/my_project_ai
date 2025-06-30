@@ -2,7 +2,7 @@
   <div class="profile-container">
     <div class="profile-header">
       <div class="profile-info">
-        <h1 class="username">{{ userInfo.data?.username || '用户名' }}</h1>
+        <h1 class="username">{{ userInfo.data?.nikeName || '用户名' }}</h1>
         <div class="industry">{{ userInfo.data?.industry || '行业' }}</div>
         <el-button type="text" size="small"@click="goToUpdateUserInfo">编辑个人资料</el-button>
 
