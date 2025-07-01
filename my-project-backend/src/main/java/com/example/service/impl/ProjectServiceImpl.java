@@ -46,7 +46,17 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
         return projectMapper.selectPage(
                 pageable,
                 new QueryWrapper<Projects>()
-                        .eq("created_by", userId)
+                        .eq(userId != null, "created_by", userId)
+                        .orderByDesc("created_at")
+        );
+    }
+
+    @Override
+    public Page getProjectsPageByStatus(Page<Projects> pageable, Integer status) {
+        return projectMapper.selectPage(
+                pageable,
+                new QueryWrapper<Projects>()
+                        .eq(status != null, "status", status)
                         .orderByDesc("created_at")
         );
     }

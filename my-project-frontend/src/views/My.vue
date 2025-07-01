@@ -27,6 +27,15 @@
             <el-button type="success" size="large" @click="goToApplicationList">
               🤝 进度查询
             </el-button>
+
+            <el-button 
+              type="success" 
+              size="large" 
+              @click="goToAdminApplyList"
+              v-if="userInfo.data?.role === 'ADMIN'"
+            >
+              🤝 去审核用户发布的帖子
+            </el-button>
           </div>
 
           <!-- 意向表单区域 -->
@@ -270,6 +279,10 @@ const goToUpdateUserInfo = () => {
 
 const goToApplyList = () => {
   router.push('/my/applyList')
+}
+
+const goToAdminApplyList = () => {
+  router.push('/my/adminApplyList')
 }
 
 const goToApplicationList = () => {

@@ -487,6 +487,26 @@ public class ProjectFacade {
         return result;
     }
 
+    public Page<AdminApplyListResp> adminApproveList(Page<Projects> page, MyApplyListReq req, Long userId) {
+        Page<Projects> list = projectService.getProjectsPageByStatus(page, ProjectEnum.ProjectStatusEnum.WAITING.getCode());
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+        List<AdminApplyListResp> collect = list.getRecords().stream().map(v -> {
+            AdminApplyListResp p = new AdminApplyListResp();
+            p.setId(v.getId());
+            p.setProjectName(v.getName());
+            p.setStatus(v.getStatus());
+            p.setApplyTime(v.getCreatedAt());
+            return p;
+        }).collect(Collectors.toList());
+
+        Page<AdminApplyListResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(list.getTotal());
+        result.setRecords(collect);
+        return result;
+    }
+
     public Boolean cancelApply(CancelApproveReq req, Long userId) {
         ProjectApplications p = projectApplicationsService.selectByProjectIdAndUserId(req.getProjectId(), userId);
         if (p == null) {
@@ -494,4 +514,6 @@ public class ProjectFacade {
         }
         return projectApplicationsService.updateStatus(p.getId(), ProjectEnum.ProjectApplyStatusEnum.CANCELED.getCode(), userId) > 0;
     }
+
+
 }

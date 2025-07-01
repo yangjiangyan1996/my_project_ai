@@ -18,6 +18,8 @@ public interface ProjectService extends IService<Projects> {
 
     Page getMyProjects(Page<Projects> pageable, Long userId);
 
+    Page getProjectsPageByStatus(Page<Projects> pageable, Integer status);
+
     //判断项目是否启用
     boolean isProjectDown(Long projectId);
 

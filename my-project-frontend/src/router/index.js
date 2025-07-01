@@ -75,6 +75,11 @@ const router = createRouter({
             name: 'updateUserInfo',
             component: () => import('@/views/UpdateUserInfo.vue'),
             meta: { requiresAuth: true }
+        },{
+            path: '/my/adminApplyList',
+            name: 'adminApplyList',
+            component: () => import('@/views/AdminApplyList.vue'),
+            meta: { requiresAuth: true }
         },
     ]
 })

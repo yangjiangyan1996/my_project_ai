@@ -90,6 +90,24 @@ public class ProjectController {
         }
     }
 
+    @PostMapping("/adminApproveList")
+    public RespBean<Page<AdminApplyListResp>> adminApproveList(@RequestBody MyApplyListReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            if (!user.getRole().equals("ADMIN")) {
+                return RespBean.failure(999, "无权限");
+            }
+            Page<AdminApplyListResp> result = projectFacade.adminApproveList(Page.of(req.getPage() - 1, req.getSize()),req, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e){
+            log.error("ProjectController#adminApproveList,req:{}",e);
+            return RespBean.failure(999, e.getMessage());
+        }catch (Exception e) {
+            log.error("ProjectController#adminApproveList,req:{}",e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     @PostMapping("/myApplicationList")
     public RespBean<Page<MyApplicationListResp>> myApplicationList(@RequestBody MyApplyListReq req) {
         try {
