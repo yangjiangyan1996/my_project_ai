@@ -156,19 +156,9 @@
       </div>
     </div>
 
-  <!-- <div class="stats-container">
-              <div class="stats-item" @click="goToApplyList">
-                <div class="stats-count">{{ stats.applyCount || 0 }}</div>
-                <div class="stats-label">待审核数</div>
-              </div>
-              <div class="stats-item">
-                <div class="stats-count">{{ stats.applicationCount || 0 }}</div>
-                <div class="stats-label">已申请数</div>
-              </div>
-            </div> -->
     <div class="content-tabs">
       <el-tabs v-model="activeTab" @tab-click="handleTabChange">
-        <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
+        <!-- <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
           <div class="infinite-list" v-infinite-scroll="loadMore" :infinite-scroll-disabled="noMorePublish">
             <div class="activity-item" v-for="(item, index) in publishList" :key="'publish-'+index" @click="goToDetail(item)">
               <div class="activity-type">{{ item.categoryName }}</div>
@@ -185,7 +175,59 @@
             </div>
             <div v-if="noMorePublish" class="no-more">没有更多内容了</div>
           </div>
+        </el-tab-pane> -->
+        <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
+          <div class="infinite-list" v-infinite-scroll="loadMore" :infinite-scroll-disabled="noMorePublish">
+            <div
+              class="activity-item"
+              v-for="(item, index) in publishList"
+              :key="'publish-' + index"
+              @click="goToDetail(item)"
+            >
+              <div class="activity-type">{{ item.categoryName }}</div>
+              <div class="activity-time">{{ item.createdAt.slice(0, 10) }}</div>
+              <div class="activity-content">
+                <h3 class="activity-title">{{ item.name }}</h3>
+                <div class="activity-detail">{{ item.description }}</div>
+
+                <!-- 状态展示 -->
+                <div class="activity-status">
+                  <el-tag
+                    :type="item.status === 0 ? 'warning' : item.status === 1 ? 'success' : 'danger'"
+                    size="small"
+                  >
+                    {{ item.status === 0 ? '待审核' : item.status === 1 ? '已通过' : '已拒绝' }}
+                  </el-tag>
+                </div>
+
+                <!-- 如果是拒绝，展示理由 -->
+                <div v-if="item.status === 2" class="activity-reason">
+                  <strong>拒绝理由：</strong>{{ item.reason || '无' }}
+                </div>
+
+                <!-- 重新编辑按钮 -->
+                <el-button
+                  v-if="item.status === 2"
+                  type="primary"
+                  size="small"
+                  @click.stop="goToCreateSidejob(item.id)"
+                  style="margin-top: 8px"
+                >
+                  重新编辑
+                </el-button>
+
+                <div class="activity-meta">
+                  <span>已赞同 {{ item.likeCount }}</span>
+                  <span>{{ item.commentCount }} 条评论</span>
+                  <span>收藏 {{ item.favoriteCount }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="noMorePublish" class="no-more">没有更多内容了</div>
+          </div>
         </el-tab-pane>
+
         
         <el-tab-pane label="我收藏的" name="myFavorites" v-loading="favoritesLoading">
           <div class="infinite-list" v-infinite-scroll="loadMoreFavorites" :infinite-scroll-disabled="noMoreFavorites">
@@ -419,9 +461,13 @@ const goToDetail = (project) => {
   router.push({ name: 'project-detail', params: { id: project.id } })
 }
 
-const goToCreateSidejob = () => {
-  router.push({ name: 'createOfFindColleague' })
+const goToCreateSidejob = (itemId) => {
+  router.push({
+    name: 'createOfFindColleague',
+    query: { id: itemId }
+  })
 }
+
 
 const fetchFollowCount = async () => {
   try {

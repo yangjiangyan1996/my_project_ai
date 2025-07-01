@@ -11,6 +11,8 @@ import lombok.Data;
 @Data
 public class MyPublishedResp {
     private Long id;
+    private Integer status;
+    private String reason;
     private String name;
     private String description;
     private String categoryName;

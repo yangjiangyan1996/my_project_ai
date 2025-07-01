@@ -170,6 +170,20 @@ import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import '@wangeditor/editor/dist/css/style.css'
 
 const router = useRouter()
+//const itemId = router.query.id
+
+
+// 初始化加载数据
+onMounted(() => {
+  const itemId = router.currentRoute.value.query.id;
+  if (itemId) {
+    console.log('接收到的项目ID:', itemId);
+    // 这里添加根据ID加载数据的逻辑
+    loadProjectDetail(itemId);
+  } else {
+    console.warn('未接收到项目ID参数');
+  }
+})
 
 // 表单数据
 const form = reactive({
