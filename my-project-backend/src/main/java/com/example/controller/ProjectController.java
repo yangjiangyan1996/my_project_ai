@@ -33,7 +33,7 @@ public class ProjectController {
     @Resource
     private ProjectService projectService;
 
-    @GetMapping("/api/auth/project//simple")
+    @GetMapping("/api/auth/project/simple")
     public String sendSimpleMail() {
         qqMailService.sendSimpleMail(
                 "aqawaearadf@gmail.com",
@@ -104,6 +104,43 @@ public class ProjectController {
             return RespBean.failure(999, e.getMessage());
         }catch (Exception e) {
             log.error("ProjectController#adminApproveList,req:{}",e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @PostMapping("/adminApprovePass")
+    public RespBean<Boolean> adminApprovePass(@RequestBody AdminApproveReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            if (!user.getRole().equals("ADMIN")) {
+                return RespBean.failure(999, "无权限");
+            }
+            Boolean result = projectFacade.adminApprovePass(req.getProjectId(), user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e){
+            log.error("ProjectController#adminApprovePass,req:{}",e);
+            return RespBean.failure(999, e.getMessage());
+        }catch (Exception e) {
+            log.error("ProjectController#adminApprovePass,req:{}",e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @PostMapping("/adminApproveNo")
+    public RespBean<Boolean> adminApproveNo(@RequestParam("projectId") Long projectId ,
+                                            @RequestParam("reason") String reason) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            if (!user.getRole().equals("ADMIN")) {
+                return RespBean.failure(999, "无权限");
+            }
+            Boolean result = projectFacade.adminApproveNo(projectId,reason, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e){
+            log.error("ProjectController#adminApproveNo,req:{}",e);
+            return RespBean.failure(999, e.getMessage());
+        }catch (Exception e) {
+            log.error("ProjectController#adminApproveNo,req:{}",e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -364,7 +401,11 @@ public class ProjectController {
     public RespBean<ProjectsDetailResp> showHotFuye(@RequestParam("projectId") Long projectId) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            ProjectsDetailResp result = projectFacade.selectByProjectId(projectId, user.getId());
+            Long userId = user.getId();
+            if (user.getRole().equals("ADMIN")) {
+                userId = null;
+            }
+            ProjectsDetailResp result = projectFacade.selectByProjectId(projectId, userId);
             return RespBean.success(result);
         } catch (Exception e) {
             log.error("ProjectController#detail,error,projectId:{}", projectId,e);

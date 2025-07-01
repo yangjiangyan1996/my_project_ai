@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.util.Date;
 import java.util.List;
 
 
@@ -70,12 +71,26 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
 
     @Override
     public Projects selectByProjectId(Long projectId) {
+        return projectMapper.selectOne(new QueryWrapper<Projects>().eq("id", projectId));
+    }
+
+    @Override
+    public Projects selectByProjectIdAndStatus(Long projectId, Integer status) {
         return projectMapper.selectOne(new QueryWrapper<Projects>().eq("id", projectId)
-                .eq("status", 1));
+                .eq("status", status));
     }
 
     @Override
     public List<Projects> selectByProjectIds(List<Long> projectIds) {
         return this.baseMapper.selectList(new QueryWrapper<Projects>().in("id", projectIds).eq("status", 1).eq("is_deleted", 0));
+    }
+
+    @Override
+    public Boolean updateStatus(Long projectId, Integer status,String reason, Long userId) {
+        Projects projects = new Projects();
+        projects.setStatus(status);
+        projects.setModifiedBy(userId);
+        projects.setModifiedAt(new Date());
+        return this.baseMapper.update(projects, new QueryWrapper<Projects>().eq("id", projectId)) > 0;
     }
 }

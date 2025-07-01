@@ -22,4 +22,5 @@ public class Projects extends BaseModel{
     private Integer difficulty;
     private String imageUrl;
     private Integer status;
+    private String reason;
 }

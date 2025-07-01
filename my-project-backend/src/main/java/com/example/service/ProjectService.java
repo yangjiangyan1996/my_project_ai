@@ -25,5 +25,9 @@ public interface ProjectService extends IService<Projects> {
 
     Projects selectByProjectId(Long projectId);
 
+    Projects selectByProjectIdAndStatus(Long projectId, Integer status);
+
     List<Projects> selectByProjectIds(List<Long> projectIds);
+
+    Boolean updateStatus(Long projectId, Integer status, String reason, Long userId);
 }

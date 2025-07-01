@@ -61,24 +61,27 @@ public class ProjectFacade {
         ProjectsDetail project = projectsDetailService.selectByProjectId(projectId);
         BeanUtils.copyProperties(project, r);
 
+        r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
+        r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
+
+
         r.setImageUrl(projectDown.getImageUrl());
         Account account = accountService.selectById(project.getCreatedBy());
         r.setCreatorName(account.getNickname());
 
-        Boolean myLike = projectLikeService.selectByProjectIdAndUserId(projectId, userId);
-        r.setMyLike(myLike);
-        Boolean myFavorite = projectFavoriteService.selectByProjectIdAndUserId(projectId, userId);
-        r.setMyFavorite(myFavorite);
+        if (userId != null) {
+            Boolean myLike = projectLikeService.selectByProjectIdAndUserId(projectId, userId);
+            r.setMyLike(myLike);
+            Boolean myFavorite = projectFavoriteService.selectByProjectIdAndUserId(projectId, userId);
+            r.setMyFavorite(myFavorite);
 
-        r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
-        r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
+            Boolean followed = userFollowService.selectByUserIdAndFollowedId(userId, project.getCreatedBy());
+            r.setFollowed(followed);
 
-        Boolean followed = userFollowService.selectByUserIdAndFollowedId(userId, project.getCreatedBy());
-        r.setFollowed(followed);
-
-        ProjectApplications pa = projectApplicationsService.selectByProjectIdAndUserId(projectId, userId);
-        if (pa != null) {
-            r.setApplyStatus(pa.getStatus());
+            ProjectApplications pa = projectApplicationsService.selectByProjectIdAndUserId(projectId, userId);
+            if (pa != null) {
+                r.setApplyStatus(pa.getStatus());
+            }
         }
         return r;
     }
@@ -435,7 +438,7 @@ public class ProjectFacade {
         if (pa == null) {
             throw new ValidationException("申请不存在");
         }
-        Projects project = projectService.selectByProjectId(pa.getProjectId());
+        Projects project = projectService.selectByProjectIdAndStatus(pa.getProjectId(), ProjectEnum.ProjectStatusEnum.PUBLISHING.getCode());
         ProjectMembers entity = new ProjectMembers();
         entity.setProjectId(project.getId());
         entity.setUserId(pa.getUserId());
@@ -516,4 +519,11 @@ public class ProjectFacade {
     }
 
 
+    public Boolean adminApprovePass(Long projectId, Long userId) {
+        return projectService.updateStatus(projectId, ProjectEnum.ProjectStatusEnum.PUBLISHING.getCode(), null, userId);
+    }
+
+    public Boolean adminApproveNo(Long projectId, String reason, Long userId) {
+        return projectService.updateStatus(projectId, ProjectEnum.ProjectStatusEnum.PUBLISHING.getCode(),reason, userId);
+    }
 }

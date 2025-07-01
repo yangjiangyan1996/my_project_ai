@@ -2,7 +2,7 @@
   <div class="apply-list-container">
     <el-page-header @back="goBack" title="返回个人中心">
       <template #content>
-        <span class="page-title">我的审核列表</span>
+        <span class="page-title">管理员审核列表</span>
       </template>
     </el-page-header>
 
@@ -19,8 +19,9 @@
             :key="index"
             @mouseenter="hoveredItem = index"
             @mouseleave="hoveredItem = null"
+             @click="goToDetail(item)"
           >
-            <div class="apply-header">
+            <div class="apply-header" >
               <el-avatar :src="item.avatar" size="small">
                 {{ item.username?.charAt(0) }}
               </el-avatar>
@@ -35,26 +36,11 @@
                 <span class="label">申请项目：</span>
                 <span class="value strong">{{ item.projectName }}</span>
               </div>
-              <!-- <div class="message">
-                <span class="label">申请留言：</span>
-                <span class="value strong">{{ item.message || '无留言' }}</span>
-              </div> -->
-            </div>
-
-            <div
-              class="hover-info"
-              v-if="hoveredItem === index"
-            >
-              <p><b>项目简介：</b>{{ item.description || '暂无' }}</p>
-              <p><b>身份：</b>{{ item.audience || '未填写' }}</p>
-              <p><b>可投入时间：</b>{{ item.timePerDay || '未填写' }}</p>
-              <p><b>技能：</b>{{ item.skills || '未填写' }}</p>
-              <p><b>资源：</b>{{ item.resources || '未填写' }}</p>
             </div>
 
             <div class="apply-actions" v-if="item.status === 0">
-              <el-button type="success" size="small" @click="handleApprove(item.id)">通过</el-button>
-              <el-button type="danger" size="small" @click="handleReject(item.id)">拒绝</el-button>
+              <el-button type="success" size="small" @click.stop="handleApprove(item.id)">通过</el-button>
+              <el-button type="danger" size="small" @click.stop="handleReject(item.id)">拒绝</el-button>
             </div>
 
             <div class="apply-status">
@@ -92,6 +78,29 @@ const loading = ref(false)
 const noMore = ref(false)
 const hoveredItem = ref(null)
 
+// 跳转到项目详情页
+function goToDetail(item) {
+  console.log("跳转项目详情", item)
+  if (!item) {
+    console.error("跳转失败：item参数为空")
+    return
+  }
+  
+  // 确保有可用的ID
+  const projectId = item.projectId || item.id
+  if (!projectId) {
+    console.error("跳转失败：缺少项目ID")
+    return
+  }
+
+  router.push({ 
+    name: 'project-detail', 
+    params: { id: projectId } 
+  }).catch(err => {
+    console.error("路由跳转失败:", err)
+  })
+}
+
 const formatTime = (timeString) => {
   if (!timeString) return ''
   return new Date(timeString).toLocaleString()
@@ -118,7 +127,6 @@ const getStatusType = (status) => {
 }
 
 const fetchList = async () => {
-    console.log("111")
   try {
     loading.value = true
     const res = await post('/api/auth/project/adminApproveList', {
@@ -149,7 +157,7 @@ const handleApprove = async (id) => {
       type: 'warning'
     })
 
-    const res = await post('/api/auth/project/approveApply', { id })
+    const res = await post('/api/auth/project/adminApprovePass', { projectId:id })
     if (res) {
       ElMessage.success('操作成功')
       const item = list.value.find(item => item.id === id)
@@ -216,6 +224,7 @@ onMounted(() => {
   padding: 16px;
   border-bottom: 1px solid #f0f2f7;
   position: relative;
+  cursor: pointer;
 }
 
 .apply-item:last-child {

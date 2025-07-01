@@ -71,7 +71,7 @@ public class ProjectEnum {
     public enum ProjectStatusEnum {
         WAITING(0, "待审核"),
         PUBLISHING(1, "发布"),
-        NO(2, "禁用"),
+        NO(2, "退回"),
         ;
         private Integer code;
         private String name;

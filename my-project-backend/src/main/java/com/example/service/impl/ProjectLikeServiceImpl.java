@@ -41,7 +41,7 @@ public class ProjectLikeServiceImpl extends ServiceImpl<ProjectLikeMapper, Proje
     public Boolean selectByProjectIdAndUserId(Long projectId, Long userId) {
         return  this.baseMapper.exists(new LambdaQueryWrapper<ProjectLike>()
                 .eq(ProjectLike::getProjectId, projectId)
-                .eq(ProjectLike::getUserId, userId)
+                .eq(userId != null, ProjectLike::getUserId, userId)
                 .eq(ProjectLike::getIsDeleted, 0));
     }
 
