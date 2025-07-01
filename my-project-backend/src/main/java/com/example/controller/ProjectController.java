@@ -127,14 +127,13 @@ public class ProjectController {
     }
 
     @PostMapping("/adminApproveNo")
-    public RespBean<Boolean> adminApproveNo(@RequestParam("projectId") Long projectId ,
-                                            @RequestParam("reason") String reason) {
+    public RespBean<Boolean> adminApproveNo(@RequestBody AdminApproveReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
             if (!user.getRole().equals("ADMIN")) {
                 return RespBean.failure(999, "无权限");
             }
-            Boolean result = projectFacade.adminApproveNo(projectId,reason, user.getId());
+            Boolean result = projectFacade.adminApproveNo(req.getProjectId(),req.getReason(), user.getId());
             return RespBean.success(result);
         } catch (ValidationException e){
             log.error("ProjectController#adminApproveNo,req:{}",e);

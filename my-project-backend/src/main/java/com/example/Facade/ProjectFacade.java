@@ -524,6 +524,6 @@ public class ProjectFacade {
     }
 
     public Boolean adminApproveNo(Long projectId, String reason, Long userId) {
-        return projectService.updateStatus(projectId, ProjectEnum.ProjectStatusEnum.PUBLISHING.getCode(),reason, userId);
+        return projectService.updateStatus(projectId, ProjectEnum.ProjectStatusEnum.NO.getCode(),reason, userId);
     }
 }

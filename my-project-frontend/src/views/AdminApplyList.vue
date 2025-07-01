@@ -172,13 +172,18 @@ const handleApprove = async (id) => {
 
 const handleReject = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要拒绝此申请吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+    const { value: reason } = await ElMessageBox.prompt(
+      '请输入拒绝理由：',
+      '拒绝申请',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputPattern: /.+/,
+        inputErrorMessage: '理由不能为空'
+      }
+    )
 
-    const res = await post('/api/auth/project/rejectApply', { id })
+    const res = await post('/api/auth/project/adminApproveNo', { projectId:id, reason })
     if (res) {
       ElMessage.success('操作成功')
       const item = list.value.find(item => item.id === id)
@@ -190,6 +195,7 @@ const handleReject = async (id) => {
     }
   }
 }
+
 
 const goBack = () => {
   router.push('/my')

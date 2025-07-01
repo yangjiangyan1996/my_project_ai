@@ -91,6 +91,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
         projects.setStatus(status);
         projects.setModifiedBy(userId);
         projects.setModifiedAt(new Date());
+        projects.setReason(reason);
         return this.baseMapper.update(projects, new QueryWrapper<Projects>().eq("id", projectId)) > 0;
     }
 }
