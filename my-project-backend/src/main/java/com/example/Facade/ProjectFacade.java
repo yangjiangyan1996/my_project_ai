@@ -220,53 +220,115 @@ public class ProjectFacade {
 
     @Transactional(rollbackFor = Exception.class)
     public Boolean createFindCollage(CreateFindCollageReq req, Long userId) {
-        //如果req.getId()不为空，需要更新，如果为空，则执行现有的逻辑
-        Projects pd = new Projects();
-        pd.setName(req.getName());
-        pd.setCategory(req.getCategory());
-        pd.setDescription(req.getDescription());
-        pd.setDifficulty(req.getDifficulty());
-        pd.setImageUrl(req.getImageUrl());
-        pd.setCreatedBy(userId);
-        pd.setModifiedBy(userId);
-        pd.setStatus(ProjectEnum.ProjectStatusEnum.WAITING.getCode());
+        // 判断是更新还是创建
+        boolean isUpdate = req.getId() != null;
 
-        boolean save = projectService.save(pd);
-        if (!save) {
-            throw new ValidationException("保存失败");
+        Projects pd;
+        ProjectsDetail pdd;
+
+        if (isUpdate) {
+            // 更新逻辑
+            // 1. 更新Projects表
+            pd = projectService.getById(req.getId());
+            if (pd == null) {
+                throw new ValidationException("项目不存在");
+            }
+            pd.setName(req.getName());
+            pd.setCategory(req.getCategory());
+            pd.setDescription(req.getDescription());
+            pd.setDifficulty(req.getDifficulty());
+            pd.setImageUrl(req.getImageUrl());
+            pd.setModifiedBy(userId);
+            boolean updateProject = projectService.updateById(pd);
+            if (!updateProject) {
+                throw new ValidationException("更新项目失败");
+            }
+
+            // 2. 更新ProjectsDetail表
+            pdd = projectsDetailService.lambdaQuery()
+                    .eq(ProjectsDetail::getProjectsId, req.getId())
+                    .one();
+            if (pdd == null) {
+                throw new ValidationException("项目详情不存在");
+            }
+            pdd.setNeedMember(req.getNeedMember());
+            pdd.setMemberNum(req.getMemberNum());
+            pdd.setSteps(req.getSteps());
+            pdd.setTools(req.getTools());
+            pdd.setTimePerDay(req.getTimePerDay());
+            pdd.setIncomeEstimate(req.getIncomeEstimate());
+            pdd.setTargetAudience(req.getTargetAudience());
+            pdd.setRiskWarning(req.getRiskWarning());
+            pdd.setIsRemote(req.getIsRemote());
+            pdd.setIsFreeEntry(req.getIsFreeEntry());
+            pdd.setTags(req.getTags());
+            pdd.setModifiedBy(userId);
+            boolean updateDetail = projectsDetailService.updateById(pdd);
+            if (!updateDetail) {
+                throw new ValidationException("更新项目详情失败");
+            }
+
+            // 3. 检查ProjectMembers表，确保用户仍然是管理员
+            long count = projectMembersService.lambdaQuery()
+                    .eq(ProjectMembers::getProjectId, req.getId())
+                    .eq(ProjectMembers::getUserId, userId)
+                    .eq(ProjectMembers::getRole, ProjectEnum.ProjectMemberRoleEnum.ADMIN.getCode())
+                    .count();
+            if (count == 0) {
+                throw new ValidationException("用户没有权限更新此项目");
+            }
+        } else {
+            // 创建逻辑（保持原有逻辑）
+            // 1. 保存Projects表
+            pd = new Projects();
+            pd.setName(req.getName());
+            pd.setCategory(req.getCategory());
+            pd.setDescription(req.getDescription());
+            pd.setDifficulty(req.getDifficulty());
+            pd.setImageUrl(req.getImageUrl());
+            pd.setCreatedBy(userId);
+            pd.setModifiedBy(userId);
+            pd.setStatus(ProjectEnum.ProjectStatusEnum.WAITING.getCode());
+            boolean saveProject = projectService.save(pd);
+            if (!saveProject) {
+                throw new ValidationException("保存项目失败");
+            }
+
+            // 2. 保存ProjectsDetail表
+            pdd = new ProjectsDetail();
+            pdd.setProjectsId(pd.getId());
+            pdd.setNeedMember(req.getNeedMember());
+            pdd.setMemberNum(req.getMemberNum());
+            pdd.setSteps(req.getSteps());
+            pdd.setTools(req.getTools());
+            pdd.setTimePerDay(req.getTimePerDay());
+            pdd.setIncomeEstimate(req.getIncomeEstimate());
+            pdd.setTargetAudience(req.getTargetAudience());
+            pdd.setRiskWarning(req.getRiskWarning());
+            pdd.setIsRemote(req.getIsRemote());
+            pdd.setIsFreeEntry(req.getIsFreeEntry());
+            pdd.setTags(req.getTags());
+            pdd.setCreatedBy(userId);
+            pdd.setModifiedBy(userId);
+            boolean saveDetail = projectsDetailService.save(pdd);
+            if (!saveDetail) {
+                throw new ValidationException("保存项目详情失败");
+            }
+
+            // 3. 保存ProjectMembers表
+            ProjectMembers pm = new ProjectMembers();
+            pm.setProjectId(pd.getId());
+            pm.setUserId(userId);
+            pm.setJoinTime(new Date());
+            pm.setRole(ProjectEnum.ProjectMemberRoleEnum.ADMIN.getCode());
+            pm.setCreatedBy(userId);
+            pm.setModifiedBy(userId);
+            boolean saveMember = projectMembersService.save(pm);
+            if (!saveMember) {
+                throw new ValidationException("保存项目成员失败");
+            }
         }
 
-        ProjectsDetail pdd = new ProjectsDetail();
-        pdd.setProjectsId(pd.getId());
-        pdd.setNeedMember(req.getNeedMember());
-        pdd.setMemberNum(req.getMemberNum());
-        pdd.setSteps(req.getSteps());
-        pdd.setTools(req.getTools());
-        pdd.setTimePerDay(req.getTimePerDay());
-        pdd.setIncomeEstimate(req.getIncomeEstimate());
-        pdd.setTargetAudience(req.getTargetAudience());
-        pdd.setRiskWarning(req.getRiskWarning());
-        pdd.setIsRemote(req.getIsRemote());
-        pdd.setIsFreeEntry(req.getIsFreeEntry());
-        pdd.setTags(req.getTags());
-        pdd.setCreatedBy(userId);
-        pdd.setModifiedBy(userId);
-        boolean save1 = projectsDetailService.save(pdd);
-        if (!save1) {
-            throw new ValidationException("保存失败");
-        }
-
-        ProjectMembers pm = new ProjectMembers();
-        pm.setProjectId(pd.getId());
-        pm.setUserId(userId);
-        pm.setJoinTime(new Date());
-        pm.setRole(ProjectEnum.ProjectMemberRoleEnum.ADMIN.getCode());
-        pm.setCreatedBy(userId);
-        pm.setModifiedBy(userId);
-        boolean save2 = projectMembersService.save(pm);
-        if (!save2) {
-            throw new ValidationException("保存失败");
-        }
         return true;
     }
 
@@ -536,6 +598,6 @@ public class ProjectFacade {
     }
 
     public Boolean adminApproveNo(Long projectId, String reason, Long userId) {
-        return projectService.updateStatus(projectId, ProjectEnum.ProjectStatusEnum.NO.getCode(),reason, userId);
+        return projectService.updateStatus(projectId, ProjectEnum.ProjectStatusEnum.NO.getCode(), reason, userId);
     }
 }
