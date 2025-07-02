@@ -25,7 +25,7 @@
             </el-button>
 
             <el-button type="success" size="large" @click="goToApplicationList">
-              🤝 进度查询
+              🤝 我申请的
             </el-button>
 
             <el-button 
@@ -313,6 +313,18 @@ const form = ref({
   status: 1
 })
 
+const goToDetail = (project) => {
+  router.push({ name: 'project-detail', params: { id: project.id } })
+}
+
+const goToCreateSidejob = (itemId) => {
+  console.log("itemId------",itemId)
+  router.push({
+    name: 'createOfFindColleague',
+    query: { id: itemId }
+  })
+}
+
 
 const goToUpdateUserInfo = () => {
   router.push('/my/updateUserInfo')
@@ -457,16 +469,6 @@ const likeTotal = ref(0)
 const likeLoading = ref(false)
 const noMoreLike = ref(false)
 
-const goToDetail = (project) => {
-  router.push({ name: 'project-detail', params: { id: project.id } })
-}
-
-const goToCreateSidejob = (itemId) => {
-  router.push({
-    name: 'createOfFindColleague',
-    query: { id: itemId }
-  })
-}
 
 
 const fetchFollowCount = async () => {
