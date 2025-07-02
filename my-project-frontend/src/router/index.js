@@ -40,20 +40,20 @@ const router = createRouter({
             component: () => import('@/views/TaohuaView.vue'),
             meta: { layout: 'EmptyLayout' }
         },{
-            path: '/projects/:id',
+            path: '/index/detail/:id',
             name: 'project-detail',
             component: () => import('@/views/ProjectDetail.vue')
           },{
-            path: '/projects/my',
+            path: '/index/my',
             name: 'my',
             component: () => import('@/views/My.vue'),
             meta: { layout: 'EmptyLayout' }
         },{
-            path: '/CreateOfFindColleague',
+            path: '/index/my/CreateOfFindColleague',
             name: 'createOfFindColleague',
             component: () => import('@/views/CreateOfFindColleague.vue')
         },{
-            path: '/create-find-job',
+            path: '/index/my/create-find-job',
             name: 'createFindJob',
             component: () => import('@/views/create-find-job.vue')
         },{
@@ -61,22 +61,22 @@ const router = createRouter({
             name: 'skillMatch',
             component: () => import('@/views/SkillMatch.vue')
         },{
-            path: '/my/applyList',
+            path: '/index/my/applyList',
             name: 'applyList',
             component: () => import('@/views/ApplyList.vue'),
             meta: { requiresAuth: true }
         },{
-            path: '/my/applicationList',
+            path: '/index/my/applicationList',
             name: 'applicationList',
             component: () => import('@/views/ApplicationList.vue'),
             meta: { requiresAuth: true }
         },{
-            path: '/my/updateUserInfo',
+            path: '/index/my/updateUserInfo',
             name: 'updateUserInfo',
             component: () => import('@/views/UpdateUserInfo.vue'),
             meta: { requiresAuth: true }
         },{
-            path: '/my/adminApplyList',
+            path: '/index/my/adminApplyList',
             name: 'adminApplyList',
             component: () => import('@/views/AdminApplyList.vue'),
             meta: { requiresAuth: true }
