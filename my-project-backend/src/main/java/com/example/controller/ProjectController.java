@@ -65,27 +65,27 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.applyJoinProject(projectId, user.getId());
             return RespBean.success(result);
-        }catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
     @GetMapping("/changeShowStatus")
     public RespBean<Boolean> changeShowStatus(@RequestParam("projectShowId") Long projectShowId,
-                                                             @RequestParam("status")Integer status) {
+                                              @RequestParam("status") Integer status) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.changeShowStatus(projectShowId, status, user.getId());
             return RespBean.success(result);
-        }catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("ProjectController#changeShowStatus,req:{}",e);
+            log.error("ProjectController#changeShowStatus,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -97,13 +97,13 @@ public class ProjectController {
             if (!user.getRole().equals("ADMIN")) {
                 return RespBean.failure(999, "无权限");
             }
-            Page<AdminApplyListResp> result = projectFacade.adminApproveList(Page.of(req.getPage() - 1, req.getSize()),req, user.getId());
+            Page<AdminApplyListResp> result = projectFacade.adminApproveList(Page.of(req.getPage() - 1, req.getSize()), req, user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#adminApproveList,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#adminApproveList,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#adminApproveList,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#adminApproveList,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -117,11 +117,11 @@ public class ProjectController {
             }
             Boolean result = projectFacade.adminApprovePass(req.getProjectId(), user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#adminApprovePass,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#adminApprovePass,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#adminApprovePass,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#adminApprovePass,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -133,13 +133,13 @@ public class ProjectController {
             if (!user.getRole().equals("ADMIN")) {
                 return RespBean.failure(999, "无权限");
             }
-            Boolean result = projectFacade.adminApproveNo(req.getProjectId(),req.getReason(), user.getId());
+            Boolean result = projectFacade.adminApproveNo(req.getProjectId(), req.getReason(), user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#adminApproveNo,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#adminApproveNo,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#adminApproveNo,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#adminApproveNo,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -148,13 +148,13 @@ public class ProjectController {
     public RespBean<Page<MyApplicationListResp>> myApplicationList(@RequestBody MyApplyListReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            Page<MyApplicationListResp> result = projectFacade.myApplicationList(Page.of(req.getPage() - 1, req.getSize()),req, user.getId());
+            Page<MyApplicationListResp> result = projectFacade.myApplicationList(Page.of(req.getPage() - 1, req.getSize()), req, user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#changeShowStatus,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#changeShowStatus,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -163,13 +163,13 @@ public class ProjectController {
     public RespBean<Page<MyApplyListResp>> myApplyList(@RequestBody MyApplyListReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            Page<MyApplyListResp> result = projectFacade.myApplyList(Page.of(req.getPage() - 1, req.getSize()),req, user.getId());
+            Page<MyApplyListResp> result = projectFacade.myApplyList(Page.of(req.getPage() - 1, req.getSize()), req, user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#changeShowStatus,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#changeShowStatus,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -180,11 +180,11 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.approveApply(req, user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#approveApply,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#approveApply,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#approveApply,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#approveApply,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -195,11 +195,11 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.cancelApply(req, user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#cancelApply,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#cancelApply,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#cancelApply,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#cancelApply,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -210,11 +210,11 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.rejectApply(req, user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#rejectApply,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#rejectApply,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#rejectApply,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#rejectApply,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -223,13 +223,13 @@ public class ProjectController {
     public RespBean<Page<ProjectOfMyShowGetResp>> projectShowList(@RequestBody ProjectShowListReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            Page<ProjectOfMyShowGetResp> result = projectFacade.projectShowList(Page.of(req.getPage() - 1, req.getSize()),req);
+            Page<ProjectOfMyShowGetResp> result = projectFacade.projectShowList(Page.of(req.getPage() - 1, req.getSize()), req);
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#changeShowStatus,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#changeShowStatus,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -240,11 +240,11 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             ProjectOfMyShowGetResp result = projectFacade.getProjectOfMyShow(user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#getProjectOfMyShow,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#getProjectOfMyShow,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -255,11 +255,11 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.updateProjectOfMyShow(req, user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#updateProjectOfMyShow,req:{}", JSON.toJSONString(req),e);
+        } catch (Exception e) {
+            log.error("ProjectController#updateProjectOfMyShow,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -270,11 +270,11 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.createFindCollage(req, user.getId());
             return RespBean.success(result);
-        }catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("ProjectController#createFindCollage,req:{}", JSON.toJSONString(req),e);
+            log.error("ProjectController#createFindCollage,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -286,8 +286,8 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.concernPublisher(req, user.getId());
             return RespBean.success(result);
-        }catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             return RespBean.failure(999, "系统异常，请联系管理员");
@@ -300,10 +300,10 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.concernPublisherCancel(req, user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
+        } catch (Exception e) {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -313,12 +313,12 @@ public class ProjectController {
                                          @RequestParam("commentId") Long commentId) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            Boolean result = projectFacade.commentLike(commentId,projectId, user.getId());
+            Boolean result = projectFacade.commentLike(commentId, projectId, user.getId());
             return RespBean.success(result);
-        } catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
+        } catch (Exception e) {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -330,8 +330,8 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.commentDeleted(projectId, commentId, user.getId());
             return RespBean.success(result);
-        }catch (ValidationException e){
-            log.error("ProjectController#applyJoinProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             return RespBean.failure(999, "系统异常，请联系管理员");
@@ -344,8 +344,8 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             List<ProjectCommentResp> result = projectFacade.commentShow(projectId, user.getId());
             return RespBean.success(result);
-        }catch (ValidationException e){
-            log.error("ProjectController#commentShow,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#commentShow,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             return RespBean.failure(999, "系统异常，请联系管理员");
@@ -358,8 +358,8 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.comment(req, user.getId(), user.getNikeName());
             return RespBean.success(result);
-        }catch (ValidationException e){
-            log.error("ProjectController#comment,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#comment,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             return RespBean.failure(999, "系统异常，请联系管理员");
@@ -373,8 +373,8 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.favoriteProject(projectId, user.getId(), liked);
             return RespBean.success(result);
-        }catch (ValidationException e){
-            log.error("ProjectController#favoriteProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#favoriteProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             return RespBean.failure(999, "系统异常，请联系管理员");
@@ -388,8 +388,8 @@ public class ProjectController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.likeProject(projectId, user.getId(), liked);
             return RespBean.success(result);
-        }catch (ValidationException e){
-            log.error("ProjectController#likeProject,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#likeProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             return RespBean.failure(999, "系统异常，请联系管理员");
@@ -407,7 +407,7 @@ public class ProjectController {
             ProjectsDetailResp result = projectFacade.selectByProjectId(projectId, userId);
             return RespBean.success(result);
         } catch (Exception e) {
-            log.error("ProjectController#detail,error,projectId:{}", projectId,e);
+            log.error("ProjectController#detail,error,projectId:{}", projectId, e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -418,7 +418,7 @@ public class ProjectController {
             ProjectUpdateResp result = projectFacade.detailForUpdate(projectId);
             return RespBean.success(result);
         } catch (Exception e) {
-            log.error("ProjectController#detail,error,projectId:{}", projectId,e);
+            log.error("ProjectController#detail,error,projectId:{}", projectId, e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -441,8 +441,8 @@ public class ProjectController {
             result.setTotal(hotFuyeProjects.getTotal());
             result.setRecords(collect);
             return RespBean.success(result);
-        }catch (ValidationException e){
-            log.error("ProjectController#showHotFuye,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#showHotFuye,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             return RespBean.failure(999, "系统异常，请联系管理员");

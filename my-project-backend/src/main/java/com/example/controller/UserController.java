@@ -3,10 +3,7 @@ package com.example.controller;
 import com.example.Facade.UserFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
-import com.example.entity.dto.Account;
 import com.example.entity.req.UpdateUserInfoReq;
-import com.example.entity.resp.MyCountResp;
-import com.example.entity.resp.ProjectOfMyShowGetResp;
 import com.example.entity.resp.UserAllInfo;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
@@ -29,11 +26,11 @@ public class UserController {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean u = userFacade.updateUserInfo(req);
             return RespBean.success(u);
-        } catch (ValidationException e){
-            log.error("ProjectController#updateUserInfo,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#updateUserInfo,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#updateUserInfo,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#updateUserInfo,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -44,11 +41,11 @@ public class UserController {
             UserInfo user = UserUtil.getCurrentUser();
             UserAllInfo u = userFacade.getUserAllInfo(user.getId());
             return RespBean.success(u);
-        } catch (ValidationException e){
-            log.error("ProjectController#getUserAllInfo,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#getUserAllInfo,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#getUserAllInfo,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#getUserAllInfo,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -59,11 +56,11 @@ public class UserController {
         try {
             UserInfo user = UserUtil.getCurrentUser();
             return RespBean.success(user);
-        } catch (ValidationException e){
-            log.error("ProjectController#getCurrentUserInfo,req:{}",e);
+        } catch (ValidationException e) {
+            log.error("ProjectController#getCurrentUserInfo,req:{}", e);
             return RespBean.failure(999, e.getMessage());
-        }catch (Exception e) {
-            log.error("ProjectController#getCurrentUserInfo,req:{}",e);
+        } catch (Exception e) {
+            log.error("ProjectController#getCurrentUserInfo,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
