@@ -397,7 +397,7 @@ public class ProjectController {
     }
 
     @GetMapping("/detail")
-    public RespBean<ProjectsDetailResp> showHotFuye(@RequestParam("projectId") Long projectId) {
+    public RespBean<ProjectsDetailResp> detail(@RequestParam("projectId") Long projectId) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
             Long userId = user.getId();
@@ -405,6 +405,17 @@ public class ProjectController {
                 userId = null;
             }
             ProjectsDetailResp result = projectFacade.selectByProjectId(projectId, userId);
+            return RespBean.success(result);
+        } catch (Exception e) {
+            log.error("ProjectController#detail,error,projectId:{}", projectId,e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @GetMapping("/detailForUpdate")
+    public RespBean<ProjectUpdateResp> showHotFuye(@RequestParam("projectId") Long projectId) {
+        try {
+            ProjectUpdateResp result = projectFacade.detailForUpdate(projectId);
             return RespBean.success(result);
         } catch (Exception e) {
             log.error("ProjectController#detail,error,projectId:{}", projectId,e);

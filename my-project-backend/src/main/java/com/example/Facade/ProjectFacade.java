@@ -51,6 +51,17 @@ public class ProjectFacade {
     @Resource
     AccountService accountService;
 
+    public ProjectUpdateResp detailForUpdate(Long projectId) {
+        ProjectUpdateResp r = new ProjectUpdateResp();
+
+        Projects projectDown = projectService.selectByProjectId(projectId);
+        BeanUtils.copyProperties(projectDown, r);
+
+        ProjectsDetail projectsDetail = projectsDetailService.selectByProjectId(projectId);
+        BeanUtils.copyProperties(projectsDetail, r);
+        return r;
+    }
+
     public ProjectsDetailResp selectByProjectId(Long projectId, Long userId) {
         Projects projectDown = projectService.selectByProjectId(projectId);
         if (projectDown == null) {
@@ -209,6 +220,7 @@ public class ProjectFacade {
 
     @Transactional(rollbackFor = Exception.class)
     public Boolean createFindCollage(CreateFindCollageReq req, Long userId) {
+        //如果req.getId()不为空，需要更新，如果为空，则执行现有的逻辑
         Projects pd = new Projects();
         pd.setName(req.getName());
         pd.setCategory(req.getCategory());

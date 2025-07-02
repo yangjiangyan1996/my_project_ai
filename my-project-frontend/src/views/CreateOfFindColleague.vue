@@ -164,7 +164,7 @@
 import { ref, reactive, onMounted, nextTick, shallowRef, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
-import { post } from '@/net'
+import { post, get } from '@/net'
 import { ElMessage } from 'element-plus'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import '@wangeditor/editor/dist/css/style.css'
@@ -176,14 +176,17 @@ const router = useRouter()
 // 初始化加载数据
 onMounted(() => {
   const itemId = router.currentRoute.value.query.id;
-  if (itemId) {
-    console.log('接收到的项目ID:', itemId);
-    // 这里添加根据ID加载数据的逻辑
+  console.log('接收到的项目ID:', itemId);
+  
+  if (itemId && /^\d+$/.test(itemId)) {
     loadProjectDetail(itemId);
   } else {
-    console.warn('未接收到项目ID参数');
+    // ElMessage.error('无效的项目ID参数');
+    console.warn('非法项目ID:', itemId);
   }
 })
+
+
 
 // 表单数据
 const form = reactive({
@@ -370,9 +373,46 @@ const goBack = () => {
   router.go(-1)
 }
 
-onMounted(() => {
-  // 可以在这里加载分类数据
-})
+const loadProjectDetail = async (id) => {
+  try {
+    console.log("id", id)
+    const res = await get(`/api/auth/project/detailForUpdate?projectId=${id}`);
+    const data = res;
+
+    // 逐个赋值
+    form.imageUrl = data.imageUrl || '';
+    form.steps = data.steps || '';
+    form.tools = data.tools || '';
+    form.timePerDay = data.timePerDay || '';
+    form.incomeEstimate = data.incomeEstimate || '';
+    form.targetAudience = data.targetAudience || '';
+    form.riskWarning = data.riskWarning || '';
+    form.isRemote = data.isRemote === 1;
+    form.isFreeEntry = data.isFreeEntry === 1;
+    form.tags = data.tags?.split(',') || [];
+    form.memberNum = data.memberNum || null;
+
+    // 补充一些必须字段，防止报错（后端未返回）
+    form.name = data.name || '从接口补充名称';
+    form.category = data.category || null;
+    form.description = data.description || '';
+    form.difficulty = data.difficulty || 1;
+    form.needMember = data.needMember || 1;
+    form.memberNum = data.memberNum || 1;
+    form.category = data.category || 1;
+
+    // 等编辑器初始化完成后再设置内容
+    nextTick(() => {
+      if (editorRef.value) {
+        editorRef.value.setHtml(data.steps || '');
+      }
+    });
+
+  } catch (error) {
+    ElMessage.error('项目加载失败');
+  }
+};
+
 </script>
 
 <style scoped>

@@ -1,25 +1,23 @@
-package com.example.entity.req;
+package com.example.entity.resp;
 
 import lombok.Data;
-
-import java.util.List;
 
 /**
  * @Author YangJian
  * @Description
  * @Email 1776080295@qq.com
- * @Date 2025/6/24 21:59
+ * @Date 2025/7/1 17:15
  */
 @Data
-public class CreateFindCollageReq {
+public class ProjectUpdateResp {
     private Long id;
     private String name;
     private Integer category;
     private String description;
     private Integer difficulty;
-    //封面图片
     private String imageUrl;
     private Integer status;
+    private String reason;
     private String steps;
     private String tools;
     private String timePerDay;
