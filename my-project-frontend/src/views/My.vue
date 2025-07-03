@@ -229,6 +229,32 @@
         </el-tab-pane>
 
         
+        <el-tab-pane label="我的团队" name="myTeams" v-loading="teamLoading">
+          <div
+            class="infinite-list"
+            v-infinite-scroll="loadMoreTeam"
+            :infinite-scroll-disabled="noMoreTeam"
+          >
+            <div
+              class="activity-item"
+              v-for="(item, index) in teamList"
+              :key="'team-' + index"
+              @click="goToDetail(item)"
+            >
+              <div class="activity-type">我的角色：{{ item.roleOfMemberGroup }}</div>
+              <div class="activity-time">{{ item.createdAt?.slice(0,10) || '-' }}</div>
+              <div class="activity-content">
+                <h3 class="activity-title">{{ item.name }}</h3>
+                <div class="activity-meta">
+                  <span>项目ID：{{ item.id }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-if="noMoreTeam" class="no-more">没有更多内容了</div>
+          </div>
+        </el-tab-pane>
+
+
         <el-tab-pane label="我收藏的" name="myFavorites" v-loading="favoritesLoading">
           <div class="infinite-list" v-infinite-scroll="loadMoreFavorites" :infinite-scroll-disabled="noMoreFavorites">
             <div class="activity-item" v-for="(item, index) in favoritesList" :key="'favorites-'+index" @click="goToDetail(item)">
@@ -296,12 +322,21 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const userInfo = inject('userInfo')
 
+const teamList = ref([])
+const teamPage = ref(1)
+const teamSize = ref(10)
+const teamTotal = ref(0)
+const teamLoading = ref(false)
+const noMoreTeam = ref(false)
+
+
 // 意向表单相关状态
 const showIntentSection = ref(false)
 const editMode = ref(false)
 const hasSubmitted = ref(false)
 const submitting = ref(false)
 const publishing = ref(false)
+
 
 const form = ref({
   id:'',
@@ -312,6 +347,33 @@ const form = ref({
   
   status: 1
 })
+
+const loadMoreTeam = () => {
+  if (!teamLoading.value && teamPage.value * teamSize.value < teamTotal.value) {
+    teamPage.value++
+    fetchTeamData()
+  } else {
+    noMoreTeam.value = true
+  }
+}
+
+const fetchTeamData = async () => {
+  try {
+    teamLoading.value = true
+    const res = await post('/api/auth/my/myMemberGroups', {
+      page: teamPage.value,
+      size: teamSize.value
+    })
+    teamList.value.push(...res.records || res)  // 有些接口可能不分页
+    teamTotal.value = res.total || res.length || 0
+    noMoreTeam.value = teamPage.value * teamSize.value >= teamTotal.value
+  } catch (err) {
+    console.error('加载我的团队失败', err)
+  } finally {
+    teamLoading.value = false
+  }
+}
+
 
 const goToDetail = (project) => {
   router.push({ name: 'project-detail', params: { id: project.id } })
@@ -558,6 +620,8 @@ const handleTabChange = (tab) => {
     fetchFavoritesData()
   } else if (tab.paneName === 'myLike' && likeList.value.length === 0) {
     fetchLikeData()
+  } else if (tab.paneName === 'myTeams' && teamList.value.length === 0) {
+    fetchTeamData()
   }
 }
 

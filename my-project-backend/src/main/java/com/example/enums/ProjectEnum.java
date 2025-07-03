@@ -18,11 +18,11 @@ public class ProjectEnum {
         NO_NEED_MEMBER(0, "不需要"),
         NEED_MEMBER(1, "需要");
         private Integer code;
-        private String message;
+        private String name;
 
-        IsNeedMemberEnum(Integer code, String message) {
+        IsNeedMemberEnum(Integer code, String name) {
             this.code = code;
-            this.message = message;
+            this.name = name;
         }
     }
 
@@ -37,11 +37,11 @@ public class ProjectEnum {
         REJECTED(2, "已拒绝"),
         CANCELED(3, "已撤销");
         private final Integer code;
-        private final String message;
+        private final String name;
 
-        ProjectApplyStatusEnum(Integer code, String message) {
+        ProjectApplyStatusEnum(Integer code, String name) {
             this.code = code;
-            this.message = message;
+            this.name = name;
         }
     }
 
@@ -56,11 +56,19 @@ public class ProjectEnum {
         GROUP(1, "组长"),
         ADMIN(2, "管理员");
         private final Integer code;
-        private final String message;
+        private final String name;
 
-        ProjectMemberRoleEnum(Integer code, String message) {
+        ProjectMemberRoleEnum(Integer code, String name) {
             this.code = code;
-            this.message = message;
+            this.name = name;
+        }
+        public static ProjectMemberRoleEnum getByCode(Integer code) {
+            for (ProjectMemberRoleEnum value : values()) {
+                if (value.code.equals(code)) {
+                    return value;
+                }
+            }
+            return null;
         }
     }
 

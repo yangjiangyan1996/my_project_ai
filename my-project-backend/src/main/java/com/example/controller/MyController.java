@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.MyFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
+import com.example.entity.req.MyMemberGroupsReq;
 import com.example.entity.req.MyPublishedPageReq;
 import com.example.entity.resp.MyFollowCountResp;
+import com.example.entity.resp.MyMemberGroupsResp;
 import com.example.entity.resp.MyPublishedResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
@@ -67,6 +69,18 @@ public class MyController {
         try {
             UserInfo user = UserUtil.getCurrentUser();
             Page<MyPublishedResp> list = myFacade.myPublished(req, user.getId());
+            return RespBean.success(list);
+        } catch (Exception e) {
+            log.error("Mycontroller#myPublished, error",e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
+    @PostMapping("/myMemberGroups")
+    public RespBean<Page<MyMemberGroupsResp>> myMemberGroups(@RequestBody MyMemberGroupsReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Page<MyMemberGroupsResp> list = myFacade.myMemberGroups(req, user.getId());
             return RespBean.success(list);
         } catch (Exception e) {
             log.error("Mycontroller#myPublished, error",e);

@@ -1,8 +1,10 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ProjectMembers;
+import com.example.entity.dto.Projects;
 import com.example.mapper.ProjectMembersMapper;
 import com.example.service.ProjectMembersService;
 import org.springframework.stereotype.Service;
@@ -28,5 +30,15 @@ public class ProjectMembersServiceImpl extends ServiceImpl<ProjectMembersMapper,
     public List<ProjectMembers> selectByUserId(Long userid) {
         return this.baseMapper.selectList(new QueryWrapper<ProjectMembers>().eq("user_id", userid)
                 .eq("is_deleted", 0));
+    }
+
+    @Override
+    public Page<ProjectMembers> getMyProjectMemberGroupList(Page<ProjectMembers> page, Long userId) {
+        return baseMapper.selectPage(
+                page,
+                new QueryWrapper<ProjectMembers>()
+                        .eq(userId != null, "user_id", userId)
+                        .orderByDesc("join_time")
+        );
     }
 }

@@ -1,5 +1,6 @@
 package com.example.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.ProjectMembers;
 
@@ -15,4 +16,6 @@ public interface ProjectMembersService extends IService<ProjectMembers> {
     List<ProjectMembers> selectByProjectIdAndNeRole(Long projectId, Integer notEqRoleCode);
 
     List<ProjectMembers> selectByUserId(Long userid);
+
+    Page<ProjectMembers> getMyProjectMemberGroupList(Page<ProjectMembers> page, Long userId);
 }

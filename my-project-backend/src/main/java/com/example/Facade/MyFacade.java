@@ -2,8 +2,10 @@ package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
+import com.example.entity.req.MyMemberGroupsReq;
 import com.example.entity.req.MyPublishedPageReq;
 import com.example.entity.resp.MyFollowCountResp;
+import com.example.entity.resp.MyMemberGroupsResp;
 import com.example.entity.resp.MyPublishedResp;
 import com.example.enums.ProjectEnum;
 import com.example.service.*;
@@ -24,6 +26,8 @@ import java.util.stream.Collectors;
 @Service
 public class MyFacade {
     @Resource
+    ProjectMembersService projectMembersService;
+    @Resource
     UserFollowService userFollowService;
     @Resource
     ProjectCommentService projectCommentService;
@@ -34,16 +38,41 @@ public class MyFacade {
     @Resource
     ProjectService projectService;
 
-    public Page<MyPublishedResp> myPublished( MyPublishedPageReq req, Long userId) {
+    public Page<MyMemberGroupsResp> myMemberGroups(MyMemberGroupsReq req, Long userId) {
+        Page<ProjectMembers> myProjects = projectMembersService.getMyProjectMemberGroupList(Page.of(req.getPage() - 1, req.getSize()), userId);
+        if (myProjects.getRecords().isEmpty()) {
+            return Page.of(req.getPage(), req.getSize());
+        }
+        List<Long> projectIds = myProjects.getRecords().stream().map(v -> v.getProjectId()).collect(Collectors.toList());
+
+        List<Projects> projectList = projectService.selectByProjectIds(projectIds);
+        Map<Long, Projects> projectId2ProjectsMap = projectList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v, (l1, l2) -> l2));
+
+        List<MyMemberGroupsResp> collect = myProjects.getRecords().stream().map(v -> {
+            MyMemberGroupsResp r = new MyMemberGroupsResp();
+            r.setId(v.getId());
+            r.setRoleOfMemberGroup(ProjectEnum.ProjectMemberRoleEnum.getByCode(v.getRole()).getName());
+            r.setCreatedAt(v.getCreatedAt());
+            r.setName(projectId2ProjectsMap.getOrDefault(v.getProjectId(), new Projects()).getName());
+            return r;
+        }).collect(Collectors.toList());
+
+        Page<MyMemberGroupsResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(myProjects.getTotal());
+        result.setRecords(collect);
+        return result;
+    }
+
+    public Page<MyPublishedResp> myPublished(MyPublishedPageReq req, Long userId) {
         Page<Projects> myProjects = projectService.getMyProjects(Page.of(req.getPage() - 1, req.getSize()), userId);
         if (myProjects.getRecords().isEmpty()) {
             return Page.of(req.getPage(), req.getSize());
         }
         List<Long> projectIds = myProjects.getRecords().stream().map(v -> v.getId()).collect(Collectors.toList());
 
-        Map<Long ,Long> projectId2LikeCountMap = projectLikeService.selectLikeCountByProjectIds(projectIds);
-        Map<Long ,Long> projectId2FavoriteCountMap = projectFavoriteService.selectFavoriteCountByProjectIds(projectIds);
-        Map<Long ,Long> projectId2CommentCountMap = projectCommentService.selectCommentCountByProjectIds(projectIds);
+        Map<Long, Long> projectId2LikeCountMap = projectLikeService.selectLikeCountByProjectIds(projectIds);
+        Map<Long, Long> projectId2FavoriteCountMap = projectFavoriteService.selectFavoriteCountByProjectIds(projectIds);
+        Map<Long, Long> projectId2CommentCountMap = projectCommentService.selectCommentCountByProjectIds(projectIds);
 
         List<MyPublishedResp> collect = myProjects.getRecords().stream().map(v -> {
             MyPublishedResp projectsResp = new MyPublishedResp();
@@ -70,9 +99,9 @@ public class MyFacade {
         List<Long> projectIds = myFavorites.getRecords().stream().map(v -> v.getProjectId()).collect(Collectors.toList());
 
         List<Projects> projectList = projectService.selectByProjectIds(projectIds);
-        Map<Long ,Long> projectId2LikeCountMap = projectLikeService.selectLikeCountByProjectIds(projectIds);
-        Map<Long ,Long> projectId2FavoriteCountMap = projectFavoriteService.selectFavoriteCountByProjectIds(projectIds);
-        Map<Long ,Long> projectId2CommentCountMap = projectCommentService.selectCommentCountByProjectIds(projectIds);
+        Map<Long, Long> projectId2LikeCountMap = projectLikeService.selectLikeCountByProjectIds(projectIds);
+        Map<Long, Long> projectId2FavoriteCountMap = projectFavoriteService.selectFavoriteCountByProjectIds(projectIds);
+        Map<Long, Long> projectId2CommentCountMap = projectCommentService.selectCommentCountByProjectIds(projectIds);
 
 
         List<MyPublishedResp> collect = projectList.stream().map(v -> {
@@ -99,9 +128,9 @@ public class MyFacade {
         }
         List<Long> projectIds = myLikes.getRecords().stream().map(v -> v.getProjectId()).collect(Collectors.toList());
         List<Projects> projectList = projectService.selectByProjectIds(projectIds);
-        Map<Long ,Long> projectId2LikeCountMap = projectLikeService.selectLikeCountByProjectIds(projectIds);
-        Map<Long ,Long> projectId2FavoriteCountMap = projectFavoriteService.selectFavoriteCountByProjectIds(projectIds);
-        Map<Long ,Long> projectId2CommentCountMap = projectCommentService.selectCommentCountByProjectIds(projectIds);
+        Map<Long, Long> projectId2LikeCountMap = projectLikeService.selectLikeCountByProjectIds(projectIds);
+        Map<Long, Long> projectId2FavoriteCountMap = projectFavoriteService.selectFavoriteCountByProjectIds(projectIds);
+        Map<Long, Long> projectId2CommentCountMap = projectCommentService.selectCommentCountByProjectIds(projectIds);
 
         List<MyPublishedResp> collect = projectList.stream().map(v -> {
             MyPublishedResp projectsResp = new MyPublishedResp();
@@ -121,8 +150,8 @@ public class MyFacade {
     }
 
     public MyFollowCountResp myFollowCount(Long userId) {
-        List<UserFollow> myFollowers =userFollowService.selectByFollowerId(userId);
-        List<UserFollow> myFollowees =userFollowService.selectByFolloweeId(userId);
+        List<UserFollow> myFollowers = userFollowService.selectByFollowerId(userId);
+        List<UserFollow> myFollowees = userFollowService.selectByFolloweeId(userId);
         return new MyFollowCountResp(myFollowers.size(), myFollowees.size());
     }
 }
