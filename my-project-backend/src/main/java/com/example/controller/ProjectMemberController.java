@@ -31,7 +31,7 @@ public class ProjectMemberController {
     public RespBean<MemberListResp> memberList(@RequestParam Long projectId) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            MemberListResp result = projectMemberFacade.memberList(projectId);
+            MemberListResp result = projectMemberFacade.memberList(projectId,user.getId());
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ProjectMemberController#memberList,req:{}", projectId,e);

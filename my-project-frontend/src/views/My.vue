@@ -239,7 +239,7 @@
               class="activity-item"
               v-for="(item, index) in teamList"
               :key="'team-' + index"
-              @click="goToMyMemberGroupDetail(item)"
+              @click="goToMyMemberGroupDetail(item.projectId)"
             >
               <div class="activity-type">我的角色：{{ item.roleOfMemberGroup }}</div>
               <div class="activity-time">{{ item.createdAt?.slice(0,10) || '-' }}</div>
@@ -376,8 +376,9 @@ const goToDetail = (project) => {
   router.push({ name: 'project-detail', params: { id: project.id } })
 }
 
-const goToMyMemberGroupDetail = (project) => {
-  router.push({ name: 'myMemberGroupDetail', params: { id: project.id } })
+const goToMyMemberGroupDetail = (projectId) => {
+  console.log("project.id",projectId)
+  router.push({ name: 'myMemberGroupDetail', params: { id: projectId } })
 }
 
 const goToCreateSidejob = (itemId) => {

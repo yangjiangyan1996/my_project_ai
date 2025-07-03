@@ -137,7 +137,7 @@ import { get, post } from '@/net'
 const route = useRoute()
 const router = useRouter()
 
-const projectId = route.params.id
+//const projectId = route.params.id;
 const projectName = ref('项目名称')
 const memberList = ref([])
 const loading = ref(false)
@@ -154,9 +154,12 @@ const addMemberForm = ref({
 })
 const searchResult = ref([])
 const selectedUser = ref(null)
+const projectId = ref(null)
 
 // 初始化加载数据
 onMounted(() => {
+  projectId.value = route.params.id
+  console.log("onMounted====projectId",projectId.value)
   loadProjectInfo()
   loadMemberList()
 })
@@ -164,7 +167,8 @@ onMounted(() => {
 // 加载项目信息
 const loadProjectInfo = async () => {
   try {
-    const res = await get(`/api/auth/project/detail?id=${projectId}`)
+    console.log("projectId",projectId)
+    const res = await get(`/api/auth/project/detail?id=${projectId.value}`)
     projectName.value = res.name || '项目名称'
   } catch (error) {
     ElMessage.error('加载项目信息失败')
@@ -175,7 +179,8 @@ const loadProjectInfo = async () => {
 const loadMemberList = async () => {
   try {
     loading.value = true
-    const res = await get(`/api/auth/project/memberList?projectId=${projectId}`)
+    console.log("projectId",projectId)
+    const res = await get(`/api/auth/projectMember/memberList?projectId=${projectId.value}`)
     memberList.value = res.members || []
     currentUserRole.value = res.currentUserRole || ''
     isAdmin.value = ['CREATOR', 'ADMIN'].includes(currentUserRole.value)

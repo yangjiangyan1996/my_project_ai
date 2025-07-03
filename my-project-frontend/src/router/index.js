@@ -81,7 +81,7 @@ const router = createRouter({
             component: () => import('@/views/AdminApplyList.vue'),
             meta: { requiresAuth: true }
         },{
-            path: '/index/my/myMemberGroupDetail',
+            path: '/index/my/myMemberGroupDetail/:id',
             name: 'myMemberGroupDetail',
             component: () => import('@/views/MyMemberGroupDetail.vue'),
             meta: { requiresAuth: true }

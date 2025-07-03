@@ -51,6 +51,7 @@ public class MyFacade {
         List<MyMemberGroupsResp> collect = myProjects.getRecords().stream().map(v -> {
             MyMemberGroupsResp r = new MyMemberGroupsResp();
             r.setId(v.getId());
+            r.setProjectId(v.getProjectId());
             r.setRoleOfMemberGroup(ProjectEnum.ProjectMemberRoleEnum.getByCode(v.getRole()).getName());
             r.setCreatedAt(v.getCreatedAt());
             r.setName(projectId2ProjectsMap.getOrDefault(v.getProjectId(), new Projects()).getName());

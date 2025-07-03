@@ -38,7 +38,17 @@ public class ProjectMembersServiceImpl extends ServiceImpl<ProjectMembersMapper,
                 page,
                 new QueryWrapper<ProjectMembers>()
                         .eq(userId != null, "user_id", userId)
+                        .eq("is_deleted", 0)
                         .orderByDesc("join_time")
+        );
+    }
+
+    @Override
+    public List<ProjectMembers> selectByProjectId(Long projectId) {
+        return this.baseMapper.selectList(
+                new QueryWrapper<ProjectMembers>()
+                        .eq("project_id", projectId)
+                        .eq("is_deleted", 0)
         );
     }
 }

@@ -11,6 +11,7 @@ import lombok.Data;
 @Data
 public class MyMemberGroupsResp {
     private Long id;
+    private Long projectId;
     private String name;
     private String roleOfMemberGroup;
     private java.util.Date createdAt;
