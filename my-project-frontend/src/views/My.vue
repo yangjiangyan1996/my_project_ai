@@ -239,15 +239,12 @@
               class="activity-item"
               v-for="(item, index) in teamList"
               :key="'team-' + index"
-              @click="goToDetail(item)"
+              @click="goToMyMemberGroupDetail(item)"
             >
               <div class="activity-type">我的角色：{{ item.roleOfMemberGroup }}</div>
               <div class="activity-time">{{ item.createdAt?.slice(0,10) || '-' }}</div>
               <div class="activity-content">
                 <h3 class="activity-title">{{ item.name }}</h3>
-                <div class="activity-meta">
-                  <span>项目ID：{{ item.id }}</span>
-                </div>
               </div>
             </div>
             <div v-if="noMoreTeam" class="no-more">没有更多内容了</div>
@@ -377,6 +374,10 @@ const fetchTeamData = async () => {
 
 const goToDetail = (project) => {
   router.push({ name: 'project-detail', params: { id: project.id } })
+}
+
+const goToMyMemberGroupDetail = (project) => {
+  router.push({ name: 'myMemberGroupDetail', params: { id: project.id } })
 }
 
 const goToCreateSidejob = (itemId) => {

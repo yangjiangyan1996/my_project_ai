@@ -80,7 +80,12 @@ const router = createRouter({
             name: 'adminApplyList',
             component: () => import('@/views/AdminApplyList.vue'),
             meta: { requiresAuth: true }
-        },
+        },{
+            path: '/index/my/myMemberGroupDetail',
+            name: 'myMemberGroupDetail',
+            component: () => import('@/views/MyMemberGroupDetail.vue'),
+            meta: { requiresAuth: true }
+        }
     ]
 })
 
