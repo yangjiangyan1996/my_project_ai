@@ -171,6 +171,7 @@ import '@wangeditor/editor/dist/css/style.css'
 
 const router = useRouter()
 //const itemId = router.query.id
+const projectId = ref(null)
 
 
 // 初始化加载数据
@@ -179,6 +180,7 @@ onMounted(() => {
   console.log('接收到的项目ID:', itemId);
   
   if (itemId && /^\d+$/.test(itemId)) {
+    projectId.value = itemId
     loadProjectDetail(itemId);
   } else {
     // ElMessage.error('无效的项目ID参数');
@@ -322,6 +324,7 @@ const submitForm = () => {
       // 组装请求数据
       const requestData = {
         // projects表字段
+        id: projectId.value,
         name: form.name,
         category: form.category,
         description: form.description,

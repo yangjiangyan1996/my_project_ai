@@ -1,6 +1,7 @@
 package com.example.Facade;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
@@ -233,6 +234,7 @@ public class ProjectFacade {
             if (pd == null) {
                 throw new ValidationException("项目不存在");
             }
+            pd.setStatus(ProjectEnum.ProjectStatusEnum.WAITING.getCode());
             pd.setName(req.getName());
             pd.setCategory(req.getCategory());
             pd.setDescription(req.getDescription());
@@ -443,6 +445,19 @@ public class ProjectFacade {
         return projectApplicationsService.save(entity);
     }
 
+
+
+    public Boolean cancelApplyJoinProject(Long projectId, Long userId) {
+        ProjectsDetail pd = projectsDetailService.selectByProjectId(projectId);
+        if (pd == null) {
+            throw new ValidationException("项目不存在");
+        }
+        if (pd.getCreatedBy().equals(userId)) {
+            throw new ValidationException("不能操作自己的项目");
+        }
+        return projectApplicationsService.remove(new UpdateWrapper<ProjectApplications>().eq("project_id", projectId).eq("user_id", userId));
+    }
+
     public MyCountResp getMyCount(Long userId) {
         MyCountResp result = new MyCountResp();
         List<ProjectApplications> projectApplications = projectApplicationsService.selectByProcessedBy(userId, ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode());
@@ -600,4 +615,5 @@ public class ProjectFacade {
     public Boolean adminApproveNo(Long projectId, String reason, Long userId) {
         return projectService.updateStatus(projectId, ProjectEnum.ProjectStatusEnum.NO.getCode(), reason, userId);
     }
+
 }

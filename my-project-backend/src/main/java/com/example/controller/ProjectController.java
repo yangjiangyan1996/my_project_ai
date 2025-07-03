@@ -74,6 +74,21 @@ public class ProjectController {
         }
     }
 
+    @GetMapping("/cancelApplyJoinProject")
+    public RespBean<Boolean> cancelApplyJoinProject(@RequestParam("projectId") Long projectId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.cancelApplyJoinProject(projectId, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProjectController#cancelApplyJoinProject,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#cancelApplyJoinProject,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     @GetMapping("/changeShowStatus")
     public RespBean<Boolean> changeShowStatus(@RequestParam("projectShowId") Long projectShowId,
                                               @RequestParam("status") Integer status) {

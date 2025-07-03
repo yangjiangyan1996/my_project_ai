@@ -332,15 +332,15 @@ const goToUpdateUserInfo = () => {
 
 
 const goToApplyList = () => {
-  router.push('/my/applyList')
+  router.push('/index/my/applyList')
 }
 
 const goToAdminApplyList = () => {
-  router.push('/my/adminApplyList')
+  router.push('/index/my/adminApplyList')
 }
 
 const goToApplicationList = () => {
-  router.push('/my/applicationList')
+  router.push('/index/my/applicationList')
 }
 
 // 新增获取统计数据方法

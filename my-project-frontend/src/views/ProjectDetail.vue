@@ -460,7 +460,8 @@ const handleApply = async () => {
       // 提交申请或重新申请
       const res = await get(`/api/auth/project/applyJoinProject?projectId=${projectId}`);
       if (res) {
-        applyStatus.value = res.status || -1;
+      console.log("res,",res)
+        applyStatus.value = 0;
         const message = {
           '-1': '申请已撤销',
           0: '申请已提交，请等待审核',
@@ -472,7 +473,8 @@ const handleApply = async () => {
       }
     } else if (applyStatus.value === 1) {
       // 已加入状态，点击跳转到项目详情
-      router.push(`/project/${projectId}/workspace`);
+      // router.push(`/project/${projectId}/workspace`);
+      //TODO yang 这里跳转到组
     } else if (applyStatus.value === 0) {
       // 审核中状态，可以撤销申请
       const confirm = await ElMessageBox.confirm(
@@ -481,7 +483,7 @@ const handleApply = async () => {
         { type: 'warning' }
       );
       if (confirm) {
-        const res = await post('/api/auth/project/cancel-apply', { projectId });
+        const res = await get(`/api/auth/project/cancelApplyJoinProject?projectId=${projectId}`);
         if (res) {
           applyStatus.value = 3;
           ElMessage.success('申请已撤销');
