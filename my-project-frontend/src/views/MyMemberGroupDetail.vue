@@ -4,7 +4,7 @@
     
     <el-card class="member-group-card">
       <div class="header">
-        <h2>{{ projectName }} - 团队成员管理</h2>
+        <h2>{{ projectName }}</h2>
         <div class="header-actions">
           <el-button 
             v-if="isAdmin"
@@ -168,7 +168,7 @@ onMounted(() => {
 const loadProjectInfo = async () => {
   try {
     console.log("projectId",projectId)
-    const res = await get(`/api/auth/project/detail?id=${projectId.value}`)
+    const res = await get(`/api/auth/project/detail?projectId=${projectId.value}`)
     projectName.value = res.name || '项目名称'
   } catch (error) {
     ElMessage.error('加载项目信息失败')

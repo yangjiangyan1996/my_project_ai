@@ -73,6 +73,7 @@ public class ProjectFacade {
         ProjectsDetail project = projectsDetailService.selectByProjectId(projectId);
         BeanUtils.copyProperties(project, r);
 
+        r.setName(projectDown.getName());
         r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
         r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
 
