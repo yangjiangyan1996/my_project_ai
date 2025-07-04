@@ -58,14 +58,37 @@
         </el-form-item>
         
         <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item label="每日投入时间" prop="timePerDay">
-              <el-input v-model="form.timePerDay" placeholder="如：2小时" />
-            </el-form-item>
-          </el-col>
+          <!-- 替换每日投入时间部分 -->
+<el-col :span="8">
+  <el-form-item label="每日投入时间" prop="timePerDay">
+    <el-input-number
+      v-model="form.timePerDay"
+      :min="1"
+      :step="1"
+      controls-position="right"
+      placeholder="请输入时间"
+    />
+    <span style="margin-left: 6px;">小时</span>
+  </el-form-item>
+</el-col>
+
+<!-- 替换月收益范围部分 -->
           <el-col :span="8">
             <el-form-item label="月收益范围" prop="incomeEstimate">
-              <el-input v-model="form.incomeEstimate" placeholder="如：3000-8000元" />
+              <div style="display: flex; align-items: center;">
+                <el-input-number
+                  v-model="form.incomeMin"
+                  :min="0"
+                  placeholder="最低"
+                />
+                <span style="margin: 0 10px;">~</span>
+                <el-input-number
+                  v-model="form.incomeMax"
+                  :min="0"
+                  placeholder="最高"
+                />
+                <span style="margin-left: 6px;">元</span>
+              </div>
             </el-form-item>
           </el-col>
           <el-col :span="24" style="margin-bottom: 15px">
@@ -192,26 +215,31 @@ onMounted(() => {
 
 // 表单数据
 const form = reactive({
-  // projects表字段
+  // 项目字段
   name: '',
   category: null,
   description: '',
   difficulty: 1,
   imageUrl: '',
-  
-  // projects_detail表字段
+
+  // 详情字段
   steps: '',
   tools: '',
-  timePerDay: '',
-  incomeEstimate: '',
+  timePerDay: 1,       // 数字（小时）
+  incomeMin: null,     // 数字
+  incomeMax: null,     // 数字
   targetAudience: '',
   riskWarning: '',
   isRemote: true,
   isFreeEntry: true,
   tags: [],
+
+  // 成员招募
+  needMember: 1,
+  memberNum: null
 })
 
-// 表单验证规则
+// 校验规则
 const rules = {
   name: [{ required: true, message: '请输入副业名称', trigger: 'blur' }],
   category: [{ required: true, message: '请选择分类', trigger: 'change' }],
@@ -219,7 +247,29 @@ const rules = {
   difficulty: [{ required: true, message: '请选择难度等级', trigger: 'change' }],
   steps: [{ required: true, message: '请输入操作步骤', trigger: 'blur' }],
   tools: [{ required: true, message: '请输入推荐工具', trigger: 'blur' }],
-  timePerDay: [{ required: true, message: '请输入每日投入时间', trigger: 'blur' }]
+  timePerDay: [
+    {
+      validator: (rule, value, callback) => {
+        if (value <= 0) callback(new Error('每日时间必须大于0'))
+        else callback()
+      },
+      trigger: 'blur'
+    }
+  ],
+  incomeEstimate: [
+    {
+      validator(rule, value, callback) {
+        if (form.incomeMin === null || form.incomeMax === null) {
+          callback(new Error('请输入完整的收益范围'))
+        } else if (form.incomeMin > form.incomeMax) {
+          callback(new Error('最小值不能大于最大值'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
 }
 
 // 分类数据
@@ -320,32 +370,29 @@ const submitForm = () => {
   formRef.value.validate((valid) => {
     if (valid) {
       submitting.value = true
-      
-      // 组装请求数据
+
       const requestData = {
-        // projects表字段
         id: projectId.value,
         name: form.name,
         category: form.category,
         description: form.description,
         difficulty: form.difficulty,
         imageUrl: form.imageUrl,
-        
-        // projects_detail表字段
+
         steps: form.steps,
         tools: form.tools,
-        timePerDay: form.timePerDay,
-        incomeEstimate: form.incomeEstimate,
+        timePerDay: form.timePerDay + '小时',
+        incomeEstimate: `${form.incomeMin}-${form.incomeMax}元`,
         targetAudience: form.targetAudience,
         riskWarning: form.riskWarning,
         isRemote: form.isRemote ? 1 : 0,
         isFreeEntry: form.isFreeEntry ? 1 : 0,
         tags: form.tags.join(','),
-        status: 0, // 0=待审核
+        status: 0,
         needMember: form.needMember,
         memberNum: form.memberNum
       }
-      
+
       post('/api/auth/project/createFindCollage', requestData)
         .then(() => {
           ElMessage.success('创建成功')
@@ -360,6 +407,7 @@ const submitForm = () => {
     }
   })
 }
+
 
 // 重置表单
 const resetForm = () => {
