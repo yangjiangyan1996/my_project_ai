@@ -4,12 +4,12 @@
     <el-button @click="userLogout" class="logout-button">退出登录</el-button>
 
     <el-card class="project-detail-card">
+      <!-- 项目详情头部部分保持不变 -->
       <div class="header">
         <img :src="detail.imageUrl || '/images/default-project.png'" class="cover-image" />
         <div class="basic-info">
           <h2 class="title">{{ detail.name }}</h2>
           
-          <!-- 用户信息区域 -->
           <div class="creator">
             <div class="user-info">
               <el-avatar :size="32" class="user-avatar">{{ detail.creatorName?.charAt(0) || '匿' }}</el-avatar>
@@ -76,7 +76,7 @@
 
       <el-divider>评论区</el-divider>
       
-      <!-- 知乎风格主评论输入框 -->
+      <!-- 主评论输入框 -->
       <div class="zhihu-comment-editor">
         <div class="editor-header">
           <div class="avatar">{{ userInitial }}</div>
@@ -165,11 +165,11 @@
               </div>
               <span v-if="reply.deleted" class="deleted">该评论已被删除</span>
               <span v-else>
-                <template v-if="reply.replyToName">回复 {{ reply.replyToName }}：</template>
+                <template v-if="reply.replyToName">@{{ reply.replyToName }}：</template>
                 <span v-html="renderMarkdown(reply.content)" class="md-content" />
               </span>
               <div class="comment-actions">
-                <el-button text @click="replyTo(reply.id, reply.username, true)">回复</el-button>
+                <el-button text @click="replyTo(reply.id, reply.username)">回复</el-button>
                 <el-button text @click="likeComment(reply.id)">👍 {{ reply.likes }}</el-button>
                 <el-button text v-if="reply.isMine" @click="deleteComment(reply.id)">删除</el-button>
               </div>
@@ -363,7 +363,7 @@ function renderMarkdown(text) {
   return mdParser.render(text || '');
 }
 
-function replyTo(commentId, username, isReplyToReply = false) {
+function replyTo(commentId, username) {
   // 如果点击的是已经打开的回复框，则关闭它
   if (activeReplyBox.value === commentId) {
     cancelReply();
@@ -373,14 +373,12 @@ function replyTo(commentId, username, isReplyToReply = false) {
   replyToCommentId.value = commentId;
   replyToUsername.value = username;
   activeReplyBox.value = commentId;
-  replyContent.value = isReplyToReply ? `@${username} ` : '';
+  replyContent.value = '';
   
   // 如果是回复二级评论，确保父级评论是展开的
-  if (isReplyToReply) {
-    const firstLevelId = findFirstLevelCommentId(commentId);
-    if (firstLevelId && !expandedComments.value[firstLevelId]) {
-      expandedComments.value[firstLevelId] = true;
-    }
+  const firstLevelId = findFirstLevelCommentId(commentId);
+  if (firstLevelId && firstLevelId !== commentId && !expandedComments.value[firstLevelId]) {
+    expandedComments.value[firstLevelId] = true;
   }
 }
 
@@ -420,16 +418,19 @@ async function submitReply(commentId) {
   }
 
   try {
-    await post('/api/auth/project/comment', {
+    const res = await post('/api/auth/project/comment', {
       projectId,
       content: replyContent.value,
       replyTo: commentId,
       firstLevelCommonId: findFirstLevelCommentId(commentId)
     });
-    replyContent.value = "";
-    cancelReply();
-    fetchComments();
-    ElMessage.success('回复成功');
+    
+    if (res) {
+      replyContent.value = "";
+      cancelReply();
+      fetchComments();
+      ElMessage.success('回复成功');
+    }
   } catch (err) {
     ElMessage.error('回复失败');
   }
