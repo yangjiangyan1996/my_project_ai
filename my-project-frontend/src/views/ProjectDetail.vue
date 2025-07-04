@@ -519,7 +519,7 @@ const submitApply = async () => {
       ElMessage.success('申请已提交，请等待审核');
     }
   } catch (err) {
-    ElMessage.error('提交申请失败');
+    // ElMessage.error('提交申请失败');
   } finally {
     applyLoading.value = false;
   }
