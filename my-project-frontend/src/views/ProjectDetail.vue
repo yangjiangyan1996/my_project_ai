@@ -42,8 +42,6 @@
           </div>
 
           <div class="tags">
-            <!-- <el-tag v-if="detail.isRemote" type="success">远程</el-tag> -->
-            <!-- <el-tag v-if="detail.isFreeEntry" type="info">零门槛</el-tag> -->
             <el-tag v-for="tag in parsedTags" :key="tag" type="warning">{{ tag }}</el-tag>
           </div>
 
@@ -180,6 +178,24 @@
         </div>
       </div>
     </el-card>
+
+    <!-- 申请加入对话框 -->
+    <el-dialog v-model="applyDialogVisible" title="申请加入" width="500px">
+      <el-form :model="applyForm" label-width="80px">
+        <el-form-item label="申请留言">
+          <el-input 
+            v-model="applyForm.message" 
+            type="textarea" 
+            placeholder="请简单介绍一下自己或申请理由（选填）"
+            :autosize="{ minRows: 4, maxRows: 8 }"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="applyDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitApply">提交申请</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -187,7 +203,7 @@
 import { ref, onMounted, inject, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { get, logout, post } from '@/net';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import markdownIt from 'markdown-it';
 import emoji from 'markdown-it-emoji';
 
@@ -217,8 +233,12 @@ const projectId = route.params.id;
 const userInfo = inject('userInfo');
 const emojis = inject('emojis');
 
-const applyStatus = ref(-1); // -1-未申请 0=待审核 1-已通过 2-已拒绝
+const applyStatus = ref(-1); // -1-未申请 0=待审核 1-已通过 2-已拒绝 3-已撤销
 const applyLoading = ref(false);
+const applyDialogVisible = ref(false);
+const applyForm = ref({
+  message: ''
+});
 
 const userInitial = computed(() => {
   return userInfo.data?.username?.charAt(0) || '匿';
@@ -230,15 +250,14 @@ onMounted(async () => {
   fetchComments();
 });
 
-
 // 获取申请按钮文本
 const getApplyButtonText = (status) => {
   switch(status) {
     case -1: return '申请加入';
-    case 0: return '审核中...';
+    case 0: return '审核中';
     case 1: return '已加入';
     case 2: return '已拒绝';
-    case 3: return '已撤销';
+    case 3: return '重新申请';
     default: return '申请加入';
   }
 };
@@ -434,12 +453,10 @@ const handleConcernPublisher = async (userId) => {
       followeeId: userId
     });
     
-    // 立即更新UI状态
     isConcerned.value = !isConcerned.value;
     concernCount.value += isConcerned.value ? 1 : -1;
     ElMessage.success(isConcerned.value ? '关注成功' : '已取消关注');
     
-    // 更新detail对象中的followed状态
     if (detail.value) {
       detail.value.followed = isConcerned.value;
     }
@@ -456,21 +473,11 @@ const handleApply = async () => {
   
   try {
     applyLoading.value = true;
+    
     if (applyStatus.value === -1 || applyStatus.value === 3) {
-      // 提交申请或重新申请
-      const res = await get(`/api/auth/project/applyJoinProject?projectId=${projectId}`);
-      if (res) {
-      console.log("res,",res)
-        applyStatus.value = 0;
-        const message = {
-          '-1': '申请已撤销',
-          0: '申请已提交，请等待审核',
-          1: '申请已通过',
-          2: '申请已被拒绝',
-          3: '申请已撤销'
-        }[applyStatus.value];
-        ElMessage.success(message || '操作成功');
-      }
+      // 显示申请留言对话框
+      applyDialogVisible.value = true;
+      applyForm.value.message = '';
     } else if (applyStatus.value === 1) {
       // 已加入状态，点击跳转到项目详情
       // router.push(`/project/${projectId}/workspace`);
@@ -492,6 +499,27 @@ const handleApply = async () => {
     }
   } catch (err) {
     ElMessage.error('操作失败');
+  } finally {
+    applyLoading.value = false;
+  }
+};
+
+// 提交申请
+const submitApply = async () => {
+  try {
+    applyLoading.value = true;
+    const res = await post('/api/auth/project/applyJoinProject', {
+      projectId: projectId,
+      message: applyForm.value.message
+    });
+    
+    if (res) {
+      applyStatus.value = 0;
+      applyDialogVisible.value = false;
+      ElMessage.success('申请已提交，请等待审核');
+    }
+  } catch (err) {
+    ElMessage.error('提交申请失败');
   } finally {
     applyLoading.value = false;
   }
@@ -607,7 +635,6 @@ function userLogout() {
   color: #222;
 }
 
-/* 用户信息样式 */
 .user-info {
   display: flex;
   align-items: center;
@@ -681,7 +708,6 @@ function userLogout() {
   word-break: break-word;
 }
 
-/* 评论区域样式 */
 .comment-list {
   margin-top: 30px;
 }
@@ -768,7 +794,6 @@ function userLogout() {
   margin-left: 10px;
 }
 
-/* 评论编辑器样式 */
 .zhihu-comment-editor, .zhihu-reply-editor {
   margin-bottom: 20px;
   border: 1px solid #f0f2f7;

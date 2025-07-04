@@ -416,7 +416,7 @@ public class ProjectFacade {
         return result;
     }
 
-    public Boolean applyJoinProject(Long projectId, Long userid) {
+    public Boolean applyJoinProject(Long projectId,String message, Long userid) {
         ProjectsDetail pd = projectsDetailService.selectByProjectId(projectId);
         if (pd == null) {
             throw new ValidationException("项目不存在");
@@ -457,6 +457,7 @@ public class ProjectFacade {
         entity.setStatus(ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode());
         entity.setApplyTime(new Date());
         entity.setProcessedBy(pd.getCreatedBy());
+        entity.setMessage(message);
         return projectApplicationsService.save(entity);
     }
 

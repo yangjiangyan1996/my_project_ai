@@ -51,11 +51,11 @@ public class ProjectController {
     }
 
 
-    @GetMapping("/applyJoinProject")
-    public RespBean<Boolean> applyJoinProject(@RequestParam("projectId") Long projectId) {
+    @PostMapping("/applyJoinProject")
+    public RespBean<Boolean> applyJoinProject(@RequestBody ApplyJoinProjectReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            Boolean result = projectFacade.applyJoinProject(projectId, user.getId());
+            Boolean result = projectFacade.applyJoinProject(req.getProjectId(), req.getMessage(), user.getId());
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ProjectController#applyJoinProject,req:{}", e);
