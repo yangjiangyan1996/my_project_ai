@@ -20,4 +20,6 @@ public interface ProjectMembersService extends IService<ProjectMembers> {
     Page<ProjectMembers> getMyProjectMemberGroupList(Page<ProjectMembers> page, Long userId);
 
     List<ProjectMembers> selectByProjectId(Long projectId, Integer status);
+
+    ProjectMembers selectByProjectIdAndUserId(Long projectId,Long userId);
 }

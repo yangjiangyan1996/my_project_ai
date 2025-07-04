@@ -55,4 +55,12 @@ public class ProjectMembersServiceImpl extends ServiceImpl<ProjectMembersMapper,
                         .eq("is_deleted", 0)
         );
     }
+
+    @Override
+    public ProjectMembers selectByProjectIdAndUserId(Long projectId, Long userId) {
+        return this.baseMapper.selectOne(new QueryWrapper<ProjectMembers>()
+                .eq("project_id", projectId)
+                .eq("user_id", userId)
+                .eq("is_deleted", 0));
+    }
 }

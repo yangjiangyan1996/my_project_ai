@@ -6,6 +6,7 @@ import com.example.entity.dto.Account;
 import com.example.entity.dto.ProjectApplications;
 import com.example.entity.dto.ProjectMembers;
 import com.example.entity.dto.Projects;
+import com.example.entity.req.AddMemberByManagerReq;
 import com.example.entity.req.MyMemberGroupsReq;
 import com.example.entity.req.RemoveMemberReq;
 import com.example.entity.resp.MemberListResp;
@@ -24,6 +25,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -133,7 +135,36 @@ public class ProjectMemberFacade {
             throw new ValidationException("更新成员失败");
         }
         boolean remove = projectApplicationsService.remove(new QueryWrapper<ProjectApplications>().eq("project_id", req.getProjectId()).eq("user_id", projectMembers.getUserId()));
-        
+
         return b;
+    }
+
+    public Boolean addMemberByManager(AddMemberByManagerReq req, Long userId) {
+        ProjectMembers p = projectMembersService.selectByProjectIdAndUserId(req.getProjectId(), req.getUserId());
+        if (p != null) {
+            if (Objects.equals(p.getStatus(), ProjectEnum.MemberStatusEnum.IN.getCode())) {
+                throw new ValidationException("用户已加入");
+            } else {
+                ProjectMembers e = new ProjectMembers();
+                e.setId(p.getId());
+                e.setStatus(ProjectEnum.MemberStatusEnum.IN.getCode());
+                e.setRole(ProjectEnum.ProjectMemberRoleEnum.getByCode(req.getRole()).getCode());
+                e.setModifiedBy(userId);
+                e.setModifiedAt(new Date());
+                return projectMembersService.updateById(e);
+            }
+        } else {
+            ProjectMembers e = new ProjectMembers();
+            e.setProjectId(req.getProjectId());
+            e.setUserId(req.getUserId());
+            e.setJoinTime(new Date());
+            e.setRole(ProjectEnum.ProjectMemberRoleEnum.getByCode(req.getRole()).getCode());
+            e.setStatus(ProjectEnum.MemberStatusEnum.IN.getCode());
+            e.setCreatedAt(new Date());
+            e.setCreatedBy(userId);
+            e.setModifiedBy(userId);
+            e.setModifiedAt(new Date());
+            return projectMembersService.save(e);
+        }
     }
 }

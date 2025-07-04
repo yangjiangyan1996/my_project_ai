@@ -1,9 +1,11 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.Account;
+import com.example.entity.req.SearchUserReq;
 import com.example.entity.vo.request.ConfirmResetVO;
 import com.example.entity.vo.request.EmailRegisterVO;
 import com.example.entity.vo.request.EmailResetVO;
@@ -169,6 +171,12 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     @Override
     public List<Account> selectByIds(List<Long> userIds) {
         return this.baseMapper.selectList(new QueryWrapper<Account>().in("id", userIds).eq("is_deleted", 0));
+    }
+
+    @Override
+    public List<Account> searchByReq(SearchUserReq req) {
+        return this.baseMapper.selectList(new QueryWrapper<Account>()
+                .like(StringUtils.isNotBlank(req.getUsername()), "username", req.getUsername()));
     }
 
     /**

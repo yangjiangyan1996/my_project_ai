@@ -86,8 +86,8 @@
 
         <el-form-item label="选择角色" v-if="searchResult.length > 0">
           <el-select v-model="addMemberForm.role" placeholder="请选择角色">
-            <el-option label="管理员" value="ADMIN" />
-            <el-option label="普通成员" value="MEMBER" />
+            <el-option label="普通成员" value="0" />
+            <el-option label="组长" value="1" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -140,8 +140,8 @@ const currentUserRole = ref('')
 const isAdmin = ref(false)
 const addMemberDialogVisible = ref(false)
 const addMemberForm = ref({
-  keyword: '',
-  role: 'MEMBER'
+  keyword: '0',
+  role: '普通成员'
 })
 const searchResult = ref([])
 const selectedUser = ref(null)
@@ -204,7 +204,7 @@ const showAddMemberDialog = () => {
   addMemberDialogVisible.value = true
   addMemberForm.value = {
     keyword: '',
-    role: 'MEMBER'
+    role: '0'
   }
   searchResult.value = []
   selectedUser.value = null
@@ -216,7 +216,12 @@ const searchUser = async () => {
     return
   }
   try {
-    const res = await get(`/api/auth/project/searchUser?keyword=${addMemberForm.value.keyword}`)
+    //const res = await get(`/api/auth/common/searchUser?keyword=${addMemberForm.value.keyword}`)
+
+    const res = await post('/api/auth/common/searchUser', {
+      username:addMemberForm.value.keyword
+    })
+
     searchResult.value = res || []
     if (searchResult.value.length === 0) {
       ElMessage.info('未找到匹配的用户')
@@ -240,7 +245,7 @@ const confirmAddMember = async () => {
     return
   }
   try {
-    await post('/api/auth/project/addMember', {
+    await post('/api/auth/projectMember/addMemberByManager', {
       projectId: projectId.value,
       userId: selectedUser.value.id,
       role: addMemberForm.value.role
