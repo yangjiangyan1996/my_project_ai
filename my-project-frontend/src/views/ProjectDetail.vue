@@ -126,7 +126,7 @@
             </el-button>
           </div>
 
-          <!-- 知乎风格回复评论输入框 -->
+          <!-- 一级评论的回复框 -->
           <div v-if="activeReplyBox === comment.id" class="zhihu-reply-editor">
             <div class="editor-header">
               <div class="avatar">{{ userInitial }}</div>
@@ -152,7 +152,7 @@
               </el-popover>
               
               <button class="cancel-button" @click="cancelReply">取消</button>
-              <button class="submit-button" @click="submitReply(activeReplyBox)">发布</button>
+              <button class="submit-button" @click="submitReply(comment.id)">发布</button>
             </div>
           </div>
 
@@ -169,9 +169,39 @@
                 <span v-html="renderMarkdown(reply.content)" class="md-content" />
               </span>
               <div class="comment-actions">
-                <el-button text @click="replyTo(reply.id, reply.username)">回复</el-button>
+                <el-button text @click="replyTo(reply.id, reply.username, true)">回复</el-button>
                 <el-button text @click="likeComment(reply.id)">👍 {{ reply.likes }}</el-button>
                 <el-button text v-if="reply.isMine" @click="deleteComment(reply.id)">删除</el-button>
+              </div>
+
+              <!-- 二级评论的回复框 -->
+              <div v-if="activeReplyBox === reply.id" class="zhihu-reply-editor">
+                <div class="editor-header">
+                  <div class="avatar">{{ userInitial }}</div>
+                  <span>回复 {{ replyToUsername }}</span>
+                </div>
+                <el-input
+                  v-model="replyContent"
+                  type="textarea"
+                  :placeholder="`回复 ${replyToUsername}...`"
+                  :autosize="{ minRows: 4, maxRows: 8 }"
+                  class="markdown-textarea"
+                />
+                <div class="editor-footer">
+                  <el-popover placement="top" width="250" trigger="click">
+                    <template #reference>
+                      <el-button size="small" text type="primary">😊 表情</el-button>
+                    </template>
+                    <div class="emoji-list">
+                      <span v-for="emoji in emojis" :key="emoji" class="emoji" @click="insertEmojiToNewComment(emoji)">
+                        {{ emoji }}
+                      </span>
+                    </div>
+                  </el-popover>
+                  
+                  <button class="cancel-button" @click="cancelReply">取消</button>
+                  <button class="submit-button" @click="submitReply(reply.id)">发布</button>
+                </div>
               </div>
             </div>
           </div>
@@ -333,11 +363,25 @@ function renderMarkdown(text) {
   return mdParser.render(text || '');
 }
 
-function replyTo(commentId, username) {
+function replyTo(commentId, username, isReplyToReply = false) {
+  // 如果点击的是已经打开的回复框，则关闭它
+  if (activeReplyBox.value === commentId) {
+    cancelReply();
+    return;
+  }
+  
   replyToCommentId.value = commentId;
   replyToUsername.value = username;
   activeReplyBox.value = commentId;
-  replyContent.value = `@${username} `;
+  replyContent.value = isReplyToReply ? `@${username} ` : '';
+  
+  // 如果是回复二级评论，确保父级评论是展开的
+  if (isReplyToReply) {
+    const firstLevelId = findFirstLevelCommentId(commentId);
+    if (firstLevelId && !expandedComments.value[firstLevelId]) {
+      expandedComments.value[firstLevelId] = true;
+    }
+  }
 }
 
 function cancelReply() {
@@ -769,13 +813,17 @@ function userLogout() {
   text-decoration: underline;
 }
 
+.replies {
+  margin-top: 10px;
+}
+
 .reply-item {
+  position: relative;
   margin-left: 30px;
   margin-top: 15px;
   padding: 10px;
   background: #f9f9f9;
   border-radius: 6px;
-  position: relative;
 }
 
 .reply-item::before {
@@ -794,11 +842,19 @@ function userLogout() {
   margin-left: 10px;
 }
 
-.zhihu-comment-editor, .zhihu-reply-editor {
+.zhihu-comment-editor {
   margin-bottom: 20px;
   border: 1px solid #f0f2f7;
   border-radius: 4px;
   padding: 12px;
+}
+
+.zhihu-reply-editor {
+  margin-top: 10px;
+  border: 1px solid #f0f2f7;
+  border-radius: 4px;
+  padding: 12px;
+  background: #fff;
 }
 
 .editor-header {

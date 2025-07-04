@@ -168,6 +168,7 @@ public class ProjectFacade {
         vo.setContent(comment.getStatus().equals(ProjectEnum.ProjectCommentStatusEnum.hide.getCode()) ? "本条评论已被用户删除～" : comment.getContent());
         vo.setCreatedAt(comment.getCreatedAt());
         vo.setReplyTo(comment.getReplyTo());
+        vo.setReplyToName(comment.getReplyToUsername());
         vo.setDeleted(comment.getIsDeleted() != 0);
         vo.setLikes(commentId2LikeListMap.containsKey(comment.getId()) ? commentId2LikeListMap.get(comment.getId()).size() : 0);
         vo.setIsMine(comment.getUserId().equals(currentUserId));
