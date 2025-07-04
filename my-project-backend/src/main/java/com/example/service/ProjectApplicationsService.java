@@ -25,5 +25,7 @@ public interface ProjectApplicationsService extends IService<ProjectApplications
     Page<ProjectApplications> myApplicationList(Page<ProjectApplications> page, Long userId);
 
     Integer updateStatus(Long id, Integer status, Long userId);
+
+    int updateStatusByProjectId(Integer status, Long projectId, Integer butNotThisStatus);
 }
 

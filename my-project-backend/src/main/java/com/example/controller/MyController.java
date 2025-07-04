@@ -75,16 +75,4 @@ public class MyController {
             return RespBean.failure(999, e.getMessage());
         }
     }
-
-    @PostMapping("/myMemberGroups")
-    public RespBean<Page<MyMemberGroupsResp>> myMemberGroups(@RequestBody MyMemberGroupsReq req) {
-        try {
-            UserInfo user = UserUtil.getCurrentUser();
-            Page<MyMemberGroupsResp> list = myFacade.myMemberGroups(req, user.getId());
-            return RespBean.success(list);
-        } catch (Exception e) {
-            log.error("Mycontroller#myPublished, error",e);
-            return RespBean.failure(999, e.getMessage());
-        }
-    }
 }

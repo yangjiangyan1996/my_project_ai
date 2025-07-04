@@ -1,14 +1,27 @@
 package com.example.Facade;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.Account;
+import com.example.entity.dto.ProjectApplications;
 import com.example.entity.dto.ProjectMembers;
+import com.example.entity.dto.Projects;
+import com.example.entity.req.MyMemberGroupsReq;
+import com.example.entity.req.RemoveMemberReq;
 import com.example.entity.resp.MemberListResp;
+import com.example.entity.resp.MyMemberGroupsResp;
 import com.example.enums.ProjectEnum;
 import com.example.service.AccountService;
+import com.example.service.ProjectApplicationsService;
 import com.example.service.ProjectMembersService;
+import com.example.service.ProjectService;
 import jakarta.annotation.Resource;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -24,10 +37,41 @@ public class ProjectMemberFacade {
     @Resource
     AccountService accountService;
     @Resource
+    ProjectApplicationsService projectApplicationsService;
+    @Resource
+    ProjectService projectService;
+    @Resource
     private ProjectMembersService projectMembersService;
 
+    public Page<MyMemberGroupsResp> myMemberGroups(MyMemberGroupsReq req, Long userId) {
+        Page<ProjectMembers> myProjects = projectMembersService.getMyProjectMemberGroupList(Page.of(req.getPage() - 1, req.getSize()), userId);
+        if (myProjects.getRecords().isEmpty()) {
+            return Page.of(req.getPage(), req.getSize());
+        }
+        List<Long> projectIds = myProjects.getRecords().stream().map(v -> v.getProjectId()).collect(Collectors.toList());
+
+        List<Projects> projectList = projectService.selectByProjectIds(projectIds);
+        Map<Long, Projects> projectId2ProjectsMap = projectList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v, (l1, l2) -> l2));
+
+        List<MyMemberGroupsResp> collect = myProjects.getRecords().stream().map(v -> {
+            MyMemberGroupsResp r = new MyMemberGroupsResp();
+            r.setId(v.getId());
+            r.setProjectId(v.getProjectId());
+            r.setRoleOfMemberGroup(ProjectEnum.ProjectMemberRoleEnum.getByCode(v.getRole()).getName());
+            r.setCreatedAt(v.getCreatedAt());
+            r.setName(projectId2ProjectsMap.getOrDefault(v.getProjectId(), new Projects()).getName());
+            return r;
+        }).collect(Collectors.toList());
+
+        Page<MyMemberGroupsResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(myProjects.getTotal());
+        result.setRecords(collect);
+        return result;
+    }
+
+
     public MemberListResp memberList(Long projectId, Long userId) {
-        List<ProjectMembers> members = projectMembersService.selectByProjectId(projectId);
+        List<ProjectMembers> members = projectMembersService.selectByProjectId(projectId, null);
 
         List<Long> userIds = members.stream().map(v -> v.getUserId()).collect(Collectors.toList());
         List<Account> userAccount = accountService.selectByIds(userIds);
@@ -39,7 +83,7 @@ public class ProjectMemberFacade {
                     memberGetResp.setId(v.getId());
                     memberGetResp.setAvatarUrl(userId2UserInfoMap.get(v.getUserId()).getAvatarUrl());
                     memberGetResp.setNickname(userId2UserInfoMap.get(v.getUserId()).getNickname());
-                    memberGetResp.setUsername(userId2UserInfoMap.get(v.getUserId()).getUsername());
+                    memberGetResp.setStatusName(ProjectEnum.MemberStatusEnum.getByCode(v.getStatus()).getName());
                     memberGetResp.setEmail(userId2UserInfoMap.get(v.getUserId()).getEmail());
                     memberGetResp.setProvince(userId2UserInfoMap.get(v.getUserId()).getProvince());
                     memberGetResp.setCity(userId2UserInfoMap.get(v.getUserId()).getCity());
@@ -57,5 +101,39 @@ public class ProjectMemberFacade {
             r.setCurrentUserRole(ProjectEnum.ProjectMemberRoleEnum.getByCode(projectMembers.getRole()).getName());
         }
         return r;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean removeMember(RemoveMemberReq req, Long userId) {
+        List<ProjectMembers> pm = projectMembersService.selectByProjectId(req.getProjectId(), ProjectEnum.MemberStatusEnum.IN.getCode());
+        if (CollectionUtils.isEmpty(pm)) {
+            return false;
+        }
+        List<Long> userIdsOfAmdin = pm.stream().filter(v -> v.getRole().equals(ProjectEnum.ProjectMemberRoleEnum.ADMIN.getCode())).map(v -> v.getUserId()).distinct().collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(userIdsOfAmdin)) {
+            return false;
+        }
+        if (!userIdsOfAmdin.contains(userId)) {
+            throw new ValidationException("无权操作");
+        }
+
+        List<Long> ids = pm.stream().filter(v -> v.getRole().equals(ProjectEnum.ProjectMemberRoleEnum.ADMIN.getCode())).map(v -> v.getId()).distinct().collect(Collectors.toList());
+        if (ids.contains(req.getMemberId())) {
+            throw new ValidationException("不能移除管理员");
+        }
+        ProjectMembers projectMembers = pm.stream().filter(v -> v.getId().equals(req.getMemberId())).findFirst().orElse(null);
+        if (projectMembers == null) {
+            throw new ValidationException("成员不存在");
+        }
+        projectMembers.setExitTime(new Date());
+        projectMembers.setExitMessage(req.getExitMessage());
+        projectMembers.setStatus(req.getStatus());
+        boolean b = projectMembersService.updateById(projectMembers);
+        if (!b) {
+            throw new ValidationException("更新成员失败");
+        }
+        boolean remove = projectApplicationsService.remove(new QueryWrapper<ProjectApplications>().eq("project_id", req.getProjectId()).eq("user_id", projectMembers.getUserId()));
+        
+        return b;
     }
 }

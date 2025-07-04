@@ -16,7 +16,7 @@ const defaultError = (error) => {
     if (status === 429) {
         ElMessage.error(error.response.data.message);
     } else {
-        ElMessage.error('发生了一些错误，请联系管理员');
+        //ElMessage.error('发生了一些错误，请联系管理员');
     }
 }
 

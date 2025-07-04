@@ -35,9 +35,17 @@
                 <span class="label">申请项目：</span>
                 <span class="value strong">{{ item.projectName }}</span>
               </div>
+              <div class="project-desc">
+                <span class="label">项目简介：</span>
+                <span class="value strong">{{ item.description }}</span>
+              </div>
               <div class="message">
                 <span class="label">申请留言：</span>
                 <span class="value strong">{{ item.message || '无留言' }}</span>
+              </div>
+              <div class="applyUser">
+                <span class="label">申请人：</span>
+                <span class="value strong">{{ item.userName || '匿名' }}</span>
               </div>
             </div>
 
@@ -45,7 +53,6 @@
               class="hover-info"
               v-if="hoveredItem === index"
             >
-              <p><b>项目简介：</b>{{ item.description || '暂无' }}</p>
               <p><b>身份：</b>{{ item.audience || '未填写' }}</p>
               <p><b>可投入时间：</b>{{ item.timePerDay || '未填写' }}</p>
               <p><b>技能：</b>{{ item.skills || '未填写' }}</p>

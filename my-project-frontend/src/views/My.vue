@@ -357,7 +357,7 @@ const loadMoreTeam = () => {
 const fetchTeamData = async () => {
   try {
     teamLoading.value = true
-    const res = await post('/api/auth/my/myMemberGroups', {
+    const res = await post('/api/auth/projectMember/myMemberGroups', {
       page: teamPage.value,
       size: teamSize.value
     })

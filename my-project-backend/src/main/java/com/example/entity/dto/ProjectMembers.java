@@ -15,6 +15,7 @@ public class ProjectMembers extends BaseModel {
     private Long userId;
     private Date joinTime;
     private Integer role;
+    private Integer status;
     private Date exitTime;
     private String exitMessage;
 }

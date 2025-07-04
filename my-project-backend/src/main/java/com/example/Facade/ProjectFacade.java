@@ -428,10 +428,24 @@ public class ProjectFacade {
             throw new ValidationException("该项目不需要成员");
         }
 
-        List<ProjectMembers> members = projectMembersService.selectByProjectIdAndNeRole(projectId, ProjectEnum.ProjectMemberRoleEnum.ADMIN.getCode());
-        if (!CollectionUtils.isEmpty(members) && pd.getMemberNum() >= members.size()) {
+        if (projectFull(projectId)) {
             throw new ValidationException("该项目已满员");
         }
+        List<ProjectMembers> members = projectMembersService.selectByProjectId(projectId, ProjectEnum.MemberStatusEnum.IN.getCode());
+        List<ProjectMembers> collect = members.stream().filter(v -> v.getUserId().equals(userid)).collect(Collectors.toList());
+        if (!CollectionUtils.isEmpty(collect)) {
+            throw new ValidationException("已加入该项目");
+        }
+
+        ProjectApplications p = projectApplicationsService.selectByProjectIdAndUserId(projectId, userid);
+        if(p != null) {
+            if (p.getStatus().equals(ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode())) {
+                throw new ValidationException("请勿重复申请");
+            } else {
+                projectApplicationsService.removeById(p.getId());
+            }
+        }
+
 
 //        List<ProjectMembers> joinedMembers = projectMembersService.selectByUserId(userid);
 //        if (!CollectionUtils.isEmpty(joinedMembers) && joinedMembers.size()>=5) {
@@ -445,7 +459,6 @@ public class ProjectFacade {
         entity.setProcessedBy(pd.getCreatedBy());
         return projectApplicationsService.save(entity);
     }
-
 
 
     public Boolean cancelApplyJoinProject(Long projectId, Long userId) {
@@ -523,7 +536,7 @@ public class ProjectFacade {
 
     }
 
-    public Boolean approveApply(ApproveApplyReq req, Long id) {
+    public Boolean approveApply(ApproveApplyReq req, Long userId) {
         ProjectApplications pa = projectApplicationsService.getById(req.getId());
         if (pa == null) {
             throw new ValidationException("申请不存在");
@@ -538,8 +551,29 @@ public class ProjectFacade {
         if (!save) {
             throw new ValidationException("内部错误，加入失败");
         }
-        Integer result = projectApplicationsService.updateStatus(req.getId(), ProjectEnum.ProjectApplyStatusEnum.APPROVED.getCode(), id);
-        return result == 1;
+        projectApplicationsService.updateStatus(req.getId(), ProjectEnum.ProjectApplyStatusEnum.APPROVED.getCode(), pa.getUserId());
+
+        if (Boolean.TRUE.equals(projectFull(project.getId()))) {
+            projectApplicationsService.updateStatusByProjectId(ProjectEnum.ProjectApplyStatusEnum.REJECTED.getCode(), project.getId(),ProjectEnum.ProjectApplyStatusEnum.APPROVED.getCode());
+        }
+        return true;
+    }
+
+    /**
+     * 项目已经满员
+     *
+     * @param req
+     * @param id
+     * @return boolean
+     */
+    public Boolean projectFull(Long projectId) {
+        ProjectsDetail pd = projectsDetailService.selectByProjectId(projectId);
+        List<ProjectMembers> members = projectMembersService.selectByProjectId(projectId, ProjectEnum.MemberStatusEnum.IN.getCode());
+        if (!CollectionUtils.isEmpty(members) && pd.getMemberNum() <= (members.size() -1)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     public Boolean rejectApply(ApproveApplyReq req, Long id) {

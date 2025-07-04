@@ -72,4 +72,13 @@ public class ProjectApplicationsServiceImpl extends ServiceImpl<ProjectApplicati
         p.setModifiedBy(userId);
         return this.baseMapper.update(p, new QueryWrapper<ProjectApplications>().eq("id", id));
     }
+
+    @Override
+    public int updateStatusByProjectId(Integer status, Long projectId, Integer butNotThisStatus) {
+        ProjectApplications o = new ProjectApplications();
+        o.setStatus(status);
+        return this.baseMapper.update(o, new QueryWrapper<ProjectApplications>().eq("project_id", projectId)
+                .ne("status", butNotThisStatus)
+                .eq("is_deleted", 0));
+    }
 }

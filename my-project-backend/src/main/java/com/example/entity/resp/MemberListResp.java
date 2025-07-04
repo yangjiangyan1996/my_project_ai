@@ -15,7 +15,7 @@ public class MemberListResp {
         private Long id;
         private String avatarUrl;
         private String nickname;
-        private String username;
+        private String statusName;
         private Integer roleOfMemberGroupCode;
         private String roleOfMemberGroup;
         private String email;

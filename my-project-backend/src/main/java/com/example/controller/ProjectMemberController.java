@@ -1,18 +1,19 @@
 package com.example.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.ProjectMemberFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
+import com.example.entity.req.MyMemberGroupsReq;
+import com.example.entity.req.RemoveMemberReq;
 import com.example.entity.resp.MemberListResp;
 import com.example.entity.resp.MyCountResp;
+import com.example.entity.resp.MyMemberGroupsResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @Author YangJian
@@ -27,6 +28,35 @@ public class ProjectMemberController {
 
     @Resource
     private ProjectMemberFacade projectMemberFacade;
+
+    @PostMapping("/myMemberGroups")
+    public RespBean<Page<MyMemberGroupsResp>> myMemberGroups(@RequestBody MyMemberGroupsReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Page<MyMemberGroupsResp> list = projectMemberFacade.myMemberGroups(req, user.getId());
+            return RespBean.success(list);
+        } catch (Exception e) {
+            log.error("Mycontroller#myPublished, error",e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
+
+    @PostMapping("/removeMember")
+    public RespBean<Boolean> removeMember(@RequestBody RemoveMemberReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectMemberFacade.removeMember(req,user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProjectMemberController#removeMember,req:{}", req,e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectMemberController#removeMember,req:{}", req,e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     @GetMapping("/memberList")
     public RespBean<MemberListResp> memberList(@RequestParam Long projectId) {
         try {

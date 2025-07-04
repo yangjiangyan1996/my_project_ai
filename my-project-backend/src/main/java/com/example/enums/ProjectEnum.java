@@ -10,6 +10,30 @@ import lombok.Getter;
  */
 public class ProjectEnum {
 
+    //状态 0=在，1=管理员退出，2=自己退出
+    @Getter
+    public enum MemberStatusEnum {
+        IN(0, "已加入"),
+        ADMIN_QUIT(1, "管理员退出"),
+        SELF_QUIT(2, "自己退出");
+        private Integer code;
+        private String name;
+
+        MemberStatusEnum(Integer code, String name) {
+            this.code = code;
+            this.name = name;
+        }
+
+        public static MemberStatusEnum getByCode(Integer status) {
+            for (MemberStatusEnum value : values()) {
+                if (value.code.equals(status)) {
+                    return value;
+                }
+            }
+            return null;
+        }
+    }
+
     /**
      * 是否招纳成员，0=不需要，1=需要
      */
@@ -62,6 +86,7 @@ public class ProjectEnum {
             this.code = code;
             this.name = name;
         }
+
         public static ProjectMemberRoleEnum getByCode(Integer code) {
             for (ProjectMemberRoleEnum value : values()) {
                 if (value.code.equals(code)) {
