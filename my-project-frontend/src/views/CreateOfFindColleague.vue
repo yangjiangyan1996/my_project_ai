@@ -59,18 +59,20 @@
         
         <el-row :gutter="20">
           <!-- 替换每日投入时间部分 -->
-<el-col :span="8">
-  <el-form-item label="每日投入时间" prop="timePerDay">
-    <el-input-number
-      v-model="form.timePerDay"
-      :min="1"
-      :step="1"
-      controls-position="right"
-      placeholder="请输入时间"
-    />
-    <span style="margin-left: 6px;">小时</span>
-  </el-form-item>
-</el-col>
+      <el-col :span="8">
+        
+
+        <el-form-item label="每日投入时间" prop="timePerDay">
+  <el-input-number
+    v-model="form.timePerDay"
+    :min="1"
+    :step="1"
+    controls-position="right"
+    placeholder="请输入时间"
+  />
+  <span class="unit-label">小时</span>
+</el-form-item>
+      </el-col>
 
 <!-- 替换月收益范围部分 -->
           <el-col :span="8">
@@ -468,6 +470,20 @@ const loadProjectDetail = async (id) => {
 </script>
 
 <style scoped>
+
+
+/* 高级感标签样式：更深的灰色 + 更粗字体 + 合适字号 */
+::v-deep(.el-form-item__label) {
+  color: #333;              /* 更深的灰色 */
+  font-weight: 500;         /* 半粗 */
+  font-size: 15px;          /* 略大一点 */
+}
+.unit-label {
+  color: #333;          /* 与 label 保持一致 */
+  font-weight: 500;     /* 半粗字体 */
+  font-size: 15px;      /* 字号一致 */
+  margin-left: 6px;
+}
 .create-container {
   padding: 30px;
   max-width: 1100px;
@@ -568,4 +584,5 @@ const loadProjectDetail = async (id) => {
   background-color: #f0f0f0 !important;
   color: #333;
 }
+
 </style>
