@@ -101,12 +101,13 @@
           </el-col>
           <el-col :span="8" v-if="form.needMember === 1">
             <el-form-item label="成员数量" prop="memberNum">
-              <el-input 
+              <el-input-number
                 v-model="form.memberNum"
-                type="number"
                 :min="1"
                 :max="1000"
-                placeholder="请输入1-1000之间的整数"
+                :step="1"
+                controls-position="right"
+                placeholder="请输入成员数量"
               />
             </el-form-item>
           </el-col>
@@ -549,5 +550,22 @@ const loadProjectDetail = async (id) => {
 .w-e-text-container {
   background-color: #fff !important;
   border: none !important;
+}
+
+.el-input-number__decrease,
+.el-input-number__increase {
+  background-color: white !important;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  width: 28px;
+  height: 28px;
+  color: #666;
+}
+
+.el-input-number__decrease:hover,
+.el-input-number__increase:hover {
+  background-color: #f0f0f0 !important;
+  color: #333;
 }
 </style>
