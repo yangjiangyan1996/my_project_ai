@@ -13,28 +13,34 @@
           </div>
           <div class="sidejob-description">选择你的路径：发起副业项目，或加入有趣团队</div>
           <div class="sidejob-buttons">
+            <!-- 发起副业 - 使用火箭表示开始新事物，保持primary蓝色 -->
             <el-button type="primary" size="large" @click="goToCreateSidejob">
-              💼 我要发起副业
+              🚀 我要发起副业
             </el-button>
-            <el-button type="success" size="large" @click="toggleIntentForm">
-              🤝 我想找团队
-            </el-button>
-
-            <el-button type="success" size="large" @click="goToApplyList">
-              🤝 去审核（{{ stats.applyCount || 0 }}）
+            
+            <!-- 找团队 - 使用握手符号表示合作，改为info天蓝色 -->
+            <el-button type="info" size="large" @click="toggleIntentForm">
+              👥 我想找团队
             </el-button>
 
+            <!-- 审核 - 使用警徽表示审核权限，使用warning黄色 -->
+            <el-button type="warning" size="large" @click="goToApplyList">
+              🛡️ 去审核（{{ stats.applyCount || 0 }}）
+            </el-button>
+
+            <!-- 我申请的 - 使用文档符号表示申请记录，使用success绿色 -->
             <el-button type="success" size="large" @click="goToApplicationList">
-              🤝 我申请的
+              📄 我申请的
             </el-button>
 
+            <!-- 管理员审核 - 使用星标表示管理员权限，使用danger红色 -->
             <el-button 
-              type="success" 
+              type="danger" 
               size="large" 
               @click="goToAdminApplyList"
               v-if="userInfo.data?.role === 'ADMIN'"
             >
-              🤝 去审核用户发布的帖子
+              ⭐ 去审核用户发布的帖子
             </el-button>
           </div>
 
