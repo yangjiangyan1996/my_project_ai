@@ -2,9 +2,62 @@
   <div class="profile-container">
     <div class="profile-header">
       <div class="profile-info">
+        <div class="profile-header">
+  <div class="user-profile-wrapper">
+    <!-- 头像部分 -->
+    <el-avatar 
+      :size="80" 
+      :src="userInfo.data?.avatarUrl" 
+      class="user-avatar"
+      :style="{
+        backgroundColor: userInfo.data?.avatarUrl ? 'transparent' : '#409EFF',
+        color: 'white',
+        fontSize: '24px'
+      }"
+    >
+      {{ userInfo.data?.nikeName ? userInfo.data.nikeName.charAt(0) : '用' }}
+    </el-avatar>
+    
+    <!-- 用户信息部分 -->
+    <div class="user-info-wrapper">
+      <div class="user-info-main">
         <h1 class="username">{{ userInfo.data?.nikeName || '用户名' }}</h1>
-        <div class="industry">{{ userInfo.data?.industry || '行业' }}</div>
-        <el-button type="text" size="small" @click="goToUpdateUserInfo">编辑个人资料</el-button>
+        <div class="industry-badge">
+          <el-tag 
+            v-if="userInfo.data?.industry"
+            effect="dark"
+            type="info"
+            size="small"
+          >
+            {{ userInfo.data.industry }}
+          </el-tag>
+          <el-tag 
+            v-else
+            effect="plain"
+            type="info"
+            size="small"
+          >
+            未设置行业
+          </el-tag>
+        </div>
+      </div>
+      
+      <!-- 编辑按钮 -->
+      <el-button 
+        type="primary" 
+        size="small" 
+        @click="goToUpdateUserInfo"
+        class="edit-profile-btn"
+        plain
+        round
+      >
+        <el-icon><Edit /></el-icon>
+        <span>编辑资料</span>
+      </el-button>
+    </div>
+  </div>
+</div>
+
 
         <div class="sidejob-entry-card">
           <div class="sidejob-header">
@@ -931,5 +984,48 @@ onMounted(() => {
   .sidejob-buttons {
     flex-direction: column;
   }
+}
+
+/* 添加这些样式 */
+.user-profile-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 0;
+}
+
+.user-avatar {
+  border: 2px solid #f0f2f5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.sidejob-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.intent-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reject-reason {
+  margin-left: 10px;
+  color: #f56c6c;
+  font-size: 14px;
 }
 </style>
