@@ -243,10 +243,15 @@
               :key="'publish-' + index"
               @click="goToDetail(item)"
             >
-              <div class="activity-type">{{ item.categoryName }}</div>
-              <div class="activity-time">{{ item.createdAt.slice(0, 10) }}</div>
-              <div class="activity-content">
+              <div class="activity-header">
                 <h3 class="activity-title">{{ item.name }}</h3>
+                <div class="activity-meta-top">
+                  <div class="activity-type">{{ item.categoryName }}</div>
+                  <div class="activity-time">{{ item.createdAt.slice(0, 10) }}</div>
+                </div>
+              </div>
+              
+              <div class="activity-content">
                 <div class="activity-detail">{{ item.description }}</div>
 
                 <!-- 状态展示 -->
@@ -779,12 +784,13 @@ onMounted(() => {
 .activity-type {
   color: #8590a6;
   font-size: 14px;
+  order: 1;
 }
 
 .activity-time {
-  color: #8590a6;
+   color: #8590a6;
   font-size: 14px;
-  margin: 5px 0;
+  order: 2;
 }
 
 .activity-title {
@@ -796,13 +802,18 @@ onMounted(() => {
 }
 
 .activity-detail {
-  color: #837df0;
+  color: #808287;
   margin: 10px 0;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .activity-meta {
-  color: #8590a6;
+   color: #8590a6;
   font-size: 14px;
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
 }
 
 .activity-meta > * {
@@ -1044,6 +1055,14 @@ onMounted(() => {
   align-items: center;
 }
 
+.activity-meta-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+
 .reject-reason {
   margin-left: 10px;
   color: #f56c6c;
@@ -1053,5 +1072,15 @@ onMounted(() => {
 /* 活动项内部元素的样式调整 */
 .activity-content {
   transition: all 0.3s ease;
+}
+
+.activity-status {
+  margin: 8px 0;
+}
+
+.activity-reason {
+  color: #f56c6c;
+  font-size: 14px;
+  margin: 8px 0;
 }
 </style>
