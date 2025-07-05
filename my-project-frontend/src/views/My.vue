@@ -245,24 +245,24 @@
             >
               <div class="activity-header">
                 <h3 class="activity-title">{{ item.name }}</h3>
+                <!-- 状态标签移到右上角 -->
+                <el-tag
+                  class="activity-status"
+                  :type="item.status === 0 ? 'warning' : item.status === 1 ? 'success' : 'danger'"
+                  size="small"
+                >
+                  {{ item.status === 0 ? '待审核' : item.status === 1 ? '已通过' : '已拒绝' }}
+                </el-tag>
+              </div>
+              
+              <div class="activity-content">
+                <!-- 分类和时间放在原来状态标签的位置 -->
                 <div class="activity-meta-top">
                   <div class="activity-type">{{ item.categoryName }}</div>
                   <div class="activity-time">{{ item.createdAt.slice(0, 10) }}</div>
                 </div>
-              </div>
-              
-              <div class="activity-content">
-                <div class="activity-detail">{{ item.description }}</div>
 
-                <!-- 状态展示 -->
-                <div class="activity-status">
-                  <el-tag
-                    :type="item.status === 0 ? 'warning' : item.status === 1 ? 'success' : 'danger'"
-                    size="small"
-                  >
-                    {{ item.status === 0 ? '待审核' : item.status === 1 ? '已通过' : '已拒绝' }}
-                  </el-tag>
-                </div>
+                <div class="activity-detail">{{ item.description }}</div>
 
                 <!-- 如果是拒绝，展示理由 -->
                 <div v-if="item.status === 2" class="activity-reason">
@@ -281,9 +281,9 @@
                 </el-button>
 
                 <div class="activity-meta">
-                  <span>已赞同 {{ item.likeCount }}</span>
-                  <span>{{ item.commentCount }} 条评论</span>
-                  <span>收藏 {{ item.favoriteCount }}</span>
+                  <span>👍 已赞同 {{ item.likeCount }}</span>
+                  <span>💬 {{ item.commentCount }} 条评论</span>
+                  <span>❤️ 收藏 {{ item.favoriteCount }}</span>
                 </div>
               </div>
             </div>
