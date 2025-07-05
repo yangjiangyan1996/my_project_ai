@@ -641,15 +641,19 @@ onMounted(() => {
 .profile-container {
   max-width: 1000px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
   display: grid;
-  grid-template-columns: 1fr 250px;
-  gap: 20px;
+  grid-template-columns: 1fr 260px;
+  gap: 32px;
+  background-color: #fff;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 .profile-header {
   grid-column: 1 / -1;
-  margin-bottom: 20px;
+  border-bottom: 1px solid #ebebeb;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .profile-info {
@@ -657,8 +661,10 @@ onMounted(() => {
 }
 
 .username {
-  font-size: 24px;
-  margin: 0 0 5px 0;
+  font-size: 26px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
 }
 
 .industry {
@@ -696,8 +702,9 @@ onMounted(() => {
 }
 
 .activity-item {
-  padding: 15px 0;
-  border-bottom: 1px solid #f0f2f7;
+ padding: 18px 0;
+  border-bottom: 1px solid #ebebeb;
+  transition: background 0.2s ease;
   cursor: pointer;
 }
 
@@ -773,21 +780,20 @@ onMounted(() => {
 }
 
 .sidejob-entry-card {
-  background-color: #fefce8;
-  border: 1px solid #fde68a;
-  padding: 20px;
-  border-radius: 12px;
+   background-color: #f6f6f6;
+  border: none;
+  border-radius: 8px;
+  padding: 16px;
   margin-top: 20px;
-  max-width: 600px;
 }
 
 .sidejob-header {
   display: flex;
   align-items: center;
-  font-size: 18px;
-  font-weight: 600;
-  color: #b45309;
-  margin-bottom: 8px;
+  font-weight: 500;
+  color: #121212;
+  font-size: 16px;
+  margin-bottom: 10px;
 }
 
 .sidejob-header .el-icon {
@@ -799,15 +805,15 @@ onMounted(() => {
 }
 
 .sidejob-description {
-  color: #92400e;
-  font-size: 14px;
-  margin-bottom: 16px;
+  font-size: 13px;
+  color: #8590a6;
+  margin-bottom: 14px;
 }
 
 .sidejob-buttons {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
+ display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 /* 新增意向表单样式 */
@@ -821,10 +827,10 @@ onMounted(() => {
 }
 
 .intent-card {
-  border-radius: 12px;
-  background-color: #f9f9fb; /* 更亮一些的灰白背景 */
-  border: 1px solid #dcdfe6; /* 增加边框层次 */
-  color: #333;
+  background: #f9f9f9;
+  border: none;
+  border-radius: 8px;
+  padding: 16px;
 }
 
 .intent-card h2 {
@@ -837,11 +843,12 @@ onMounted(() => {
   gap: 8px;
 }
 
+.intent-form
 .intent-display {
-  padding: 10px;
-  background-color: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
+  background: #fff;
+  border: 1px solid #ebebeb;
+  padding: 16px;
+  border-radius: 6px;
 }
 
 .intent-item {
@@ -858,7 +865,8 @@ onMounted(() => {
 }
 
 .intent-value {
-  color: #303133; /* 主体文字颜色更黑一些 */
+  color: #303133; 
+  /* color: #1a1a1a; */
   flex: 1;
 }
 
@@ -877,9 +885,9 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.intent-form {
-  padding: 10px;
-}
+/* .intent-form { */
+  /* padding: 10px;/ */
+/* } */
 
 /* 响应式调整 */
 @media (max-width: 768px) {
