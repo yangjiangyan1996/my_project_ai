@@ -450,7 +450,7 @@ const goToCreateSidejob = (itemId) => {
 
 
 const goToUpdateUserInfo = () => {
-  router.push('/my/updateUserInfo')
+  router.push('/index/my/updateUserInfo')
 }
 
 
