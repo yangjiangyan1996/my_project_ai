@@ -761,14 +761,19 @@ onMounted(() => {
 }
 
 .activity-item {
- padding: 18px 0;
+  padding: 18px 0;
   border-bottom: 1px solid #ebebeb;
-  transition: background 0.2s ease;
+  transition: all 0.3s ease; /* 添加过渡效果 */
   cursor: pointer;
+  border-radius: 6px; /* 添加圆角 */
+  margin: 4px 0 0 10px; /* 添加一点外边距 */
+  padding: 16px; /* 调整内边距 */
 }
 
 .activity-item:hover {
-  background-color: #fafafa;
+  background-color: #e6e9ef;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .activity-type {
@@ -783,8 +788,11 @@ onMounted(() => {
 }
 
 .activity-title {
-  font-size: 16px;
+ font-size: 16px;
+  font-weight: 600; /* 增加字体粗细 */
+  color: #303133; /* 使用更深的颜色 */
   margin: 10px 0;
+  transition: color 0.2s ease; /* 添加颜色过渡效果 */
 }
 
 .activity-detail {
@@ -806,7 +814,14 @@ onMounted(() => {
 }
 
 .sidebar-section {
-  margin-bottom: 25px;
+ padding: 12px;
+  border-radius: 8px;
+  background-color: #f8f9fa; /* 浅灰色背景 */
+  transition: all 0.2s ease;
+}
+
+.sidebar-section:hover {
+  background-color: #b2bfd2; /* 悬停时背景色加深 */
 }
 
 .sidebar-title {
@@ -815,9 +830,15 @@ onMounted(() => {
   margin-bottom: 10px;
 }
 
+.sidebar-count:hover {
+  color: #409EFF; /* 悬停时变为主题蓝色 */
+}
+
 .sidebar-count {
-  font-size: 18px;
+ font-size: 18px;
   font-weight: 600;
+  color: #1a1a1a; /* 添加这行，使用深色字体 */
+  transition: color 0.2s ease; /* 添加过渡效果 */
 }
 
 .empty-placeholder {
@@ -1027,5 +1048,10 @@ onMounted(() => {
   margin-left: 10px;
   color: #f56c6c;
   font-size: 14px;
+}
+
+/* 活动项内部元素的样式调整 */
+.activity-content {
+  transition: all 0.3s ease;
 }
 </style>
