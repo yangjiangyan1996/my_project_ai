@@ -4,7 +4,7 @@
       <div class="profile-info">
         <h1 class="username">{{ userInfo.data?.nikeName || '用户名' }}</h1>
         <div class="industry">{{ userInfo.data?.industry || '行业' }}</div>
-        <el-button type="text" size="small"@click="goToUpdateUserInfo">编辑个人资料</el-button>
+        <el-button type="text" size="small" @click="goToUpdateUserInfo">编辑个人资料</el-button>
 
         <div class="sidejob-entry-card">
           <div class="sidejob-header">
