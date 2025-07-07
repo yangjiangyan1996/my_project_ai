@@ -3,60 +3,60 @@
     <div class="profile-header">
       <div class="profile-info">
         <div class="profile-header">
-  <div class="user-profile-wrapper">
-    <!-- 头像部分 -->
-    <el-avatar 
-      :size="80" 
-      :src="userInfo.data?.avatarUrl" 
-      class="user-avatar"
-      :style="{
-        backgroundColor: userInfo.data?.avatarUrl ? 'transparent' : '#409EFF',
-        color: 'white',
-        fontSize: '24px'
-      }"
-    >
-      {{ userInfo.data?.nikeName ? userInfo.data.nikeName.charAt(0) : '用' }}
-    </el-avatar>
-    
-    <!-- 用户信息部分 -->
-    <div class="user-info-wrapper">
-      <div class="user-info-main">
-        <h1 class="username">{{ userInfo.data?.nikeName || '用户名' }}</h1>
-        <div class="industry-badge">
-          <el-tag 
-            v-if="userInfo.data?.industry"
-            effect="dark"
-            type="info"
-            size="small"
-          >
-            {{ userInfo.data.industry }}
-          </el-tag>
-          <el-tag 
-            v-else
-            effect="plain"
-            type="info"
-            size="small"
-          >
-            未设置行业
-          </el-tag>
+          <div class="user-profile-wrapper">
+            <!-- 头像部分 -->
+            <el-avatar 
+              :size="80" 
+              :src="userInfo.data?.avatarUrl" 
+              class="user-avatar"
+              :style="{
+                backgroundColor: userInfo.data?.avatarUrl ? 'transparent' : '#409EFF',
+                color: 'white',
+                fontSize: '24px'
+              }"
+            >
+              {{ userInfo.data?.nikeName ? userInfo.data.nikeName.charAt(0) : '用' }}
+            </el-avatar>
+            
+            <!-- 用户信息部分 -->
+            <div class="user-info-wrapper">
+              <div class="user-info-main">
+                <h1 class="username">{{ userInfo.data?.nikeName || '用户名' }}</h1>
+                <div class="industry-badge">
+                  <el-tag 
+                    v-if="userInfo.data?.industryName"
+                    effect="dark"
+                    type="info"
+                    size="small"
+                  >
+                    {{ userInfo.data.industryName }}
+                  </el-tag>
+                  <el-tag 
+                    v-else
+                    effect="plain"
+                    type="info"
+                    size="small"
+                  >
+                    未设置行业
+                  </el-tag>
+                </div>
+              </div>
+              
+              <!-- 编辑按钮 -->
+              <el-button 
+                type="primary" 
+                size="small" 
+                @click="goToUpdateUserInfo"
+                class="edit-profile-btn"
+                plain
+                round
+              >
+                <el-icon><Edit /></el-icon>
+                <span>编辑资料</span>
+              </el-button>
+            </div>
+          </div>
         </div>
-      </div>
-      
-      <!-- 编辑按钮 -->
-      <el-button 
-        type="primary" 
-        size="small" 
-        @click="goToUpdateUserInfo"
-        class="edit-profile-btn"
-        plain
-        round
-      >
-        <el-icon><Edit /></el-icon>
-        <span>编辑资料</span>
-      </el-button>
-    </div>
-  </div>
-</div>
 
 
         <div class="sidejob-entry-card">
@@ -1082,5 +1082,61 @@ onMounted(() => {
   color: #f56c6c;
   font-size: 14px;
   margin: 8px 0;
+}
+.user-info-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 8px;
+}
+.user-info-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.username-and-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.username {
+  font-size: 26px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0; /* 移除默认margin */
+}
+
+.industry-badge {
+  margin-left: 8px;
+}
+
+.edit-profile-btn {
+  align-self: flex-start; /* 使按钮左对齐 */
+  margin-top: 4px;
+}
+
+/* 响应式调整 */
+@media (max-width: 600px) {
+  .username-and-badge {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .username {
+    font-size: 22px;
+  }
+  
+  .user-profile-wrapper {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .edit-profile-btn {
+    align-self: center;
+  }
 }
 </style>
