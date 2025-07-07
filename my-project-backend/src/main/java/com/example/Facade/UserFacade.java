@@ -41,6 +41,7 @@ public class UserFacade {
         account.setProvince(req.getProvince());
         account.setCity(req.getCity());
         account.setCounty(req.getCounty());
+        account.setIndustryCode(req.getIndustryCode());
         return accountService.updateById(account);
     }
 }

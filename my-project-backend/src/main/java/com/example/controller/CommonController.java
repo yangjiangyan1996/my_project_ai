@@ -9,6 +9,7 @@ import com.example.entity.req.SearchUserReq;
 import com.example.entity.resp.EnumResp;
 import com.example.entity.resp.MyMemberGroupsResp;
 import com.example.entity.resp.UserSearchResp;
+import com.example.enums.CommonEnum;
 import com.example.enums.ProjectEnum;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
@@ -66,6 +67,18 @@ public class CommonController {
     @GetMapping("/difficulty")
     public RespBean<List<EnumResp>> getAllDifficulties() {
         List<EnumResp> collect = Arrays.stream(ProjectEnum.ProjectDifficultyEnum.values()).map(v -> {
+                    EnumResp r = new EnumResp();
+                    r.setCode(v.getCode());
+                    r.setDesc(v.getName());
+                    return r;
+                }).sorted(Comparator.comparingInt(EnumResp::getCode))
+                .collect(Collectors.toList());
+        return RespBean.success(collect);
+    }
+
+    @GetMapping("/industrys")
+    public RespBean<List<EnumResp>> getIndustrys() {
+        List<EnumResp> collect = Arrays.stream(CommonEnum.IndustryEnum.values()).map(v -> {
                     EnumResp r = new EnumResp();
                     r.setCode(v.getCode());
                     r.setDesc(v.getName());

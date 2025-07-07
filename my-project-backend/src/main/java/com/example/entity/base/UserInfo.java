@@ -14,4 +14,5 @@ public class UserInfo implements Serializable {
     private String username;
     private String nikeName;
     private String role;
+    private String industryName;
 }

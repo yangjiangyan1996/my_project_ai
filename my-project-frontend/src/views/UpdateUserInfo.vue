@@ -30,6 +30,18 @@
           </el-radio-group>
         </el-form-item>
 
+        <el-form-item label="行业" prop="industryCode">
+          <el-select v-model="userForm.industryCode" placeholder="请选择行业">
+            <el-option
+              v-for="item in industryOptions"
+              :key="item.code"
+              :label="item.desc"
+              :value="item.code"
+            />
+          </el-select>
+        </el-form-item>
+
+
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="userForm.email" placeholder="请输入邮箱"></el-input>
         </el-form-item>
@@ -81,6 +93,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { get, post } from '@/net'
 
 const router = useRouter()
+const industryOptions = ref([]) // ✅ 下拉行业选项数据
 
 // 表单数据
 const userForm = ref({
@@ -93,8 +106,19 @@ const userForm = ref({
   phone: '',
   province: '',
   city: '',
-  county: ''
+  county: '',
+  industryCode: ''
 })
+
+// 获取行业列表
+const fetchIndustryOptions = async () => {
+  try {
+    const res = await get('/api/auth/common/industrys')
+    industryOptions.value = res || []
+  } catch (e) {
+    ElMessage.error('加载行业选项失败')
+  }
+}
 
 // 表单验证规则
 const rules = {
@@ -129,7 +153,8 @@ const fetchUserInfo = async () => {
       phone: res.phone || '',
       province: res.province || '',
       city: res.city || '',
-      county: res.county || ''
+      county: res.county || '',
+      industryCode: res.industryCode || ''
     }
   } catch (error) {
     ElMessage.error('获取用户信息失败')
@@ -193,7 +218,8 @@ const goBack = () => {
 
 // 初始化加载用户数据
 onMounted(() => {
-  fetchUserInfo()
+  fetchUserInfo();
+  fetchIndustryOptions();
 })
 </script>
 

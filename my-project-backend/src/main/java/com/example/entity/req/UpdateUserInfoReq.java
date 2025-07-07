@@ -14,6 +14,7 @@ public class UpdateUserInfoReq {
     String username;
     String nickname;
     Integer sex;
+    Long industryCode;
     String avatarUrl;
     String phone;
     String province;

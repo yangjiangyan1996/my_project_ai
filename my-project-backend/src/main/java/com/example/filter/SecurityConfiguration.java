@@ -4,6 +4,7 @@ import com.example.config.Config;
 import com.example.entity.RestBean;
 import com.example.entity.dto.Account;
 import com.example.entity.vo.response.AuthorizeVO;
+import com.example.enums.CommonEnum;
 import com.example.service.AccountService;
 import com.example.utils.JwtUtils;
 import jakarta.annotation.Resource;
@@ -104,7 +105,7 @@ public class SecurityConfiguration {
         } else if (exceptionOrAuthentication instanceof Authentication authentication) {
             User user = (User) authentication.getPrincipal();
             Account account = service.findAccountByNameOrEmail(user.getUsername());
-            String jwt = utils.createJwt(user, account.getUsername(), account.getNickname(), account.getId(), account.getRole());
+            String jwt = utils.createJwt(user, account.getUsername(), account.getNickname(), account.getId(), account.getRole(), CommonEnum.IndustryEnum.getByCode(account.getIndustryCode()));
             if (jwt == null) {
                 writer.write(RestBean.forbidden("登录验证频繁，请稍后再试").asJsonString());
             } else {

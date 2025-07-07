@@ -16,6 +16,7 @@ public class UserAllInfo {
     String username;
     String nickname;
     String avatarUrl;
+    Long industryCode;
     Integer sex;
     String email;
     String phone;
