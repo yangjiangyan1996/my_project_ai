@@ -11,4 +11,5 @@ import lombok.Data;
  */
 @Data
 public class MyMemberGroupsReq extends PageReq {
+    private Long secrecyId;
 }

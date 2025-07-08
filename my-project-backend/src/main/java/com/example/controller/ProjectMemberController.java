@@ -1,6 +1,7 @@
 package com.example.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.Facade.CommonFacade;
 import com.example.Facade.ProjectMemberFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
@@ -8,7 +9,6 @@ import com.example.entity.req.AddMemberByManagerReq;
 import com.example.entity.req.MyMemberGroupsReq;
 import com.example.entity.req.RemoveMemberReq;
 import com.example.entity.resp.MemberListResp;
-import com.example.entity.resp.MyCountResp;
 import com.example.entity.resp.MyMemberGroupsResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
@@ -28,6 +28,8 @@ import org.springframework.web.bind.annotation.*;
 public class ProjectMemberController {
 
     @Resource
+    CommonFacade commonFacade;
+    @Resource
     private ProjectMemberFacade projectMemberFacade;
 
     @PostMapping("/addMemberByManager")
@@ -37,10 +39,10 @@ public class ProjectMemberController {
             Boolean result = projectMemberFacade.addMemberByManager(req, user.getId());
             return RespBean.success(result);
         } catch (ValidationException e) {
-            log.error("ProjectMemberController#addMemberByManager,req:{}", req,e);
+            log.error("ProjectMemberController#addMemberByManager,req:{}", req, e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("ProjectMemberController#addMemberByManager, error",e);
+            log.error("ProjectMemberController#addMemberByManager, error", e);
             return RespBean.failure(999, e.getMessage());
         }
     }
@@ -48,14 +50,20 @@ public class ProjectMemberController {
     @PostMapping("/myMemberGroups")
     public RespBean<Page<MyMemberGroupsResp>> myMemberGroups(@RequestBody MyMemberGroupsReq req) {
         try {
-            UserInfo user = UserUtil.getCurrentUser();
-            Page<MyMemberGroupsResp> list = projectMemberFacade.myMemberGroups(req, user.getId());
+            Long userId = null;
+            if (req.getSecrecyId() != null) {
+                userId = commonFacade.getUserIdBySecrecyId(req.getSecrecyId());
+            } else {
+                userId = UserUtil.getCurrentUser().getId();
+            }
+
+            Page<MyMemberGroupsResp> list = projectMemberFacade.myMemberGroups(req, userId);
             return RespBean.success(list);
         } catch (ValidationException e) {
-            log.error("ProjectMemberController#myMemberGroups,req:{}", req,e);
+            log.error("ProjectMemberController#myMemberGroups,req:{}", req, e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("ProjectMemberController#myPublished, error",e);
+            log.error("ProjectMemberController#myPublished, error", e);
             return RespBean.failure(999, e.getMessage());
         }
     }
@@ -65,13 +73,13 @@ public class ProjectMemberController {
     public RespBean<Boolean> removeMember(@RequestBody RemoveMemberReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            Boolean result = projectMemberFacade.removeMember(req,user.getId());
+            Boolean result = projectMemberFacade.removeMember(req, user.getId());
             return RespBean.success(result);
         } catch (ValidationException e) {
-            log.error("ProjectMemberController#removeMember,req:{}", req,e);
+            log.error("ProjectMemberController#removeMember,req:{}", req, e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("ProjectMemberController#removeMember,req:{}", req,e);
+            log.error("ProjectMemberController#removeMember,req:{}", req, e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -80,13 +88,13 @@ public class ProjectMemberController {
     public RespBean<MemberListResp> memberList(@RequestParam Long projectId) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            MemberListResp result = projectMemberFacade.memberList(projectId,user.getId());
+            MemberListResp result = projectMemberFacade.memberList(projectId, user.getId());
             return RespBean.success(result);
         } catch (ValidationException e) {
-            log.error("ProjectMemberController#memberList,req:{}", projectId,e);
+            log.error("ProjectMemberController#memberList,req:{}", projectId, e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("ProjectMemberController#memberList,req:{}", projectId,e);
+            log.error("ProjectMemberController#memberList,req:{}", projectId, e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

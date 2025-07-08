@@ -11,4 +11,5 @@ import lombok.Data;
  */
 @Data
 public class MyPublishedPageReq extends PageReq {
+    private Long secrecyId;
 }

@@ -2,6 +2,7 @@ package com.example.controller;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.Facade.CommonFacade;
 import com.example.Facade.ProjectFacade;
 import com.example.config.QqMailService;
 import com.example.entity.base.RespBean;
@@ -27,12 +28,13 @@ import java.util.stream.Collectors;
 public class ProjectController {
 
     @Resource
+    CommonFacade commonFacade;
+    @Resource
     private QqMailService qqMailService;
     @Resource
     ProjectFacade projectFacade;
     @Resource
     private ProjectService projectService;
-
 
 
     @GetMapping("/getMyCount")
@@ -242,10 +244,16 @@ public class ProjectController {
     }
 
     @GetMapping("/getProjectOfMyShow")
-    public RespBean<ProjectOfMyShowGetResp> getProjectOfMyShow() {
+    public RespBean<ProjectOfMyShowGetResp> getProjectOfMyShow(@RequestParam(value = "secrecyId", required = false) Long secrecyId) {
         try {
-            UserInfo user = UserUtil.getCurrentUser();
-            ProjectOfMyShowGetResp result = projectFacade.getProjectOfMyShow(user.getId());
+            Long userId = null;
+            if (secrecyId != null) {
+                userId = commonFacade.getUserIdBySecrecyId(secrecyId);
+            } else {
+                userId = UserUtil.getCurrentUser().getId();
+            }
+
+            ProjectOfMyShowGetResp result = projectFacade.getProjectOfMyShow(userId);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ProjectController#applyJoinProject,req:{}", e);
@@ -355,6 +363,7 @@ public class ProjectController {
             log.error("ProjectController#commentShow,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
+            log.error("ProjectController#commentShow,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

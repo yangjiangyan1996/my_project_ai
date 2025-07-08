@@ -1,10 +1,12 @@
 package com.example.controller;
 
+import com.example.Facade.CommonFacade;
 import com.example.Facade.UserFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.req.UpdateUserInfoReq;
 import com.example.entity.resp.UserAllInfo;
+import com.example.enums.CommonEnum;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth/user")
 public class UserController {
 
+    @Resource
+    CommonFacade commonFacade;
     @Resource
     UserFacade userFacade;
 
@@ -55,6 +59,25 @@ public class UserController {
     public RespBean<UserInfo> getCurrentUserInfo() {
         try {
             UserInfo user = UserUtil.getCurrentUser();
+            return RespBean.success(user);
+        } catch (ValidationException e) {
+            log.error("ProjectController#getCurrentUserInfo,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#getCurrentUserInfo,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @GetMapping("/getSecrecyIdUserInfo")
+    public RespBean<UserInfo> getCurrentUserInfo(@RequestParam(value = "secrecyId", required = false) Long secrecyId) {
+        try {
+            Long userIdBySecrecyId = commonFacade.getUserIdBySecrecyId(secrecyId);
+            UserAllInfo userAllInfo = userFacade.getUserAllInfo(userIdBySecrecyId);
+            UserInfo user = new UserInfo();
+            user.setUsername(userAllInfo.getUsername());
+            user.setIndustryName(CommonEnum.IndustryEnum.getByCode(userAllInfo.getIndustryCode()));
+            user.setAvatarUrl(userAllInfo.getAvatarUrl());
             return RespBean.success(user);
         } catch (ValidationException e) {
             log.error("ProjectController#getCurrentUserInfo,req:{}", e);

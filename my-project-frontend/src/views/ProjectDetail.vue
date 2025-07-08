@@ -111,7 +111,7 @@
           <div class="comment-header">
             <div class="comment-user">
               <el-avatar :src="comment.avatar" size="small" class="user-avatar">{{ comment.username.charAt(0) }}</el-avatar>
-              <strong class="username">{{ comment.username }}</strong>
+              <strong class="username"  @click.stop="goToUserProfile(comment.secrecyId)">{{ comment.username }}</strong>
               <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
             </div>
             <span v-if="comment.deleted" class="deleted">该评论已被删除</span>
@@ -160,7 +160,7 @@
             <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
               <div class="comment-user">
                 <el-avatar :src="reply.avatar" size="small" class="user-avatar">{{ reply.username.charAt(0) }}</el-avatar>
-                <strong class="username">{{ reply.username }}</strong>
+                <strong class="username"  @click.stop="goToUserProfile(reply.secrecyId)">{{ reply.username }}</strong>
                 <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
               </div>
               <span v-if="reply.deleted" class="deleted">该评论已被删除</span>
@@ -279,6 +279,11 @@ onMounted(async () => {
   fetchDetail();
   fetchComments();
 });
+
+const goToUserProfile = (userId) => {
+  console.log("访问用户详情页",userId)
+  router.push(`/index/user/${userId}`)
+}
 
 // 获取申请按钮文本
 const getApplyButtonText = (status) => {

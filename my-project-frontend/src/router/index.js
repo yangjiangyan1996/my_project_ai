@@ -85,6 +85,11 @@ const router = createRouter({
             name: 'myMemberGroupDetail',
             component: () => import('@/views/MyMemberGroupDetail.vue'),
             meta: { requiresAuth: true }
+        },{
+            path: '/index/user/:id',
+            name: 'userProfile',
+            component: () => import('@/views/UserProfile.vue'),
+            meta: { requiresAuth: true }
         }
     ]
 })

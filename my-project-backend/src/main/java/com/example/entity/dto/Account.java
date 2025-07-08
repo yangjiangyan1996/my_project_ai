@@ -20,6 +20,7 @@ import java.util.Date;
 public class Account implements BaseData {
     @TableId(type = IdType.AUTO)
     Long id;
+    Long secrecyId;
     String username;
     String password;
     String nickname;

@@ -115,8 +115,15 @@ public class ProjectFacade {
         List<ProjectComment> all = projectCommentService.selectByProjectId(projectId)
                 .stream()
                 .collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(all)) {
+            return new ArrayList<>();
+        }
         List<ProjectCommentLike> likes = projectCommentLikeService.selectByProjectId(projectId);
 
+
+        List<Long> userIds = all.stream().map(v -> v.getUserId()).distinct().collect(Collectors.toList());
+        List<Account> userInfoList = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = userInfoList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
 
         // 1. 映射全部评论
         Map<Long, List<ProjectCommentLike>> commentId2LikeListMap = likes.stream().collect(Collectors.groupingBy(ProjectCommentLike::getCommentId));
@@ -126,7 +133,7 @@ public class ProjectFacade {
                 .filter(c -> c.getReplyTo() < 0)
                 .collect(Collectors.toMap(
                         ProjectComment::getId,
-                        c -> convertToVO(c, currentUserId, commentId2LikeListMap)
+                        c -> convertToVO(c, currentUserId, commentId2LikeListMap, userId2UserInfoMap)
                 ));
 
         // 构建第二层评论（first_level_common_id对应第一层ID）
@@ -135,7 +142,7 @@ public class ProjectFacade {
                 .collect(Collectors.groupingBy(
                         ProjectComment::getFirstLevelCommonId,
                         Collectors.mapping(
-                                c -> convertToVO(c, currentUserId, commentId2LikeListMap),
+                                c -> convertToVO(c, currentUserId, commentId2LikeListMap, userId2UserInfoMap),
                                 Collectors.toList()
                         )
                 ));
@@ -161,7 +168,7 @@ public class ProjectFacade {
                 .collect(Collectors.toList());
     }
 
-    private ProjectCommentResp convertToVO(ProjectComment comment, Long currentUserId, Map<Long, List<ProjectCommentLike>> commentId2LikeListMap) {
+    private ProjectCommentResp convertToVO(ProjectComment comment, Long currentUserId, Map<Long, List<ProjectCommentLike>> commentId2LikeListMap, Map<Long, Account> userId2UserInfoMap) {
         ProjectCommentResp vo = new ProjectCommentResp();
         vo.setId(comment.getId());
         vo.setProjectId(comment.getProjectId());
@@ -173,6 +180,7 @@ public class ProjectFacade {
         vo.setLikes(commentId2LikeListMap.containsKey(comment.getId()) ? commentId2LikeListMap.get(comment.getId()).size() : 0);
         vo.setIsMine(comment.getUserId().equals(currentUserId));
         vo.setFirstLevelCommonId(comment.getFirstLevelCommonId());
+        vo.setSecrecyId(userId2UserInfoMap.get(comment.getUserId()).getSecrecyId());
 
         // 获取用户昵称头像
         Account account = accountService.selectById(comment.getUserId());
@@ -417,7 +425,7 @@ public class ProjectFacade {
         return result;
     }
 
-    public Boolean applyJoinProject(Long projectId,String message, Long userid) {
+    public Boolean applyJoinProject(Long projectId, String message, Long userid) {
         ProjectsDetail pd = projectsDetailService.selectByProjectId(projectId);
         if (pd == null) {
             throw new ValidationException("项目不存在");
@@ -439,7 +447,7 @@ public class ProjectFacade {
         }
 
         ProjectApplications p = projectApplicationsService.selectByProjectIdAndUserId(projectId, userid);
-        if(p != null) {
+        if (p != null) {
             if (p.getStatus().equals(ProjectEnum.ProjectApplyStatusEnum.WAIT_AUDIT.getCode())) {
                 throw new ValidationException("请勿重复申请");
             } else {
@@ -556,7 +564,7 @@ public class ProjectFacade {
         projectApplicationsService.updateStatus(req.getId(), ProjectEnum.ProjectApplyStatusEnum.APPROVED.getCode(), pa.getUserId());
 
         if (Boolean.TRUE.equals(projectFull(project.getId()))) {
-            projectApplicationsService.updateStatusByProjectId(ProjectEnum.ProjectApplyStatusEnum.REJECTED.getCode(), project.getId(),ProjectEnum.ProjectApplyStatusEnum.APPROVED.getCode());
+            projectApplicationsService.updateStatusByProjectId(ProjectEnum.ProjectApplyStatusEnum.REJECTED.getCode(), project.getId(), ProjectEnum.ProjectApplyStatusEnum.APPROVED.getCode());
         }
         return true;
     }
@@ -571,7 +579,7 @@ public class ProjectFacade {
     public Boolean projectFull(Long projectId) {
         ProjectsDetail pd = projectsDetailService.selectByProjectId(projectId);
         List<ProjectMembers> members = projectMembersService.selectByProjectId(projectId, ProjectEnum.MemberStatusEnum.IN.getCode());
-        if (!CollectionUtils.isEmpty(members) && pd.getMemberNum() <= (members.size() -1)) {
+        if (!CollectionUtils.isEmpty(members) && pd.getMemberNum() <= (members.size() - 1)) {
             return true;
         } else {
             return false;

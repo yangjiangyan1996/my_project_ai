@@ -21,7 +21,7 @@
             <!-- 用户信息部分 -->
             <div class="user-info-wrapper">
               <div class="user-info-main">
-                <h1 class="username">{{ userInfo.data?.nikeName || '用户名' }}</h1>
+                <h1 class="username">{{ userInfo.data?.username || '用户名' }}</h1>
                 <div class="industry-badge">
                   <el-tag 
                     v-if="userInfo.data?.industryName"
@@ -42,18 +42,6 @@
                 </div>
               </div>
               
-              <!-- 编辑按钮 -->
-              <el-button 
-                type="primary" 
-                size="small" 
-                @click="goToUpdateUserInfo"
-                class="edit-profile-btn"
-                plain
-                round
-              >
-                <el-icon><Edit /></el-icon>
-                <span>编辑资料</span>
-              </el-button>
             </div>
           </div>
         </div>
@@ -93,12 +81,12 @@
                 <div class="activity-detail">{{ item.description }}</div>
 
                 <!-- 如果是拒绝，展示理由 -->
-                <div v-if="item.status === 2" class="activity-reason">
+                <!-- <div v-if="item.status === 2" class="activity-reason">
                   <strong>拒绝理由：</strong>{{ item.reason || '无' }}
-                </div>
+                </div> -->
 
                 <!-- 重新编辑按钮 -->
-                <el-button
+                <!-- <el-button
                   v-if="item.status === 2"
                   type="primary"
                   size="small"
@@ -106,7 +94,7 @@
                   style="margin-top: 8px"
                 >
                   重新编辑
-                </el-button>
+                </el-button> -->
 
                 <div class="activity-meta">
                   <span>👍 已赞同 {{ item.likeCount }}</span>
@@ -193,9 +181,9 @@
           <div class="sidejob-description">选择你的路径：发起副业项目，或加入有趣团队</div>
           <div class="sidejob-buttons">
             <!-- 发起副业 - 使用火箭表示开始新事物，保持primary蓝色 -->
-            <el-button type="primary" size="large" @click="goToCreateSidejob">
+            <!-- <el-button type="primary" size="large" @click="goToCreateSidejob">
               🚀 发起副业
-            </el-button>
+            </el-button> -->
             
             <!-- 找团队 - 使用握手符号表示合作，改为info天蓝色 -->
             <el-button type="info" size="large" @click="toggleIntentForm">
@@ -203,24 +191,24 @@
             </el-button>
 
             <!-- 审核 - 使用警徽表示审核权限，使用warning黄色 -->
-            <el-button type="warning" size="large" @click="goToApplyList" style="margin-left: 0px;">
+            <!-- <el-button type="warning" size="large" @click="goToApplyList" style="margin-left: 0px;">
               🛡️ 我审核的（{{ stats.applyCount || 0 }}）
-            </el-button>
+            </el-button> -->
 
             <!-- 我申请的 - 使用文档符号表示申请记录，使用success绿色 -->
-            <el-button type="success" size="large" @click="goToApplicationList">
+            <!-- <el-button type="success" size="large" @click="goToApplicationList">
               📄 我申请的
-            </el-button>
+            </el-button> -->
 
             <!-- 管理员审核 - 使用星标表示管理员权限，使用danger红色 -->
-            <el-button 
+            <!-- <el-button 
               type="danger" 
               size="large" 
               @click="goToAdminApplyList"
               v-if="userInfo.data?.role === 'ADMIN'"
             >
               ⭐ 去审核用户发布的帖子
-            </el-button>
+            </el-button> -->
           </div>
 
           <!-- 意向表单区域 -->
@@ -246,7 +234,7 @@
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">可投入时间：</span>
-                    <span class="intent-value">{{ form.time || '未填写' }}</span>
+                    <span class="intent-value">{{ form.timePerDay || '未填写' }}</span>
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">个人技能：</span>
@@ -257,25 +245,7 @@
                     <span class="intent-value">{{ form.resources || '未填写' }}</span>
                   </div>
                   
-                  <div class="intent-actions">
-                    <el-button 
-                      v-if="form.status === 0"
-                      type="success" 
-                      @click="changeShowStatus"
-                      :loading="publishing"
-                    >
-                      发布到广场
-                    </el-button>
-                    <el-button 
-                      type="primary" 
-                      @click="editMode = true"
-                    >
-                      编辑意向
-                    </el-button>
-                    <el-tag v-if="form.published" type="success" class="published-tag">
-                      <el-icon><SuccessFilled /></el-icon> 已发布
-                    </el-tag>
-                  </div>
+                  
                 </div>
               </template>
               
@@ -320,20 +290,7 @@
                     <el-radio :label="0">不发布</el-radio>
                   </el-radio-group>
                 </el-form-item>
-                <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    @click="submitIntent(false)"
-                    :loading="submitting"
-                  >
-                    {{ hasSubmitted ? '更新信息' : '保存信息' }}
-                  </el-button>
-                  <el-button 
-                    @click="cancelEdit"
-                  >
-                    取消
-                  </el-button>
-                </el-form-item>
+               
               </el-form>
             </el-card>
           </div>
@@ -360,15 +317,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+
+
+
+
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Suitcase, SuccessFilled } from '@element-plus/icons-vue'
 import { post, get } from '@/net'
 import { ElMessage } from 'element-plus'
 import useUserInfo from '@/hooks/useUserInfo';
+
+
 const { state: userInfo, loadUserInfo } = useUserInfo();
-
-
+const route = useRoute()
 const router = useRouter()
 const teamList = ref([])
 const teamPage = ref(1)
@@ -385,11 +347,14 @@ const hasSubmitted = ref(false)
 const submitting = ref(false)
 const publishing = ref(false)
 
+// 用户ID从路由参数获取
+const secrecyId = ref(route.params.id)
+const isCurrentUser = computed(() => userId.value === userInfo.data?.id)
 
 const form = ref({
   id:'',
   audience: '',
-  time: '',
+  timePerDay: '',
   skills: '',
   resources: '',
   
@@ -409,6 +374,7 @@ const fetchTeamData = async () => {
   try {
     teamLoading.value = true
     const res = await post('/api/auth/projectMember/myMemberGroups', {
+        secrecyId:secrecyId.value,
       page: teamPage.value,
       size: teamSize.value
     })
@@ -458,29 +424,19 @@ const goToApplicationList = () => {
   router.push('/index/my/applicationList')
 }
 
-// 新增获取统计数据方法
-const fetchMyCount = async () => {
+
+
+//加载用户名称和头像
+const fetchUserInfo = async () => {
   try {
-    const res = await get('/api/auth/project/getMyCount')
-    stats.value.applyCount = res.applyCount || 0
-    stats.value.applicationCount = res.applicationCount || 0
+    const res = await get(`/api/auth/user/getSecrecyIdUserInfo?secrecyId=${secrecyId.value}`);
+    console.log("res",res)
+    userInfo.data = res
   } catch (error) {
-    console.error('获取统计数据失败:', error)
+    console.error('获取用户信息失败:', error)
   }
 }
 
-// 加载用户意向数据
-const changeShowStatus = async () => {
-  try {
-    const res = await get(`/api/auth/project/changeShowStatus?projectShowId=${form.value.id}&status=1`);
-    if (res) {
-      ElMessage.success(res || '操作成功');
-      form.value.status = 1
-    }
-  } catch (error) {
-    console.error('加载意向数据失败:', error)
-  }
-}
 
 // 统计数据
 const stats = ref({
@@ -498,12 +454,12 @@ const stats = ref({
 // 加载用户意向数据
 const loadIntentData = async () => {
   try {
-    const res = await get('/api/auth/project/getProjectOfMyShow')
+    const res = await get(`/api/auth/project/getProjectOfMyShow?secrecyId=${secrecyId.value}`);
     if (res) {
       form.value = {
         id:res.id||'',
         audience: res.audience || '',
-        time: res.time || '',
+        timePerDay: res.timePerDay || '',
         skills: res.skills || '',
         resources: res.resources || '',
         status: res.status ? 1 : 0
@@ -515,24 +471,7 @@ const loadIntentData = async () => {
   }
 }
 
-// 提交意向表单
-const submitIntent = async () => {
-  try {
-    submitting.value = true
-    
-    await post('/api/auth/project/updateProjectOfMyShow', form.value)
-    
-    // form.value.status = 1
-    hasSubmitted.value = true
-    editMode.value = false
-    
-    ElMessage.success(form.value.status === 1 ? '已发布到广场' : '信息已保存')
-  } catch (error) {
-    ElMessage.error('操作失败，请稍后重试')
-  } finally {
-    submitting.value = false
-  }
-}
+
 
 // 切换表单显示
 const toggleIntentForm = () => {
@@ -579,7 +518,7 @@ const noMoreLike = ref(false)
 
 const fetchFollowCount = async () => {
   try {
-    const res = await get('/api/auth/my/myFollowCount')
+    const res = await get(`/api/auth/my/myFollowCount?secrecyId=${secrecyId.value}`);
     followerCount.value = res.followerCount || 0
     followeeCount.value = res.followeeCount || 0
   } catch (error) {
@@ -618,6 +557,7 @@ const fetchPublishData = async () => {
   try {
     loading.value = true
     const res = await post('/api/auth/my/myPublished', {
+      secrecyId:secrecyId.value,
       page: publishPage.value,
       size: publishSize.value
     })
@@ -633,6 +573,7 @@ const fetchFavoritesData = async () => {
   try {
     favoritesLoading.value = true
     const res = await post('/api/auth/my/myFavorites', {
+        secrecyId:secrecyId.value,
       page: favoritesPage.value,
       size: favoritesSize.value
     })
@@ -648,6 +589,7 @@ const fetchLikeData = async () => {
   try {
     likeLoading.value = true
     const res = await post('/api/auth/my/myLike', {
+        secrecyId:secrecyId.value,
       page: likePage.value,
       size: likeSize.value
     })
@@ -675,13 +617,14 @@ onMounted(() => {
     loadUserInfo().then(() => {
       fetchPublishData()
       fetchFollowCount()
-      fetchMyCount()
+    
+    fetchUserInfo();
       loadIntentData()
     });
   } else {
     fetchPublishData()
     fetchFollowCount()
-    fetchMyCount()
+     fetchUserInfo();
     loadIntentData()
   }
 });

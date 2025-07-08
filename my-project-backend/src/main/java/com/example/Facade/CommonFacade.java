@@ -22,9 +22,13 @@ public class CommonFacade {
     @Resource
     AccountService accountService;
 
+    public Long getUserIdBySecrecyId(Long secrecyId) {
+        return accountService.selectBySecrecyId(secrecyId).getId();
+    }
+
     public List<UserSearchResp> myMemberGroups(SearchUserReq req) {
         List<Account> list = accountService.searchByReq(req);
-        return list.stream().map(v->{
+        return list.stream().map(v -> {
             UserSearchResp memberInfo = new UserSearchResp();
             memberInfo.setId(v.getId());
             memberInfo.setUsername(v.getUsername());
