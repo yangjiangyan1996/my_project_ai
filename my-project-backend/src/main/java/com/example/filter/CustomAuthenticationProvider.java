@@ -39,7 +39,7 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
             return new UsernamePasswordAuthenticationToken(
                     user, password, user.getAuthorities());
         } else {
-            throw new BadCredentialsException("Authentication failed");
+            throw new BadCredentialsException("用户名或者密码错误！");
         }
     }
 

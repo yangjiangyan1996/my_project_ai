@@ -67,7 +67,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Account account = this.findAccountByNameOrEmail(username);
         if(account == null) {
-            throw new UsernameNotFoundException("用户名或密码错误");
+            throw new UsernameNotFoundException("用户名不存在");
         }
         UserDetails build = User
                 .withUsername(username)
