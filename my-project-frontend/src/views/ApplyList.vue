@@ -1,13 +1,14 @@
 <template>
   <div class="apply-list-container">
-    <el-page-header @click="goBack" title="返回个人中心">
+    <el-page-header @click="goBack" title="返回个人中心" class="page-header">
       <template #content>
         <span class="page-title">我的审核列表</span>
+        <div class="page-subtitle">查看和管理团队成员申请</div>
       </template>
     </el-page-header>
 
     <div class="list-container">
-      <el-card class="list-card">
+      <el-card class="list-card" shadow="hover">
         <div
           class="infinite-list"
           v-infinite-scroll="loadMore"
@@ -21,11 +22,19 @@
             @mouseleave="hoveredItem = null"
           >
             <div class="apply-header">
-              <el-avatar :src="item.avatar" size="small">
-                {{ item.username?.charAt(0) }}
+              <el-avatar 
+                :src="item.avatar" 
+                size="medium"
+                :style="{
+                  backgroundColor: item.avatar ? 'transparent' : '#409EFF',
+                  color: 'white',
+                  fontSize: '18px'
+                }"
+              >
+                {{ item.username?.charAt(0) || '用' }}
               </el-avatar>
               <div class="user-info">
-                <div class="username">{{ item.username }}</div>
+                <div class="username">{{ item.username || '用户名' }}</div>
                 <div class="apply-time">{{ formatTime(item.applyTime) }}</div>
               </div>
             </div>
@@ -33,19 +42,19 @@
             <div class="apply-content">
               <div class="project-info">
                 <span class="label">申请项目：</span>
-                <span class="value strong">{{ item.projectName }}</span>
+                <span class="value strong">{{ item.projectName || '未命名项目' }}</span>
               </div>
               <div class="project-desc">
                 <span class="label">项目简介：</span>
-                <span class="value strong">{{ item.description }}</span>
+                <span class="value">{{ item.description || '暂无描述' }}</span>
               </div>
               <div class="message">
                 <span class="label">申请留言：</span>
-                <span class="value strong">{{ item.message || '无留言' }}</span>
+                <span class="value">{{ item.message || '无留言' }}</span>
               </div>
               <div class="applyUser">
                 <span class="label">申请人：</span>
-                <span class="value strong">{{ item.userName || '匿名' }}</span>
+                <span class="value strong">{{ item.userName || '匿名用户' }}</span>
               </div>
             </div>
 
@@ -60,12 +69,34 @@
             </div>
 
             <div class="apply-actions" v-if="item.status === 0">
-              <el-button type="success" size="small" @click="handleApprove(item.id)">通过</el-button>
-              <el-button type="danger" size="small" @click="handleReject(item.id)">拒绝</el-button>
+              <el-button 
+                type="success" 
+                size="small" 
+                @click="handleApprove(item.id)"
+                plain
+                round
+              >
+                <el-icon><CircleCheck /></el-icon>
+                <span>通过</span>
+              </el-button>
+              <el-button 
+                type="danger" 
+                size="small" 
+                @click="handleReject(item.id)"
+                plain
+                round
+              >
+                <el-icon><CircleClose /></el-icon>
+                <span>拒绝</span>
+              </el-button>
             </div>
 
             <div class="apply-status">
-              <el-tag :type="getStatusType(item.status)" size="small">
+              <el-tag 
+                :type="getStatusType(item.status)" 
+                size="small"
+                :effect="item.status === 1 ? 'dark' : 'plain'"
+              >
                 {{ getStatusText(item.status) }}
               </el-tag>
             </div>
@@ -87,7 +118,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { post } from '@/net'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
+import { Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -202,12 +233,34 @@ onMounted(() => {
 .apply-list-container {
   max-width: 1000px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
+  background-color: #fff;
+  min-height: 100vh;
+}
+
+.page-header {
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ebebeb;
+  margin-bottom: 24px;
+  cursor: pointer;
+}
+
+.page-header :deep(.el-page-header__content) {
+  font-size: 0;
 }
 
 .page-title {
-  font-size: 18px;
-  font-weight: 500;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  display: block;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #606266;
+  margin-top: 8px;
+  display: block;
 }
 
 .list-container {
@@ -216,101 +269,162 @@ onMounted(() => {
 
 .list-card {
   border-radius: 8px;
+  border: none;
+  background-color: #f6f6f6;
 }
 
 .apply-item {
-  padding: 16px;
-  border-bottom: 1px solid #f0f2f7;
+  padding: 20px;
+  border-bottom: 1px solid #ebebeb;
   position: relative;
+  background-color: #fff;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
 }
 
-.apply-item:last-child {
-  border-bottom: none;
+.apply-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .apply-header {
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .user-info {
-  margin-left: 10px;
+  margin-left: 12px;
 }
 
 .username {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
+  color: #303133;
 }
 
 .apply-time {
-  font-size: 12px;
+  font-size: 13px;
   color: #8590a6;
+  margin-top: 4px;
 }
 
 .apply-content {
-  margin-left: 42px;
+  margin-left: 52px;
 }
 
-.project-info, .message {
-  margin-bottom: 8px;
+.project-info, 
+.project-desc, 
+.message, 
+.applyUser {
+  margin-bottom: 10px;
   font-size: 14px;
+  display: flex;
 }
 
 .label {
   color: #606266;
   font-weight: 500;
+  min-width: 80px;
 }
 
 .value {
   color: #303133;
+  flex: 1;
 }
 
 .strong {
-  color: #1f2d3d;
+  color: #1a1a1a;
   font-weight: 600;
 }
 
 .apply-actions {
-  margin-top: 12px;
-  margin-left: 42px;
+  margin-top: 16px;
+  margin-left: 52px;
+  display: flex;
+  gap: 12px;
 }
 
 .apply-status {
-  margin-top: 8px;
-  margin-left: 42px;
+  position: absolute;
+  top: 20px;
+  right: 20px;
 }
 
 .hover-info {
-  position: absolute;
-  right: 20px;
-  top: 16px;
-  background: #fff;
-  border: 1px solid #ebeef5;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  background-color: #f8f9fa;
+  border-radius: 6px;
   padding: 12px;
-  border-radius: 8px;
-  z-index: 100;
-  width: 240px;
+  margin-top: 12px;
   font-size: 13px;
   color: #606266;
   line-height: 1.6;
+  border-left: 3px solid #409EFF;
 }
 
-.loading-more, .no-more {
+.hover-info p {
+  margin-bottom: 6px;
+}
+
+.hover-info b {
+  color: #303133;
+  font-weight: 500;
+  min-width: 80px;
+  display: inline-block;
+}
+
+.loading-more, 
+.no-more {
   text-align: center;
-  padding: 10px 0;
+  padding: 20px 0;
   color: #8590a6;
   font-size: 14px;
 }
 
 .loading-more .el-icon {
-  margin-right: 5px;
+  margin-right: 8px;
   animation: rotating 2s linear infinite;
 }
 
 @keyframes rotating {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .apply-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .user-info {
+    margin-left: 0;
+    margin-top: 10px;
+  }
+  
+  .apply-content {
+    margin-left: 0;
+  }
+  
+  .apply-actions {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+  
+  .apply-status {
+    position: static;
+    margin-top: 10px;
+  }
+  
+  .label {
+    min-width: 70px;
+  }
+  
+  .hover-info {
+    position: static;
+    width: auto;
+  }
 }
 </style>

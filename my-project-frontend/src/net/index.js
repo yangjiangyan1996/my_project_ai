@@ -92,7 +92,6 @@ function deleteAccessToken(redirect = false) {
 
 function internalPost(url, data, headers, success = () => {}, failure = defaultFailure, error = defaultError) {
     return axios.post(url, data, { headers: headers }).then(({ data: responseData }) => {
-        console.log("接口调用1成功", responseData);
         if (responseData.code === 200) {
             success(responseData.data);
             return responseData.data;
@@ -114,7 +113,6 @@ function internalPost(url, data, headers, success = () => {}, failure = defaultF
 
 function internalGet(url, headers, success = () => {}, failure = defaultFailure, error = defaultError) {
     return axios.get(url, { headers: headers }).then(({ data: responseData }) => {
-         console.log("接口调用2成功", responseData);
         if (responseData.code === 200) {
             success(responseData.data);
             return responseData.data;
