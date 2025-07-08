@@ -44,7 +44,8 @@
         <el-menu-item index="ai-assistant" @click="router.push({ name: 'ai-assistant' })">副业推荐助手</el-menu-item>
       </el-sub-menu>
 
-      <el-menu-item index="wodefuye" @click="router.push({ name: 'my' })">
+      <!-- <el-menu-item index="wodefuye"  @click="router.push({ name: 'my' })"> -->
+      <el-menu-item index="wodefuye"  @click="changeDisplayMode('myInfo')">
         <i class="el-icon-folder-opened"></i>我的
       </el-menu-item>
 
@@ -125,6 +126,8 @@
 
     <!-- 技能匹配展示区域 -->
     <SkillMatch v-if="displayMode === 'skillMatch'" />
+
+    <MyInfo v-if="displayMode === 'myInfo'" />
   </div>
 </template>
 
@@ -135,6 +138,7 @@ import router from "@/router";
 import { logout, post, get } from '@/net';
 import { ElMessage } from 'element-plus';
 import SkillMatch from '@/views/SkillMatch.vue';
+import MyInfo from '@/views/My.vue';
 import useUserInfo from '@/hooks/useUserInfo';
 
 
