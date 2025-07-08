@@ -1,6 +1,6 @@
 <template>
   <div class="apply-list-container">
-    <el-page-header @back="goBack" title="返回个人中心">
+    <el-page-header @click="goBack" title="返回个人中心">
       <template #content>
         <span class="page-title">我的审核列表</span>
       </template>
@@ -190,7 +190,7 @@ const handleReject = async (id) => {
 }
 
 const goBack = () => {
-  router.push('/my')
+  router.push('/index/my')
 }
 
 onMounted(() => {
