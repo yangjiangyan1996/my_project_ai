@@ -57,9 +57,135 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="content-tabs">
+      <el-tabs v-model="activeTab" @tab-click="handleTabChange">
+       
+        <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
+          <div class="infinite-list" v-infinite-scroll="loadMore" :infinite-scroll-disabled="noMorePublish">
+            <div
+              class="activity-item"
+              v-for="(item, index) in publishList"
+              :key="'publish-' + index"
+              @click="goToDetail(item)"
+            >
+              <div class="activity-header">
+                <h3 class="activity-title">{{ item.name }}</h3>
+                <!-- 状态标签移到右上角 -->
+                <el-tag
+                  class="activity-status"
+                  :type="item.status === 0 ? 'warning' : item.status === 1 ? 'success' : 'danger'"
+                  size="small"
+                >
+                  {{ item.status === 0 ? '待审核' : item.status === 1 ? '已通过' : '已拒绝' }}
+                </el-tag>
+              </div>
+              
+              <div class="activity-content">
+                <!-- 分类和时间放在原来状态标签的位置 -->
+                <div class="activity-meta-top">
+                  <div class="activity-type">{{ item.categoryName }}</div>
+                  <div class="activity-time">{{ item.createdAt.slice(0, 10) }}</div>
+                </div>
+
+                <div class="activity-detail">{{ item.description }}</div>
+
+                <!-- 如果是拒绝，展示理由 -->
+                <div v-if="item.status === 2" class="activity-reason">
+                  <strong>拒绝理由：</strong>{{ item.reason || '无' }}
+                </div>
+
+                <!-- 重新编辑按钮 -->
+                <el-button
+                  v-if="item.status === 2"
+                  type="primary"
+                  size="small"
+                  @click.stop="goToCreateSidejob(item.id)"
+                  style="margin-top: 8px"
+                >
+                  重新编辑
+                </el-button>
+
+                <div class="activity-meta">
+                  <span>👍 已赞同 {{ item.likeCount }}</span>
+                  <span>💬 {{ item.commentCount }} 条评论</span>
+                  <span>❤️ 收藏 {{ item.favoriteCount }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="noMorePublish" class="no-more">没有更多内容了</div>
+          </div>
+        </el-tab-pane>
+
+        
+        <el-tab-pane label="我的团队" name="myTeams" v-loading="teamLoading">
+          <div
+            class="infinite-list"
+            v-infinite-scroll="loadMoreTeam"
+            :infinite-scroll-disabled="noMoreTeam"
+          >
+            <div
+              class="activity-item"
+              v-for="(item, index) in teamList"
+              :key="'team-' + index"
+              @click="goToMyMemberGroupDetail(item.projectId)"
+            >
+              <div class="activity-type">我的角色：{{ item.roleOfMemberGroup }}</div>
+              <div class="activity-time">{{ item.createdAt?.slice(0,10) || '-' }}</div>
+              <div class="activity-content">
+                <h3 class="activity-title">{{ item.name }}</h3>
+              </div>
+            </div>
+            <div v-if="noMoreTeam" class="no-more">没有更多内容了</div>
+          </div>
+        </el-tab-pane>
 
 
-        <div class="sidejob-entry-card">
+        <el-tab-pane label="我收藏的" name="myFavorites" v-loading="favoritesLoading">
+          <div class="infinite-list" v-infinite-scroll="loadMoreFavorites" :infinite-scroll-disabled="noMoreFavorites">
+            <div class="activity-item" v-for="(item, index) in favoritesList" :key="'favorites-'+index" @click="goToDetail(item)">
+              <div class="activity-type">{{ item.categoryName }}</div>
+              <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
+              <div class="activity-content">
+                <h3 class="activity-title">{{ item.name }}</h3>
+                <div class="activity-detail">{{ item.description }}</div>
+                <div class="activity-meta">
+                  <span>已赞同 {{ item.likeCount }}</span>
+                  <span>{{ item.commentCount }} 条评论</span>
+                  <span>收藏 {{ item.favoriteCount }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-if="noMoreFavorites" class="no-more">没有更多内容了</div>
+          </div>
+        </el-tab-pane>
+        
+        <el-tab-pane label="我点赞的" name="myLike" v-loading="likeLoading">
+          <div class="infinite-list" v-infinite-scroll="loadMoreLike" :infinite-scroll-disabled="noMoreLike">
+            <div class="activity-item" v-for="(item, index) in likeList" :key="'like-'+index" @click="goToDetail(item)">
+              <div class="activity-type">{{ item.categoryName }}</div>
+              <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
+              <div class="activity-content">
+                <h3 class="activity-title">{{ item.name }}</h3>
+                <div class="activity-detail">{{ item.description }}</div>
+                <div class="activity-meta">
+                  <span>已赞同 {{ item.likeCount }}</span>
+                  <span>{{ item.commentCount }} 条评论</span>
+                  <span>收藏 {{ item.favoriteCount }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-if="noMoreLike" class="no-more">没有更多内容了</div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
+
+    <div class="sidebar">
+       <div class="sidejob-entry-card">
           <div class="sidejob-header">
             <el-icon size="22"><Suitcase /></el-icon>
             <span class="sidejob-title">开启副业，赚外快</span>
@@ -68,17 +194,17 @@
           <div class="sidejob-buttons">
             <!-- 发起副业 - 使用火箭表示开始新事物，保持primary蓝色 -->
             <el-button type="primary" size="large" @click="goToCreateSidejob">
-              🚀 我要发起副业
+              🚀 发起副业
             </el-button>
             
             <!-- 找团队 - 使用握手符号表示合作，改为info天蓝色 -->
             <el-button type="info" size="large" @click="toggleIntentForm">
-              👥 我想找团队
+              👥 寻找团队
             </el-button>
 
             <!-- 审核 - 使用警徽表示审核权限，使用warning黄色 -->
-            <el-button type="warning" size="large" @click="goToApplyList">
-              🛡️ 去审核（{{ stats.applyCount || 0 }}）
+            <el-button type="warning" size="large" @click="goToApplyList" style="margin-left: 0px;">
+              🛡️ 我审核的（{{ stats.applyCount || 0 }}）
             </el-button>
 
             <!-- 我申请的 - 使用文档符号表示申请记录，使用success绿色 -->
@@ -212,147 +338,24 @@
             </el-card>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="content-tabs">
-      <el-tabs v-model="activeTab" @tab-click="handleTabChange">
-       
-        <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
-          <div class="infinite-list" v-infinite-scroll="loadMore" :infinite-scroll-disabled="noMorePublish">
-            <div
-              class="activity-item"
-              v-for="(item, index) in publishList"
-              :key="'publish-' + index"
-              @click="goToDetail(item)"
-            >
-              <div class="activity-header">
-                <h3 class="activity-title">{{ item.name }}</h3>
-                <!-- 状态标签移到右上角 -->
-                <el-tag
-                  class="activity-status"
-                  :type="item.status === 0 ? 'warning' : item.status === 1 ? 'success' : 'danger'"
-                  size="small"
-                >
-                  {{ item.status === 0 ? '待审核' : item.status === 1 ? '已通过' : '已拒绝' }}
-                </el-tag>
-              </div>
-              
-              <div class="activity-content">
-                <!-- 分类和时间放在原来状态标签的位置 -->
-                <div class="activity-meta-top">
-                  <div class="activity-type">{{ item.categoryName }}</div>
-                  <div class="activity-time">{{ item.createdAt.slice(0, 10) }}</div>
-                </div>
-
-                <div class="activity-detail">{{ item.description }}</div>
-
-                <!-- 如果是拒绝，展示理由 -->
-                <div v-if="item.status === 2" class="activity-reason">
-                  <strong>拒绝理由：</strong>{{ item.reason || '无' }}
-                </div>
-
-                <!-- 重新编辑按钮 -->
-                <el-button
-                  v-if="item.status === 2"
-                  type="primary"
-                  size="small"
-                  @click.stop="goToCreateSidejob(item.id)"
-                  style="margin-top: 8px"
-                >
-                  重新编辑
-                </el-button>
-
-                <div class="activity-meta">
-                  <span>👍 已赞同 {{ item.likeCount }}</span>
-                  <span>💬 {{ item.commentCount }} 条评论</span>
-                  <span>❤️ 收藏 {{ item.favoriteCount }}</span>
-                </div>
-              </div>
+        <div class="sidebar-info-section">
+          <div class="sidebar-follow-row">
+            <div class="sidebar-section">
+              <h3 class="sidebar-title">关注了</h3>
+              <div class="sidebar-count">{{ followeeCount }}</div>
             </div>
-
-            <div v-if="noMorePublish" class="no-more">没有更多内容了</div>
-          </div>
-        </el-tab-pane>
-
-        
-        <el-tab-pane label="我的团队" name="myTeams" v-loading="teamLoading">
-          <div
-            class="infinite-list"
-            v-infinite-scroll="loadMoreTeam"
-            :infinite-scroll-disabled="noMoreTeam"
-          >
-            <div
-              class="activity-item"
-              v-for="(item, index) in teamList"
-              :key="'team-' + index"
-              @click="goToMyMemberGroupDetail(item.projectId)"
-            >
-              <div class="activity-type">我的角色：{{ item.roleOfMemberGroup }}</div>
-              <div class="activity-time">{{ item.createdAt?.slice(0,10) || '-' }}</div>
-              <div class="activity-content">
-                <h3 class="activity-title">{{ item.name }}</h3>
-              </div>
+            <div class="sidebar-section">
+              <h3 class="sidebar-title">关注者</h3>
+              <div class="sidebar-count">{{ followerCount }}</div>
             </div>
-            <div v-if="noMoreTeam" class="no-more">没有更多内容了</div>
           </div>
-        </el-tab-pane>
-
-
-        <el-tab-pane label="我收藏的" name="myFavorites" v-loading="favoritesLoading">
-          <div class="infinite-list" v-infinite-scroll="loadMoreFavorites" :infinite-scroll-disabled="noMoreFavorites">
-            <div class="activity-item" v-for="(item, index) in favoritesList" :key="'favorites-'+index" @click="goToDetail(item)">
-              <div class="activity-type">{{ item.categoryName }}</div>
-              <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
-              <div class="activity-content">
-                <h3 class="activity-title">{{ item.name }}</h3>
-                <div class="activity-detail">{{ item.description }}</div>
-                <div class="activity-meta">
-                  <span>已赞同 {{ item.likeCount }}</span>
-                  <span>{{ item.commentCount }} 条评论</span>
-                  <span>收藏 {{ item.favoriteCount }}</span>
-                </div>
-              </div>
-            </div>
-            <div v-if="noMoreFavorites" class="no-more">没有更多内容了</div>
+          <div class="sidebar-section">
+            <h3 class="sidebar-title">赞助的 Live</h3>
+            <div class="empty-placeholder">暂无内容</div>
           </div>
-        </el-tab-pane>
-        
-        <el-tab-pane label="我点赞的" name="myLike" v-loading="likeLoading">
-          <div class="infinite-list" v-infinite-scroll="loadMoreLike" :infinite-scroll-disabled="noMoreLike">
-            <div class="activity-item" v-for="(item, index) in likeList" :key="'like-'+index" @click="goToDetail(item)">
-              <div class="activity-type">{{ item.categoryName }}</div>
-              <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
-              <div class="activity-content">
-                <h3 class="activity-title">{{ item.name }}</h3>
-                <div class="activity-detail">{{ item.description }}</div>
-                <div class="activity-meta">
-                  <span>已赞同 {{ item.likeCount }}</span>
-                  <span>{{ item.commentCount }} 条评论</span>
-                  <span>收藏 {{ item.favoriteCount }}</span>
-                </div>
-              </div>
-            </div>
-            <div v-if="noMoreLike" class="no-more">没有更多内容了</div>
-          </div>
-        </el-tab-pane>
-      </el-tabs>
-    </div>
-
-    <div class="sidebar">
-      <div class="sidebar-section">
-        <h3 class="sidebar-title">关注了</h3>
-        <div class="sidebar-count">{{ followeeCount }}</div>
+        </div>
       </div>
-      <div class="sidebar-section">
-        <h3 class="sidebar-title">关注者</h3>
-        <div class="sidebar-count">{{ followerCount }}</div>
-      </div>
-      <div class="sidebar-section">
-        <h3 class="sidebar-title">赞助的 Live</h3>
-        <div class="empty-placeholder">暂无内容</div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -690,10 +693,12 @@ onMounted(() => {
 .profile-container {
   width: 100%;
   margin: 0 auto;
-  padding: 24px;
+  padding: 24px 40px;
+  /* padding-left: 60px; */
+  padding-right: 60px;
   display: grid;
-  grid-template-columns: 1fr 260px;
-  gap: 32px;
+  grid-template-columns: 1fr 400px;
+  gap: 40px;
   background-color: #fff;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
@@ -701,8 +706,7 @@ onMounted(() => {
 .profile-header {
   grid-column: 1 / -1;
   border-bottom: 1px solid #ebebeb;
-  padding-bottom: 20px;
-  margin-bottom: 24px;
+  margin-bottom: 6px;
 }
 
 .profile-info {
@@ -751,7 +755,7 @@ onMounted(() => {
 }
 
 .activity-item {
-  padding: 18px 0;
+  padding: 14px 0;
   border-bottom: 1px solid #ebebeb;
   transition: all 0.3s ease; /* 添加过渡效果 */
   cursor: pointer;
@@ -807,6 +811,9 @@ onMounted(() => {
 
 .sidebar {
   grid-column: 2;
+  padding-top: 12px;
+  padding-right: 12px;
+  margin-right: 10%;
 }
 
 .sidebar-section {
@@ -857,7 +864,15 @@ onMounted(() => {
 
 .sidejob-entry-card {
    background-color: #f6f6f6;
-  border: none;
+  border: 1px solid #e0e0e0; /* 增加边界线 */
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.sidebar-info-section {
+  background-color: #f6f6f6;
+  border: 1px solid #e0e0e0; /* 增加边界线 */
   border-radius: 8px;
   padding: 16px;
   margin-top: 20px;
@@ -887,10 +902,36 @@ onMounted(() => {
 }
 
 .sidejob-buttons {
- display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
+  margin-top: 12px;
+  justify-items: start; /* 新增：让网格项左对齐 */
 }
+
+.sidejob-buttons .el-button {
+  width: 80%; /* 宽度填满网格单元格 */
+  height: 48px; /* 固定高度 */
+  padding: 0 8px; /* 内边距 */
+  font-size: 13px; /* 统一字体大小 */
+  white-space: normal; /* 允许文字换行 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.4; /* 行高 */
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .sidejob-buttons {
+    grid-template-columns: 1fr;
+  }
+  
+  .sidejob-buttons .el-button {
+    height: 44px; /* 移动端稍小一点 */
+  }
+}
+
 
 /* 新增意向表单样式 */
 .intent-section {
@@ -999,7 +1040,7 @@ onMounted(() => {
   }
   
   .sidejob-buttons {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1007,8 +1048,8 @@ onMounted(() => {
 .user-profile-wrapper {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 16px 0;
+  gap: 24px;
+  padding: 8px 0;
 }
 
 .user-avatar {
@@ -1124,4 +1165,20 @@ onMounted(() => {
     align-self: center;
   }
 }
+.sidebar-follow-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sidebar-follow-row .sidebar-section {
+  flex: 1;
+  background-color: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+
 </style>
