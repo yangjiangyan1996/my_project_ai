@@ -217,24 +217,7 @@
 
     <div class="content-tabs">
       <el-tabs v-model="activeTab" @tab-click="handleTabChange">
-        <!-- <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
-          <div class="infinite-list" v-infinite-scroll="loadMore" :infinite-scroll-disabled="noMorePublish">
-            <div class="activity-item" v-for="(item, index) in publishList" :key="'publish-'+index" @click="goToDetail(item)">
-              <div class="activity-type">{{ item.categoryName }}</div>
-              <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
-              <div class="activity-content">
-                <h3 class="activity-title">{{ item.name }}</h3>
-                <div class="activity-detail">{{ item.description }}</div>
-                <div class="activity-meta">
-                  <span>已赞同 {{ item.likeCount }}</span>
-                  <span>{{ item.commentCount }} 条评论</span>
-                  <span>收藏 {{ item.favoriteCount }}</span>
-                </div>
-              </div>
-            </div>
-            <div v-if="noMorePublish" class="no-more">没有更多内容了</div>
-          </div>
-        </el-tab-pane> -->
+       
         <el-tab-pane label="我发布的" name="myPublish" v-loading="loading">
           <div class="infinite-list" v-infinite-scroll="loadMore" :infinite-scroll-disabled="noMorePublish">
             <div
@@ -374,15 +357,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, inject } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Suitcase, SuccessFilled } from '@element-plus/icons-vue'
 import { post, get } from '@/net'
 import { ElMessage } from 'element-plus'
+import useUserInfo from '@/hooks/useUserInfo';
+const { state: userInfo, loadUserInfo } = useUserInfo();
+
 
 const router = useRouter()
-const userInfo = inject('userInfo')
-
 const teamList = ref([])
 const teamPage = ref(1)
 const teamSize = ref(10)
@@ -564,15 +548,6 @@ const cancelEdit = () => {
   }
 }
 
-// 加载统计数据
-// const loadStats = async () => {
-//   try {
-//     const res = await get('/api/auth/my/stats')
-//     stats.value = res || {}
-//   } catch (error) {
-//     console.error('加载统计数据失败:', error)
-//   }
-// }
 
 // 其余原有代码
 const activeTab = ref('myPublish')
@@ -691,15 +666,24 @@ const handleTabChange = (tab) => {
   }
 }
 
-
-// 初始化加载数据
 onMounted(() => {
-  console.log('userInfo',userInfo)
-  fetchPublishData()
-  fetchFollowCount()
-  fetchMyCount() // 新增调用
-  loadIntentData()
-})
+
+  if (!userInfo.data) {
+    loadUserInfo().then(() => {
+      fetchPublishData()
+      fetchFollowCount()
+      fetchMyCount()
+      loadIntentData()
+    });
+  } else {
+    fetchPublishData()
+    fetchFollowCount()
+    fetchMyCount()
+    loadIntentData()
+  }
+});
+
+
 </script>
 
 <style scoped>

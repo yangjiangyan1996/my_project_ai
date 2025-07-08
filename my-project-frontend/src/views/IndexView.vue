@@ -134,9 +134,11 @@ import { Loading } from '@element-plus/icons-vue';
 import router from "@/router";
 import { logout, post, get } from '@/net';
 import { ElMessage } from 'element-plus';
-import { inject } from 'vue'
 import SkillMatch from '@/views/SkillMatch.vue';
+import useUserInfo from '@/hooks/useUserInfo';
 
+
+const { state, loadUserInfo } = useUserInfo();
 const displayMode = ref('project')
 const projectList = ref([]);
 const loading = ref(false);
@@ -147,7 +149,6 @@ const hasMore = ref(true);
 const categories = ref([]);
 const difficulties = ref([]);
 const search = ref({ name: '', category: '', difficulties: [] });
-const userInfo = inject('userInfo')
 
 
 function changeDisplayMode(mode) {
@@ -267,11 +268,12 @@ const handleScroll = (e) => {
 
 // 初始化加载
 onMounted(() => {
-  if (!userInfo.data) {
-    userInfo.loadUserInfo()
-    console.log("user",userInfo)
+  console.log("indexView页面的用户数据",state)
+  if (!state.data) {
+    loadUserInfo();
+  } else {
+    loadProjects();
   }
-  loadProjects();
 });
 
 
