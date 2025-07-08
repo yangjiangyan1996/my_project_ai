@@ -2,7 +2,7 @@
   <div class="profile-container">
     <div class="profile-header">
       <div class="profile-info">
-        <div class="profile-header">
+        <div >
           <div class="user-profile-wrapper">
             <!-- 头像部分 -->
             <el-avatar 
