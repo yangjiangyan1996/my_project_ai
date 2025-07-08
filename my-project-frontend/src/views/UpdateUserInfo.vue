@@ -91,7 +91,9 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { get, post } from '@/net'
+import useUserInfo from '@/hooks/useUserInfo';
 
+const { state, loadUserInfo } = useUserInfo();
 const router = useRouter()
 const industryOptions = ref([]) // ✅ 下拉行业选项数据
 
@@ -194,6 +196,9 @@ const submitForm = async () => {
     
     await post('/api/auth/user/updateUserInfo', userForm.value)
     
+    state.data = {}; // 清空用户信息
+    localStorage.removeItem('userInfo'); // 清除本地存储
+
     ElMessage.success('个人资料更新成功')
     router.back()
   } catch (error) {

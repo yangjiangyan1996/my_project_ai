@@ -269,8 +269,10 @@ const handleScroll = (e) => {
 // 初始化加载
 onMounted(() => {
   console.log("indexView页面的用户数据",state)
-  if (!state.data) {
-    loadUserInfo();
+  if (!state.data.id) {
+    loadUserInfo().then(() => {
+      loadProjects();
+    });
   } else {
     loadProjects();
   }

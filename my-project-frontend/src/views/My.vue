@@ -668,7 +668,7 @@ const handleTabChange = (tab) => {
 
 onMounted(() => {
 
-  if (!userInfo.data) {
+  if (!userInfo.data.id) {
     loadUserInfo().then(() => {
       fetchPublishData()
       fetchFollowCount()

@@ -153,9 +153,14 @@ function get(url, success, failure = defaultFailure) {
     return internalGet(url, accessHeader(), success, failure);
 }
 
+import useUserInfo from '@/hooks/useUserInfo';
+
 function logout(success, failure = defaultFailure) {
+    const { state, loadUserInfo } = useUserInfo();
     get('/api/auth/logout', () => {
         deleteAccessToken();
+        state.data = {}; // 清空用户信息
+        localStorage.removeItem('userInfo'); // 清除本地存储
         ElMessage.success(`退出登录成功，欢迎您再次使用`);
         success();
     }, failure);
