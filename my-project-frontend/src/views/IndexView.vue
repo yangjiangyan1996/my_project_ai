@@ -18,9 +18,6 @@
         <el-tab-pane label="评论回复" name="comment">
           <div class="message-list">
             <div v-for="item in commentMessages" :key="item.id" class="message-item" @click="showCommentDetail(item)">
-                    <!-- <div class="message-avatar">
-                      <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
-                    </div> -->
                     <div class="message-content">
                       <div class="message-header">
                         <span class="message-time">{{ formatTime(item.createdAt) }}</span>
@@ -32,18 +29,7 @@
                       </div>
                     </div>
                   </div>
-            <!-- <div v-for="item in commentMessages" :key="item.id" class="message-item">
-              <div class="message-avatar">
-                <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
-              </div>
-              <div class="message-content">
-                <div class="message-header">
-                  <span class="message-user">{{ item.senderName }}</span>
-                  <span class="message-time">{{ formatTime(item.createTime) }}</span>
-                </div>
-                <div class="message-text">回复了你的评论: {{ item.content }}</div>
-              </div>
-            </div> -->
+          
             <div v-if="commentLoading" class="loading-more">
               <el-icon class="is-loading"><Loading /></el-icon>
             </div>
@@ -408,10 +394,15 @@ const expandedDialogComments = ref({});
 const activeReplyCommentId = ref(null);
 const replyContent = ref('');
 const replyToUsername = ref('');
+const currentProjectId = ref(null);
+
 
 // 显示评论详情
 const showCommentDetail = async (item) => {
   try {
+    currentProjectId.value = item.projectId; // 设置当前项目ID
+
+
     // 获取所有评论
     const res = await get(`/api/auth/project/commentShow?projectId=${item.projectId}`);
     allComments.value = res || [];
@@ -539,27 +530,17 @@ const insertEmojiToReply = (emoji) => {
 };
 
 const submitDialogReply = async () => {
-      console.log("回复ka is hi")
-  // if (!replyContent.value.trim()) {
-  //   ElMessage.warning('回复内容不能为空');
-  //   return;
-  // }
-
+  if (!replyContent.value.trim()) {
+    ElMessage.warning('回复内容不能为空');
+    return;
+  }
   try {
-        console.log("kkkk")
-    console.log("kkk1k",currentProjectId.value)
-    console.log("kkk2k",replyContent.value)
-    console.log("kkk3k",activeReplyCommentId.value,)
-    console.log("kkk4k",findFirstLevelCommentId(activeReplyCommentId.value))
     const res = await post('/api/auth/project/comment', {
       projectId: currentProjectId.value,
       content: replyContent.value,
       replyTo: activeReplyCommentId.value,
       firstLevelCommonId: findFirstLevelCommentId(activeReplyCommentId.value)
     });
-
-    
-    console.log("回复结果",res)
     if (res) {
       replyContent.value = '';
       cancelReply();
