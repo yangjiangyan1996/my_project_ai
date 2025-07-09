@@ -73,6 +73,8 @@ public class MessageEnums {
         LIKE_COMMENT(110, "点赞评论"),
         REPLY_COMMENT(111, "回复评论"),
 
+        PUBLISHER(120, "关注用户"),
+
         SYSTEM_NOTICE(99, "系统通知"),
         ;
 

@@ -224,7 +224,9 @@ public class ProjectFacade {
         entity.setFollowerId(id);
         entity.setFolloweeId(req.getFolloweeId());
         entity.setIsMutual(UserEnums.FollowEnum.No.getCode());
-        return userFollowService.save(entity);
+        Boolean result = userFollowService.save(entity);
+        messageFacade.createMessageOfPublisher(req.getFolloweeId(),id);
+        return result;
     }
 
     public Boolean concernPublisherCancel(ConcernPublisherCancelReq req, Long userId) {

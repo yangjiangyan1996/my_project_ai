@@ -343,7 +343,7 @@ const loadFollowMessages = async () => {
   if (followLoading.value) return;
   followLoading.value = true;
   try {
-    const res = await get('/api/auth/project/msgOfFollowed', {
+    const res = await post('/api/auth/msg/msgOfFollowed', {
       page: followPage.value,
       size: commentSize.value
     });
@@ -367,7 +367,7 @@ const loadLikeMessages = async () => {
   if (likeLoading.value) return;
   likeLoading.value = true;
   try {
-    const res = await get('/api/auth/project/msgOfLiked', {
+    const res = await post('/api/auth/msg/msgOfLiked', {
       page: likePage.value,
       size: commentSize.value
     });

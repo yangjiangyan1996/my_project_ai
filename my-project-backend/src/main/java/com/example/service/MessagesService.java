@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.Messages;
 import com.example.entity.resp.MsgOfCommentListResp;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -14,5 +16,6 @@ import com.example.entity.resp.MsgOfCommentListResp;
 public interface MessagesService extends IService<Messages> {
     Boolean createNotification(Long receiverId, Long senderId, Integer type, String content, Long relatedId, String relatedWords);
 
-    Page<Messages> getProjectShowList(Page<Messages> page, Long userId);
+    Page<Messages> getPage(Page<Messages> page, Long userId, List<Integer> types);
+
 }

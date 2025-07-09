@@ -3,10 +3,15 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
 import com.example.entity.req.MsgOfCommentListPageReq;
+import com.example.entity.req.MsgOfFollowedPageReq;
+import com.example.entity.req.MsgOfLikedPageReq;
 import com.example.entity.resp.MsgOfCommentListResp;
+import com.example.entity.resp.MsgOfFollowerResp;
+import com.example.entity.resp.MsgOfLikedPageResp;
 import com.example.entity.resp.ProjectOfMyShowGetResp;
 import com.example.enums.MessageEnums;
 import com.example.service.*;
+import io.lettuce.core.internal.LettuceLists;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -39,6 +44,9 @@ public class MessageFacade {
     @Resource
     ProjectService projectService;
 
+    public void createMessageOfPublisher( Long targetId, Long currentUserId) {
+        messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.PUBLISHER.getCode(), "关注了您", null, null);
+    }
 
     public void createMessageOfComment(Long projectId, Long replyTo, Long currentUserId) {
         Long receiverId = null; // 获取接收者id
@@ -72,7 +80,8 @@ public class MessageFacade {
     }
 
     public Page<MsgOfCommentListResp> msgOfCommentList( MsgOfCommentListPageReq req, Long userId) {
-        Page<Messages> list = messagesService.getProjectShowList(Page.of(req.getPage() - 1, req.getSize()), userId);
+        List<Integer> types = LettuceLists.newList(MessageEnums.MessageType.REPLY_PROJECT.getCode(), MessageEnums.MessageType.REPLY_COMMENT.getCode());
+        Page<Messages> list = messagesService.getPage(Page.of(req.getPage() - 1, req.getSize()), userId,types);
         if (list.getRecords().isEmpty()) {
             return Page.of(req.getPage() - 1, req.getSize());
         }
@@ -91,6 +100,58 @@ public class MessageFacade {
         }).sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())).collect(Collectors.toList());
 
         Page<MsgOfCommentListResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(list.getTotal());
+        result.setRecords(collect);
+        return result;
+    }
+
+    public Page<MsgOfFollowerResp> msgOfFollowed(MsgOfFollowedPageReq req, Long userId) {
+        List<Integer> types = LettuceLists.newList(MessageEnums.MessageType.PUBLISHER.getCode());
+        Page<Messages> list = messagesService.getPage(Page.of(req.getPage() - 1, req.getSize()), userId,types);
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+
+        List<Long> userIds = list.getRecords().stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+        List<MsgOfFollowerResp> collect = list.getRecords().stream().map(v -> {
+            MsgOfFollowerResp projectsResp = new MsgOfFollowerResp();
+            BeanUtils.copyProperties(v, projectsResp);
+
+            if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
+                projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
+            }
+            return projectsResp;
+        }).sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())).collect(Collectors.toList());
+
+        Page<MsgOfFollowerResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(list.getTotal());
+        result.setRecords(collect);
+        return result;
+    }
+
+    public Page<MsgOfLikedPageResp> msgOfLiked(MsgOfLikedPageReq req, Long userId) {
+        List<Integer> types = LettuceLists.newList(MessageEnums.MessageType.LIKE_POST.getCode(), MessageEnums.MessageType.LIKE_COMMENT.getCode());
+        Page<Messages> list = messagesService.getPage(Page.of(req.getPage() - 1, req.getSize()), userId, types);
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+
+        List<Long> userIds = list.getRecords().stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+        List<MsgOfLikedPageResp> collect = list.getRecords().stream().map(v -> {
+            MsgOfLikedPageResp projectsResp = new MsgOfLikedPageResp();
+            BeanUtils.copyProperties(v, projectsResp);
+
+            if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
+                projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
+            }
+            return projectsResp;
+        }).sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())).collect(Collectors.toList());
+
+        Page<MsgOfLikedPageResp> result = Page.of(req.getPage() - 1, req.getSize());
         result.setTotal(list.getTotal());
         result.setRecords(collect);
         return result;

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -46,11 +47,12 @@ public class MessagesServiceImpl extends ServiceImpl<MessagesMapper, Messages> i
     }
 
     @Override
-    public Page<Messages> getProjectShowList(Page<Messages> pageable, Long userId) {
+    public Page<Messages> getPage(Page<Messages> pageable, Long userId, List<Integer> types) {
         return baseMapper.selectPage(
                 pageable,
                 new QueryWrapper<Messages>()
                         .eq("receiver_id", userId)
+                        .in("type", types)
                         .orderByDesc("created_at")
         );
     }
