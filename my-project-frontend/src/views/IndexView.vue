@@ -17,7 +17,22 @@
       <el-tabs v-model="activeMessageTab" class="message-tabs">
         <el-tab-pane label="评论回复" name="comment">
           <div class="message-list">
-            <div v-for="item in commentMessages" :key="item.id" class="message-item">
+ <div v-for="item in commentMessages" :key="item.id" class="message-item">
+        <!-- <div class="message-avatar">
+          <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
+        </div> -->
+        <div class="message-content">
+          <div class="message-header">
+            <span class="message-time">{{ formatTime(item.createdAt) }}</span>
+          </div>
+          <div class="message-text">
+            <span class="sender-name">{{ item.senderName }}</span>
+            <span class="message-content-text">{{ item.content }}</span>
+            <span class="related-words">"{{ item.relatedWords }}"</span>
+          </div>
+        </div>
+      </div>
+            <!-- <div v-for="item in commentMessages" :key="item.id" class="message-item">
               <div class="message-avatar">
                 <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
               </div>
@@ -28,7 +43,7 @@
                 </div>
                 <div class="message-text">回复了你的评论: {{ item.content }}</div>
               </div>
-            </div>
+            </div> -->
             <div v-if="commentLoading" class="loading-more">
               <el-icon class="is-loading"><Loading /></el-icon>
             </div>
@@ -287,6 +302,16 @@ const fetchUnreadCount = async () => {
   } catch (e) {
     console.error('获取未读消息数失败:', e);
   }
+};
+
+const formatTime = (timeString) => {
+  if (!timeString) return '';
+  const date = new Date(timeString);
+  return `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}`;
+};
+
+const padZero = (num) => {
+  return num < 10 ? `0${num}` : num;
 };
 
 // 加载评论消息
@@ -759,5 +784,26 @@ function userLogout() {
 .loading-more {
   text-align: center;
   padding: 10px;
+}
+
+.message-text {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sender-name {
+  color: #409EFF; /* 蓝色显示发送者名字 */
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.message-content-text {
+  color: #666; /* 灰色显示消息内容 */
+  margin-right: 5px;
+}
+
+.related-words {
+  color: #67C23A; /* 绿色显示相关词 */
+  font-style: italic;
 }
 </style>
