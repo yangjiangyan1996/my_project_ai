@@ -63,6 +63,7 @@
             width="60%"
             top="5vh"
             @closed="handleDialogClosed"
+            class="comment-detail-dialog"
           >
             <div class="comment-dialog-container">
               <div class="comment-list" ref="commentListRef">
@@ -74,17 +75,79 @@
                   ref="commentItems"
                 >
                   <div class="comment-header">
-                    <el-avatar :src="comment.senderAvatar || '/images/default-avatar.png'" size="small" />
-                    <span class="comment-user">{{ comment.senderName }}</span>
+                    <el-avatar :src="comment.avatar || '/images/default-avatar.png'" size="small" class="user-avatar">{{ comment.username?.charAt(0) || '匿' }}</el-avatar>
+                    <strong class="username" @click.stop="goToUserProfile(comment.secrecyId)">{{ comment.username || '匿名用户' }}</strong>
                     <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
                   </div>
-                  <div class="comment-content">{{ comment.content }}</div>
-                  <div v-if="comment.relatedWords" class="comment-related">
-                    相关项目: {{ comment.relatedWords }}
+                  
+                  <div v-if="comment.deleted" class="deleted">该评论已被删除</div>
+                  <div v-else v-html="renderMarkdown(comment.content)" class="md-content" />
+                  
+                  <div class="comment-actions">
+                    <el-button text @click="replyToDialog(comment.id, comment.username)">回复</el-button>
+                    <el-button text @click="likeDialogComment(comment.id)">👍 {{ comment.likes || 0 }}</el-button>
+                    <el-button text v-if="comment.isMine" @click="deleteDialogComment(comment.id)">删除</el-button>
+                    <el-button text v-if="comment.replies?.length" @click="toggleExpandDialog(comment.id)">
+                      {{ expandedDialogComments[comment.id] ? '收起回复' : `展开回复 (${comment.replies.length})` }}
+                    </el-button>
+                  </div>
+
+                  <!-- 回复列表 -->
+                  <div v-if="expandedDialogComments[comment.id] && comment.replies?.length" class="replies">
+                    <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
+                      <div class="comment-header">
+                        <el-avatar :src="reply.avatar || '/images/default-avatar.png'" size="small" class="user-avatar">{{ reply.username?.charAt(0) || '匿' }}</el-avatar>
+                        <strong class="username" @click.stop="goToUserProfile(reply.secrecyId)">{{ reply.username || '匿名用户' }}</strong>
+                        <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
+                      </div>
+                      
+                      <div v-if="reply.deleted" class="deleted">该回复已被删除</div>
+                      <div v-else class="reply-content">
+                        <template v-if="reply.replyToName">@{{ reply.replyToName }}：</template>
+                        <span v-html="renderMarkdown(reply.content)" class="md-content" />
+                      </div>
+                      
+                      <div class="comment-actions">
+                        <el-button text @click="replyToDialog(reply.id, reply.username)">回复</el-button>
+                        <el-button text @click="likeDialogComment(reply.id)">👍 {{ reply.likes || 0 }}</el-button>
+                        <el-button text v-if="reply.isMine" @click="deleteDialogComment(reply.id)">删除</el-button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+              
+              <!-- 回复输入框 -->
+              <div class="zhihu-comment-editor" v-if="activeReplyCommentId">
+                <div class="editor-header">
+                  <div class="avatar">{{ userInitial }}</div>
+                  <span>回复 {{ replyToUsername }}</span>
+                </div>
+                <el-input
+                  v-model="replyContent"
+                  type="textarea"
+                  :placeholder="`回复 ${replyToUsername}...`"
+                  :autosize="{ minRows: 4, maxRows: 8 }"
+                  class="markdown-textarea"
+                />
+                <div class="editor-footer">
+                  <el-popover placement="top" width="250" trigger="click">
+                    <template #reference>
+                      <el-button size="small" text type="primary">😊 表情</el-button>
+                    </template>
+                    <div class="emoji-list">
+                      <span v-for="emoji in emojis" :key="emoji" class="emoji" @click="insertEmojiToReply(emoji)">
+                        {{ emoji }}
+                      </span>
+                    </div>
+                  </el-popover>
+                  
+                  <button class="cancel-button" @click="cancelReply">取消</button>
+                  <button class="submit-button" @click="submitDialogReply">发布</button>
+                </div>
+              </div>
             </div>
+            
             <template #footer>
               <el-button @click="commentDialogVisible = false">关闭</el-button>
             </template>
@@ -290,6 +353,11 @@ import { ElMessage } from 'element-plus';
 import SkillMatch from '@/views/SkillMatch.vue';
 import MyInfo from '@/views/My.vue';
 import useUserInfo from '@/hooks/useUserInfo';
+//评论区导入
+// 新增的状态和导入
+import { nextTick } from 'vue';
+import markdownIt from 'markdown-it';
+import emoji from 'markdown-it-emoji';
 
 const { state, loadUserInfo } = useUserInfo();
 const displayMode = ref('project')
@@ -332,6 +400,15 @@ const currentCommentId = ref(null);
 const commentListRef = ref(null);
 const commentItems = ref([]);
 
+const mdParser = markdownIt().use(emoji);
+const emojis = ['😀', '😂', '😍', '👍', '👏', '🙏', '❤️', '🔥', '🎉', '🤔'];
+
+// 评论对话框相关状态
+const expandedDialogComments = ref({});
+const activeReplyCommentId = ref(null);
+const replyContent = ref('');
+const replyToUsername = ref('');
+
 // 显示评论详情
 const showCommentDetail = async (item) => {
   try {
@@ -341,10 +418,16 @@ const showCommentDetail = async (item) => {
     currentCommentId.value = item.commentId;
     commentDialogVisible.value = true;
     
-    // 在下一个tick滚动到指定评论
-    nextTick(() => {
-      scrollToCurrentComment();
+    // 展开所有回复
+    allComments.value.forEach(comment => {
+      if (comment.replies?.length) {
+        expandedDialogComments.value[comment.id] = true;
+      }
     });
+    
+    // 在下一个tick滚动到指定评论
+    await nextTick();
+    scrollToCurrentComment();
   } catch (e) {
     console.error('获取评论详情失败:', e);
     ElMessage.error('加载评论详情失败');
@@ -356,9 +439,17 @@ const scrollToCurrentComment = () => {
   if (commentItems.value && currentCommentId.value) {
     const index = allComments.value.findIndex(c => c.id === currentCommentId.value);
     if (index !== -1 && commentItems.value[index]) {
-      commentItems.value[index].scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+      const container = commentListRef.value;
+      const element = commentItems.value[index];
+      
+      // 计算滚动位置
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      const scrollPosition = elementRect.top - containerRect.top + container.scrollTop - (containerRect.height / 2) + (elementRect.height / 2);
+      
+      container.scrollTo({
+        top: scrollPosition,
+        behavior: 'smooth'
       });
     }
   }
@@ -414,6 +505,148 @@ const loadMoreComments = () => {
   commentPage.value += 1;
   loadCommentMessages();
 };
+
+// 对话框回复相关方法
+const replyToDialog = (commentId, username) => {
+  activeReplyCommentId.value = commentId;
+  replyToUsername.value = username;
+  replyContent.value = '';
+  
+  // 确保父评论是展开的
+  const firstLevelId = findFirstLevelCommentId(commentId);
+  if (firstLevelId && firstLevelId !== commentId && !expandedDialogComments.value[firstLevelId]) {
+    expandedDialogComments.value[firstLevelId] = true;
+  }
+  
+  // 滚动到回复框位置
+  nextTick(() => {
+    const container = commentListRef.value;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth'
+    });
+  });
+};
+
+const cancelReply = () => {
+  activeReplyCommentId.value = null;
+  replyToUsername.value = '';
+  replyContent.value = '';
+};
+
+const insertEmojiToReply = (emoji) => {
+  replyContent.value += emoji;
+};
+
+const submitDialogReply = async () => {
+      console.log("回复ka is hi")
+  // if (!replyContent.value.trim()) {
+  //   ElMessage.warning('回复内容不能为空');
+  //   return;
+  // }
+
+  try {
+        console.log("kkkk")
+    console.log("kkk1k",currentProjectId.value)
+    console.log("kkk2k",replyContent.value)
+    console.log("kkk3k",activeReplyCommentId.value,)
+    console.log("kkk4k",findFirstLevelCommentId(activeReplyCommentId.value))
+    const res = await post('/api/auth/project/comment', {
+      projectId: currentProjectId.value,
+      content: replyContent.value,
+      replyTo: activeReplyCommentId.value,
+      firstLevelCommonId: findFirstLevelCommentId(activeReplyCommentId.value)
+    });
+
+    
+    console.log("回复结果",res)
+    if (res) {
+      replyContent.value = '';
+      cancelReply();
+      // 重新加载评论
+      await showCommentDetail({ projectId: currentProjectId.value, commentId: currentCommentId.value });
+      ElMessage.success('回复成功');
+    }
+  } catch (err) {
+    ElMessage.error('回复失败',err);
+  }
+};
+
+const likeDialogComment = async (commentId) => {
+  try {
+    const res = await get(`/api/auth/project/commentLike?projectId=${currentProjectId.value}&commentId=${commentId}`);
+    if (res) {
+      // 重新加载评论
+      await showCommentDetail({ projectId: currentProjectId.value, commentId: currentCommentId.value });
+      ElMessage.success('点赞成功');
+    }
+  } catch (err) {
+    ElMessage.error('点赞失败');
+  }
+};
+
+const deleteDialogComment = async (commentId) => {
+  try {
+    const confirm = await ElMessageBox.confirm('确定要删除这条评论吗？', '删除评论', { type: 'warning' });
+    if (confirm) {
+      const res = await get(`/api/auth/project/commentDeleted?projectId=${currentProjectId.value}&commentId=${commentId}`);
+      if (res) {
+        // 重新加载评论
+        await showCommentDetail({ projectId: currentProjectId.value, commentId: currentCommentId.value });
+        ElMessage.success('删除成功');
+      }
+    }
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error('删除失败');
+    }
+  }
+};
+
+const toggleExpandDialog = (commentId) => {
+  expandedDialogComments.value[commentId] = !expandedDialogComments.value[commentId];
+};
+
+const renderMarkdown = (text) => {
+  return mdParser.render(text || '');
+};
+
+const findFirstLevelCommentId = (commentId) => {
+  const topLevelComment = allComments.value.find(c => c.id === commentId);
+  if (topLevelComment) {
+    return topLevelComment.id;
+  }
+  
+  for (const comment of allComments.value) {
+    if (comment.replies) {
+      const foundReply = findCommentInReplies(comment.replies, commentId);
+      if (foundReply) {
+        if (foundReply.replyTo === comment.id) {
+          return comment.id;
+        }
+        return findFirstLevelCommentId(foundReply.replyTo);
+      }
+    }
+  }
+  
+  return -1;
+};
+
+const findCommentInReplies = (replies, commentId) => {
+  for (const reply of replies) {
+    if (reply.id === commentId) {
+      return reply;
+    }
+    if (reply.replies) {
+      const found = findCommentInReplies(reply.replies, commentId);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+};
+
 
 // 加载关注消息
 const loadFollowMessages = async () => {
@@ -884,5 +1117,206 @@ function userLogout() {
 .related-words {
   color: #67C23A; /* 绿色显示相关词 */
   font-style: italic;
+}
+
+/* 新增评论对话框样式 */
+.comment-detail-dialog {
+  border-radius: 12px;
+}
+
+.comment-dialog-container {
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  margin-bottom: 20px;
+}
+
+.comment-item {
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  transition: all 0.3s;
+}
+
+.highlight-comment {
+  background-color: #e6f7ff;
+  border-left: 3px solid #1890ff;
+  animation: highlight 2s ease-in-out;
+}
+
+@keyframes highlight {
+  0% { background-color: #e6f7ff; }
+  50% { background-color: #bae7ff; }
+  100% { background-color: #e6f7ff; }
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 10px;
+}
+
+.user-avatar {
+  background-color: #409EFF;
+  color: white;
+  font-weight: bold;
+}
+
+.username {
+  font-weight: bold;
+  color: #333;
+  cursor: pointer;
+}
+
+.username:hover {
+  color: #409EFF;
+}
+
+.comment-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.md-content {
+  color: #333;
+  line-height: 1.6;
+  word-break: break-word;
+  font-size: 14px;
+}
+
+.md-content :deep(*) {
+  margin: 0;
+}
+
+.md-content :deep(p) {
+  margin-bottom: 8px;
+}
+
+.md-content :deep(a) {
+  color: #409EFF;
+  text-decoration: none;
+}
+
+.md-content :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.comment-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 15px;
+}
+
+.replies {
+  margin-top: 15px;
+  padding-left: 30px;
+  position: relative;
+}
+
+.replies::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #eaeaea;
+}
+
+.reply-item {
+  position: relative;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+
+.reply-item::before {
+  content: "";
+  position: absolute;
+  left: -15px;
+  top: 20px;
+  width: 15px;
+  height: 1px;
+  background: #ddd;
+}
+
+.deleted {
+  color: #bbb;
+  font-style: italic;
+}
+
+.zhihu-comment-editor {
+  border: 1px solid #f0f2f7;
+  border-radius: 4px;
+  padding: 12px;
+  background: #fff;
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.editor-header .avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #409EFF;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  font-weight: bold;
+}
+
+.markdown-textarea {
+  width: 100%;
+}
+
+.editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  gap: 8px;
+}
+
+.submit-button {
+  background-color: #0084ff;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-button {
+  background: none;
+  border: none;
+  color: #8590a6;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.emoji-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.emoji {
+  cursor: pointer;
+  font-size: 20px;
+  padding: 2px;
 }
 </style>
