@@ -1,6 +1,21 @@
 <template>
   <div class="index-container">
-    <el-button @click="userLogout" style="position: absolute; right: 20px; top: 20px">退出登录</el-button>
+    <!-- 头像下拉菜单 -->
+    <el-dropdown class="avatar-dropdown" trigger="click">
+      <div class="avatar-wrapper">
+        <el-avatar :src="state.data.avatarUrl || '/images/default-avatar.png'" />
+      </div>
+      <template #dropdown>
+        <el-dropdown-menu>
+          <el-dropdown-item @click="changeDisplayMode('myInfo')">
+            <i class="el-icon-user"></i>我的
+          </el-dropdown-item>
+          <el-dropdown-item divided @click="userLogout">
+            <i class="el-icon-switch-button"></i>退出登录
+          </el-dropdown-item>
+        </el-dropdown-menu>
+      </template>
+    </el-dropdown>
 
     <el-menu 
       mode="horizontal"
@@ -23,7 +38,6 @@
         <template #title><i class="el-icon-user"></i>找人合作</template>
         <el-menu-item index="partner-map" @click="router.push({ name: 'partner-map' })">合作地图</el-menu-item>
         <el-menu-item index="skill-match" @click="changeDisplayMode('skillMatch')">技能匹配</el-menu-item>
-
       </el-sub-menu>
 
       <el-sub-menu index="3">
@@ -44,83 +58,74 @@
         <el-menu-item index="ai-assistant" @click="router.push({ name: 'ai-assistant' })">副业推荐助手</el-menu-item>
       </el-sub-menu>
 
-      <!-- <el-menu-item index="wodefuye"  @click="router.push({ name: 'my' })"> -->
-      <el-menu-item index="wodefuye"  @click="changeDisplayMode('myInfo')">
-        <i class="el-icon-folder-opened"></i>我的
-      </el-menu-item>
-
-      <div class="flex-grow" />
-
-      <el-menu-item index="logout" @click="userLogout">
-        <i class="el-icon-switch-button"></i>退出登录
-      </el-menu-item>
+      
     </el-menu>
 
-     <!-- 搜索区域 -->
-       <!-- 搜索 + 项目展示：只在非技能匹配页面展示 -->
+    <!-- 搜索区域 -->
+    <!-- 搜索 + 项目展示：只在非技能匹配页面展示 -->
     <div v-if="displayMode === 'project'">
       <div class="search-bar">
-      <el-input v-model="search.name" placeholder="搜索副业名称" style="width: 200px; margin-right: 10px" />
-      <el-select v-model="search.category" placeholder="选择分类" style="width: 180px; margin-right: 10px">
-        <el-option
-          v-for="item in categories"
-          :key="item.code"
-          :label="item.desc"
-          :value="item.code"
-        />
-      </el-select>
-      <el-select
-        v-model="search.difficulties"
-        placeholder="选择难度"
-        multiple
-        style="width: 180px; margin-right: 10px"
-      >
-        <el-option
-          v-for="item in difficulties"
-          :key="item.code"
-          :label="item.desc"
-          :value="item.code"
-        />
-      </el-select>
-      <el-button type="primary" @click="onSearch">搜索</el-button>
+        <el-input v-model="search.name" placeholder="搜索副业名称" style="width: 200px; margin-right: 10px" />
+        <el-select v-model="search.category" placeholder="选择分类" style="width: 180px; margin-right: 10px">
+          <el-option
+            v-for="item in categories"
+            :key="item.code"
+            :label="item.desc"
+            :value="item.code"
+          />
+        </el-select>
+        <el-select
+          v-model="search.difficulties"
+          placeholder="选择难度"
+          multiple
+          style="width: 180px; margin-right: 10px"
+        >
+          <el-option
+            v-for="item in difficulties"
+            :key="item.code"
+            :label="item.desc"
+            :value="item.code"
+          />
+        </el-select>
+        <el-button type="primary" @click="onSearch">搜索</el-button>
       </div>
       <!-- 项目展示区域 -->
       <div class="main-content">
-      <!-- 项目列表容器，添加滚动监听 -->
-      <div class="project-container" @scroll="handleScroll">
-        <el-row :gutter="20" class="project-list">
-          <el-col 
-            v-for="project in projectList" 
-            :key="project.id" 
-            :xs="24" :sm="12" :md="8" :lg="6"
-          >
-            <el-card class="project-card" shadow="hover" @click="goToDetail(project)">
-              <img 
-                :src="project.imageUrl" 
-                class="project-image"
-                alt="项目封面"
-              />
-              <div class="project-content">
-                <h3 class="project-title">{{ project.name }}</h3>
-                <div class="project-meta">
-                  <el-tag size="small">{{ project.category }}</el-tag>
-                  <span class="project-difficulty">{{ project.difficulty }}</span>
+        <!-- 项目列表容器，添加滚动监听 -->
+        <div class="project-container" @scroll="handleScroll">
+          <el-row :gutter="20" class="project-list">
+            <el-col 
+              v-for="project in projectList" 
+              :key="project.id" 
+              :xs="24" :sm="12" :md="8" :lg="6"
+            >
+              <el-card class="project-card" shadow="hover" @click="goToDetail(project)">
+                <img 
+                  :src="project.imageUrl" 
+                  class="project-image"
+                  alt="项目封面"
+                />
+                <div class="project-content">
+                  <h3 class="project-title">{{ project.name }}</h3>
+                  <div class="project-meta">
+                    <el-tag size="small">{{ project.category }}</el-tag>
+                    <span class="project-difficulty">{{ project.difficulty }}</span>
+                  </div>
+                  <p class="project-description">{{ project.description }}</p>
                 </div>
-                <p class="project-description">{{ project.description }}</p>
-              </div>
-            </el-card>
-          </el-col>
-        </el-row>
+              </el-card>
+            </el-col>
+          </el-row>
 
-        <!-- 加载更多提示 -->
-        <div v-if="loading" class="loading-more">
-          <el-icon class="is-loading"><Loading /></el-icon>
-          <span>加载中...</span>
+          <!-- 加载更多提示 -->
+          <div v-if="loading" class="loading-more">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            <span>加载中...</span>
+          </div>
+          <div v-else-if="!hasMore" class="no-more">
+            没有更多数据了
+          </div>
         </div>
-        <div v-else-if="!hasMore" class="no-more">
-          没有更多数据了
-        </div>
-      </div>
       </div>
     </div>
 
@@ -128,19 +133,19 @@
     <SkillMatch v-if="displayMode === 'skillMatch'" />
 
     <MyInfo v-if="displayMode === 'myInfo'" />
+
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { Loading } from '@element-plus/icons-vue';
+import { Loading, ArrowDown } from '@element-plus/icons-vue';
 import router from "@/router";
 import { logout, post, get } from '@/net';
 import { ElMessage } from 'element-plus';
 import SkillMatch from '@/views/SkillMatch.vue';
 import MyInfo from '@/views/My.vue';
 import useUserInfo from '@/hooks/useUserInfo';
-
 
 const { state, loadUserInfo } = useUserInfo();
 const displayMode = ref('project')
@@ -153,7 +158,6 @@ const hasMore = ref(true);
 const categories = ref([]);
 const difficulties = ref([]);
 const search = ref({ name: '', category: '', difficulties: [] });
-
 
 function changeDisplayMode(mode) {
   displayMode.value = mode;
@@ -184,10 +188,6 @@ const fetchOptions = async () => {
   }
 };
 
-
-/**
- * 副业的列表数据
- */
 const fetchProjectListData = async (params = {}) => {
   if (loading.value || !hasMore.value) {
       return;
@@ -203,14 +203,11 @@ const fetchProjectListData = async (params = {}) => {
       projectName: params?.projectName
     });
 
-    //console.log("接口返回数据:", res);
-    
     if (!res?.records) {
       console.warn("接口返回异常结构：", res);
       return;
     }
 
-    // 合并新数据
     projectList.value = [
       ...projectList.value,
       ...res.records.map(item => ({
@@ -233,11 +230,9 @@ const fetchProjectListData = async (params = {}) => {
     loading.value = false;
   }
 }
-// 加载项目数据
+
 const loadProjects = async () => {
   fetchOptions();
-  
-  // 初始加载带上空条件
   fetchProjectListData({
     category: search.value.category,
     difficulty: search.value.difficulties,
@@ -246,10 +241,9 @@ const loadProjects = async () => {
 };
 
 const onSearch = () => {
-  currentPage.value = 1;         // 重置页码
-  projectList.value = [];        // 清空旧数据
-  hasMore.value = true;          // 恢复为“还有更多”
-
+  currentPage.value = 1;
+  projectList.value = [];
+  hasMore.value = true;
   fetchProjectListData({
     category: search.value.category,
     difficulty: search.value.difficulties,
@@ -257,8 +251,6 @@ const onSearch = () => {
   });
 };
 
-
-// 滚动到底部加载更多
 const handleScroll = (e) => {
   const { scrollTop, scrollHeight, clientHeight } = e.target;
   if (scrollHeight - scrollTop - clientHeight < 100 && !loading.value && hasMore.value) {
@@ -270,7 +262,6 @@ const handleScroll = (e) => {
   }
 };
 
-// 初始化加载
 onMounted(() => {
   console.log("indexView页面的用户数据",state)
   if (!state.data.id) {
@@ -282,13 +273,9 @@ onMounted(() => {
   }
 });
 
-
-
-
 function userLogout() {
   logout(() => router.push("/"));
 }
-
 </script>
 
 <style scoped>
@@ -400,5 +387,24 @@ function userLogout() {
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 新增头像下拉菜单样式 */
+.avatar-dropdown {
+  position: absolute;
+  right: 20px;
+  top: 10px;
+  z-index: 1001;
+}
+
+.avatar-wrapper {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.avatar-wrapper .el-icon {
+  margin-left: 5px;
+  color: #666;
 }
 </style>
