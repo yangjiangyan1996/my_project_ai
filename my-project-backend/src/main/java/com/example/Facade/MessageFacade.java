@@ -1,20 +1,23 @@
 package com.example.Facade;
 
-import com.example.entity.dto.MessageUserSettings;
-import com.example.entity.dto.Messages;
-import com.example.entity.dto.ProjectComment;
-import com.example.entity.dto.Projects;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.entity.dto.*;
+import com.example.entity.req.MsgOfCommentListPageReq;
+import com.example.entity.resp.MsgOfCommentListResp;
+import com.example.entity.resp.ProjectOfMyShowGetResp;
 import com.example.enums.MessageEnums;
-import com.example.service.MessageUserSettingsService;
-import com.example.service.MessagesService;
-import com.example.service.ProjectCommentService;
-import com.example.service.ProjectService;
+import com.example.service.*;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * @Author YangJian
@@ -25,6 +28,8 @@ import java.util.Objects;
 @Service
 @Slf4j
 public class MessageFacade {
+    @Resource
+    AccountService accountService;
     @Resource
     MessagesService messagesService;
     @Resource
@@ -64,5 +69,30 @@ public class MessageFacade {
             return;
         }
         messagesService.createNotification(receiverId, currentUserId, type, content, relatedId,relatedWords);
+    }
+
+    public Page<MsgOfCommentListResp> msgOfCommentList( MsgOfCommentListPageReq req, Long userId) {
+        Page<Messages> list = messagesService.getProjectShowList(Page.of(req.getPage() - 1, req.getSize()), userId);
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+
+        List<Long> userIds = list.getRecords().stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+        List<MsgOfCommentListResp> collect = list.getRecords().stream().map(v -> {
+            MsgOfCommentListResp projectsResp = new MsgOfCommentListResp();
+            BeanUtils.copyProperties(v, projectsResp);
+
+            if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
+                projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
+            }
+            return projectsResp;
+        }).sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())).collect(Collectors.toList());
+
+        Page<MsgOfCommentListResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(list.getTotal());
+        result.setRecords(collect);
+        return result;
     }
 }

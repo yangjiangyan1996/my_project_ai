@@ -1,12 +1,18 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.MessageUserSettings;
 import com.example.entity.dto.Messages;
+import com.example.entity.dto.Projects;
+import com.example.entity.resp.MsgOfCommentListResp;
 import com.example.enums.MessageEnums;
 import com.example.mapper.MessagesMapper;
 import com.example.service.MessagesService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.Date;
 
@@ -37,5 +43,15 @@ public class MessagesServiceImpl extends ServiceImpl<MessagesMapper, Messages> i
         e.setCreatedBy(senderId);
         e.setModifiedBy(senderId);
         return save(e);
+    }
+
+    @Override
+    public Page<Messages> getProjectShowList(Page<Messages> pageable, Long userId) {
+        return baseMapper.selectPage(
+                pageable,
+                new QueryWrapper<Messages>()
+                        .eq("receiver_id", userId)
+                        .orderByDesc("created_at")
+        );
     }
 }

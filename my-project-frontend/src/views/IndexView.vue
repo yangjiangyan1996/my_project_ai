@@ -294,7 +294,7 @@ const loadCommentMessages = async () => {
   if (commentLoading.value) return;
   commentLoading.value = true;
   try {
-    const res = await get('/api/auth/project/msgOfCommentList', {
+    const res = await post('/api/auth/msg/msgOfCommentList', {
       page: commentPage.value,
       size: commentSize.value
     });
