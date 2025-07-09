@@ -10,4 +10,8 @@ import com.example.entity.dto.MessageUserSettings;
  * @Date 2025/7/9 11:12
  */
 public interface MessageUserSettingsService extends IService<MessageUserSettings> {
+    boolean saveMessageSetting(Long userId, Integer receiveLikeNotification,
+                               Integer receiveCommentNotification,
+                               Integer receiveProjectNotification,
+                               Integer receiveSystemNotification);
 }

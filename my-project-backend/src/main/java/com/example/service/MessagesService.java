@@ -9,4 +9,6 @@ import com.example.entity.dto.Messages;
  * @Email 1776080295@qq.com
  * @Date 2025/7/9 11:21
  */
-public interface MessagesService extends IService<Messages> {}
+public interface MessagesService extends IService<Messages> {
+    Boolean createNotification(Long receiverId, Long senderId, Integer type, String content, Long relatedId);
+}
