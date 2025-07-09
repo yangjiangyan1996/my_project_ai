@@ -18,4 +18,5 @@ public interface MessagesService extends IService<Messages> {
 
     Page<Messages> getPage(Page<Messages> page, Long userId, List<Integer> types);
 
+    Long unreadMsgCount(Long userId,List<Integer> types);
 }

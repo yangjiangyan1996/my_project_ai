@@ -17,10 +17,7 @@ import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -36,6 +33,21 @@ import java.util.List;
 public class MessageContorller {
     @Resource
     MessageFacade messageFacade;
+
+    @GetMapping("/unreadMsgCount")
+    public RespBean<Long> unreadMsgCount() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Long list = messageFacade.unreadMsgCount(user.getId());
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("MessageContorller#unreadMsgCount,req:{}",e);
+            return RespBean.failure(999, e.getMessage());
+        }  catch (Exception e) {
+            log.error("MessageContorller#unreadMsgCount, error",e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
 
     @PostMapping("/msgOfFollowed")
     public RespBean<Page<MsgOfFollowerResp>> msgOfFollowed(@RequestBody MsgOfFollowedPageReq req) {

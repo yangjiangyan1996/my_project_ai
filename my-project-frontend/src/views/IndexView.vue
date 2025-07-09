@@ -17,21 +17,21 @@
       <el-tabs v-model="activeMessageTab" class="message-tabs">
         <el-tab-pane label="评论回复" name="comment">
           <div class="message-list">
- <div v-for="item in commentMessages" :key="item.id" class="message-item">
-        <!-- <div class="message-avatar">
-          <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
-        </div> -->
-        <div class="message-content">
-          <div class="message-header">
-            <span class="message-time">{{ formatTime(item.createdAt) }}</span>
-          </div>
-          <div class="message-text">
-            <span class="sender-name">{{ item.senderName }}</span>
-            <span class="message-content-text">{{ item.content }}</span>
-            <span class="related-words">"{{ item.relatedWords }}"</span>
-          </div>
-        </div>
-      </div>
+            <div v-for="item in commentMessages" :key="item.id" class="message-item">
+                    <!-- <div class="message-avatar">
+                      <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
+                    </div> -->
+                    <div class="message-content">
+                      <div class="message-header">
+                        <span class="message-time">{{ formatTime(item.createdAt) }}</span>
+                      </div>
+                      <div class="message-text">
+                        <span class="sender-name">{{ item.senderName }}</span>
+                        <span class="message-content-text">{{ item.content }}</span>
+                        <span class="related-words">"{{ item.relatedWords }}"</span>
+                      </div>
+                    </div>
+                  </div>
             <!-- <div v-for="item in commentMessages" :key="item.id" class="message-item">
               <div class="message-avatar">
                 <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
@@ -297,8 +297,8 @@ const likeLoading = ref(false);
 // 获取未读消息数
 const fetchUnreadCount = async () => {
   try {
-    const res = await get('/api/auth/project/unreadMsgCount');
-    unreadCount.value = res.count || 0;
+    const res = await get('/api/auth/msg/unreadMsgCount');
+    unreadCount.value = res || 0;
   } catch (e) {
     console.error('获取未读消息数失败:', e);
   }
@@ -558,8 +558,10 @@ onMounted(() => {
   if (!state.data.id) {
     loadUserInfo().then(() => {
       loadProjects();
+      fetchUnreadCount();
     });
   } else {
+    fetchUnreadCount();
     loadProjects();
   }
 });

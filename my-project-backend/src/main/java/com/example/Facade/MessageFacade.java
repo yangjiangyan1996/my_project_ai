@@ -156,4 +156,16 @@ public class MessageFacade {
         result.setRecords(collect);
         return result;
     }
+
+    public Long unreadMsgCount(Long userId) {
+        List<Integer> types = LettuceLists.newList(
+                MessageEnums.MessageType.REPLY_PROJECT.getCode(),
+                MessageEnums.MessageType.REPLY_COMMENT.getCode(),
+                MessageEnums.MessageType.PUBLISHER.getCode(),
+                MessageEnums.MessageType.LIKE_POST.getCode(),
+                MessageEnums.MessageType.LIKE_COMMENT.getCode());
+
+
+        return messagesService.unreadMsgCount(userId,types);
+    }
 }
