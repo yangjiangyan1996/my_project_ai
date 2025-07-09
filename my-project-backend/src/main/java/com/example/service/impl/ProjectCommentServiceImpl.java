@@ -76,4 +76,9 @@ public class ProjectCommentServiceImpl extends ServiceImpl<ProjectCommentMapper,
         return projectLikes.stream().collect(Collectors.groupingBy(ProjectComment::getProjectId, Collectors.counting()));
 
     }
+
+    @Override
+    public ProjectComment selectById(Long id) {
+        return this.baseMapper.selectById(id);
+    }
 }

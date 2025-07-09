@@ -15,5 +15,6 @@ public class Messages extends BaseModel {
     private Integer type;
     private String content;
     private Long relatedId;
+    private String relatedWords;
     private Integer isRead;
 }

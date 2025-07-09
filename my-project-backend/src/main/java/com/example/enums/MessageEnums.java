@@ -65,11 +65,16 @@ public class MessageEnums {
     @Getter
 
     public enum MessageType {
-        LIKE_POST(101, "点赞帖子"),
-        LIKE_COMMENT(102, "点赞评论"),
+        F_POST(100, "收藏项目"),
+        LIKE_POST(101, "点赞项目"),
+        REPLY_PROJECT(102, "回复项目"),
         JOIN_PROJECT(103, "加入项目"),
-        REPLY_COMMENT(104, "回复评论"),
-        SYSTEM_NOTICE(105, "系统通知");
+
+        LIKE_COMMENT(110, "点赞评论"),
+        REPLY_COMMENT(111, "回复评论"),
+
+        SYSTEM_NOTICE(99, "系统通知"),
+        ;
 
         private final Integer code;
         private final String name;

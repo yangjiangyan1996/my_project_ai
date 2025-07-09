@@ -10,5 +10,5 @@ import com.example.entity.dto.Messages;
  * @Date 2025/7/9 11:21
  */
 public interface MessagesService extends IService<Messages> {
-    Boolean createNotification(Long receiverId, Long senderId, Integer type, String content, Long relatedId);
+    Boolean createNotification(Long receiverId, Long senderId, Integer type, String content, Long relatedId, String relatedWords);
 }

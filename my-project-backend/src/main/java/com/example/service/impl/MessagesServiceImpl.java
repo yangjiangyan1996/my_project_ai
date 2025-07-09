@@ -22,7 +22,7 @@ public class MessagesServiceImpl extends ServiceImpl<MessagesMapper, Messages> i
 
 
     @Override
-    public Boolean createNotification(Long receiverId, Long senderId, Integer type, String content, Long relatedId) {
+    public Boolean createNotification(Long receiverId, Long senderId, Integer type, String content, Long relatedId, String relatedWords) {
 
         Messages e = new Messages();
         e.setSenderId(senderId);
@@ -30,6 +30,7 @@ public class MessagesServiceImpl extends ServiceImpl<MessagesMapper, Messages> i
         e.setType(type);
         e.setContent(content);
         e.setRelatedId(relatedId);
+        e.setRelatedWords(relatedWords);
         e.setIsRead(MessageEnums.MessageReadStatus.UNREAD.getCode());
         e.setCreatedAt(new Date());
         e.setModifiedAt(new Date());

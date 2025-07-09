@@ -22,4 +22,6 @@ public interface ProjectCommentService extends IService<ProjectComment> {
     Integer updateStatus(Long commentId, Long userId, Integer code);
 
     Map<Long, Long> selectCommentCountByProjectIds(List<Long> projectIds);
+
+    ProjectComment selectById(Long id);
 }

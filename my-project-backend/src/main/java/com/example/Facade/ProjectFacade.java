@@ -30,6 +30,8 @@ import java.util.stream.Collectors;
 public class ProjectFacade {
 
     @Resource
+    MessageFacade messageFacade;
+    @Resource
     ProjectApplicationsService projectApplicationsService;
     @Resource
     ProjectMembersService projectMembersService;
@@ -108,7 +110,11 @@ public class ProjectFacade {
     }
 
     public Boolean comment(UserCommentProjectReq req, Long userId, String name) {
-        return projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyTo(), req.getFirstLevelCommonId());
+        boolean commentResult = projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyTo(), req.getFirstLevelCommonId());
+        if (commentResult) {
+            messageFacade.createMessageOfComment(req.getProjectId(), req.getReplyTo(), userId);
+        }
+        return commentResult;
     }
 
     public List<ProjectCommentResp> commentShow(Long projectId, Long currentUserId) {
@@ -572,8 +578,6 @@ public class ProjectFacade {
     /**
      * 项目已经满员
      *
-     * @param req
-     * @param id
      * @return boolean
      */
     public Boolean projectFull(Long projectId) {

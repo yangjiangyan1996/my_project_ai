@@ -1,5 +1,100 @@
 <template>
   <div class="index-container">
+    <el-popover
+      placement="bottom-end"
+      trigger="click"
+      width="350"
+      v-model:visible="messageVisible"
+    >
+      <template #reference>
+        <div class="message-bell" @click="handleMessageClick">
+          <el-badge :value="unreadCount" :max="99" class="badge">
+            <el-icon :size="20"><bell /></el-icon>
+          </el-badge>
+        </div>
+      </template>
+      
+      <el-tabs v-model="activeMessageTab" class="message-tabs">
+        <el-tab-pane label="评论回复" name="comment">
+          <div class="message-list">
+            <div v-for="item in commentMessages" :key="item.id" class="message-item">
+              <div class="message-avatar">
+                <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
+              </div>
+              <div class="message-content">
+                <div class="message-header">
+                  <span class="message-user">{{ item.senderName }}</span>
+                  <span class="message-time">{{ formatTime(item.createTime) }}</span>
+                </div>
+                <div class="message-text">回复了你的评论: {{ item.content }}</div>
+              </div>
+            </div>
+            <div v-if="commentLoading" class="loading-more">
+              <el-icon class="is-loading"><Loading /></el-icon>
+            </div>
+            <div v-else-if="commentHasMore" class="load-more" @click="loadMoreComments">
+              加载更多
+            </div>
+            <div v-else-if="commentMessages.length === 0" class="no-message">
+              暂无消息
+            </div>
+          </div>
+        </el-tab-pane>
+        
+        <el-tab-pane label="新增关注" name="follow">
+          <div class="message-list">
+            <div v-for="item in followMessages" :key="item.id" class="message-item">
+              <div class="message-avatar">
+                <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
+              </div>
+              <div class="message-content">
+                <div class="message-header">
+                  <span class="message-user">{{ item.senderName }}</span>
+                  <span class="message-time">{{ formatTime(item.createTime) }}</span>
+                </div>
+                <div class="message-text">关注了你</div>
+              </div>
+            </div>
+            <div v-if="followLoading" class="loading-more">
+              <el-icon class="is-loading"><Loading /></el-icon>
+            </div>
+            <div v-else-if="followHasMore" class="load-more" @click="loadMoreFollows">
+              加载更多
+            </div>
+            <div v-else-if="followMessages.length === 0" class="no-message">
+              暂无消息
+            </div>
+          </div>
+        </el-tab-pane>
+        
+        <el-tab-pane label="点赞通知" name="like">
+          <div class="message-list">
+            <div v-for="item in likeMessages" :key="item.id" class="message-item">
+              <div class="message-avatar">
+                <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
+              </div>
+              <div class="message-content">
+                <div class="message-header">
+                  <span class="message-user">{{ item.senderName }}</span>
+                  <span class="message-time">{{ formatTime(item.createTime) }}</span>
+                </div>
+                <div class="message-text">点赞了你的{{ item.targetType === 'project' ? '项目' : '评论' }}</div>
+              </div>
+            </div>
+            <div v-if="likeLoading" class="loading-more">
+              <el-icon class="is-loading"><Loading /></el-icon>
+            </div>
+            <div v-else-if="likeHasMore" class="load-more" @click="loadMoreLikes">
+              加载更多
+            </div>
+            <div v-else-if="likeMessages.length === 0" class="no-message">
+              暂无消息
+            </div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </el-popover>
+
     <!-- 头像下拉菜单 -->
     <el-dropdown class="avatar-dropdown" trigger="click">
       <div class="avatar-wrapper">
@@ -138,8 +233,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { Loading, ArrowDown } from '@element-plus/icons-vue';
+import { ref, onMounted ,computed, watch} from 'vue';
+import { Loading, ArrowDown,Bell } from '@element-plus/icons-vue';
 import router from "@/router";
 import { logout, post, get } from '@/net';
 import { ElMessage } from 'element-plus';
@@ -158,6 +253,177 @@ const hasMore = ref(true);
 const categories = ref([]);
 const difficulties = ref([]);
 const search = ref({ name: '', category: '', difficulties: [] });
+
+
+// 消息相关状态
+const messageVisible = ref(false);
+const activeMessageTab = ref('comment');
+const unreadCount = ref(0);
+
+// 评论消息
+const commentMessages = ref([]);
+const commentPage = ref(1);
+const commentSize = ref(10);
+const commentHasMore = ref(true);
+const commentLoading = ref(false);
+
+// 关注消息
+const followMessages = ref([]);
+const followPage = ref(1);
+const followHasMore = ref(true);
+const followLoading = ref(false);
+
+// 点赞消息
+const likeMessages = ref([]);
+const likePage = ref(1);
+const likeHasMore = ref(true);
+const likeLoading = ref(false);
+
+// 获取未读消息数
+const fetchUnreadCount = async () => {
+  try {
+    const res = await get('/api/auth/project/unreadMsgCount');
+    unreadCount.value = res.count || 0;
+  } catch (e) {
+    console.error('获取未读消息数失败:', e);
+  }
+};
+
+// 加载评论消息
+const loadCommentMessages = async () => {
+  if (commentLoading.value) return;
+  commentLoading.value = true;
+  try {
+    const res = await get('/api/auth/project/msgOfCommentList', {
+      page: commentPage.value,
+      size: commentSize.value
+    });
+    commentMessages.value = [...commentMessages.value, ...(res.records || [])];
+    commentHasMore.value = commentMessages.value.length < (res.total || 0);
+  } catch (e) {
+    console.error('加载评论消息失败:', e);
+  } finally {
+    commentLoading.value = false;
+  }
+};
+
+// 加载更多评论
+const loadMoreComments = () => {
+  commentPage.value += 1;
+  loadCommentMessages();
+};
+
+// 加载关注消息
+const loadFollowMessages = async () => {
+  if (followLoading.value) return;
+  followLoading.value = true;
+  try {
+    const res = await get('/api/auth/project/msgOfFollowed', {
+      page: followPage.value,
+      size: commentSize.value
+    });
+    followMessages.value = [...followMessages.value, ...(res.records || [])];
+    followHasMore.value = followMessages.value.length < (res.total || 0);
+  } catch (e) {
+    console.error('加载关注消息失败:', e);
+  } finally {
+    followLoading.value = false;
+  }
+};
+
+// 加载更多关注
+const loadMoreFollows = () => {
+  followPage.value += 1;
+  loadFollowMessages();
+};
+
+// 加载点赞消息
+const loadLikeMessages = async () => {
+  if (likeLoading.value) return;
+  likeLoading.value = true;
+  try {
+    const res = await get('/api/auth/project/msgOfLiked', {
+      page: likePage.value,
+      size: commentSize.value
+    });
+    likeMessages.value = [...likeMessages.value, ...(res.records || [])];
+    likeHasMore.value = likeMessages.value.length < (res.total || 0);
+  } catch (e) {
+    console.error('加载点赞消息失败:', e);
+  } finally {
+    likeLoading.value = false;
+  }
+};
+
+// 加载更多点赞
+const loadMoreLikes = () => {
+  likePage.value += 1;
+  loadLikeMessages();
+};
+
+// 点击消息图标
+const handleMessageClick = () => {
+  if (!messageVisible.value) {
+    // 每次打开时刷新当前tab数据
+    switch (activeMessageTab.value) {
+      case 'comment':
+        commentMessages.value = [];
+        commentPage.value = 1;
+        loadCommentMessages();
+        break;
+      case 'follow':
+        followMessages.value = [];
+        followPage.value = 1;
+        loadFollowMessages();
+        break;
+      case 'like':
+        likeMessages.value = [];
+        likePage.value = 1;
+        loadLikeMessages();
+        break;
+    }
+    // 如果有未读消息，标记为已读
+    if (unreadCount.value > 0) {
+      markMessagesAsRead();
+    }
+  }
+};
+
+// 标记消息为已读
+const markMessagesAsRead = async () => {
+  try {
+    await post('/api/auth/project/markMsgAsRead');
+    unreadCount.value = 0;
+  } catch (e) {
+    console.error('标记消息为已读失败:', e);
+  }
+};
+
+// 监听tab切换
+watch(activeMessageTab, (newVal) => {
+  if (messageVisible.value) {
+    switch (newVal) {
+      case 'comment':
+        if (commentMessages.value.length === 0) {
+          loadCommentMessages();
+        }
+        break;
+      case 'follow':
+        if (followMessages.value.length === 0) {
+          loadFollowMessages();
+        }
+        break;
+      case 'like':
+        if (likeMessages.value.length === 0) {
+          loadLikeMessages();
+        }
+        break;
+    }
+  }
+});
+
+
+
 
 function changeDisplayMode(mode) {
   displayMode.value = mode;
@@ -406,5 +672,92 @@ function userLogout() {
 .avatar-wrapper .el-icon {
   margin-left: 5px;
   color: #666;
+}
+
+/* 新增消息通知样式 */
+.message-bell {
+  position: absolute;
+  right: 70px;
+  top: 15px;
+  z-index: 1001;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s;
+}
+
+.message-bell:hover {
+  background-color: #f0f0f0;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-tabs {
+  padding: 0 10px;
+}
+
+.message-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.message-item {
+  display: flex;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.message-avatar {
+  margin-right: 12px;
+}
+
+.message-content {
+  flex: 1;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.message-user {
+  font-weight: bold;
+  color: #333;
+}
+
+.message-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.message-text {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.load-more, .no-message {
+  text-align: center;
+  padding: 10px;
+  color: #999;
+  cursor: pointer;
+}
+
+.load-more:hover {
+  color: #409EFF;
+}
+
+.no-message {
+  cursor: default;
+}
+
+.loading-more {
+  text-align: center;
+  padding: 10px;
 }
 </style>
