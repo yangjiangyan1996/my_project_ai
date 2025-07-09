@@ -13,6 +13,8 @@ import java.util.Date;
 @Data
 public class MsgOfCommentListResp {
     private Long id;
+    private Long projectId;
+    private Long commentId;
     private String senderName;
     private String content;
     private Integer isRead;

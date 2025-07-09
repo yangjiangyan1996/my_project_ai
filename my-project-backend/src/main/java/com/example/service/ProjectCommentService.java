@@ -13,9 +13,11 @@ import java.util.Map;
  * @Date 2025/6/21 16:37
  */
 public interface ProjectCommentService extends IService<ProjectComment> {
-    Boolean comment(Long projectId, Long userId, String userName, String content, Long replyToId, Long firstLevelCommonId);
+    Long comment(Long projectId, Long userId, String userName, String content, Long replyToId, Long firstLevelCommonId);
 
     List<ProjectComment> selectByProjectId(Long projectId);
+
+    List<ProjectComment> selectByIds(List<Long> ids);
 
     ProjectComment selectByProjectAndCommentId(Long projectId, Long commentId);
 

@@ -17,7 +17,7 @@
       <el-tabs v-model="activeMessageTab" class="message-tabs">
         <el-tab-pane label="评论回复" name="comment">
           <div class="message-list">
-            <div v-for="item in commentMessages" :key="item.id" class="message-item">
+            <div v-for="item in commentMessages" :key="item.id" class="message-item" @click="showCommentDetail(item)">
                     <!-- <div class="message-avatar">
                       <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
                     </div> -->
@@ -55,6 +55,40 @@
             </div>
           </div>
         </el-tab-pane>
+
+        <!-- 评论详情对话框 -->
+          <el-dialog
+            v-model="commentDialogVisible"
+            title="评论详情"
+            width="60%"
+            top="5vh"
+            @closed="handleDialogClosed"
+          >
+            <div class="comment-dialog-container">
+              <div class="comment-list" ref="commentListRef">
+                <div 
+                  v-for="comment in allComments" 
+                  :key="comment.id" 
+                  class="comment-item"
+                  :class="{ 'highlight-comment': comment.id === currentCommentId }"
+                  ref="commentItems"
+                >
+                  <div class="comment-header">
+                    <el-avatar :src="comment.senderAvatar || '/images/default-avatar.png'" size="small" />
+                    <span class="comment-user">{{ comment.senderName }}</span>
+                    <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
+                  </div>
+                  <div class="comment-content">{{ comment.content }}</div>
+                  <div v-if="comment.relatedWords" class="comment-related">
+                    相关项目: {{ comment.relatedWords }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <template #footer>
+              <el-button @click="commentDialogVisible = false">关闭</el-button>
+            </template>
+          </el-dialog>
         
         <el-tab-pane label="新增关注" name="follow">
           <div class="message-list">
@@ -274,25 +308,68 @@ const search = ref({ name: '', category: '', difficulties: [] });
 const messageVisible = ref(false);
 const activeMessageTab = ref('comment');
 const unreadCount = ref(0);
-
 // 评论消息
 const commentMessages = ref([]);
 const commentPage = ref(1);
 const commentSize = ref(10);
 const commentHasMore = ref(true);
 const commentLoading = ref(false);
-
 // 关注消息
 const followMessages = ref([]);
 const followPage = ref(1);
 const followHasMore = ref(true);
 const followLoading = ref(false);
-
 // 点赞消息
 const likeMessages = ref([]);
 const likePage = ref(1);
 const likeHasMore = ref(true);
 const likeLoading = ref(false);
+
+//评论回复相关
+const commentDialogVisible = ref(false);
+const allComments = ref([]);
+const currentCommentId = ref(null);
+const commentListRef = ref(null);
+const commentItems = ref([]);
+
+// 显示评论详情
+const showCommentDetail = async (item) => {
+  try {
+    // 获取所有评论
+    const res = await get(`/api/auth/project/commentShow?projectId=${item.projectId}`);
+    allComments.value = res || [];
+    currentCommentId.value = item.commentId;
+    commentDialogVisible.value = true;
+    
+    // 在下一个tick滚动到指定评论
+    nextTick(() => {
+      scrollToCurrentComment();
+    });
+  } catch (e) {
+    console.error('获取评论详情失败:', e);
+    ElMessage.error('加载评论详情失败');
+  }
+};
+
+// 滚动到当前评论
+const scrollToCurrentComment = () => {
+  if (commentItems.value && currentCommentId.value) {
+    const index = allComments.value.findIndex(c => c.id === currentCommentId.value);
+    if (index !== -1 && commentItems.value[index]) {
+      commentItems.value[index].scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }
+};
+
+// 对话框关闭时重置状态
+const handleDialogClosed = () => {
+  allComments.value = [];
+  currentCommentId.value = null;
+};
+
 
 // 获取未读消息数
 const fetchUnreadCount = async () => {

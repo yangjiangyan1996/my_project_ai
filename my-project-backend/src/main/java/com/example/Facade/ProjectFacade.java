@@ -110,11 +110,13 @@ public class ProjectFacade {
     }
 
     public Boolean comment(UserCommentProjectReq req, Long userId, String name) {
-        boolean commentResult = projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyTo(), req.getFirstLevelCommonId());
-        if (commentResult) {
-            messageFacade.createMessageOfComment(req.getProjectId(), req.getReplyTo(), userId);
+        Long commentId = projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyTo(), req.getFirstLevelCommonId());
+        if (commentId!=null) {
+            messageFacade.createMessageOfComment(req.getProjectId(), commentId,req.getReplyTo(), userId);
+            return true;
+        } else {
+            return false;
         }
-        return commentResult;
     }
 
     public List<ProjectCommentResp> commentShow(Long projectId, Long currentUserId) {

@@ -18,10 +18,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -44,15 +41,14 @@ public class MessageFacade {
     @Resource
     ProjectService projectService;
 
-    public void createMessageOfPublisher( Long targetId, Long currentUserId) {
+    public void createMessageOfPublisher(Long targetId, Long currentUserId) {
         messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.PUBLISHER.getCode(), "关注了您", null, null);
     }
 
-    public void createMessageOfComment(Long projectId, Long replyTo, Long currentUserId) {
+    public void createMessageOfComment(Long projectId, Long relatedId, Long replyTo, Long currentUserId) {
         Long receiverId = null; // 获取接收者id
         String content = null;
         Integer type = null;
-        Long relatedId = null;
         String relatedWords = null;
         Projects p = projectService.selectByProjectId(projectId);
         if (replyTo != null) {
@@ -61,41 +57,55 @@ public class MessageFacade {
                 receiverId = pc.getUserId();
                 content = "回复了您的评论";
                 type = MessageEnums.MessageType.REPLY_COMMENT.getCode();
-                relatedId = replyTo;
                 relatedWords = pc.getContent();
             }
-        } else if(projectId != null) {
+        } else if (projectId != null) {
             receiverId = p.getCreatedBy();
             content = "评论了您的项目";
             type = MessageEnums.MessageType.REPLY_PROJECT.getCode();
-            relatedId = projectId;
             relatedWords = p.getName();
         }
 
         if (Objects.equals(receiverId, currentUserId)) {
-            log.info("MessageFacade#createMessageOfComment，消息接收者与发送者相同，不发送消息,id:{}",currentUserId);
+            log.info("MessageFacade#createMessageOfComment，消息接收者与发送者相同，不发送消息,id:{}", currentUserId);
             return;
         }
-        messagesService.createNotification(receiverId, currentUserId, type, content, relatedId,relatedWords);
+        messagesService.createNotification(receiverId, currentUserId, type, content, relatedId, relatedWords);
     }
 
-    public Page<MsgOfCommentListResp> msgOfCommentList( MsgOfCommentListPageReq req, Long userId) {
+    public Page<MsgOfCommentListResp> msgOfCommentList(MsgOfCommentListPageReq req, Long userId) {
         List<Integer> types = LettuceLists.newList(MessageEnums.MessageType.REPLY_PROJECT.getCode(), MessageEnums.MessageType.REPLY_COMMENT.getCode());
-        Page<Messages> list = messagesService.getPage(Page.of(req.getPage() - 1, req.getSize()), userId,types);
+        Page<Messages> list = messagesService.getPage(Page.of(req.getPage() - 1, req.getSize()), userId, types);
         if (list.getRecords().isEmpty()) {
             return Page.of(req.getPage() - 1, req.getSize());
         }
 
+        Map<Long, Account> userId2UserInfoMap = new HashMap<>();
         List<Long> userIds = list.getRecords().stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
-        List<Account> accounts = accountService.selectByIds(userIds);
-        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+        if (!CollectionUtils.isEmpty(userIds)) {
+            List<Account> accounts = accountService.selectByIds(userIds);
+            userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+        }
+
+        Map<Long, ProjectComment> commentMap = new HashMap<>();
+        List<Long> replyCommentIds = list.getRecords().stream().map(v -> v.getRelatedId()).distinct().collect(Collectors.toList());
+        List<ProjectComment> commentList = projectCommentService.selectByIds(replyCommentIds);
+        if (commentList != null) {
+            commentMap = commentList.stream().collect(Collectors.toMap(ProjectComment::getId, v -> v));
+        }
+
+
+        Map<Long, Account> finalUserId2UserInfoMap = userId2UserInfoMap;
+        Map<Long, ProjectComment> finalCommentMap = commentMap;
         List<MsgOfCommentListResp> collect = list.getRecords().stream().map(v -> {
             MsgOfCommentListResp projectsResp = new MsgOfCommentListResp();
             BeanUtils.copyProperties(v, projectsResp);
 
-            if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
-                projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
+            if (!CollectionUtils.isEmpty(finalUserId2UserInfoMap) && finalUserId2UserInfoMap.containsKey(v.getSenderId())) {
+                projectsResp.setSenderName(finalUserId2UserInfoMap.get(v.getSenderId()).getNickname());
             }
+            projectsResp.setProjectId(finalCommentMap.get(v.getRelatedId()).getProjectId());
+            projectsResp.setCommentId(v.getRelatedId());
             return projectsResp;
         }).sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())).collect(Collectors.toList());
 
@@ -107,7 +117,7 @@ public class MessageFacade {
 
     public Page<MsgOfFollowerResp> msgOfFollowed(MsgOfFollowedPageReq req, Long userId) {
         List<Integer> types = LettuceLists.newList(MessageEnums.MessageType.PUBLISHER.getCode());
-        Page<Messages> list = messagesService.getPage(Page.of(req.getPage() - 1, req.getSize()), userId,types);
+        Page<Messages> list = messagesService.getPage(Page.of(req.getPage() - 1, req.getSize()), userId, types);
         if (list.getRecords().isEmpty()) {
             return Page.of(req.getPage() - 1, req.getSize());
         }
@@ -166,6 +176,6 @@ public class MessageFacade {
                 MessageEnums.MessageType.LIKE_COMMENT.getCode());
 
 
-        return messagesService.unreadMsgCount(userId,types);
+        return messagesService.unreadMsgCount(userId, types);
     }
 }

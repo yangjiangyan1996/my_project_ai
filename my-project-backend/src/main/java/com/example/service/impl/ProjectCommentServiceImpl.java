@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @Service
 public class ProjectCommentServiceImpl extends ServiceImpl<ProjectCommentMapper, ProjectComment> implements ProjectCommentService {
     @Override
-    public Boolean comment(Long projectId, Long userId, String userName, String content, Long replyToId,Long firstLevelCommonId) {
+    public Long comment(Long projectId, Long userId, String userName, String content, Long replyToId,Long firstLevelCommonId) {
         ProjectComment replyToComment = null;
         if (replyToId != null) {
             replyToComment = this.baseMapper.selectById(replyToId);
@@ -37,12 +37,23 @@ public class ProjectCommentServiceImpl extends ServiceImpl<ProjectCommentMapper,
         projectComment.setReplyToUserId(replyToComment != null ? replyToComment.getUserId() : null);
         projectComment.setReplyToUsername(replyToComment != null ? replyToComment.getUsername() : null);
         projectComment.setLikes(0);
-        return save(projectComment);
+        boolean save = save(projectComment);
+        if (save){
+            return projectComment.getId();
+        }else {
+            return null;
+        }
     }
 
     @Override
     public List<ProjectComment> selectByProjectId(Long projectId) {
         return this.baseMapper.selectList(new QueryWrapper<ProjectComment>().eq("project_id", projectId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public List<ProjectComment> selectByIds(List<Long> ids) {
+        return this.baseMapper.selectList(new QueryWrapper<ProjectComment>().in("id", ids)
                 .eq("is_deleted", 0));
     }
 
