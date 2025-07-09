@@ -400,8 +400,8 @@ const currentProjectId = ref(null);
 // 显示评论详情
 const showCommentDetail = async (item) => {
   try {
+    await markMessagesAsRead(item.id);//标记为已读
     currentProjectId.value = item.projectId; // 设置当前项目ID
-
 
     // 获取所有评论
     const res = await get(`/api/auth/project/commentShow?projectId=${item.projectId}`);
@@ -698,17 +698,19 @@ const handleMessageClick = () => {
         loadLikeMessages();
         break;
     }
-    // 如果有未读消息，标记为已读
-    if (unreadCount.value > 0) {
-      markMessagesAsRead();
-    }
+    // // 如果有未读消息，标记为已读
+    // if (unreadCount.value > 0) {
+    //   markMessagesAsRead();
+    // }
   }
 };
 
 // 标记消息为已读
-const markMessagesAsRead = async () => {
+const markMessagesAsRead = async (messageId) => {
   try {
-    await post('/api/auth/project/markMsgAsRead');
+    await post('/api/auth/msg/markMsgAsRead',{
+      id:messageId
+    });
     unreadCount.value = 0;
   } catch (e) {
     console.error('标记消息为已读失败:', e);

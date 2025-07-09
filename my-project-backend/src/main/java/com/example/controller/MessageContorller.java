@@ -5,10 +5,7 @@ import com.example.Facade.CommonFacade;
 import com.example.Facade.MessageFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
-import com.example.entity.req.MsgOfCommentListPageReq;
-import com.example.entity.req.MsgOfFollowedPageReq;
-import com.example.entity.req.MsgOfLikedPageReq;
-import com.example.entity.req.SearchUserReq;
+import com.example.entity.req.*;
 import com.example.entity.resp.MsgOfCommentListResp;
 import com.example.entity.resp.MsgOfFollowerResp;
 import com.example.entity.resp.MsgOfLikedPageResp;
@@ -48,6 +45,22 @@ public class MessageContorller {
             return RespBean.failure(999, e.getMessage());
         }
     }
+
+    @PostMapping("/markMsgAsRead")
+    public RespBean<Boolean> markMsgAsRead(@RequestBody MarkMsgAsReadReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean list = messageFacade.markMsgAsRead(req, user.getId());
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("MessageContorller#markMsgAsRead,req:{}", req,e);
+            return RespBean.failure(999, e.getMessage());
+        }  catch (Exception e) {
+            log.error("MessageContorller#markMsgAsRead, error",e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
 
     @PostMapping("/msgOfFollowed")
     public RespBean<Page<MsgOfFollowerResp>> msgOfFollowed(@RequestBody MsgOfFollowedPageReq req) {

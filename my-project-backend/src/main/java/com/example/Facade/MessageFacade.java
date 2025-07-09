@@ -2,6 +2,7 @@ package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
+import com.example.entity.req.MarkMsgAsReadReq;
 import com.example.entity.req.MsgOfCommentListPageReq;
 import com.example.entity.req.MsgOfFollowedPageReq;
 import com.example.entity.req.MsgOfLikedPageReq;
@@ -177,5 +178,9 @@ public class MessageFacade {
 
 
         return messagesService.unreadMsgCount(userId, types);
+    }
+
+    public Boolean markMsgAsRead(MarkMsgAsReadReq req, Long userId) {
+        return messagesService.markMsgAsRead(req.getId(), userId);
     }
 }

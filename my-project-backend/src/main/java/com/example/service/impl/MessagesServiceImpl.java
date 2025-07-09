@@ -63,4 +63,13 @@ public class MessagesServiceImpl extends ServiceImpl<MessagesMapper, Messages> i
                         .eq("is_deleted", 0)
         );
     }
+
+    @Override
+    public Boolean markMsgAsRead(Long id, Long userId) {
+        Messages messages = new Messages();
+        messages.setIsRead(MessageEnums.MessageReadStatus.READ.getCode());
+        messages.setModifiedAt(new Date());
+        messages.setModifiedBy(userId);
+        return this.baseMapper.update(messages, new QueryWrapper<Messages>().eq("id", id)) == 1;
+    }
 }
