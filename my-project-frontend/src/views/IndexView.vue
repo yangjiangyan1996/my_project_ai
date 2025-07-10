@@ -17,18 +17,25 @@
       <el-tabs v-model="activeMessageTab" class="message-tabs">
         <el-tab-pane label="评论回复" name="comment">
           <div class="message-list">
-            <div v-for="item in commentMessages" :key="item.id" class="message-item" @click="showCommentDetail(item)">
-                    <div class="message-content">
-                      <div class="message-header">
-                        <span class="message-time">{{ formatTime(item.createdAt) }}</span>
-                      </div>
-                      <div class="message-text">
-                        <span class="sender-name">{{ item.senderName }}</span>
-                        <span class="message-content-text">{{ item.content }}</span>
-                        <span class="related-words">"{{ item.relatedWords }}"</span>
-                      </div>
-                    </div>
-                  </div>
+            <div 
+              v-for="item in commentMessages" 
+              :key="item.id" 
+              class="message-item" 
+              @click="showCommentDetail(item)"
+              :class="{ 'unread-message': item.isRead === 0 }"
+            >
+              <div class="message-unread-dot" v-if="item.isRead === 0"></div>
+              <div class="message-content">
+                <div class="message-header">
+                  <span class="message-time">{{ formatTime(item.createdAt) }}</span>
+                </div>
+                <div class="message-text">
+                  <span class="sender-name">{{ item.senderName }}</span>
+                  <span class="message-content-text">{{ item.content }}</span>
+                  <span class="related-words">"{{ item.relatedWords }}"</span>
+                </div>
+              </div>
+            </div>
           
             <div v-if="commentLoading" class="loading-more">
               <el-icon class="is-loading"><Loading /></el-icon>
@@ -43,105 +50,111 @@
         </el-tab-pane>
 
         <!-- 评论详情对话框 -->
-          <el-dialog
-            v-model="commentDialogVisible"
-            title="评论详情"
-            width="60%"
-            top="5vh"
-            @closed="handleDialogClosed"
-            class="comment-detail-dialog"
-          >
-            <div class="comment-dialog-container">
-              <div class="comment-list" ref="commentListRef">
-                <div 
-                  v-for="comment in allComments" 
-                  :key="comment.id" 
-                  class="comment-item"
-                  :class="{ 'highlight-comment': comment.id === currentCommentId }"
-                  ref="commentItems"
-                >
-                  <div class="comment-header">
-                    <el-avatar :src="comment.avatar || '/images/default-avatar.png'" size="small" class="user-avatar">{{ comment.username?.charAt(0) || '匿' }}</el-avatar>
-                    <strong class="username" @click.stop="goToUserProfile(comment.secrecyId)">{{ comment.username || '匿名用户' }}</strong>
-                    <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
-                  </div>
-                  
-                  <div v-if="comment.deleted" class="deleted">该评论已被删除</div>
-                  <div v-else v-html="renderMarkdown(comment.content)" class="md-content" />
-                  
-                  <div class="comment-actions">
-                    <el-button text @click="replyToDialog(comment.id, comment.username)">回复</el-button>
-                    <el-button text @click="likeDialogComment(comment.id)">👍 {{ comment.likes || 0 }}</el-button>
-                    <el-button text v-if="comment.isMine" @click="deleteDialogComment(comment.id)">删除</el-button>
-                    <el-button text v-if="comment.replies?.length" @click="toggleExpandDialog(comment.id)">
-                      {{ expandedDialogComments[comment.id] ? '收起回复' : `展开回复 (${comment.replies.length})` }}
-                    </el-button>
-                  </div>
+        <el-dialog
+          v-model="commentDialogVisible"
+          title="评论详情"
+          width="60%"
+          top="5vh"
+          @closed="handleDialogClosed"
+          class="comment-detail-dialog"
+        >
+          <div class="comment-dialog-container">
+            <div class="comment-list" ref="commentListRef">
+              <div 
+                v-for="comment in allComments" 
+                :key="comment.id" 
+                class="comment-item"
+                :class="{ 'highlight-comment': comment.id === currentCommentId }"
+                ref="commentItems"
+              >
+                <div class="comment-header">
+                  <el-avatar :src="comment.avatar || '/images/default-avatar.png'" size="small" class="user-avatar">{{ comment.username?.charAt(0) || '匿' }}</el-avatar>
+                  <strong class="username" @click.stop="goToUserProfile(comment.secrecyId)">{{ comment.username || '匿名用户' }}</strong>
+                  <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
+                </div>
+                
+                <div v-if="comment.deleted" class="deleted">该评论已被删除</div>
+                <div v-else v-html="renderMarkdown(comment.content)" class="md-content" />
+                
+                <div class="comment-actions">
+                  <el-button text @click="replyToDialog(comment.id, comment.username)">回复</el-button>
+                  <el-button text @click="likeDialogComment(comment.id)">👍 {{ comment.likes || 0 }}</el-button>
+                  <el-button text v-if="comment.isMine" @click="deleteDialogComment(comment.id)">删除</el-button>
+                  <el-button text v-if="comment.replies?.length" @click="toggleExpandDialog(comment.id)">
+                    {{ expandedDialogComments[comment.id] ? '收起回复' : `展开回复 (${comment.replies.length})` }}
+                  </el-button>
+                </div>
 
-                  <!-- 回复列表 -->
-                  <div v-if="expandedDialogComments[comment.id] && comment.replies?.length" class="replies">
-                    <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-                      <div class="comment-header">
-                        <el-avatar :src="reply.avatar || '/images/default-avatar.png'" size="small" class="user-avatar">{{ reply.username?.charAt(0) || '匿' }}</el-avatar>
-                        <strong class="username" @click.stop="goToUserProfile(reply.secrecyId)">{{ reply.username || '匿名用户' }}</strong>
-                        <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
-                      </div>
-                      
-                      <div v-if="reply.deleted" class="deleted">该回复已被删除</div>
-                      <div v-else class="reply-content">
-                        <template v-if="reply.replyToName">@{{ reply.replyToName }}：</template>
-                        <span v-html="renderMarkdown(reply.content)" class="md-content" />
-                      </div>
-                      
-                      <div class="comment-actions">
-                        <el-button text @click="replyToDialog(reply.id, reply.username)">回复</el-button>
-                        <el-button text @click="likeDialogComment(reply.id)">👍 {{ reply.likes || 0 }}</el-button>
-                        <el-button text v-if="reply.isMine" @click="deleteDialogComment(reply.id)">删除</el-button>
-                      </div>
+                <!-- 回复列表 -->
+                <div v-if="expandedDialogComments[comment.id] && comment.replies?.length" class="replies">
+                  <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
+                    <div class="comment-header">
+                      <el-avatar :src="reply.avatar || '/images/default-avatar.png'" size="small" class="user-avatar">{{ reply.username?.charAt(0) || '匿' }}</el-avatar>
+                      <strong class="username" @click.stop="goToUserProfile(reply.secrecyId)">{{ reply.username || '匿名用户' }}</strong>
+                      <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
+                    </div>
+                    
+                    <div v-if="reply.deleted" class="deleted">该回复已被删除</div>
+                    <div v-else class="reply-content">
+                      <template v-if="reply.replyToName">@{{ reply.replyToName }}：</template>
+                      <span v-html="renderMarkdown(reply.content)" class="md-content" />
+                    </div>
+                    
+                    <div class="comment-actions">
+                      <el-button text @click="replyToDialog(reply.id, reply.username)">回复</el-button>
+                      <el-button text @click="likeDialogComment(reply.id)">👍 {{ reply.likes || 0 }}</el-button>
+                      <el-button text v-if="reply.isMine" @click="deleteDialogComment(reply.id)">删除</el-button>
                     </div>
                   </div>
-                </div>
-              </div>
-              
-              <!-- 回复输入框 -->
-              <div class="zhihu-comment-editor" v-if="activeReplyCommentId">
-                <div class="editor-header">
-                  <div class="avatar">{{ userInitial }}</div>
-                  <span>回复 {{ replyToUsername }}</span>
-                </div>
-                <el-input
-                  v-model="replyContent"
-                  type="textarea"
-                  :placeholder="`回复 ${replyToUsername}...`"
-                  :autosize="{ minRows: 4, maxRows: 8 }"
-                  class="markdown-textarea"
-                />
-                <div class="editor-footer">
-                  <el-popover placement="top" width="250" trigger="click">
-                    <template #reference>
-                      <el-button size="small" text type="primary">😊 表情</el-button>
-                    </template>
-                    <div class="emoji-list">
-                      <span v-for="emoji in emojis" :key="emoji" class="emoji" @click="insertEmojiToReply(emoji)">
-                        {{ emoji }}
-                      </span>
-                    </div>
-                  </el-popover>
-                  
-                  <button class="cancel-button" @click="cancelReply">取消</button>
-                  <button class="submit-button" @click="submitDialogReply">发布</button>
                 </div>
               </div>
             </div>
             
-            <template #footer>
-              <el-button @click="commentDialogVisible = false">关闭</el-button>
-            </template>
-          </el-dialog>
+            <!-- 回复输入框 -->
+            <div class="zhihu-comment-editor" v-if="activeReplyCommentId">
+              <div class="editor-header">
+                <div class="avatar">{{ userInitial }}</div>
+                <span>回复 {{ replyToUsername }}</span>
+              </div>
+              <el-input
+                v-model="replyContent"
+                type="textarea"
+                :placeholder="`回复 ${replyToUsername}...`"
+                :autosize="{ minRows: 4, maxRows: 8 }"
+                class="markdown-textarea"
+              />
+              <div class="editor-footer">
+                <el-popover placement="top" width="250" trigger="click">
+                  <template #reference>
+                    <el-button size="small" text type="primary">😊 表情</el-button>
+                  </template>
+                  <div class="emoji-list">
+                    <span v-for="emoji in emojis" :key="emoji" class="emoji" @click="insertEmojiToReply(emoji)">
+                      {{ emoji }}
+                    </span>
+                  </div>
+                </el-popover>
+                
+                <button class="cancel-button" @click="cancelReply">取消</button>
+                <button class="submit-button" @click="submitDialogReply">发布</button>
+              </div>
+            </div>
+          </div>
+          
+          <template #footer>
+            <el-button @click="commentDialogVisible = false">关闭</el-button>
+          </template>
+        </el-dialog>
         
         <el-tab-pane label="新增关注" name="follow">
           <div class="message-list">
-            <div v-for="item in followMessages" :key="item.id" class="message-item">
+            <div 
+              v-for="item in followMessages" 
+              :key="item.id" 
+              class="message-item"
+              :class="{ 'unread-message': item.isRead === 0 }"
+            >
+              <div class="message-unread-dot" v-if="item.isRead === 0"></div>
               <div class="message-avatar">
                 <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
               </div>
@@ -167,7 +180,13 @@
         
         <el-tab-pane label="点赞通知" name="like">
           <div class="message-list">
-            <div v-for="item in likeMessages" :key="item.id" class="message-item">
+            <div 
+              v-for="item in likeMessages" 
+              :key="item.id" 
+              class="message-item"
+              :class="{ 'unread-message': item.isRead === 0 }"
+            >
+              <div class="message-unread-dot" v-if="item.isRead === 0"></div>
               <div class="message-avatar">
                 <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
               </div>
@@ -335,7 +354,7 @@ import { ref, onMounted ,computed, watch} from 'vue';
 import { Loading, ArrowDown,Bell } from '@element-plus/icons-vue';
 import router from "@/router";
 import { logout, post, get } from '@/net';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import SkillMatch from '@/views/SkillMatch.vue';
 import MyInfo from '@/views/My.vue';
 import useUserInfo from '@/hooks/useUserInfo';
@@ -698,10 +717,6 @@ const handleMessageClick = () => {
         loadLikeMessages();
         break;
     }
-    // // 如果有未读消息，标记为已读
-    // if (unreadCount.value > 0) {
-    //   markMessagesAsRead();
-    // }
   }
 };
 
@@ -711,9 +726,33 @@ const markMessagesAsRead = async (messageId) => {
     await post('/api/auth/msg/markMsgAsRead',{
       id:messageId
     });
-    unreadCount.value = 0;
+    // 更新本地消息状态
+    updateMessageReadStatus(messageId);
+    // 更新未读计数
+    fetchUnreadCount();
   } catch (e) {
     console.error('标记消息为已读失败:', e);
+  }
+};
+
+// 更新本地消息的已读状态
+const updateMessageReadStatus = (messageId) => {
+  // 更新评论消息
+  const commentIndex = commentMessages.value.findIndex(m => m.id === messageId);
+  if (commentIndex !== -1) {
+    commentMessages.value[commentIndex].isRead = 1;
+  }
+  
+  // 更新关注消息
+  const followIndex = followMessages.value.findIndex(m => m.id === messageId);
+  if (followIndex !== -1) {
+    followMessages.value[followIndex].isRead = 1;
+  }
+  
+  // 更新点赞消息
+  const likeIndex = likeMessages.value.findIndex(m => m.id === messageId);
+  if (likeIndex !== -1) {
+    likeMessages.value[likeIndex].isRead = 1;
   }
 };
 
@@ -739,9 +778,6 @@ watch(activeMessageTab, (newVal) => {
     }
   }
 });
-
-
-
 
 function changeDisplayMode(mode) {
   displayMode.value = mode;
@@ -1029,6 +1065,24 @@ function userLogout() {
   display: flex;
   padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
+  position: relative;
+  transition: all 0.3s;
+}
+
+/* 未读消息样式 */
+.unread-message {
+  background-color: #f8fafc;
+}
+
+.message-unread-dot {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #f56c6c;
 }
 
 .message-avatar {
@@ -1037,6 +1091,7 @@ function userLogout() {
 
 .message-content {
   flex: 1;
+  margin-left: 15px; /* 为未读标记留出空间 */
 }
 
 .message-header {
