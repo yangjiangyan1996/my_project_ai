@@ -99,16 +99,19 @@ public class MessageFacade {
         Map<Long, Account> finalUserId2UserInfoMap = userId2UserInfoMap;
         Map<Long, ProjectComment> finalCommentMap = commentMap;
         List<MsgOfCommentListResp> collect = list.getRecords().stream().map(v -> {
-            MsgOfCommentListResp projectsResp = new MsgOfCommentListResp();
-            BeanUtils.copyProperties(v, projectsResp);
+                    MsgOfCommentListResp projectsResp = new MsgOfCommentListResp();
+                    BeanUtils.copyProperties(v, projectsResp);
 
-            if (!CollectionUtils.isEmpty(finalUserId2UserInfoMap) && finalUserId2UserInfoMap.containsKey(v.getSenderId())) {
-                projectsResp.setSenderName(finalUserId2UserInfoMap.get(v.getSenderId()).getNickname());
-            }
-            projectsResp.setProjectId(finalCommentMap.get(v.getRelatedId()).getProjectId());
-            projectsResp.setCommentId(v.getRelatedId());
-            return projectsResp;
-        }).sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())).collect(Collectors.toList());
+                    if (!CollectionUtils.isEmpty(finalUserId2UserInfoMap) && finalUserId2UserInfoMap.containsKey(v.getSenderId())) {
+                        projectsResp.setSenderName(finalUserId2UserInfoMap.get(v.getSenderId()).getNickname());
+                    }
+                    projectsResp.setProjectId(finalCommentMap.get(v.getRelatedId()).getProjectId());
+                    projectsResp.setCommentId(v.getRelatedId());
+                    return projectsResp;
+                })
+                .sorted(Comparator.comparing(MsgOfCommentListResp::getIsRead)
+                        .thenComparing(MsgOfCommentListResp::getCreatedAt, Comparator.reverseOrder()))
+                .collect(Collectors.toList());
 
         Page<MsgOfCommentListResp> result = Page.of(req.getPage() - 1, req.getSize());
         result.setTotal(list.getTotal());
@@ -127,14 +130,17 @@ public class MessageFacade {
         List<Account> accounts = accountService.selectByIds(userIds);
         Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
         List<MsgOfFollowerResp> collect = list.getRecords().stream().map(v -> {
-            MsgOfFollowerResp projectsResp = new MsgOfFollowerResp();
-            BeanUtils.copyProperties(v, projectsResp);
+                    MsgOfFollowerResp projectsResp = new MsgOfFollowerResp();
+                    BeanUtils.copyProperties(v, projectsResp);
 
-            if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
-                projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
-            }
-            return projectsResp;
-        }).sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())).collect(Collectors.toList());
+                    if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
+                        projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
+                    }
+                    return projectsResp;
+                })
+                .sorted(Comparator.comparing(MsgOfFollowerResp::getIsRead)
+                        .thenComparing(MsgOfFollowerResp::getCreatedAt, Comparator.reverseOrder()))
+                .collect(Collectors.toList());
 
         Page<MsgOfFollowerResp> result = Page.of(req.getPage() - 1, req.getSize());
         result.setTotal(list.getTotal());
@@ -153,14 +159,17 @@ public class MessageFacade {
         List<Account> accounts = accountService.selectByIds(userIds);
         Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
         List<MsgOfLikedPageResp> collect = list.getRecords().stream().map(v -> {
-            MsgOfLikedPageResp projectsResp = new MsgOfLikedPageResp();
-            BeanUtils.copyProperties(v, projectsResp);
+                    MsgOfLikedPageResp projectsResp = new MsgOfLikedPageResp();
+                    BeanUtils.copyProperties(v, projectsResp);
 
-            if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
-                projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
-            }
-            return projectsResp;
-        }).sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())).collect(Collectors.toList());
+                    if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
+                        projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
+                    }
+                    return projectsResp;
+                })
+                .sorted(Comparator.comparing(MsgOfLikedPageResp::getIsRead)
+                        .thenComparing(MsgOfLikedPageResp::getCreatedAt, Comparator.reverseOrder()))
+                .collect(Collectors.toList());
 
         Page<MsgOfLikedPageResp> result = Page.of(req.getPage() - 1, req.getSize());
         result.setTotal(list.getTotal());
