@@ -11,8 +11,8 @@
           <h2 class="title">{{ detail.name }}</h2>
           
           <div class="creator">
-            <div class="user-info">
-              <el-avatar :size="32" class="user-avatar">{{ detail.creatorName?.charAt(0) || '匿' }}</el-avatar>
+            <div class="user-info" @click="goToUserProfile(detail.secrecyId)">
+              <el-avatar :size="32" class="user-avatar" >{{ detail.creatorName?.charAt(0) || '匿' }}</el-avatar>
               <div class="user-detail">
                 <div class="username">{{ detail.creatorName || '匿名用户' }}</div>
               </div>

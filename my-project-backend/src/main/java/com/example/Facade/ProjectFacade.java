@@ -83,6 +83,7 @@ public class ProjectFacade {
         r.setImageUrl(projectDown.getImageUrl());
         Account account = accountService.selectById(project.getCreatedBy());
         r.setCreatorName(account.getNickname());
+        r.setSecrecyId(account.getSecrecyId());
 
         if (userId != null) {
             Boolean myLike = projectLikeService.selectByProjectIdAndUserId(projectId, userId);
@@ -102,7 +103,9 @@ public class ProjectFacade {
     }
 
     public Boolean likeProject(Long projectId, Long id, Boolean liked) {
-        return projectLikeService.likeProject(projectId, id, liked);
+        Boolean result =  projectLikeService.likeProject(projectId, id, liked);
+        messageFacade.createMessageOfLike(projectId, null, id);
+        return result;
     }
 
     public Boolean favoriteProject(Long projectId, Long id, Boolean liked) {
@@ -218,7 +221,9 @@ public class ProjectFacade {
         if (l != null) {
             throw new ValidationException("已点赞，无需重复操作！");
         }
-        return projectCommentLikeService.insert(commentId, projectId, userId);
+        Boolean result =  projectCommentLikeService.insert(commentId, projectId, userId);
+        messageFacade.createMessageOfLike(projectId, commentId, userId);
+        return result;
     }
 
     public Boolean concernPublisher(ConcernPublisherReq req, Long id) {

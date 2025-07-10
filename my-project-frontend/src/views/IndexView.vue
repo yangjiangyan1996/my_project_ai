@@ -210,19 +210,22 @@
               :key="item.id" 
               class="message-item"
               :class="{ 'unread-message': item.isRead === 0 }"
+              @click="showCommentDetail(item)"
             >
               <div class="message-unread-dot" v-if="item.isRead === 0"></div>
-              <div class="message-avatar">
-                <el-avatar :src="item.senderAvatar || '/images/default-avatar.png'" />
-              </div>
+              
               <div class="message-content">
                 <div class="message-header">
-                  <span class="message-user">{{ item.senderName }}</span>
-                  <span class="message-time">{{ formatTime(item.createTime) }}</span>
+                  <span class="message-time">{{ formatTime(item.createdAt) }}</span>
                 </div>
-                <div class="message-text">点赞了你的{{ item.targetType === 'project' ? '项目' : '评论' }}</div>
+                <div class="message-text">
+                  <span class="sender-name">{{ item.senderName }}</span>
+                  <span class="message-content-text">{{ item.content }}</span>
+                  <span class="related-words">"{{ item.relatedWords }}"</span>
+                </div>
               </div>
             </div>
+
             <div v-if="likeLoading" class="loading-more">
               <el-icon class="is-loading"><Loading /></el-icon>
             </div>
@@ -508,6 +511,7 @@ const markAllAsRead = async (tab) => {
 // 显示评论详情
 const showCommentDetail = async (item) => {
   try {
+    console.log("显示点赞详情item",item)
     await markMessagesAsRead(item.id);//标记为已读
     currentProjectId.value = item.projectId; // 设置当前项目ID
 
@@ -530,6 +534,40 @@ const showCommentDetail = async (item) => {
   } catch (e) {
     console.error('获取评论详情失败:', e);
     ElMessage.error('加载评论详情失败');
+  }
+};
+
+// 显示点赞详情
+const showLikeDetail = async (item) => {
+  try {
+    console.log("显示点赞详情item",item)
+    await markMessagesAsRead(item.id);//标记为已读
+    
+    if (item.targetType === 'comment') {
+      // 如果是评论点赞，显示评论详情
+      currentProjectId.value = item.projectId;
+      const res = await get(`/api/auth/project/commentShow?projectId=${item.projectId}`);
+      allComments.value = res || [];
+      currentCommentId.value = item.commentId;
+      commentDialogVisible.value = true;
+      
+      // 展开所有回复
+      allComments.value.forEach(comment => {
+        if (comment.replies?.length) {
+          expandedDialogComments.value[comment.id] = true;
+        }
+      });
+      
+      // 在下一个tick滚动到指定评论
+      await nextTick();
+      scrollToCurrentComment();
+    } else {
+      // 如果是项目点赞，跳转到项目详情页
+      router.push({ name: 'project-detail', params: { id: item.projectId } });
+    }
+  } catch (e) {
+    console.error('获取点赞详情失败:', e);
+    ElMessage.error('加载点赞详情失败');
   }
 };
 

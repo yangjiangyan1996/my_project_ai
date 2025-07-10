@@ -17,6 +17,7 @@ public class ProjectsDetailResp {
     private Long id;
     private String name;
     private Long createdBy;
+    private Long secrecyId;
     private Long projectsId;
     private String imageUrl;
     private String steps;
