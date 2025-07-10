@@ -13,9 +13,12 @@ import java.util.Date;
 @Data
 public class MsgOfFollowerResp {
     private Long id;
+    private Long senderId;
     private String senderName;
     private String senderAvatar;
     private String content;
     private Integer isRead;
     private Date createdAt;
+    //是否需要回关
+    private Boolean needFollow;
 }

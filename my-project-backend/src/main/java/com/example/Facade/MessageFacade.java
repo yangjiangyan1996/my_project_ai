@@ -1,10 +1,7 @@
 package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.example.entity.dto.Account;
-import com.example.entity.dto.Messages;
-import com.example.entity.dto.ProjectComment;
-import com.example.entity.dto.Projects;
+import com.example.entity.dto.*;
 import com.example.entity.req.MarkMsgAsReadReq;
 import com.example.entity.req.MsgOfCommentListPageReq;
 import com.example.entity.req.MsgOfFollowedPageReq;
@@ -41,6 +38,8 @@ public class MessageFacade {
     MessageUserSettingsService messageUserSettingsService;
     @Resource
     ProjectCommentService projectCommentService;
+    @Resource
+    UserFollowService userFollowService;
     @Resource
     ProjectService projectService;
 
@@ -127,13 +126,26 @@ public class MessageFacade {
         if (list.getRecords().isEmpty()) {
             return Page.of(req.getPage() - 1, req.getSize());
         }
-
         List<Long> userIds = list.getRecords().stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
+        //查询发送者是否当前用户已经关注
+
+        List<UserFollow> userFollows = userFollowService.selectByFollowerId(userId);
+        List<Long> userFollowerIds = userFollows.stream().filter(v -> userIds.contains(v.getFollowerId())).map(v -> v.getFollowerId()).distinct().collect(Collectors.toList());
+
         List<Account> accounts = accountService.selectByIds(userIds);
         Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
         List<MsgOfFollowerResp> collect = list.getRecords().stream().map(v -> {
                     MsgOfFollowerResp projectsResp = new MsgOfFollowerResp();
                     BeanUtils.copyProperties(v, projectsResp);
+                    if (!CollectionUtils.isEmpty(userFollowerIds)) {
+                        if (userFollowerIds.contains(v.getSenderId())) {
+                            projectsResp.setNeedFollow(Boolean.FALSE);
+                        } else {
+                            projectsResp.setNeedFollow(Boolean.TRUE);
+                        }
+                    } else {
+                        projectsResp.setNeedFollow(Boolean.TRUE);
+                    }
 
                     if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
                         projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());

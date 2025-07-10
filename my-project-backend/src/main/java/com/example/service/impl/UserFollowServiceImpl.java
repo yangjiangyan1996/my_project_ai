@@ -56,7 +56,8 @@ public class UserFollowServiceImpl extends ServiceImpl<UserFollowMapper, UserFol
 
     @Override
     public List<UserFollow> selectByFolloweeId(Long followeeId) {
-        return list(new QueryWrapper<UserFollow>().eq("followee_id", followeeId)
+        return list(new QueryWrapper<UserFollow>()
+                .eq("followee_id", followeeId)
                 .eq("is_deleted", 0));
     }
 }
