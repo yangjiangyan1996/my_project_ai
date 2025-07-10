@@ -15,6 +15,18 @@
       </template>
       
       <el-tabs v-model="activeMessageTab" class="message-tabs">
+        <!-- 添加一键已读按钮 -->
+        <div class="mark-all-read-container">
+          <el-button 
+            type="text" 
+            size="small" 
+            @click="markAllAsRead(activeMessageTab)"
+            :disabled="unreadCount === 0"
+          >
+            <el-icon><CircleCheck /></el-icon>
+            一键已读
+          </el-button>
+        </div>
         <el-tab-pane label="评论回复" name="comment">
           <div class="message-list">
             <div 
@@ -351,7 +363,7 @@
 
 <script setup>
 import { ref, onMounted ,computed, watch} from 'vue';
-import { Loading, ArrowDown,Bell } from '@element-plus/icons-vue';
+import { Loading, ArrowDown,Bell, CircleCheck } from '@element-plus/icons-vue';
 import router from "@/router";
 import { logout, post, get } from '@/net';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -415,6 +427,35 @@ const replyContent = ref('');
 const replyToUsername = ref('');
 const currentProjectId = ref(null);
 
+
+// 添加一键已读方法
+const markAllAsRead = async (tab) => {
+  try {
+    const res = await get(`/api/auth/msg/allMarkRead?type=${tab}`);
+    if (res) {
+      // 根据tab类型更新对应的消息列表
+      switch(tab) {
+        case 'comment':
+          commentMessages.value.forEach(msg => msg.isRead = 1);
+          break;
+        case 'follow':
+          followMessages.value.forEach(msg => msg.isRead = 1);
+          break;
+        case 'like':
+          likeMessages.value.forEach(msg => msg.isRead = 1);
+          break;
+      }
+      
+      // 重置未读计数
+      fetchUnreadCount();
+      
+      ElMessage.success('消息已标记为已读');
+    }
+  } catch (e) {
+    console.error('一键已读失败:', e);
+    ElMessage.error('标记消息为已读失败');
+  }
+};
 
 // 显示评论详情
 const showCommentDetail = async (item) => {
@@ -1356,5 +1397,29 @@ function userLogout() {
   cursor: pointer;
   font-size: 20px;
   padding: 2px;
+}
+/* 添加一键已读按钮样式 */
+.mark-all-read-container {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.mark-all-read-container .el-button {
+  color: #666;
+}
+
+.mark-all-read-container .el-button:hover {
+  color: #409EFF;
+}
+
+.mark-all-read-container .el-button:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.mark-all-read-container .el-icon {
+  margin-right: 4px;
 }
 </style>

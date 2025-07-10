@@ -1,7 +1,10 @@
 package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.example.entity.dto.*;
+import com.example.entity.dto.Account;
+import com.example.entity.dto.Messages;
+import com.example.entity.dto.ProjectComment;
+import com.example.entity.dto.Projects;
 import com.example.entity.req.MarkMsgAsReadReq;
 import com.example.entity.req.MsgOfCommentListPageReq;
 import com.example.entity.req.MsgOfFollowedPageReq;
@@ -9,7 +12,6 @@ import com.example.entity.req.MsgOfLikedPageReq;
 import com.example.entity.resp.MsgOfCommentListResp;
 import com.example.entity.resp.MsgOfFollowerResp;
 import com.example.entity.resp.MsgOfLikedPageResp;
-import com.example.entity.resp.ProjectOfMyShowGetResp;
 import com.example.enums.MessageEnums;
 import com.example.service.*;
 import io.lettuce.core.internal.LettuceLists;
@@ -191,5 +193,12 @@ public class MessageFacade {
 
     public Boolean markMsgAsRead(MarkMsgAsReadReq req, Long userId) {
         return messagesService.markMsgAsRead(req.getId(), userId);
+    }
+
+    public Boolean allMarkRead(List<Integer> types, Long userId) {
+        if (CollectionUtils.isEmpty(types)) {
+            return false;
+        }
+        return messagesService.allMarkRead(types, userId) > 0;
     }
 }

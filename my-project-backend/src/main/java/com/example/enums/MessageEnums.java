@@ -36,7 +36,6 @@ public class MessageEnums {
      * 消息已读未读 0=未读，1=已读
      */
     @Getter
-
     public enum MessageReadStatus {
         UNREAD(0, "未读"),
         READ(1, "已读");
@@ -63,7 +62,6 @@ public class MessageEnums {
      * 消息类型枚举
      */
     @Getter
-
     public enum MessageType {
         F_POST(100, "收藏项目"),
         LIKE_POST(101, "点赞项目"),

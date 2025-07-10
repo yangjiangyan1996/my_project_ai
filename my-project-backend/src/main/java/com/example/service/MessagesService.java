@@ -21,4 +21,6 @@ public interface MessagesService extends IService<Messages> {
     Long unreadMsgCount(Long userId,List<Integer> types);
 
     Boolean markMsgAsRead(Long id, Long userId);
+
+    Integer allMarkRead(List<Integer> types, Long userId);
 }
