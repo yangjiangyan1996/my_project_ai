@@ -137,6 +137,7 @@ public class MessageFacade {
 
                     if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
                         projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
+                        projectsResp.setSenderAvatar(userId2UserInfoMap.get(v.getSenderId()).getAvatarUrl());
                     }
                     return projectsResp;
                 })

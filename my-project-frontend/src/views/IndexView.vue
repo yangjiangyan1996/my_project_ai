@@ -1097,6 +1097,7 @@ function userLogout() {
 
 .message-tabs {
   padding: 0 10px;
+  background-color: #f8fafc;
 }
 
 .message-list {

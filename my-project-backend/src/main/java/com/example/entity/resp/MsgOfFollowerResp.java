@@ -14,6 +14,7 @@ import java.util.Date;
 public class MsgOfFollowerResp {
     private Long id;
     private String senderName;
+    private String senderAvatar;
     private String content;
     private Integer isRead;
     private Date createdAt;
