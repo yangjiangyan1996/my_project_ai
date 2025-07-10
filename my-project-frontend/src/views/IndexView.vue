@@ -1074,17 +1074,19 @@ function userLogout() {
 /* 新增消息通知样式 */
 .message-bell {
   position: absolute;
-  right: 70px;
+  right: 100px;
   top: 15px;
   z-index: 1001;
   cursor: pointer;
   padding: 8px;
   border-radius: 50%;
   transition: background-color 0.3s;
+  color: #606266; /* 添加图标颜色，改为深灰色 */
 }
 
 .message-bell:hover {
   background-color: #f0f0f0;
+  color: #409EFF; /* 悬停时变为蓝色 */
 }
 
 .badge {
