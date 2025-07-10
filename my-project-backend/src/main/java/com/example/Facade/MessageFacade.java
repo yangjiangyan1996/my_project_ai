@@ -130,7 +130,10 @@ public class MessageFacade {
         //查询发送者是否当前用户已经关注
 
         List<UserFollow> userFollows = userFollowService.selectByFollowerId(userId);
-        List<Long> userFollowerIds = userFollows.stream().filter(v -> userIds.contains(v.getFollowerId())).map(v -> v.getFollowerId()).distinct().collect(Collectors.toList());
+        List<Long> userFollowerIds = userFollows.stream()
+                .filter(v -> userIds.contains(v.getFolloweeId()))
+                .map(UserFollow::getFolloweeId).distinct()
+                .collect(Collectors.toList());
 
         List<Account> accounts = accountService.selectByIds(userIds);
         Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));

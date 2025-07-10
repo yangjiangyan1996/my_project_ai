@@ -177,6 +177,18 @@
                 </div>
                 <div class="message-text">关注了你</div>
               </div>
+              <!-- 新增回关按钮 -->
+              <div class="follow-back-container" v-if="item.needFollow">
+                <el-button 
+                  size="small" 
+                  type="primary" 
+                  plain 
+                  @click.stop="followBack(item.senderId)"
+                  :loading="item.followLoading"
+                >
+                  回关
+                </el-button>
+              </div>
             </div>
             <div v-if="followLoading" class="loading-more">
               <el-icon class="is-loading"><Loading /></el-icon>
@@ -427,6 +439,34 @@ const replyContent = ref('');
 const replyToUsername = ref('');
 const currentProjectId = ref(null);
 
+// 回关用户
+const followBack = async (senderId) => {
+  try {
+    // 设置加载状态
+    const item = followMessages.value.find(m => m.senderId === senderId);
+    if (item) {
+      item.followLoading = true;
+      
+      const res = await post('/api/auth/project/concernPublisher', {
+        followeeId: senderId
+      });
+      
+      if (res) {
+        // 回关成功后更新状态
+        item.needFollow = false;
+        ElMessage.success('回关成功');
+      }
+    }
+  } catch (e) {
+    console.error('回关失败:', e);
+    ElMessage.error('回关失败');
+  } finally {
+    const item = followMessages.value.find(m => m.senderId === senderId);
+    if (item) {
+      item.followLoading = false;
+    }
+  }
+};
 
 // 添加一键已读方法
 const markAllAsRead = async (tab) => {
@@ -1424,5 +1464,22 @@ function userLogout() {
 
 .mark-all-read-container .el-icon {
   margin-right: 4px;
+}
+
+/* 新增回关按钮样式 */
+.follow-back-container {
+  margin-left: auto;
+  padding-right: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.message-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+  position: relative;
+  transition: all 0.3s;
 }
 </style>
