@@ -282,7 +282,8 @@ onMounted(async () => {
 
 const goToUserProfile = (userId) => {
   console.log("访问用户详情页",userId)
-  router.push(`/index/user/${userId}`)
+  // router.push(`/index/user/${userId}`)
+  window.open(`/index/user/${userId}`, '_blank');
 }
 
 // 获取申请按钮文本

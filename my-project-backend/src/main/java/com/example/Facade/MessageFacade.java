@@ -154,6 +154,8 @@ public class MessageFacade {
                         projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
                         projectsResp.setSenderAvatar(userId2UserInfoMap.get(v.getSenderId()).getAvatarUrl());
                     }
+
+                    projectsResp.setSecrecyId(userId2UserInfoMap.get(v.getSenderId()).getSecrecyId());
                     return projectsResp;
                 })
                 .sorted(Comparator.comparing(MsgOfFollowerResp::getIsRead)

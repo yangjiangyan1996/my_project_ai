@@ -165,6 +165,7 @@
               :key="item.id" 
               class="message-item"
               :class="{ 'unread-message': item.isRead === 0 }"
+              @click="goToUserProfile(item.secrecyId)" 
             >
               <div class="message-unread-dot" v-if="item.isRead === 0"></div>
               <div class="message-avatar">
@@ -467,6 +468,13 @@ const followBack = async (senderId) => {
     }
   }
 };
+
+
+const goToUserProfile = (userId) => {
+  console.log("访问用户详情页",userId)
+  // router.push(`/index/user/${userId}`)
+  window.open(`/index/user/${userId}`, '_blank');
+}
 
 // 添加一键已读方法
 const markAllAsRead = async (tab) => {
