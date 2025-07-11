@@ -42,6 +42,19 @@
                 </div>
               </div>
               
+              <!-- 添加关注按钮 -->
+              <el-button 
+                v-if="!isCurrentUser && userInfo.data?.id"
+                :type="isFollowing ? 'info' : 'primary'"
+                size="small"
+                @click="toggleFollow"
+                plain
+                round
+                :loading="followLoading"
+              >
+                <el-icon><Plus /></el-icon>
+                <span>{{ isFollowing ? '已关注' : '关注他' }}</span>
+              </el-button>
             </div>
           </div>
         </div>
@@ -84,18 +97,6 @@
                 <!-- <div v-if="item.status === 2" class="activity-reason">
                   <strong>拒绝理由：</strong>{{ item.reason || '无' }}
                 </div> -->
-
-                <!-- 重新编辑按钮 -->
-                <!-- <el-button
-                  v-if="item.status === 2"
-                  type="primary"
-                  size="small"
-                  @click.stop="goToCreateSidejob(item.id)"
-                  style="margin-top: 8px"
-                >
-                  重新编辑
-                </el-button> -->
-
                 <div class="activity-meta">
                   <span>👍 已赞同 {{ item.likeCount }}</span>
                   <span>💬 {{ item.commentCount }} 条评论</span>
@@ -180,35 +181,10 @@
           </div>
           <div class="sidejob-description">选择你的路径：发起副业项目，或加入有趣团队</div>
           <div class="sidejob-buttons">
-            <!-- 发起副业 - 使用火箭表示开始新事物，保持primary蓝色 -->
-            <!-- <el-button type="primary" size="large" @click="goToCreateSidejob">
-              🚀 发起副业
-            </el-button> -->
-            
             <!-- 找团队 - 使用握手符号表示合作，改为info天蓝色 -->
             <el-button type="info" size="large" @click="toggleIntentForm">
               👥 寻找团队
             </el-button>
-
-            <!-- 审核 - 使用警徽表示审核权限，使用warning黄色 -->
-            <!-- <el-button type="warning" size="large" @click="goToApplyList" style="margin-left: 0px;">
-              🛡️ 我审核的（{{ stats.applyCount || 0 }}）
-            </el-button> -->
-
-            <!-- 我申请的 - 使用文档符号表示申请记录，使用success绿色 -->
-            <!-- <el-button type="success" size="large" @click="goToApplicationList">
-              📄 我申请的
-            </el-button> -->
-
-            <!-- 管理员审核 - 使用星标表示管理员权限，使用danger红色 -->
-            <!-- <el-button 
-              type="danger" 
-              size="large" 
-              @click="goToAdminApplyList"
-              v-if="userInfo.data?.role === 'ADMIN'"
-            >
-              ⭐ 去审核用户发布的帖子
-            </el-button> -->
           </div>
 
           <!-- 意向表单区域 -->
@@ -323,13 +299,13 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Suitcase, SuccessFilled } from '@element-plus/icons-vue'
+import { Suitcase, SuccessFilled, Plus } from '@element-plus/icons-vue'
 import { post, get } from '@/net'
 import { ElMessage } from 'element-plus'
 import useUserInfo from '@/hooks/useUserInfo';
 
 
-const { state: userInfo, loadUserInfo } = useUserInfo();
+const { state: currentUserInfo, loadUserInfo } = useUserInfo();
 const route = useRoute()
 const router = useRouter()
 const teamList = ref([])
@@ -338,6 +314,9 @@ const teamSize = ref(10)
 const teamTotal = ref(0)
 const teamLoading = ref(false)
 const noMoreTeam = ref(false)
+const userInfo = ref({
+  data: null
+})
 
 
 // 意向表单相关状态
@@ -347,9 +326,36 @@ const hasSubmitted = ref(false)
 const submitting = ref(false)
 const publishing = ref(false)
 
+// 添加关注相关状态
+const isFollowing = ref(false)
+const followLoading = ref(false)
+
 // 用户ID从路由参数获取
 const secrecyId = ref(route.params.id)
-const isCurrentUser = computed(() => userId.value === userInfo.data?.id)
+const isCurrentUser =  ref(false)
+
+
+onMounted(() => {
+  // fetchUserInfo()
+  if (!currentUserInfo.data.id) {
+    loadUserInfo().then(() => {
+      fetchUserInfo()
+      isCurrentUser.value = String(currentUserInfo.data.secrecyId) === String(secrecyId.value)
+      fetchPublishData()
+      fetchFollowCount()
+      loadIntentData()
+      // checkFollowStatus()
+    });
+  } else {
+     fetchUserInfo();
+    isCurrentUser.value = String(currentUserInfo.data.secrecyId) === String(secrecyId.value)
+    fetchPublishData()
+    fetchFollowCount()
+    loadIntentData()
+    // checkFollowStatus()
+  }
+
+});
 
 const form = ref({
   id:'',
@@ -360,6 +366,49 @@ const form = ref({
   
   status: 1
 })
+
+// 检查关注状态
+const checkFollowStatus = async () => {
+  console.log("关注状态",userInfo)
+  if (!userInfo.value.data?.id ) return
+  try {
+    const res = await get(`/api/auth/my/isFollewer?followeeId=${userInfo.value.data.id}`)
+    console.log("关注状态",res)
+    isFollowing.value = !res // 接口返回true表示未关注，false表示已关注
+  } catch (error) {
+    console.error('检查关注状态失败:', error)
+  }
+}
+
+// 切换关注状态
+const toggleFollow = async () => {
+  if (!userInfo.value.data?.id || followLoading.value) return
+  
+  followLoading.value = true
+  try {
+    if (isFollowing.value) {
+      // 取消关注
+      await post('/api/auth/project/concernPublisherCancel', {
+        followeeId: userInfo.value.data.id
+      })
+      ElMessage.success('已取消关注')
+    } else {
+      // 关注
+      await post('/api/auth/project/concernPublisher', {
+        followeeId: userInfo.value.data.id
+      })
+      ElMessage.success('关注成功')
+    }
+    isFollowing.value = !isFollowing.value
+    // 更新关注数
+    await fetchFollowCount()
+  } catch (error) {
+    console.error('操作失败:', error)
+    ElMessage.error('操作失败，请稍后重试')
+  } finally {
+    followLoading.value = false
+  }
+}
 
 const loadMoreTeam = () => {
   if (!teamLoading.value && teamPage.value * teamSize.value < teamTotal.value) {
@@ -394,34 +443,7 @@ const goToDetail = (project) => {
 }
 
 const goToMyMemberGroupDetail = (projectId) => {
-  console.log("project.id",projectId)
   router.push({ name: 'myMemberGroupDetail', params: { id: projectId } })
-}
-
-const goToCreateSidejob = (itemId) => {
-  console.log("itemId------",itemId)
-  router.push({
-    name: 'createOfFindColleague',
-    query: { id: itemId }
-  })
-}
-
-
-const goToUpdateUserInfo = () => {
-  router.push('/index/my/updateUserInfo')
-}
-
-
-const goToApplyList = () => {
-  router.push('/index/my/applyList')
-}
-
-const goToAdminApplyList = () => {
-  router.push('/index/my/adminApplyList')
-}
-
-const goToApplicationList = () => {
-  router.push('/index/my/applicationList')
 }
 
 
@@ -430,8 +452,9 @@ const goToApplicationList = () => {
 const fetchUserInfo = async () => {
   try {
     const res = await get(`/api/auth/user/getSecrecyIdUserInfo?secrecyId=${secrecyId.value}`);
-    console.log("res",res)
-    userInfo.data = res
+    userInfo.value = { data: res }
+
+    checkFollowStatus();
   } catch (error) {
     console.error('获取用户信息失败:', error)
   }
@@ -480,16 +503,6 @@ const toggleIntentForm = () => {
     editMode.value = true
   }
 }
-
-// 取消编辑
-const cancelEdit = () => {
-  if (hasSubmitted.value) {
-    editMode.value = false
-  } else {
-    showIntentSection.value = false
-  }
-}
-
 
 // 其余原有代码
 const activeTab = ref('myPublish')
@@ -611,23 +624,7 @@ const handleTabChange = (tab) => {
   }
 }
 
-onMounted(() => {
 
-  if (!userInfo.data.id) {
-    loadUserInfo().then(() => {
-      fetchPublishData()
-      fetchFollowCount()
-    
-    fetchUserInfo();
-      loadIntentData()
-    });
-  } else {
-    fetchPublishData()
-    fetchFollowCount()
-     fetchUserInfo();
-    loadIntentData()
-  }
-});
 
 
 </script>
@@ -1122,6 +1119,16 @@ onMounted(() => {
   border-radius: 8px;
   text-align: center;
 }
+.user-info-wrapper .el-button {
+  margin-top: 8px;
+  align-self: flex-start;
+}
 
+/* 响应式调整 */
+@media (max-width: 600px) {
+  .user-info-wrapper .el-button {
+    align-self: center;
+  }
+}
 
 </style>

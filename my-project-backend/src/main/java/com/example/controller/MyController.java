@@ -152,4 +152,24 @@ public class MyController {
             return RespBean.failure(999, e.getMessage());
         }
     }
+
+
+    /**
+     * 是否关注
+     * @param req
+     * @return  接口返回true表示未关注，false表示已关注
+     */
+    @GetMapping("/isFollewer")
+    public RespBean<Boolean> isFollewer(@RequestParam(value = "followeeId") Long followeeId) {
+        try {
+            Boolean list = myFacade.isFollewer(followeeId, UserUtil.getCurrentUser().getId());
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("Mycontroller#isFollewer,req:{}", followeeId, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("Mycontroller#isFollewer, error", e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
 }

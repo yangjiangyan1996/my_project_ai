@@ -16,4 +16,5 @@ public class UserInfo implements Serializable {
     private String nikeName;
     private String role;
     private String industryName;
+    private Long secrecyId;
 }

@@ -215,4 +215,14 @@ public class MyFacade {
         result.setRecords(collect);
         return result;
     }
+
+    /**
+     *  接口返回true表示未关注，false表示已关注
+     * @param followeeId
+     * @param userId
+     * @return
+     */
+    public Boolean isFollewer(Long followeeId, Long userId) {
+        return !userFollowService.selectByUserIdAndFollowedId(userId, followeeId);
+    }
 }

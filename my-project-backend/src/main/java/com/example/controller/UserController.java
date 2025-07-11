@@ -78,6 +78,7 @@ public class UserController {
             user.setUsername(userAllInfo.getUsername());
             user.setIndustryName(CommonEnum.IndustryEnum.getByCode(userAllInfo.getIndustryCode()));
             user.setAvatarUrl(userAllInfo.getAvatarUrl());
+            user.setId(userAllInfo.getId());
             return RespBean.success(user);
         } catch (ValidationException e) {
             log.error("ProjectController#getCurrentUserInfo,req:{}", e);
