@@ -10,7 +10,9 @@ import lombok.Data;
 public class UserFollow extends BaseModel{
     @TableId(type = IdType.AUTO)
     private Long id;
+    //粉丝id
     private Long followerId;
+    //主播ID
     private Long followeeId;
     private Integer isMutual;
     private String remark;

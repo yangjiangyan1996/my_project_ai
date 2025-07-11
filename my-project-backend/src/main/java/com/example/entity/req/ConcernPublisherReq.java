@@ -1,5 +1,7 @@
 package com.example.entity.req;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
@@ -11,5 +13,7 @@ import lombok.Data;
 @Data
 public class ConcernPublisherReq {
     //被关注的id
+    @NotNull(message = "被关注的id不能为空")
+    @Min(value = 1, message = "被关注的id不能小于1")
     private Long followeeId;
 }

@@ -47,8 +47,31 @@ public class MessageFacade {
         messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.PUBLISHER.getCode(), "关注了您", null, null);
     }
 
+    public void deletedMessageOfPublisher(Long targetId, Long currentUserId) {
+        messagesService.deletedNotification(targetId, currentUserId, MessageEnums.MessageType.PUBLISHER.getCode(), null);
+    }
+
+    public void deletedMessageOfLike(Long projectId, Long relatedId, Long currentUserId) {
+        Long receiverId = 0L; // 获取接收者id
+        Integer type = null;
+        Projects p = projectService.selectByProjectId(projectId);
+
+        if (relatedId != null) {
+            ProjectComment pc = projectCommentService.selectById(relatedId);
+            type = MessageEnums.MessageType.LIKE_COMMENT.getCode();
+            receiverId = pc.getUserId();
+        } else {
+            receiverId = p.getCreatedBy();
+            type = MessageEnums.MessageType.LIKE_POST.getCode();
+        }
+        if (Objects.equals(receiverId, currentUserId)) {
+            log.info("MessageFacade#createMessageOfLike，消息接收者与发送者相同，不发送消息,id:{}", currentUserId);
+            return;
+        }
+        messagesService.deletedNotification(receiverId, currentUserId, type, relatedId);
+    }
     public void createMessageOfLike(Long projectId, Long relatedId, Long currentUserId) {
-        Long receiverId = null; // 获取接收者id
+        Long receiverId = 0L; // 获取接收者id
         Integer type = null;
         String content = null;
         String relatedWords = null;
@@ -257,4 +280,5 @@ public class MessageFacade {
         }
         return messagesService.allMarkRead(types, userId) > 0;
     }
+
 }

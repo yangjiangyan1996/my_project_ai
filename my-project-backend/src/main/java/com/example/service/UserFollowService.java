@@ -1,5 +1,6 @@
 package com.example.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.Projects;
 import com.example.entity.dto.UserFollow;
@@ -23,5 +24,10 @@ public interface UserFollowService extends IService<UserFollow> {
 
     List<UserFollow> selectByFollowerId(Long userId);
 
+    Page<UserFollow> selectPageByFollowerId(Page<UserFollow> of, Long userId);
+
     List<UserFollow> selectByFolloweeId(Long userId);
+
+    Page<UserFollow> selectPageByFolloweeId(Page<UserFollow> page, Long userId);
+
 }

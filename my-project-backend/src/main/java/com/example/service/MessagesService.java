@@ -16,6 +16,8 @@ import java.util.List;
 public interface MessagesService extends IService<Messages> {
     Boolean createNotification(Long receiverId, Long senderId, Integer type, String content, Long relatedId, String relatedWords);
 
+    Boolean deletedNotification(Long receiverId, Long senderId, Integer type, Long relatedId);
+
     Page<Messages> getPage(Page<Messages> page, Long userId, List<Integer> types);
 
     Long unreadMsgCount(Long userId,List<Integer> types);
@@ -23,4 +25,5 @@ public interface MessagesService extends IService<Messages> {
     Boolean markMsgAsRead(Long id, Long userId);
 
     Integer allMarkRead(List<Integer> types, Long userId);
+
 }

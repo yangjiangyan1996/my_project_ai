@@ -1,19 +1,23 @@
 package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.example.entity.dto.ProjectFavorite;
-import com.example.entity.dto.ProjectLike;
-import com.example.entity.dto.Projects;
-import com.example.entity.dto.UserFollow;
+import com.example.entity.dto.*;
+import com.example.entity.req.MyFolloweesPageReq;
+import com.example.entity.req.MyFollowersPageReq;
 import com.example.entity.req.MyPublishedPageReq;
-import com.example.entity.resp.MyFollowCountResp;
-import com.example.entity.resp.MyPublishedResp;
+import com.example.entity.resp.*;
+import com.example.enums.CommonEnum;
+import com.example.enums.MessageEnums;
 import com.example.enums.ProjectEnum;
 import com.example.service.*;
+import io.lettuce.core.internal.LettuceLists;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,6 +38,8 @@ public class MyFacade {
     ProjectLikeService projectLikeService;
     @Resource
     ProjectFavoriteService projectFavoriteService;
+    @Resource
+    AccountService  accountService;
     @Resource
     ProjectService projectService;
 
@@ -127,5 +133,85 @@ public class MyFacade {
         List<UserFollow> myFollowers = userFollowService.selectByFollowerId(userId);
         List<UserFollow> myFollowees = userFollowService.selectByFolloweeId(userId);
         return new MyFollowCountResp(myFollowers.size(), myFollowees.size());
+    }
+
+    public Page<MyFollowersPageResp> myFollowers(MyFollowersPageReq req, Long userId) {
+        Page<UserFollow> list = userFollowService.selectPageByFolloweeId(Page.of(req.getPage() - 1, req.getSize()), userId);
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+
+        List<Long> userIds = list.getRecords().stream().map(v -> v.getFollowerId()).distinct().collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+        List<UserFollow> userFollows = userFollowService.selectByFollowerId(userId);
+        List<Long> interrelationUserIds = userFollows.stream().filter(v -> userIds.contains(v.getFolloweeId()))
+                .map(v -> v.getFolloweeId())
+                .collect(Collectors.toList());
+
+
+        List<MyFollowersPageResp> collect = list.getRecords().stream().map(v -> {
+                    MyFollowersPageResp projectsResp = new MyFollowersPageResp();
+
+                    if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getFollowerId())) {
+                        Account account = userId2UserInfoMap.get(v.getFollowerId());
+                        projectsResp.setUserId(account.getId());
+                        projectsResp.setUsername(account.getUsername());
+                        projectsResp.setSecrecyId(account.getSecrecyId());
+                        projectsResp.setAvatarUrl(account.getAvatarUrl());
+                        projectsResp.setCreatedAt(v.getCreatedAt());
+                        projectsResp.setIndustryName(CommonEnum.IndustryEnum.getByCode(account.getIndustryCode()));
+                    }
+                    projectsResp.setNeedFollow(interrelationUserIds.contains(v.getFollowerId()));
+                    return projectsResp;
+                })
+                .sorted(Comparator.comparing(MyFollowersPageResp::getCreatedAt))
+                .collect(Collectors.toList());
+
+        Page<MyFollowersPageResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(list.getTotal());
+        result.setRecords(collect);
+        return result;
+    }
+
+    public Page<MyFolloweesPageResp> myFollowees(MyFolloweesPageReq req, Long userId) {
+        Page<UserFollow> list = userFollowService.selectPageByFollowerId(Page.of(req.getPage() - 1, req.getSize()), userId);
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+
+        List<Long> userIds = list.getRecords().stream().map(v -> v.getFolloweeId()).distinct().collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+        List<UserFollow> userFollows = userFollowService.selectByFolloweeId(userId);
+        List<Long> interrelationUserIds = userFollows.stream().filter(v -> userIds.contains(v.getFollowerId()))
+                .map(v -> v.getFollowerId())
+                .collect(Collectors.toList());
+
+
+        List<MyFolloweesPageResp> collect = list.getRecords().stream().map(v -> {
+                    MyFolloweesPageResp projectsResp = new MyFolloweesPageResp();
+
+                    if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getFolloweeId())) {
+                        Account account = userId2UserInfoMap.get(v.getFolloweeId());
+                        projectsResp.setUserId(account.getId());
+                        projectsResp.setUsername(account.getUsername());
+                        projectsResp.setSecrecyId(account.getSecrecyId());
+                        projectsResp.setAvatarUrl(account.getAvatarUrl());
+                        projectsResp.setCreatedAt(v.getCreatedAt());
+                        projectsResp.setIndustryName(CommonEnum.IndustryEnum.getByCode(account.getIndustryCode()));
+                    }
+                    projectsResp.setNeedFollow(interrelationUserIds.contains(v.getFollowerId()));
+                    return projectsResp;
+                })
+                .sorted(Comparator.comparing(MyFolloweesPageResp::getCreatedAt))
+                .collect(Collectors.toList());
+
+        Page<MyFolloweesPageResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(list.getTotal());
+        result.setRecords(collect);
+        return result;
     }
 }

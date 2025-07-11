@@ -341,13 +341,13 @@
 
         <div class="sidebar-info-section">
           <div class="sidebar-follow-row">
-            <div class="sidebar-section">
-              <h3 class="sidebar-title">关注了</h3>
-              <div class="sidebar-count">{{ followeeCount }}</div>
-            </div>
-            <div class="sidebar-section">
-              <h3 class="sidebar-title">关注者</h3>
+            <div class="sidebar-section" @click="openFollowDialog('following')">
+              <h3 class="sidebar-title">我关注的</h3>
               <div class="sidebar-count">{{ followerCount }}</div>
+            </div>
+            <div class="sidebar-section" @click="openFollowDialog('followers')">
+              <h3 class="sidebar-title">关注我的</h3>
+              <div class="sidebar-count">{{ followeeCount }}</div>
             </div>
           </div>
           <div class="sidebar-section">
@@ -355,8 +355,163 @@
             <div class="empty-placeholder">暂无内容</div>
           </div>
         </div>
+
       </div>
   </div>
+
+  <!-- 原有代码保持不变，只添加以下Dialog部分 -->
+   <el-dialog
+      v-model="followDialogVisible"
+      :title="followDialogTitle"
+      width="600px"
+      top="5vh"
+      destroy-on-close
+    >
+      <!-- 我关注的列表 -->
+      <div 
+        v-if="currentFollowTab === 'following'"
+        class="follow-list-container" 
+        v-infinite-scroll="loadMoreFollows"
+        :infinite-scroll-disabled="loadingFollowing || noMoreFollowing"
+      >
+        <div
+          v-for="(user, index) in followingList"
+          :key="'following-' + index"
+          class="user-card"
+        >
+          <div class="user-info">
+            <el-avatar :size="48" :src="user.avatarUrl" class="user-avatar">
+              {{ user.nikeName?.charAt(0) || '用' }}
+            </el-avatar>
+            <div class="user-details">
+              <div class="user-name">{{ user.username || '未设置昵称' }}</div>
+              <div class="user-industry">
+                <el-tag
+                  v-if="user.industryName"
+                  size="small"
+                  type="info"
+                  effect="plain"
+                >
+                  {{ user.industryName }}
+                </el-tag>
+                <el-tag v-else size="small" type="info" effect="plain">
+                  未设置行业
+                </el-tag>
+              </div>
+            </div>
+          </div>
+          <div class="user-actions">
+            <el-button
+              size="small"
+              @click="viewUserProfile(user.secrecyId)"
+              plain
+            >
+              查看主页
+            </el-button>
+            <el-button
+              v-if="user.needFollow"
+              type="primary"
+              size="small"
+              @click="followUser(user.userId, index, false)"
+              plain
+            >
+              回关
+            </el-button>
+            <el-button
+              type="danger"
+              size="small"
+              @click="unfollowUser(user.userId, index)"
+              plain
+            >
+              取消关注
+            </el-button>
+          </div>
+        </div>
+        <div v-if="followingList.length === 0" class="empty-placeholder">
+          暂无关注用户
+        </div>
+        <div v-if="loadingFollowing" class="loading-more">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          加载中...
+        </div>
+        <div v-if="noMoreFollowing && followingList.length > 0" class="no-more">
+          没有更多了
+        </div>
+      </div>
+
+      <!-- 关注我的列表 -->
+      <div 
+        v-if="currentFollowTab === 'followers'"
+        class="follow-list-container" 
+        v-infinite-scroll="loadMoreFollows"
+        :infinite-scroll-disabled="loadingFollowers || noMoreFollowers"
+      >
+        <div
+          v-for="(user, index) in followersList"
+          :key="'follower-' + index"
+          class="user-card"
+        >
+          <div class="user-info">
+            <el-avatar :size="48" :src="user.avatarUrl" class="user-avatar">
+              {{ user.nikeName?.charAt(0) || '用' }}
+            </el-avatar>
+            <div class="user-details">
+              <div class="user-name">{{ user.username || '未设置昵称' }}</div>
+              <div class="user-industry">
+                <el-tag
+                  v-if="user.industryName"
+                  size="small"
+                  type="info"
+                  effect="plain"
+                >
+                  {{ user.industryName }}
+                </el-tag>
+                <el-tag v-else size="small" type="info" effect="plain">
+                  未设置行业
+                </el-tag>
+              </div>
+            </div>
+          </div>
+          <div class="user-actions">
+            <el-button
+              size="small"
+              @click="viewUserProfile(user.userId)"
+              plain
+            >
+              查看主页
+            </el-button>
+            <el-button
+              v-if="!user.isFollowing"
+              type="primary"
+              size="small"
+              @click="followUser(user.userId, index, true)"
+              plain
+            >
+              关注
+            </el-button>
+            <el-button
+              v-else
+              type="danger"
+              size="small"
+              @click="unfollowUser(user.userId, index)"
+              plain
+            >
+              取消关注
+            </el-button>
+          </div>
+        </div>
+        <div v-if="followersList.length === 0" class="empty-placeholder">
+          暂无粉丝
+        </div>
+        <div v-if="loadingFollowers" class="loading-more">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          加载中...
+        </div>
+        <div v-if="noMoreFollowers && followersList.length > 0" class="no-more">
+          没有更多了
+        </div>
+      </div>
+    </el-dialog>
 </template>
 
 <script setup>
@@ -384,6 +539,178 @@ const editMode = ref(false)
 const hasSubmitted = ref(false)
 const submitting = ref(false)
 const publishing = ref(false)
+
+// 关注弹窗相关状态
+const followDialogVisible = ref(false)
+const followActiveTab = ref('following')
+const followingList = ref([])
+const followersList = ref([])
+const loadingFollowing = ref(false)
+const loadingFollowers = ref(false)
+const noMoreFollowing = ref(false)
+const noMoreFollowers = ref(false)
+const followingPage = ref(1)
+const followersPage = ref(1)
+const pageSize = ref(10)
+
+const currentFollowTab = ref('following')
+const followDialogTitle = ref('')
+
+
+const openFollowDialog = async (type) => {
+  console.log('Opening dialog with type:', type)
+  currentFollowTab.value = type
+  followDialogTitle.value = type === 'followers' ? '关注我的' : '我关注的'
+  followDialogVisible.value = true
+  
+  // 重置对应标签页的状态
+  if (type === 'following') {
+    followingList.value = []
+    followingPage.value = 1
+    noMoreFollowing.value = false
+    await loadFollowingList()
+  } else {
+    followersList.value = []
+    followersPage.value = 1
+    noMoreFollowers.value = false
+    await loadFollowersList()
+  }
+}
+
+// 加载关注列表
+const loadFollowingList = async () => {
+  if (loadingFollowing.value || noMoreFollowing.value) return
+  
+  try {
+    loadingFollowing.value = true
+    const res = await post('/api/auth/my/myFollowees', {
+      page: followingPage.value,
+      size: pageSize.value
+    })
+    
+    if (res.records && res.records.length > 0) {
+      followingList.value.push(...res.records.map(user => ({
+        ...user,
+        needFollow: false
+      })))
+      followingPage.value++
+    } else {
+      noMoreFollowing.value = true
+    }
+    
+    // 检查是否还有更多数据
+    if (res.records.length < pageSize.value) {
+      noMoreFollowing.value = true
+    }
+  } catch (error) {
+    console.error('加载关注列表失败:', error)
+    ElMessage.error('加载关注列表失败')
+  } finally {
+    loadingFollowing.value = false
+  }
+}
+
+// 加载粉丝列表
+const loadFollowersList = async () => {
+  if (loadingFollowers.value || noMoreFollowers.value) return
+  
+  try {
+    loadingFollowers.value = true
+    const res = await post('/api/auth/my/myFollowers', {
+      page: followersPage.value,
+      size: pageSize.value
+    })
+    
+    if (res.records && res.records.length > 0) {
+      followersList.value.push(...res.records.map(user => ({
+        ...user,
+        isFollowing: user.isFollowing || false
+      })))
+      followersPage.value++
+    } else {
+      noMoreFollowers.value = true
+    }
+    
+    // 检查是否还有更多数据
+    if (res.records.length < pageSize.value) {
+      noMoreFollowers.value = true
+    }
+  } catch (error) {
+    console.error('加载粉丝列表失败:', error)
+    ElMessage.error('加载粉丝列表失败')
+  } finally {
+    loadingFollowers.value = false
+  }
+}
+
+// 无限滚动加载更多
+const loadMoreFollows = () => {
+  if (followActiveTab.value === 'following') {
+    if (!loadingFollowing.value && !noMoreFollowing.value) {
+      loadFollowingList()
+    }
+  } else {
+    if (!loadingFollowers.value && !noMoreFollowers.value) {
+      loadFollowersList()
+    }
+  }
+}
+
+// 关注用户
+const followUser = async (userId, index, isFollowerTab) => {
+  try {
+    console.log("关注用户,userId:",userId)
+    const res = await post('/api/auth/project/concernPublisher', {
+        followeeId: userId
+      });
+      if (res) {
+        // 回关成功后更新状态
+         if (isFollowerTab) {
+            followersList.value[index].isFollowing = true
+          } else {
+            // 回关后从列表中移除
+            followersList.value.splice(index, 1)
+          }
+        ElMessage.success('回关成功');
+      } else {
+        ElMessage.error('关注失败')
+      }
+  } catch (error) {
+    console.error('关注失败:', error)
+    ElMessage.error('关注失败')
+  }
+}
+
+// 取消关注
+const unfollowUser = async (userId, index) => {
+  try {
+    console.log("取消关注userId",userId)
+    const res = await post('/api/auth/project/concernPublisherCancel', {
+        followeeId: userId
+      })
+      if (res) {
+        ElMessage.success('已取消关注')
+        
+        if (followActiveTab.value === 'following') {
+          followingList.value.splice(index, 1)
+        } else {
+          followersList.value[index].isFollowing = false
+        }
+      } else {
+        ElMessage.error('取消关注失败')
+      }
+    
+  } catch (error) {
+    console.error('取消关注失败:', error)
+    ElMessage.error('取消关注失败')
+  }
+}
+
+// 查看用户主页
+const viewUserProfile = (userId) => {
+  router.push(`/user/${userId}`)
+  followDialogVisible.value = false
+}
 
 
 const form = ref({
@@ -1180,5 +1507,106 @@ onMounted(() => {
   text-align: center;
 }
 
+.follow-list-container {
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 8px;
+}
 
+.user-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.user-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  flex-shrink: 0;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-name {
+  font-weight: 500;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+.user-industry .el-tag {
+  margin-right: 0;
+}
+
+.user-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.empty-placeholder {
+  text-align: center;
+  padding: 40px 0;
+  color: #8590a6;
+  font-size: 14px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .user-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .user-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.loading-more {
+  text-align: center;
+  padding: 16px;
+  color: #8590a6;
+  font-size: 14px;
+}
+
+.loading-more .el-icon {
+  margin-right: 8px;
+  animation: rotating 2s linear infinite;
+}
+
+@keyframes rotating {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.no-more {
+  text-align: center;
+  padding: 16px;
+  color: #8590a6;
+  font-size: 14px;
+}
 </style>

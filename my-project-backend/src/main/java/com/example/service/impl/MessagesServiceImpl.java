@@ -42,6 +42,15 @@ public class MessagesServiceImpl extends ServiceImpl<MessagesMapper, Messages> i
     }
 
     @Override
+    public Boolean deletedNotification(Long receiverId, Long senderId, Integer type, Long relatedId) {
+        return remove(new QueryWrapper<Messages>()
+                .eq("receiver_id", receiverId)
+                .eq("sender_id", senderId)
+                .eq("type", type)
+                .eq(relatedId != null ,"related_id", relatedId));
+    }
+
+    @Override
     public Page<Messages> getPage(Page<Messages> pageable, Long userId, List<Integer> types) {
         return baseMapper.selectPage(
                 pageable,

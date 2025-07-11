@@ -4,11 +4,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CommonFacade;
 import com.example.Facade.MyFacade;
 import com.example.entity.base.RespBean;
+import com.example.entity.req.MyFolloweesPageReq;
+import com.example.entity.req.MyFollowersPageReq;
 import com.example.entity.req.MyPublishedPageReq;
 import com.example.entity.resp.MyFollowCountResp;
+import com.example.entity.resp.MyFolloweesPageResp;
+import com.example.entity.resp.MyFollowersPageResp;
 import com.example.entity.resp.MyPublishedResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
+import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -91,6 +96,59 @@ public class MyController {
             return RespBean.success(list);
         } catch (Exception e) {
             log.error("Mycontroller#myPublished, error", e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
+
+    /**
+     * 我的粉丝
+     * @param req
+     * @return
+     */
+    @PostMapping("/myFollowers")
+    public RespBean<Page<MyFollowersPageResp>> myFollowers(@RequestBody MyFollowersPageReq req) {
+        try {
+            Long userId = null;
+            if (req.getSecrecyId() != null) {
+                userId = commonFacade.getUserIdBySecrecyId(req.getSecrecyId());
+            } else {
+                userId = UserUtil.getCurrentUser().getId();
+            }
+
+            Page<MyFollowersPageResp> list = myFacade.myFollowers(req, userId);
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("Mycontroller#myFollowers,req:{}", req, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("Mycontroller#myFollowers, error", e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
+    /**
+     * 我的关注列表
+     * @param req
+     * @return
+     */
+    @PostMapping("/myFollowees")
+    public RespBean<Page<MyFolloweesPageResp>> myFollowees(@RequestBody MyFolloweesPageReq req) {
+        try {
+            Long userId = null;
+            if (req.getSecrecyId() != null) {
+                userId = commonFacade.getUserIdBySecrecyId(req.getSecrecyId());
+            } else {
+                userId = UserUtil.getCurrentUser().getId();
+            }
+
+            Page<MyFolloweesPageResp> list = myFacade.myFollowees(req, userId);
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("Mycontroller#myFollowees,req:{}", req, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("Mycontroller#myFollowees, error", e);
             return RespBean.failure(999, e.getMessage());
         }
     }

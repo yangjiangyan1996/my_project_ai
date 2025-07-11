@@ -103,8 +103,12 @@ public class ProjectFacade {
     }
 
     public Boolean likeProject(Long projectId, Long id, Boolean liked) {
-        Boolean result =  projectLikeService.likeProject(projectId, id, liked);
-        messageFacade.createMessageOfLike(projectId, null, id);
+        Boolean result = projectLikeService.likeProject(projectId, id, liked);
+        if (liked) {
+            messageFacade.createMessageOfLike(projectId, null, id);
+        } else {
+            messageFacade.deletedMessageOfLike(projectId, null, id);
+        }
         return result;
     }
 
@@ -114,8 +118,8 @@ public class ProjectFacade {
 
     public Boolean comment(UserCommentProjectReq req, Long userId, String name) {
         Long commentId = projectCommentService.comment(req.getProjectId(), userId, name, req.getContent(), req.getReplyTo(), req.getFirstLevelCommonId());
-        if (commentId!=null) {
-            messageFacade.createMessageOfComment(req.getProjectId(), commentId,req.getReplyTo(), userId);
+        if (commentId != null) {
+            messageFacade.createMessageOfComment(req.getProjectId(), commentId, req.getReplyTo(), userId);
             return true;
         } else {
             return false;
@@ -221,7 +225,7 @@ public class ProjectFacade {
         if (l != null) {
             throw new ValidationException("已点赞，无需重复操作！");
         }
-        Boolean result =  projectCommentLikeService.insert(commentId, projectId, userId);
+        Boolean result = projectCommentLikeService.insert(commentId, projectId, userId);
         messageFacade.createMessageOfLike(projectId, commentId, userId);
         return result;
     }
@@ -232,16 +236,21 @@ public class ProjectFacade {
         entity.setFolloweeId(req.getFolloweeId());
         entity.setIsMutual(UserEnums.FollowEnum.No.getCode());
         Boolean result = userFollowService.save(entity);
-        messageFacade.createMessageOfPublisher(req.getFolloweeId(),id);
+        messageFacade.createMessageOfPublisher(req.getFolloweeId(), id);
         return result;
     }
 
     public Boolean concernPublisherCancel(ConcernPublisherCancelReq req, Long userId) {
         UserFollow useFollwe = userFollowService.selectUserByUserId(userId, req.getFolloweeId());
+        if (useFollwe ==null) {
+            return true;
+        }
         if (useFollwe.getIsMutual().equals(UserEnums.FollowEnum.Yes.getCode())) {
             userFollowService.updateIsMutual(req.getFolloweeId(), userId, UserEnums.FollowEnum.No.getCode());
         }
-        return userFollowService.removeUserByUserId(userId, req.getFolloweeId());
+        Boolean result = userFollowService.removeUserByUserId(userId, req.getFolloweeId());
+        messageFacade.deletedMessageOfPublisher(userId, req.getFolloweeId());
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)

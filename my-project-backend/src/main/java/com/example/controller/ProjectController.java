@@ -17,6 +17,7 @@ import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -295,8 +296,13 @@ public class ProjectController {
     }
 
 
+    /**
+     * 关注
+     * @param req
+     * @return
+     */
     @PostMapping("/concernPublisher")
-    public RespBean<Boolean> concernPublisher(@RequestBody ConcernPublisherReq req) {
+    public RespBean<Boolean> concernPublisher(@RequestBody @Validated ConcernPublisherReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
             Boolean result = projectFacade.concernPublisher(req, user.getId());
@@ -309,6 +315,11 @@ public class ProjectController {
         }
     }
 
+    /**
+     * 取消关注
+     * @param req
+     * @return
+     */
     @PostMapping("/concernPublisherCancel")
     public RespBean<Boolean> concernPublisherCancel(@RequestBody ConcernPublisherCancelReq req) {
         try {
@@ -319,6 +330,7 @@ public class ProjectController {
             log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
