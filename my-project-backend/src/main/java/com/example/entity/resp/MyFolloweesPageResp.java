@@ -12,6 +12,7 @@ import java.util.Date;
  */
 @Data
 public class MyFolloweesPageResp {
+    Long id;
     Long userId;
     String username;
     String avatarUrl;

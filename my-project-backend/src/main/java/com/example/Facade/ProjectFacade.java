@@ -231,6 +231,10 @@ public class ProjectFacade {
     }
 
     public Boolean concernPublisher(ConcernPublisherReq req, Long id) {
+        Boolean exist = userFollowService.selectByUserIdAndFollowedId(id, req.getFolloweeId());
+        if (exist) {
+            return true;
+        }
         UserFollow entity = new UserFollow();
         entity.setFollowerId(id);
         entity.setFolloweeId(req.getFolloweeId());

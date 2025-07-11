@@ -12,6 +12,7 @@ import java.util.Date;
  */
 @Data
 public class MyFollowersPageResp {
+    Long id;
     Long userId;
     String username;
     String industryName;

@@ -20,7 +20,7 @@ public interface UserFollowService extends IService<UserFollow> {
 
     Boolean updateIsMutual(Long followeeId, Long userId, Integer code);
 
-    Boolean selectByUserIdAndFollowedId(Long userId, Long createdBy);
+    Boolean selectByUserIdAndFollowedId(Long followerId, Long followeeI);
 
     List<UserFollow> selectByFollowerId(Long userId);
 

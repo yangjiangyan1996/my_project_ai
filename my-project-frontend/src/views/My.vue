@@ -475,7 +475,7 @@
           <div class="user-actions">
             <el-button
               size="small"
-              @click="viewUserProfile(user.userId)"
+              @click="viewUserProfile(user.secrecyId)"
               plain
             >
               查看主页
@@ -542,9 +542,10 @@ const publishing = ref(false)
 
 // 关注弹窗相关状态
 const followDialogVisible = ref(false)
-const followActiveTab = ref('following')
-const followingList = ref([])
-const followersList = ref([])
+const currentFollowTab = ref('following') // 当前显示的标签页
+const followDialogTitle = ref('') // 对话框标题
+const followingList = ref([]) // 我关注的列表
+const followersList = ref([]) // 关注我的列表
 const loadingFollowing = ref(false)
 const loadingFollowers = ref(false)
 const noMoreFollowing = ref(false)
@@ -553,33 +554,39 @@ const followingPage = ref(1)
 const followersPage = ref(1)
 const pageSize = ref(10)
 
-const currentFollowTab = ref('following')
-const followDialogTitle = ref('')
-
 
 const openFollowDialog = async (type) => {
-  console.log('Opening dialog with type:', type)
+  console.log("打开关注弹窗，type:",type)
   currentFollowTab.value = type
   followDialogTitle.value = type === 'followers' ? '关注我的' : '我关注的'
-  followDialogVisible.value = true
   
-  // 重置对应标签页的状态
+  // 重置状态
   if (type === 'following') {
     followingList.value = []
     followingPage.value = 1
     noMoreFollowing.value = false
-    await loadFollowingList()
   } else {
     followersList.value = []
     followersPage.value = 1
     noMoreFollowers.value = false
+  }
+  
+  followDialogVisible.value = true
+  
+  // 加载数据
+  if (type === 'following') {
+    await loadFollowingList()
+  } else {
     await loadFollowersList()
   }
 }
 
 // 加载关注列表
 const loadFollowingList = async () => {
-  if (loadingFollowing.value || noMoreFollowing.value) return
+  if (loadingFollowing.value || noMoreFollowing.value) {
+    console.log("加载关注列表====停止，",loadingFollowing.value, noMoreFollowing.value)
+    return
+  }
   
   try {
     loadingFollowing.value = true
@@ -594,14 +601,14 @@ const loadFollowingList = async () => {
         needFollow: false
       })))
       followingPage.value++
-    } else {
-      noMoreFollowing.value = true
-    }
+    } 
     
-    // 检查是否还有更多数据
-    if (res.records.length < pageSize.value) {
-      noMoreFollowing.value = true
-    }
+    // 更精确的判断是否还有更多数据
+    noMoreFollowing.value = !res.records || 
+                          res.records.length === 0 || 
+                          res.records.length < pageSize.value
+    
+    console.log('是否还有更多我关注的:', !noMoreFollowing.value)
   } catch (error) {
     console.error('加载关注列表失败:', error)
     ElMessage.error('加载关注列表失败')
@@ -612,7 +619,10 @@ const loadFollowingList = async () => {
 
 // 加载粉丝列表
 const loadFollowersList = async () => {
-  if (loadingFollowers.value || noMoreFollowers.value) return
+  if (loadingFollowers.value || noMoreFollowers.value) {
+    console.log("加载粉丝列表====停止，", loadingFollowers.value, noMoreFollowers.value)
+    return
+  }
   
   try {
     loadingFollowers.value = true
@@ -622,19 +632,35 @@ const loadFollowersList = async () => {
     })
     
     if (res.records && res.records.length > 0) {
-      followersList.value.push(...res.records.map(user => ({
-        ...user,
-        isFollowing: user.isFollowing || false
-      })))
-      followersPage.value++
+      // 如果是第一页，直接赋值；否则追加
+      if (followersPage.value === 1) {
+        followersList.value = res.records.map(user => ({
+          ...user,
+          isFollowing: user.isFollowing || false
+        }))
+      } else {
+        followersList.value.push(...res.records.map(user => ({
+          ...user,
+          isFollowing: user.isFollowing || false
+        })))
+      }
+      
+      // 更新总页数和判断是否还有更多
+      const totalPages = Math.ceil(res.total / pageSize.value)
+      noMoreFollowers.value = followersPage.value >= totalPages
+      
+      if (!noMoreFollowers.value) {
+        followersPage.value++
+      }
     } else {
+      // 没有数据时处理
+      if (followersPage.value === 1) {
+        followersList.value = []
+      }
       noMoreFollowers.value = true
     }
     
-    // 检查是否还有更多数据
-    if (res.records.length < pageSize.value) {
-      noMoreFollowers.value = true
-    }
+    console.log('是否还有更多关注我的:', noMoreFollowers.value, '当前页:', followersPage.value, '总数据:', res.total)
   } catch (error) {
     console.error('加载粉丝列表失败:', error)
     ElMessage.error('加载粉丝列表失败')
@@ -645,13 +671,22 @@ const loadFollowersList = async () => {
 
 // 无限滚动加载更多
 const loadMoreFollows = () => {
-  if (followActiveTab.value === 'following') {
+  console.log('无限滚动加载更多开始，当前页码:', followersPage.value)
+  
+  if (currentFollowTab.value === 'following') {
     if (!loadingFollowing.value && !noMoreFollowing.value) {
+      console.log('加载更多我关注的列表，当前页码:', followingPage.value)
       loadFollowingList()
     }
   } else {
     if (!loadingFollowers.value && !noMoreFollowers.value) {
+      console.log('加载更多关注我的列表，当前页码:', followersPage.value)
       loadFollowersList()
+    } else {
+      console.log('不满足加载条件:', {
+        loading: loadingFollowers.value,
+        noMore: noMoreFollowers.value
+      })
     }
   }
 }
@@ -708,8 +743,9 @@ const unfollowUser = async (userId, index) => {
 
 // 查看用户主页
 const viewUserProfile = (userId) => {
-  router.push(`/user/${userId}`)
+  // router.push(`/user/${userId}`)
   followDialogVisible.value = false
+   window.open(`/index/user/${userId}`, '_blank');
 }
 
 
@@ -1511,6 +1547,8 @@ onMounted(() => {
   max-height: 500px;
   overflow-y: auto;
   padding: 8px;
+  /* 确保容器有明确高度 */
+  height: 500px;
 }
 
 .user-card {

@@ -136,7 +136,7 @@ public class MyFacade {
     }
 
     public Page<MyFollowersPageResp> myFollowers(MyFollowersPageReq req, Long userId) {
-        Page<UserFollow> list = userFollowService.selectPageByFolloweeId(Page.of(req.getPage() - 1, req.getSize()), userId);
+        Page<UserFollow> list = userFollowService.selectPageByFolloweeId(Page.of(req.getPage() , req.getSize()), userId);
         if (list.getRecords().isEmpty()) {
             return Page.of(req.getPage() - 1, req.getSize());
         }
@@ -153,6 +153,7 @@ public class MyFacade {
 
         List<MyFollowersPageResp> collect = list.getRecords().stream().map(v -> {
                     MyFollowersPageResp projectsResp = new MyFollowersPageResp();
+                    projectsResp.setId(v.getId());
 
                     if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getFollowerId())) {
                         Account account = userId2UserInfoMap.get(v.getFollowerId());
@@ -193,7 +194,7 @@ public class MyFacade {
 
         List<MyFolloweesPageResp> collect = list.getRecords().stream().map(v -> {
                     MyFolloweesPageResp projectsResp = new MyFolloweesPageResp();
-
+                    projectsResp.setId(v.getId());
                     if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getFolloweeId())) {
                         Account account = userId2UserInfoMap.get(v.getFolloweeId());
                         projectsResp.setUserId(account.getId());

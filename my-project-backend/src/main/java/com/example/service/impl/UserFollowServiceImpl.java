@@ -58,13 +58,14 @@ public class UserFollowServiceImpl extends ServiceImpl<UserFollowMapper, UserFol
     @Override
     public Page<UserFollow> selectPageByFollowerId(Page<UserFollow> page, Long userId) {
         return page(page, new QueryWrapper<UserFollow>().eq("follower_id", userId)
-                .eq("is_deleted", 0));
+                .eq("is_deleted", 0).orderByDesc("created_at"));
     }
 
     @Override
     public Page<UserFollow> selectPageByFolloweeId(Page<UserFollow> page, Long followeeId) {
         return page(page, new QueryWrapper<UserFollow>().eq("followee_id", followeeId)
-                .eq("is_deleted", 0));
+                .eq("is_deleted", 0)
+                .orderByDesc("created_at"));
     }
 
     @Override
