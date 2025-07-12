@@ -485,7 +485,8 @@ const handlePageChange = (page) => {
 }
 
 const goToUserProfile = (secrecyId) => {
-  router.push({ name: 'user-profile', params: { id: secrecyId } })
+   window.open(`/index/user/${secrecyId}`, '_blank');
+  // router.push({ name: 'user-profile', params: { id: secrecyId } })
 }
 
 const doFollowBack = async (user) => {
