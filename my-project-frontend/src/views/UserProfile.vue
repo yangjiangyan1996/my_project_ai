@@ -297,6 +297,7 @@
     size="480px"
     direction="rtl"
     :with-header="true"
+    class="custom-drawer"
   >
     <el-scrollbar height="600px">
       <div
@@ -354,6 +355,7 @@
     size="480px"
     direction="rtl"
     :with-header="true"
+    class="custom-drawer"
   >
     <el-scrollbar height="600px">
       <div
@@ -399,6 +401,7 @@
         :page-size="followerSize"
         v-model:current-page="followerPage"
         @current-change="handleFollowerPageChange"
+        class="custom-pagination"
       />
     </div>
   </el-drawer>
@@ -1016,9 +1019,12 @@ const handleTabChange = (tab) => {
 
 .no-more {
   text-align: center;
-  color: #8590a6;
-  padding: 10px 0;
+  padding: 16px;
   font-size: 14px;
+  color: #94a3b8;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  margin: 12px;
 }
 
 .infinite-list {
@@ -1361,22 +1367,30 @@ const handleTabChange = (tab) => {
 .followee-username {
   font-weight: 600;
   font-size: 16px;
-  color: #303133;
+  color: #1e293b; /* 深色文字 */
 }
 .followee-industry {
-  font-size: 13px;
-  color: #909399;
+ font-size: 13px;
+  color: #64748b; /* 中灰色 */
+  background-color: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
 }
 .followee-actions {
-  margin-top: 8px;
+ margin-top: 12px;
   display: flex;
   gap: 10px;
 }
 .followee-loading {
-  text-align: center;
-  padding: 10px;
+ text-align: center;
+  padding: 20px;
   font-size: 14px;
-  color: #999;
+  color: #64748b;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  margin: 12px;
 }
 
 .pagination-container {
@@ -1406,5 +1420,167 @@ const handleTabChange = (tab) => {
 
 .sidebar-follow-row .sidebar-section:hover {
   background-color: #e6e9ef;
+}
+.custom-drawer {
+  --el-drawer-bg-color: #f8fafc; /* 更柔和的背景色 */
+  --el-drawer-padding-primary: 20px;
+  --el-drawer-box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); /* 更精致的阴影 */
+}
+
+.custom-drawer .el-drawer__header {
+ padding: 18px 24px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #e2e8f0; /* 更细腻的分隔线 */
+  color: #1e293b; /* 深色文字 */
+  font-weight: 600;
+  background-color: #ffffff;
+  border-radius: 8px 8px 0 0;
+}
+
+.custom-drawer .el-drawer__body {
+  padding: 24px;
+  background-color: #f8fafc; /* 与头部形成轻微对比 */
+}
+
+.custom-pagination {
+  --el-pagination-button-width: 40px; /* 增大分页按钮 */
+  --el-pagination-button-height: 40px;
+  --el-pagination-font-size: 15px;
+  --el-pagination-bg-color: #ffffff;
+  --el-pagination-button-color: #64748b;
+  --el-pagination-button-disabled-bg-color: #f8fafc;
+  --el-pagination-hover-color: #3b82f6;
+}
+
+.custom-pagination .btn-prev,
+.custom-pagination .btn-next,
+.custom-pagination .number {
+  min-width: 40px;
+  height: 40px;
+  line-height: 40px;
+  border-radius: 8px;
+  margin: 0 4px;
+  font-weight: 500;
+}
+
+.custom-pagination .number:hover,
+.custom-pagination .number.is-active {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.followee-user-card {
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background-color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: 1px solid #f1f5f9; /* 更精致的边框 */
+}
+
+.followee-user-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  border-color: #e2e8f0;
+}
+
+.pagination-container {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  background-color: white;
+  border-top: 1px solid #f1f5f9;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+/* 响应式调整 */
+@media (max-width: 992px) {
+  .profile-container {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 24px;
+  }
+  
+  .sidebar {
+    margin-right: 0;
+    padding-right: 0;
+  }
+  
+  .user-profile-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .content-tabs {
+    order: 2;
+  }
+  
+  .sidebar {
+    order: 1;
+  }
+  
+  .sidejob-buttons {
+    grid-template-columns: 1fr;
+  }
+  
+  .sidejob-buttons .el-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .custom-drawer {
+    width: 90% !important;
+  }
+  
+  .followee-user-card {
+    flex-direction: column;
+  }
+  
+  .followee-actions {
+    flex-direction: column;
+  }
+  
+  .followee-actions .el-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .profile-container {
+    padding: 12px;
+  }
+  
+  .username {
+    font-size: 22px;
+  }
+  
+  .followee-user-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .followee-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .followee-actions .el-button {
+    width: 100%;
+  }
+  
+  .custom-drawer {
+    width: 100% !important;
+  }
+  
+  .activity-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 </style>

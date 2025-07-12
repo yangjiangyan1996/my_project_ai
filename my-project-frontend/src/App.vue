@@ -164,16 +164,16 @@ provide('userInfo', userInfo)
 provide('emojis', emojis)
 
 
-useDark({
-  selector: 'html',
-  attribute: 'class',
-  valueDark: 'dark',
-  valueLight: 'light'
-})
+// useDark({
+//   selector: 'html',
+//   attribute: 'class',
+//   valueDark: 'dark',
+//   valueLight: 'light'
+// })
 
-useDark({
-  onChanged(dark) { useToggle(dark) }
-})
+// useDark({
+//   onChanged(dark) { useToggle(dark) }
+// })
 
 
 
