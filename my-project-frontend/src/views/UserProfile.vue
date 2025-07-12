@@ -274,13 +274,13 @@
 
         <div class="sidebar-info-section">
           <div class="sidebar-follow-row">
-            <div class="sidebar-section">
-              <h3 class="sidebar-title">关注了</h3>
-              <div class="sidebar-count">{{ followeeCount }}</div>
+            <div class="sidebar-section" @click="openFolloweeDrawer" style="cursor: pointer;">
+              <h3 class="sidebar-title">我关注的</h3>
+              <div class="sidebar-count">{{ followerCount }}</div>
             </div>
             <div class="sidebar-section">
-              <h3 class="sidebar-title">关注者</h3>
-              <div class="sidebar-count">{{ followerCount }}</div>
+              <h3 class="sidebar-title">关注我的</h3>
+              <div class="sidebar-count">{{ followeeCount }}</div>
             </div>
           </div>
           <div class="sidebar-section">
@@ -290,6 +290,49 @@
         </div>
       </div>
   </div>
+
+  <el-drawer
+  v-model="followeeListVisible"
+  title="我关注的用户"
+  size="480px"
+  direction="rtl"
+  :with-header="true"
+>
+  <el-scrollbar height="600px" @scroll="handleFolloweeScroll">
+    <div
+      class="followee-user-card"
+      v-for="user in followeeList"
+      :key="user.id"
+    >
+      <el-avatar :src="user.avatarUrl" :size="48" />
+      <div class="followee-user-info">
+        <div class="followee-username">{{ user.username }}</div>
+        <div class="followee-industry">{{ user.industryName || '未设置行业' }}</div>
+        <div class="followee-actions">
+          <el-button
+            size="small"
+            type="primary"
+            @click="goToUserProfile(user.secrecyId)"
+            plain
+          >
+            访问主页
+          </el-button>
+          <el-button
+            v-if="user.needFollow"
+            size="small"
+            type="success"
+            @click="doFollowBack(user)"
+            plain
+          >
+            回关
+          </el-button>
+        </div>
+      </div>
+    </div>
+    <div v-if="followeeLoading" class="followee-loading">加载中...</div>
+    <div v-if="followeeFinished" class="no-more">没有更多了</div>
+  </el-scrollbar>
+</el-drawer>
 </template>
 
 <script setup>
@@ -334,6 +377,14 @@ const followLoading = ref(false)
 const secrecyId = ref(route.params.id)
 const isCurrentUser =  ref(false)
 
+const followeeListVisible = ref(false)
+const followeeList = ref([])
+const followeePage = ref(1)
+const followeeSize = ref(10)
+const followeeTotal = ref(0)
+const followeeLoading = ref(false)
+const followeeFinished = ref(false)
+
 
 onMounted(() => {
   // fetchUserInfo()
@@ -356,6 +407,57 @@ onMounted(() => {
   }
 
 });
+
+const openFolloweeDrawer = () => {
+  followeeListVisible.value = true
+  if (followeeList.value.length === 0) {
+    loadFolloweeList()
+  }
+}
+
+const loadFolloweeList = async () => {
+  if (followeeLoading.value || followeeFinished.value) return
+  followeeLoading.value = true
+  try {
+    const res = await post('/api/auth/my/myFollowers', {
+      page: followeePage.value,
+      size: followeeSize.value
+    })
+    const records = res.records || res
+    followeeList.value.push(...records)
+    followeeTotal.value = res.total || records.length || 0
+    followeeFinished.value = followeePage.value * followeeSize.value >= followeeTotal.value
+    followeePage.value++
+  } catch (err) {
+    console.error('加载关注用户失败', err)
+  } finally {
+    followeeLoading.value = false
+  }
+}
+
+const handleFolloweeScroll = (e) => {
+  const { scrollTop, scrollHeight, clientHeight } = e.target
+  if (scrollTop + clientHeight >= scrollHeight - 50) {
+    loadFolloweeList()
+  }
+}
+
+const goToUserProfile = (secrecyId) => {
+  router.push({ name: 'user-profile', params: { id: secrecyId } })
+}
+
+const doFollowBack = async (user) => {
+  try {
+    await post('/api/auth/project/concernPublisher', {
+      followeeId: user.userId
+    })
+    ElMessage.success(`已回关 ${user.username}`)
+    user.needFollow = false
+  } catch (error) {
+    console.error('回关失败:', error)
+    ElMessage.error('回关失败')
+  }
+}
 
 const form = ref({
   id:'',
@@ -1131,4 +1233,42 @@ const handleTabChange = (tab) => {
   }
 }
 
+
+.followee-user-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+}
+.followee-user-card:hover {
+  background-color: #f5f7fa;
+}
+.followee-user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.followee-username {
+  font-weight: 600;
+  font-size: 16px;
+  color: #303133;
+}
+.followee-industry {
+  font-size: 13px;
+  color: #909399;
+}
+.followee-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+}
+.followee-loading {
+  text-align: center;
+  padding: 10px;
+  font-size: 14px;
+  color: #999;
+}
 </style>
