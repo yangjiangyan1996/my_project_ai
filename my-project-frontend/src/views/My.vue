@@ -339,13 +339,13 @@
           </div>
         </div>
 
-        <div class="sidebar-info-section">
+       <div class="sidebar-info-section">
           <div class="sidebar-follow-row">
-            <div class="sidebar-section" @click="openFollowDialog('following')">
+            <div class="sidebar-section" @click="openFolloweeDrawer" style="cursor: pointer;">
               <h3 class="sidebar-title">我关注的</h3>
               <div class="sidebar-count">{{ followerCount }}</div>
             </div>
-            <div class="sidebar-section" @click="openFollowDialog('followers')">
+            <div class="sidebar-section" @click="openFollowerDrawer" style="cursor: pointer;">
               <h3 class="sidebar-title">关注我的</h3>
               <div class="sidebar-count">{{ followeeCount }}</div>
             </div>
@@ -359,159 +359,120 @@
       </div>
   </div>
 
-  <!-- 原有代码保持不变，只添加以下Dialog部分 -->
-   <el-dialog
-      v-model="followDialogVisible"
-      :title="followDialogTitle"
-      width="600px"
-      top="5vh"
-      destroy-on-close
-    >
-      <!-- 我关注的列表 -->
-      <div 
-        v-if="currentFollowTab === 'following'"
-        class="follow-list-container" 
-        v-infinite-scroll="loadMoreFollows"
-        :infinite-scroll-disabled="loadingFollowing || noMoreFollowing"
+  <el-drawer
+    v-model="followeeListVisible"
+    title="我关注的用户"
+    size="480px"
+    direction="rtl"
+    :with-header="true"
+    class="custom-drawer"
+  >
+    <el-scrollbar height="600px">
+      <div
+        class="followee-user-card"
+        v-for="user in followeeList"
+        :key="user.id"
       >
-        <div
-          v-for="(user, index) in followingList"
-          :key="'following-' + index"
-          class="user-card"
-        >
-          <div class="user-info">
-            <el-avatar :size="48" :src="user.avatarUrl" class="user-avatar">
-              {{ user.nikeName?.charAt(0) || '用' }}
-            </el-avatar>
-            <div class="user-details">
-              <div class="user-name">{{ user.username || '未设置昵称' }}</div>
-              <div class="user-industry">
-                <el-tag
-                  v-if="user.industryName"
-                  size="small"
-                  type="info"
-                  effect="plain"
-                >
-                  {{ user.industryName }}
-                </el-tag>
-                <el-tag v-else size="small" type="info" effect="plain">
-                  未设置行业
-                </el-tag>
-              </div>
-            </div>
-          </div>
-          <div class="user-actions">
+        <el-avatar :src="user.avatarUrl" :size="48" />
+        <div class="followee-user-info">
+          <div class="followee-username">{{ user.username }}</div>
+          <div class="followee-industry">{{ user.industryName || '未设置行业' }}</div>
+          <div class="followee-actions">
             <el-button
               size="small"
-              @click="viewUserProfile(user.secrecyId)"
-              plain
-            >
-              查看主页
-            </el-button>
-            <el-button
-              v-if="user.needFollow"
               type="primary"
-              size="small"
-              @click="followUser(user.userId, index, false)"
+              @click="goToUserProfile(user.secrecyId)"
               plain
             >
-              回关
+              访问主页
             </el-button>
             <el-button
-              type="danger"
+            v-if="user.needFollow !== undefined && user.needFollow !== null"
               size="small"
-              @click="unfollowUser(user.userId, index)"
+              :type="user.needFollow ? 'success' : 'info'"
+              @click="handleFollowAction(user)"
               plain
+              :loading="user.loading"
             >
-              取消关注
+              {{ user.needFollow ? '关注他' : '已关注' }}
             </el-button>
           </div>
-        </div>
-        <div v-if="followingList.length === 0" class="empty-placeholder">
-          暂无关注用户
-        </div>
-        <div v-if="loadingFollowing" class="loading-more">
-          <el-icon class="is-loading"><Loading /></el-icon>
-          加载中...
-        </div>
-        <div v-if="noMoreFollowing && followingList.length > 0" class="no-more">
-          没有更多了
         </div>
       </div>
+      <div v-if="followeeLoading" class="followee-loading">加载中...</div>
+      <div v-if="!followeeLoading && followeeList.length === 0" class="no-more">暂无关注用户</div>
+    </el-scrollbar>
+    
+    <!-- 分页控件 -->
+    <div class="pagination-container">
+      <el-pagination
+        small
+        layout="prev, pager, next"
+        :total="followeeTotal"
+        :page-size="followeeSize"
+        v-model:current-page="followeePage"
+        @current-change="handlePageChange"
+      />
+    </div>
+  </el-drawer>
 
-      <!-- 关注我的列表 -->
-      <div 
-        v-if="currentFollowTab === 'followers'"
-        class="follow-list-container" 
-        v-infinite-scroll="loadMoreFollows"
-        :infinite-scroll-disabled="loadingFollowers || noMoreFollowers"
+  <!-- 关注我的用户 drawer -->
+  <el-drawer
+    v-model="followerListVisible"
+    title="关注我的用户"
+    size="480px"
+    direction="rtl"
+    :with-header="true"
+    class="custom-drawer"
+  >
+    <el-scrollbar height="600px">
+      <div
+        class="followee-user-card"
+        v-for="user in followerList"
+        :key="user.id"
       >
-        <div
-          v-for="(user, index) in followersList"
-          :key="'follower-' + index"
-          class="user-card"
-        >
-          <div class="user-info">
-            <el-avatar :size="48" :src="user.avatarUrl" class="user-avatar">
-              {{ user.nikeName?.charAt(0) || '用' }}
-            </el-avatar>
-            <div class="user-details">
-              <div class="user-name">{{ user.username || '未设置昵称' }}</div>
-              <div class="user-industry">
-                <el-tag
-                  v-if="user.industryName"
-                  size="small"
-                  type="info"
-                  effect="plain"
-                >
-                  {{ user.industryName }}
-                </el-tag>
-                <el-tag v-else size="small" type="info" effect="plain">
-                  未设置行业
-                </el-tag>
-              </div>
-            </div>
-          </div>
-          <div class="user-actions">
+        <el-avatar :src="user.avatarUrl" :size="48" />
+        <div class="followee-user-info">
+          <div class="followee-username">{{ user.username }}</div>
+          <div class="followee-industry">{{ user.industryName || '未设置行业' }}</div>
+          <div class="followee-actions">
             <el-button
               size="small"
-              @click="viewUserProfile(user.secrecyId)"
-              plain
-            >
-              查看主页
-            </el-button>
-            <el-button
-              v-if="!user.isFollowing"
               type="primary"
-              size="small"
-              @click="followUser(user.userId, index, true)"
+              @click="goToUserProfile(user.secrecyId)"
               plain
             >
-              关注
+              访问主页
             </el-button>
             <el-button
-              v-else
-              type="danger"
+              v-if="user.needFollow !== undefined && user.needFollow !== null"
               size="small"
-              @click="unfollowUser(user.userId, index)"
+              :type="user.needFollow ? 'success' : 'info'"
+              @click="handleFollowAction(user)"
               plain
+              :loading="user.loading"
             >
-              取消关注
+              {{ user.needFollow ? '关注他' : '已关注' }}
             </el-button>
           </div>
-        </div>
-        <div v-if="followersList.length === 0" class="empty-placeholder">
-          暂无粉丝
-        </div>
-        <div v-if="loadingFollowers" class="loading-more">
-          <el-icon class="is-loading"><Loading /></el-icon>
-          加载中...
-        </div>
-        <div v-if="noMoreFollowers && followersList.length > 0" class="no-more">
-          没有更多了
         </div>
       </div>
-    </el-dialog>
+      <div v-if="followerLoading" class="followee-loading">加载中...</div>
+      <div v-if="!followerLoading && followerList.length === 0" class="no-more">暂无关注用户</div>
+    </el-scrollbar>
+    
+    <div class="pagination-container">
+      <el-pagination
+        small
+        layout="prev, pager, next"
+        :total="followerTotal"
+        :page-size="followerSize"
+        v-model:current-page="followerPage"
+        @current-change="handleFollowerPageChange"
+        class="custom-pagination"
+      />
+    </div>
+  </el-drawer>
 </template>
 
 <script setup>
@@ -555,6 +516,80 @@ const followersPage = ref(1)
 const pageSize = ref(10)
 
 
+
+// 我关注的用户相关状态
+const followeeListVisible = ref(false)
+const followeeList = ref([])
+const followeePage = ref(1)
+const followeeSize = ref(10)
+const followeeTotal = ref(0)
+const followeeLoading = ref(false)
+const followeeFinished = ref(false)
+
+// 关注我的用户相关状态
+const followerListVisible = ref(false)
+const followerList = ref([])
+const followerPage = ref(1)
+const followerSize = ref(10)
+const followerTotal = ref(0)
+const followerLoading = ref(false)
+const followerFinished = ref(false)
+
+
+// 打开我关注的用户抽屉
+const openFolloweeDrawer = () => {
+  followeeListVisible.value = true
+  loadFolloweeList()
+}
+
+// 打开关注我的用户抽屉
+const openFollowerDrawer = () => {
+  followerListVisible.value = true
+  loadFollowerList()
+}
+
+// 我关注的用户分页变化
+const handlePageChange = (page) => {
+  followeePage.value = page
+  loadFolloweeList()
+}
+
+const goToUserProfile = (secrecyId) => {
+   window.open(`/index/user/${secrecyId}`, '_blank');
+}
+
+const handleFollowAction = async (user) => {
+  user.loading = true
+  try {
+    if (user.needFollow) {
+      // Follow action
+      await post('/api/auth/project/concernPublisher', {
+        followeeId: user.userId
+      })
+      ElMessage.success(`已关注 ${user.username}`)
+    } else {
+      // Unfollow action
+      await post('/api/auth/project/concernPublisherCancel', {
+        followeeId: user.userId
+      })
+      ElMessage.success(`已取消关注 ${user.username}`)
+    }
+    // Toggle the follow state
+    user.needFollow = !user.needFollow
+  } catch (error) {
+    console.error('操作失败:', error)
+    ElMessage.error('操作失败，请稍后重试')
+  } finally {
+    user.loading = false
+  }
+}
+
+// 关注我的用户分页变化
+const handleFollowerPageChange = (page) => {
+  followerPage.value = page
+  loadFollowerList()
+}
+
 const openFollowDialog = async (type) => {
   console.log("打开关注弹窗，type:",type)
   currentFollowTab.value = type
@@ -581,91 +616,53 @@ const openFollowDialog = async (type) => {
   }
 }
 
-// 加载关注列表
-const loadFollowingList = async () => {
-  if (loadingFollowing.value || noMoreFollowing.value) {
-    console.log("加载关注列表====停止，",loadingFollowing.value, noMoreFollowing.value)
-    return
-  }
-  
+
+
+// 加载关注我的用户列表
+const loadFollowerList = async () => {
+  followerLoading.value = true
   try {
-    loadingFollowing.value = true
-    const res = await post('/api/auth/my/myFollowees', {
-      page: followingPage.value,
-      size: pageSize.value
+    const res = await post('/api/auth/my/myFollowers', {
+      page: followerPage.value,
+      size: followerSize.value
     })
-    
-    if (res.records && res.records.length > 0) {
-      followingList.value.push(...res.records.map(user => ({
-        ...user,
-        needFollow: false
-      })))
-      followingPage.value++
-    } 
-    
-    // 更精确的判断是否还有更多数据
-    noMoreFollowing.value = !res.records || 
-                          res.records.length === 0 || 
-                          res.records.length < pageSize.value
-    
-    console.log('是否还有更多我关注的:', !noMoreFollowing.value)
-  } catch (error) {
-    console.error('加载关注列表失败:', error)
-    ElMessage.error('加载关注列表失败')
+    const records = res.records || res
+    followerList.value = records.map(user => ({
+      ...user,
+      loading: false
+    }))
+    followerTotal.value = res.total || records.length || 0
+  } catch (err) {
+    console.error('加载粉丝用户失败', err)
+    ElMessage.error('加载粉丝用户失败')
   } finally {
-    loadingFollowing.value = false
+    followerLoading.value = false
   }
 }
 
-// 加载粉丝列表
-const loadFollowersList = async () => {
-  if (loadingFollowers.value || noMoreFollowers.value) {
-    console.log("加载粉丝列表====停止，", loadingFollowers.value, noMoreFollowers.value)
-    return
-  }
-  
+// 加载我关注的用户列表
+const loadFolloweeList = async () => {
+  followeeLoading.value = true
   try {
-    loadingFollowers.value = true
-    const res = await post('/api/auth/my/myFollowers', {
-      page: followersPage.value,
-      size: pageSize.value
+    const res = await post('/api/auth/my/myFollowees', {
+      page: followeePage.value,
+      size: followeeSize.value
     })
-    
-    if (res.records && res.records.length > 0) {
-      // 如果是第一页，直接赋值；否则追加
-      if (followersPage.value === 1) {
-        followersList.value = res.records.map(user => ({
-          ...user,
-          isFollowing: user.isFollowing || false
-        }))
-      } else {
-        followersList.value.push(...res.records.map(user => ({
-          ...user,
-          isFollowing: user.isFollowing || false
-        })))
-      }
-      
-      // 更新总页数和判断是否还有更多
-      const totalPages = Math.ceil(res.total / pageSize.value)
-      noMoreFollowers.value = followersPage.value >= totalPages
-      
-      if (!noMoreFollowers.value) {
-        followersPage.value++
-      }
-    } else {
-      // 没有数据时处理
-      if (followersPage.value === 1) {
-        followersList.value = []
-      }
-      noMoreFollowers.value = true
-    }
-    
-    console.log('是否还有更多关注我的:', noMoreFollowers.value, '当前页:', followersPage.value, '总数据:', res.total)
-  } catch (error) {
-    console.error('加载粉丝列表失败:', error)
-    ElMessage.error('加载粉丝列表失败')
+    const records = res.records || res
+    // Add loading state to each user
+    followeeList.value = records.map(user => ({
+      ...user,
+      loading: false
+    }))
+    followeeTotal.value = res.total || records.length || 0
+    // const records = res.records || res
+    // followeeList.value = records
+    // followeeTotal.value = res.total || records.length || 0
+  } catch (err) {
+    console.error('加载关注用户失败', err)
+    ElMessage.error('加载关注用户失败')
   } finally {
-    loadingFollowers.value = false
+    followeeLoading.value = false
   }
 }
 
@@ -1646,5 +1643,177 @@ onMounted(() => {
   padding: 16px;
   color: #8590a6;
   font-size: 14px;
+}
+
+/*1111111  */
+/* Drawer 容器样式 */
+.custom-drawer {
+  --el-drawer-bg-color: #f8fafc; /* 更柔和的背景色 */
+  --el-drawer-padding-primary: 20px;
+  --el-drawer-box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); /* 更精致的阴影 */
+}
+
+/* Drawer 头部样式 */
+.custom-drawer .el-drawer__header {
+  padding: 18px 24px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #e2e8f0; /* 更细腻的分隔线 */
+  color: #1e293b; /* 深色文字 */
+  font-weight: 600;
+  background-color: #ffffff;
+  border-radius: 8px 8px 0 0;
+}
+
+/* Drawer 内容区域样式 */
+.custom-drawer .el-drawer__body {
+  padding: 24px;
+  background-color: #f8fafc; /* 与头部形成轻微对比 */
+}
+
+/* 用户卡片样式 */
+.followee-user-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+}
+
+.followee-user-card:hover {
+  background-color: #f5f7fa;
+}
+
+/* 用户信息区域 */
+.followee-user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 用户名样式 */
+.followee-username {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1e293b; /* 深色文字 */
+}
+
+/* 行业标签样式 */
+.followee-industry {
+  font-size: 13px;
+  color: #64748b; /* 中灰色 */
+  background-color: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+}
+
+/* 操作按钮区域 */
+.followee-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+/* 加载中状态 */
+.followee-loading {
+  text-align: center;
+  padding: 20px;
+  font-size: 14px;
+  color: #64748b;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  margin: 12px;
+}
+
+/* 分页容器 */
+.pagination-container {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 自定义分页样式 */
+.custom-pagination {
+  --el-pagination-button-width: 40px; /* 增大分页按钮 */
+  --el-pagination-button-height: 40px;
+  --el-pagination-font-size: 15px;
+  --el-pagination-bg-color: #ffffff;
+  --el-pagination-button-color: #64748b;
+  --el-pagination-button-disabled-bg-color: #f8fafc;
+  --el-pagination-hover-color: #3b82f6;
+}
+
+.custom-pagination .btn-prev,
+.custom-pagination .btn-next,
+.custom-pagination .number {
+  min-width: 40px;
+  height: 40px;
+  line-height: 40px;
+  border-radius: 8px;
+  margin: 0 4px;
+  font-weight: 500;
+}
+
+.custom-pagination .number:hover,
+.custom-pagination .number.is-active {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* 无更多内容提示 */
+.no-more {
+  text-align: center;
+  padding: 16px;
+  font-size: 14px;
+  color: #94a3b8;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  margin: 12px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .custom-drawer {
+    width: 90% !important;
+  }
+  
+  .followee-user-card {
+    flex-direction: column;
+  }
+  
+  .followee-actions {
+    flex-direction: column;
+  }
+  
+  .followee-actions .el-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .followee-user-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .followee-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .followee-actions .el-button {
+    width: 100%;
+  }
+  
+  .custom-drawer {
+    width: 100% !important;
+  }
 }
 </style>
