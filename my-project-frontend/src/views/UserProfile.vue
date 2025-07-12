@@ -278,7 +278,7 @@
               <h3 class="sidebar-title">我关注的</h3>
               <div class="sidebar-count">{{ followerCount }}</div>
             </div>
-            <div class="sidebar-section">
+            <div class="sidebar-section" @click="openFollowerDrawer" style="cursor: pointer;">
               <h3 class="sidebar-title">关注我的</h3>
               <div class="sidebar-count">{{ followeeCount }}</div>
             </div>
@@ -317,15 +317,6 @@
             >
               访问主页
             </el-button>
-            <!-- <el-button
-              v-if="user.needFollow"
-              size="small"
-              type="success"
-              @click="doFollowBack(user)"
-              plain
-            >
-              回关
-            </el-button> -->
             <el-button
             v-if="user.needFollow !== undefined && user.needFollow !== null"
               size="small"
@@ -352,6 +343,62 @@
         :page-size="followeeSize"
         v-model:current-page="followeePage"
         @current-change="handlePageChange"
+      />
+    </div>
+  </el-drawer>
+
+  <!-- 关注我的用户 drawer -->
+  <el-drawer
+    v-model="followerListVisible"
+    title="关注我的用户"
+    size="480px"
+    direction="rtl"
+    :with-header="true"
+  >
+    <el-scrollbar height="600px">
+      <div
+        class="followee-user-card"
+        v-for="user in followerList"
+        :key="user.id"
+      >
+        <el-avatar :src="user.avatarUrl" :size="48" />
+        <div class="followee-user-info">
+          <div class="followee-username">{{ user.username }}</div>
+          <div class="followee-industry">{{ user.industryName || '未设置行业' }}</div>
+          <div class="followee-actions">
+            <el-button
+              size="small"
+              type="primary"
+              @click="goToUserProfile(user.secrecyId)"
+              plain
+            >
+              访问主页
+            </el-button>
+            <el-button
+              v-if="user.needFollow !== undefined && user.needFollow !== null"
+              size="small"
+              :type="user.needFollow ? 'success' : 'info'"
+              @click="handleFollowAction(user)"
+              plain
+              :loading="user.loading"
+            >
+              {{ user.needFollow ? '关注他' : '已关注' }}
+            </el-button>
+          </div>
+        </div>
+      </div>
+      <div v-if="followerLoading" class="followee-loading">加载中...</div>
+      <div v-if="!followerLoading && followerList.length === 0" class="no-more">暂无关注用户</div>
+    </el-scrollbar>
+    
+    <div class="pagination-container">
+      <el-pagination
+        small
+        layout="prev, pager, next"
+        :total="followerTotal"
+        :page-size="followerSize"
+        v-model:current-page="followerPage"
+        @current-change="handleFollowerPageChange"
       />
     </div>
   </el-drawer>
@@ -395,6 +442,7 @@ const followLoading = ref(false)
 const secrecyId = ref(route.params.id)
 const isCurrentUser =  ref(false)
 
+// 我关注的用户相关状态
 const followeeListVisible = ref(false)
 const followeeList = ref([])
 const followeePage = ref(1)
@@ -403,6 +451,14 @@ const followeeTotal = ref(0)
 const followeeLoading = ref(false)
 const followeeFinished = ref(false)
 
+// 关注我的用户相关状态
+const followerListVisible = ref(false)
+const followerList = ref([])
+const followerPage = ref(1)
+const followerSize = ref(10)
+const followerTotal = ref(0)
+const followerLoading = ref(false)
+const followerFinished = ref(false)
 
 onMounted(() => {
   if (!currentUserInfo.data.id) {
@@ -422,11 +478,42 @@ onMounted(() => {
   }
 });
 
+// 打开我关注的用户抽屉
 const openFolloweeDrawer = () => {
   followeeListVisible.value = true
   loadFolloweeList()
 }
 
+// 打开关注我的用户抽屉
+const openFollowerDrawer = () => {
+  followerListVisible.value = true
+  loadFollowerList()
+}
+
+// 加载关注我的用户列表
+const loadFollowerList = async () => {
+  followerLoading.value = true
+  try {
+    const res = await post('/api/auth/my/otherFollowers', {
+      secrecyId: secrecyId.value,
+      page: followerPage.value,
+      size: followerSize.value
+    })
+    const records = res.records || res
+    followerList.value = records.map(user => ({
+      ...user,
+      loading: false
+    }))
+    followerTotal.value = res.total || records.length || 0
+  } catch (err) {
+    console.error('加载粉丝用户失败', err)
+    ElMessage.error('加载粉丝用户失败')
+  } finally {
+    followerLoading.value = false
+  }
+}
+
+// 加载我关注的用户列表
 const loadFolloweeList = async () => {
   followeeLoading.value = true
   try {
@@ -479,9 +566,16 @@ const handleFollowAction = async (user) => {
   }
 }
 
+// 我关注的用户分页变化
 const handlePageChange = (page) => {
   followeePage.value = page
   loadFolloweeList()
+}
+
+// 关注我的用户分页变化
+const handleFollowerPageChange = (page) => {
+  followerPage.value = page
+  loadFollowerList()
 }
 
 const goToUserProfile = (secrecyId) => {
@@ -1293,5 +1387,24 @@ const handleTabChange = (tab) => {
   background: white;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.sidebar-follow-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sidebar-follow-row .sidebar-section {
+  flex: 1;
+  background-color: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.sidebar-follow-row .sidebar-section:hover {
+  background-color: #e6e9ef;
 }
 </style>

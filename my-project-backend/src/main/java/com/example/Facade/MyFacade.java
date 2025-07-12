@@ -205,8 +205,8 @@ public class MyFacade {
                         projectsResp.setCreatedAt(v.getCreatedAt());
                         projectsResp.setIndustryName(CommonEnum.IndustryEnum.getByCode(account.getIndustryCode()));
                     }
-                    if (!v.getFolloweeId().equals(currentUserId)) {
-                        projectsResp.setNeedFollow(!interrelationUserIds.contains(v.getFolloweeId()));
+                    if (!v.getFollowerId().equals(currentUserId)) {
+                        projectsResp.setNeedFollow(!interrelationUserIds.contains(v.getFollowerId()));
                     }
                     return projectsResp;
                 })
