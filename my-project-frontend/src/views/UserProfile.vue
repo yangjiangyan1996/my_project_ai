@@ -419,7 +419,8 @@ const loadFolloweeList = async () => {
   if (followeeLoading.value || followeeFinished.value) return
   followeeLoading.value = true
   try {
-    const res = await post('/api/auth/my/myFollowers', {
+    const res = await post('/api/auth/my/myFollowees', {
+      secrecyId: secrecyId.value,
       page: followeePage.value,
       size: followeeSize.value
     })
