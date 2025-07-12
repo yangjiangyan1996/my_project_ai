@@ -437,10 +437,11 @@ const loadFolloweeList = async () => {
 }
 
 const handleFolloweeScroll = (e) => {
-  const { scrollTop, scrollHeight, clientHeight } = e.target
-  if (scrollTop + clientHeight >= scrollHeight - 50) {
-    loadFolloweeList()
-  }
+  // const { scrollTop, scrollHeight, clientHeight } = e.target
+  // if (scrollTop + clientHeight >= scrollHeight - 50) {
+  //   loadFolloweeList()
+  // }
+  loadFolloweeList()
 }
 
 const goToUserProfile = (secrecyId) => {

@@ -136,7 +136,7 @@ public class MyFacade {
     }
 
     public Page<MyFollowersPageResp> myFollowers(MyFollowersPageReq req, Long userId) {
-        Page<UserFollow> list = userFollowService.selectPageByFolloweeId(Page.of(req.getPage() , req.getSize()), userId);
+        Page<UserFollow> list = userFollowService.selectPageByFolloweeId(Page.of(req.getPage() -1, req.getSize()), userId);
         if (list.getRecords().isEmpty()) {
             return Page.of(req.getPage() - 1, req.getSize());
         }
@@ -177,7 +177,7 @@ public class MyFacade {
     }
 
     public Page<MyFolloweesPageResp> myFollowees(MyFolloweesPageReq req, Long userId) {
-        Page<UserFollow> list = userFollowService.selectPageByFollowerId(Page.of(req.getPage() - 1, req.getSize()), userId);
+        Page<UserFollow> list = userFollowService.selectPageByFollowerId(Page.of(req.getPage(), req.getSize()), userId);
         if (list.getRecords().isEmpty()) {
             return Page.of(req.getPage() - 1, req.getSize());
         }
