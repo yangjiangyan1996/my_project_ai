@@ -128,6 +128,28 @@ public class MyController {
     }
 
     /**
+     * 访问别人主页查看-我的粉丝
+     * @param req
+     * @return
+     */
+    @PostMapping("/otherFollowers")
+    public RespBean<Page<MyFollowersPageResp>> otherFollowers(@RequestBody MyFollowersPageReq req) {
+        try {
+            Long otherUserId = commonFacade.getUserIdBySecrecyId(req.getSecrecyId());
+            Long currentUserId = UserUtil.getCurrentUser().getId();
+
+            Page<MyFollowersPageResp> list = myFacade.otherFollowers(req, otherUserId, currentUserId);
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("Mycontroller#otherFollowers,req:{}", req, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("Mycontroller#otherFollowers, error", e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
+    /**
      * 我的关注列表
      * @param req
      * @return
@@ -154,7 +176,7 @@ public class MyController {
     }
 
     /**
-     * 访问别的用户的--我的关注列表
+     * 访问别人主页查看-我的关注列表
      * @param req
      * @return
      */
