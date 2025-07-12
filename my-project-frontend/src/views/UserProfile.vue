@@ -317,7 +317,7 @@
             >
               访问主页
             </el-button>
-            <el-button
+            <!-- <el-button
               v-if="user.needFollow"
               size="small"
               type="success"
@@ -325,6 +325,16 @@
               plain
             >
               回关
+            </el-button> -->
+            <el-button
+            v-if="user.needFollow !== undefined && user.needFollow !== null"
+              size="small"
+              :type="user.needFollow ? 'success' : 'info'"
+              @click="handleFollowAction(user)"
+              plain
+              :loading="user.loading"
+            >
+              {{ user.needFollow ? '关注他' : '已关注' }}
             </el-button>
           </div>
         </div>
@@ -420,19 +430,52 @@ const openFolloweeDrawer = () => {
 const loadFolloweeList = async () => {
   followeeLoading.value = true
   try {
-    const res = await post('/api/auth/my/myFollowees', {
+    const res = await post('/api/auth/my/otherFollowees', {
       secrecyId: secrecyId.value,
       page: followeePage.value,
       size: followeeSize.value
     })
     const records = res.records || res
-    followeeList.value = records
+    // Add loading state to each user
+    followeeList.value = records.map(user => ({
+      ...user,
+      loading: false
+    }))
     followeeTotal.value = res.total || records.length || 0
+    // const records = res.records || res
+    // followeeList.value = records
+    // followeeTotal.value = res.total || records.length || 0
   } catch (err) {
     console.error('加载关注用户失败', err)
     ElMessage.error('加载关注用户失败')
   } finally {
     followeeLoading.value = false
+  }
+}
+
+const handleFollowAction = async (user) => {
+  user.loading = true
+  try {
+    if (user.needFollow) {
+      // Follow action
+      await post('/api/auth/project/concernPublisher', {
+        followeeId: user.userId
+      })
+      ElMessage.success(`已关注 ${user.username}`)
+    } else {
+      // Unfollow action
+      await post('/api/auth/project/concernPublisherCancel', {
+        followeeId: user.userId
+      })
+      ElMessage.success(`已取消关注 ${user.username}`)
+    }
+    // Toggle the follow state
+    user.needFollow = !user.needFollow
+  } catch (error) {
+    console.error('操作失败:', error)
+    ElMessage.error('操作失败，请稍后重试')
+  } finally {
+    user.loading = false
   }
 }
 
@@ -789,6 +832,12 @@ const handleTabChange = (tab) => {
   background-color: #e6e9ef;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
+}
+
+.followee-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
 }
 
 .activity-type {

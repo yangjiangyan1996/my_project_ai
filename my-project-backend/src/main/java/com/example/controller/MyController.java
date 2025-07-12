@@ -153,6 +153,26 @@ public class MyController {
         }
     }
 
+    /**
+     * 访问别的用户的--我的关注列表
+     * @param req
+     * @return
+     */
+    @PostMapping("/otherFollowees")
+    public RespBean<Page<MyFolloweesPageResp>> otherFollowees(@RequestBody MyFolloweesPageReq req) {
+        try {
+            Long otherUserId = commonFacade.getUserIdBySecrecyId(req.getSecrecyId());
+            Long currentUserId = UserUtil.getCurrentUser().getId();
+            Page<MyFolloweesPageResp> list = myFacade.otherFollowees(req,otherUserId, currentUserId);
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("Mycontroller#otherFollowees,req:{}", req, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("Mycontroller#otherFollowees, error", e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
 
     /**
      * 是否关注
