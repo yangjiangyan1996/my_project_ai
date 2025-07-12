@@ -292,55 +292,63 @@
   </div>
 
   <el-drawer
-  v-model="followeeListVisible"
-  title="我关注的用户"
-  size="480px"
-  direction="rtl"
-  :with-header="true"
->
-  <el-scrollbar height="600px" @scroll="handleFolloweeScroll">
-    <div
-      class="followee-user-card"
-      v-for="user in followeeList"
-      :key="user.id"
-    >
-      <el-avatar :src="user.avatarUrl" :size="48" />
-      <div class="followee-user-info">
-        <div class="followee-username">{{ user.username }}</div>
-        <div class="followee-industry">{{ user.industryName || '未设置行业' }}</div>
-        <div class="followee-actions">
-          <el-button
-            size="small"
-            type="primary"
-            @click="goToUserProfile(user.secrecyId)"
-            plain
-          >
-            访问主页
-          </el-button>
-          <el-button
-            v-if="user.needFollow"
-            size="small"
-            type="success"
-            @click="doFollowBack(user)"
-            plain
-          >
-            回关
-          </el-button>
+    v-model="followeeListVisible"
+    title="我关注的用户"
+    size="480px"
+    direction="rtl"
+    :with-header="true"
+  >
+    <el-scrollbar height="600px">
+      <div
+        class="followee-user-card"
+        v-for="user in followeeList"
+        :key="user.id"
+      >
+        <el-avatar :src="user.avatarUrl" :size="48" />
+        <div class="followee-user-info">
+          <div class="followee-username">{{ user.username }}</div>
+          <div class="followee-industry">{{ user.industryName || '未设置行业' }}</div>
+          <div class="followee-actions">
+            <el-button
+              size="small"
+              type="primary"
+              @click="goToUserProfile(user.secrecyId)"
+              plain
+            >
+              访问主页
+            </el-button>
+            <el-button
+              v-if="user.needFollow"
+              size="small"
+              type="success"
+              @click="doFollowBack(user)"
+              plain
+            >
+              回关
+            </el-button>
+          </div>
         </div>
       </div>
+      <div v-if="followeeLoading" class="followee-loading">加载中...</div>
+      <div v-if="!followeeLoading && followeeList.length === 0" class="no-more">暂无关注用户</div>
+    </el-scrollbar>
+    
+    <!-- 分页控件 -->
+    <div class="pagination-container">
+      <el-pagination
+        small
+        layout="prev, pager, next"
+        :total="followeeTotal"
+        :page-size="followeeSize"
+        v-model:current-page="followeePage"
+        @current-change="handlePageChange"
+      />
     </div>
-    <div v-if="followeeLoading" class="followee-loading">加载中...</div>
-    <div v-if="followeeFinished" class="no-more">没有更多了</div>
-  </el-scrollbar>
-</el-drawer>
+  </el-drawer>
 </template>
 
 <script setup>
-
-
-
-
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Suitcase, SuccessFilled, Plus } from '@element-plus/icons-vue'
 import { post, get } from '@/net'
@@ -387,7 +395,6 @@ const followeeFinished = ref(false)
 
 
 onMounted(() => {
-  // fetchUserInfo()
   if (!currentUserInfo.data.id) {
     loadUserInfo().then(() => {
       fetchUserInfo()
@@ -395,7 +402,6 @@ onMounted(() => {
       fetchPublishData()
       fetchFollowCount()
       loadIntentData()
-      // checkFollowStatus()
     });
   } else {
      fetchUserInfo();
@@ -403,20 +409,15 @@ onMounted(() => {
     fetchPublishData()
     fetchFollowCount()
     loadIntentData()
-    // checkFollowStatus()
   }
-
 });
 
 const openFolloweeDrawer = () => {
   followeeListVisible.value = true
-  if (followeeList.value.length === 0) {
-    loadFolloweeList()
-  }
+  loadFolloweeList()
 }
 
 const loadFolloweeList = async () => {
-  if (followeeLoading.value || followeeFinished.value) return
   followeeLoading.value = true
   try {
     const res = await post('/api/auth/my/myFollowees', {
@@ -425,22 +426,18 @@ const loadFolloweeList = async () => {
       size: followeeSize.value
     })
     const records = res.records || res
-    followeeList.value.push(...records)
+    followeeList.value = records
     followeeTotal.value = res.total || records.length || 0
-    followeeFinished.value = followeePage.value * followeeSize.value >= followeeTotal.value
-    followeePage.value++
   } catch (err) {
     console.error('加载关注用户失败', err)
+    ElMessage.error('加载关注用户失败')
   } finally {
     followeeLoading.value = false
   }
 }
 
-const handleFolloweeScroll = (e) => {
-  // const { scrollTop, scrollHeight, clientHeight } = e.target
-  // if (scrollTop + clientHeight >= scrollHeight - 50) {
-  //   loadFolloweeList()
-  // }
+const handlePageChange = (page) => {
+  followeePage.value = page
   loadFolloweeList()
 }
 
@@ -467,18 +464,15 @@ const form = ref({
   timePerDay: '',
   skills: '',
   resources: '',
-  
   status: 1
 })
 
 // 检查关注状态
 const checkFollowStatus = async () => {
-  console.log("关注状态",userInfo)
   if (!userInfo.value.data?.id ) return
   try {
     const res = await get(`/api/auth/my/isFollewer?followeeId=${userInfo.value.data.id}`)
-    console.log("关注状态",res)
-    isFollowing.value = !res // 接口返回true表示未关注，false表示已关注
+    isFollowing.value = !res
   } catch (error) {
     console.error('检查关注状态失败:', error)
   }
@@ -491,20 +485,17 @@ const toggleFollow = async () => {
   followLoading.value = true
   try {
     if (isFollowing.value) {
-      // 取消关注
       await post('/api/auth/project/concernPublisherCancel', {
         followeeId: userInfo.value.data.id
       })
       ElMessage.success('已取消关注')
     } else {
-      // 关注
       await post('/api/auth/project/concernPublisher', {
         followeeId: userInfo.value.data.id
       })
       ElMessage.success('关注成功')
     }
     isFollowing.value = !isFollowing.value
-    // 更新关注数
     await fetchFollowCount()
   } catch (error) {
     console.error('操作失败:', error)
@@ -531,7 +522,7 @@ const fetchTeamData = async () => {
       page: teamPage.value,
       size: teamSize.value
     })
-    teamList.value.push(...res.records || res)  // 有些接口可能不分页
+    teamList.value.push(...res.records || res)
     teamTotal.value = res.total || res.length || 0
     noMoreTeam.value = teamPage.value * teamSize.value >= teamTotal.value
   } catch (err) {
@@ -541,7 +532,6 @@ const fetchTeamData = async () => {
   }
 }
 
-
 const goToDetail = (project) => {
   router.push({ name: 'project-detail', params: { id: project.id } })
 }
@@ -550,20 +540,16 @@ const goToMyMemberGroupDetail = (projectId) => {
   router.push({ name: 'myMemberGroupDetail', params: { id: projectId } })
 }
 
-
-
 //加载用户名称和头像
 const fetchUserInfo = async () => {
   try {
     const res = await get(`/api/auth/user/getSecrecyIdUserInfo?secrecyId=${secrecyId.value}`);
     userInfo.value = { data: res }
-
     checkFollowStatus();
   } catch (error) {
     console.error('获取用户信息失败:', error)
   }
 }
-
 
 // 统计数据
 const stats = ref({
@@ -598,8 +584,6 @@ const loadIntentData = async () => {
   }
 }
 
-
-
 // 切换表单显示
 const toggleIntentForm = () => {
   showIntentSection.value = !showIntentSection.value
@@ -630,8 +614,6 @@ const likeSize = ref(10)
 const likeTotal = ref(0)
 const likeLoading = ref(false)
 const noMoreLike = ref(false)
-
-
 
 const fetchFollowCount = async () => {
   try {
@@ -727,10 +709,6 @@ const handleTabChange = (tab) => {
     fetchTeamData()
   }
 }
-
-
-
-
 </script>
 
 <style scoped>
@@ -738,7 +716,6 @@ const handleTabChange = (tab) => {
   width: 100%;
   margin: 0 auto;
   padding: 24px 40px;
-  /* padding-left: 60px; */
   padding-right: 60px;
   display: grid;
   grid-template-columns: 1fr 400px;
@@ -801,11 +778,11 @@ const handleTabChange = (tab) => {
 .activity-item {
   padding: 14px 0;
   border-bottom: 1px solid #ebebeb;
-  transition: all 0.3s ease; /* 添加过渡效果 */
+  transition: all 0.3s ease;
   cursor: pointer;
-  border-radius: 6px; /* 添加圆角 */
-  margin: 4px 0 0 10px; /* 添加一点外边距 */
-  padding: 16px; /* 调整内边距 */
+  border-radius: 6px;
+  margin: 4px 0 0 10px;
+  padding: 16px;
 }
 
 .activity-item:hover {
@@ -828,10 +805,10 @@ const handleTabChange = (tab) => {
 
 .activity-title {
  font-size: 16px;
-  font-weight: 600; /* 增加字体粗细 */
-  color: #303133; /* 使用更深的颜色 */
+  font-weight: 600;
+  color: #303133;
   margin: 10px 0;
-  transition: color 0.2s ease; /* 添加颜色过渡效果 */
+  transition: color 0.2s ease;
 }
 
 .activity-detail {
@@ -863,12 +840,12 @@ const handleTabChange = (tab) => {
 .sidebar-section {
  padding: 12px;
   border-radius: 8px;
-  background-color: #f8f9fa; /* 浅灰色背景 */
+  background-color: #f8f9fa;
   transition: all 0.2s ease;
 }
 
 .sidebar-section:hover {
-  background-color: #b2bfd2; /* 悬停时背景色加深 */
+  background-color: #b2bfd2;
 }
 
 .sidebar-title {
@@ -878,14 +855,14 @@ const handleTabChange = (tab) => {
 }
 
 .sidebar-count:hover {
-  color: #409EFF; /* 悬停时变为主题蓝色 */
+  color: #409EFF;
 }
 
 .sidebar-count {
  font-size: 18px;
   font-weight: 600;
-  color: #1a1a1a; /* 添加这行，使用深色字体 */
-  transition: color 0.2s ease; /* 添加过渡效果 */
+  color: #1a1a1a;
+  transition: color 0.2s ease;
 }
 
 .empty-placeholder {
@@ -908,7 +885,7 @@ const handleTabChange = (tab) => {
 
 .sidejob-entry-card {
    background-color: #f6f6f6;
-  border: 1px solid #e0e0e0; /* 增加边界线 */
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 16px;
   margin-top: 20px;
@@ -916,7 +893,7 @@ const handleTabChange = (tab) => {
 
 .sidebar-info-section {
   background-color: #f6f6f6;
-  border: 1px solid #e0e0e0; /* 增加边界线 */
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 16px;
   margin-top: 20px;
@@ -950,34 +927,31 @@ const handleTabChange = (tab) => {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-top: 12px;
-  justify-items: start; /* 新增：让网格项左对齐 */
+  justify-items: start;
 }
 
 .sidejob-buttons .el-button {
-  width: 80%; /* 宽度填满网格单元格 */
-  height: 48px; /* 固定高度 */
-  padding: 0 8px; /* 内边距 */
-  font-size: 13px; /* 统一字体大小 */
-  white-space: normal; /* 允许文字换行 */
+  width: 80%;
+  height: 48px;
+  padding: 0 8px;
+  font-size: 13px;
+  white-space: normal;
   display: flex;
   align-items: center;
   justify-content: center;
-  line-height: 1.4; /* 行高 */
+  line-height: 1.4;
 }
 
-/* 移动端适配 */
 @media (max-width: 768px) {
   .sidejob-buttons {
     grid-template-columns: 1fr;
   }
   
   .sidejob-buttons .el-button {
-    height: 44px; /* 移动端稍小一点 */
+    height: 44px;
   }
 }
 
-
-/* 新增意向表单样式 */
 .intent-section {
   margin-top: 20px;
   transition: all 0.3s ease;
@@ -996,7 +970,7 @@ const handleTabChange = (tab) => {
 
 .intent-card h2 {
   margin-bottom: 20px;
-  color: #2c3e50; /* 更深的字体色 */
+  color: #2c3e50;
   font-weight: 600;
   font-size: 18px;
   display: flex;
@@ -1021,13 +995,12 @@ const handleTabChange = (tab) => {
 
 .intent-label {
   font-weight: 500;
-  color: #606266; /* 深灰更清晰 */
+  color: #606266;
   min-width: 90px;
 }
 
 .intent-value {
-  color: #303133; 
-  /* color: #1a1a1a; */
+  color: #303133;
   flex: 1;
 }
 
@@ -1046,11 +1019,6 @@ const handleTabChange = (tab) => {
   font-weight: 500;
 }
 
-/* .intent-form { */
-  /* padding: 10px;/ */
-/* } */
-
-/* 响应式调整 */
 @media (max-width: 768px) {
   .profile-container {
     grid-template-columns: 1fr;
@@ -1088,7 +1056,6 @@ const handleTabChange = (tab) => {
   }
 }
 
-/* 添加这些样式 */
 .user-profile-wrapper {
   display: flex;
   align-items: center;
@@ -1132,14 +1099,12 @@ const handleTabChange = (tab) => {
   margin-top: 4px;
 }
 
-
 .reject-reason {
   margin-left: 10px;
   color: #f56c6c;
   font-size: 14px;
 }
 
-/* 活动项内部元素的样式调整 */
 .activity-content {
   transition: all 0.3s ease;
 }
@@ -1175,7 +1140,7 @@ const handleTabChange = (tab) => {
   font-size: 26px;
   font-weight: 600;
   color: #1a1a1a;
-  margin: 0; /* 移除默认margin */
+  margin: 0;
 }
 
 .industry-badge {
@@ -1183,11 +1148,10 @@ const handleTabChange = (tab) => {
 }
 
 .edit-profile-btn {
-  align-self: flex-start; /* 使按钮左对齐 */
+  align-self: flex-start;
   margin-top: 4px;
 }
 
-/* 响应式调整 */
 @media (max-width: 600px) {
   .username-and-badge {
     flex-direction: column;
@@ -1228,13 +1192,11 @@ const handleTabChange = (tab) => {
   align-self: flex-start;
 }
 
-/* 响应式调整 */
 @media (max-width: 600px) {
   .user-info-wrapper .el-button {
     align-self: center;
   }
 }
-
 
 .followee-user-card {
   display: flex;
@@ -1272,5 +1234,15 @@ const handleTabChange = (tab) => {
   padding: 10px;
   font-size: 14px;
   color: #999;
+}
+
+.pagination-container {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 </style>
