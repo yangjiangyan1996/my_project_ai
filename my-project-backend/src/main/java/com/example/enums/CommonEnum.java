@@ -275,6 +275,15 @@ public class CommonEnum {
             this.code = code;
             this.name = name;
         }
+
+        public static String getByCode(Long industryCode) {
+            for (UserTypeEnum industryEnum : UserTypeEnum.values()) {
+                if (Long.valueOf(industryEnum.code).equals(industryCode)) {
+                    return industryEnum.name;
+                }
+            }
+            return null;
+        }
     }
 
 

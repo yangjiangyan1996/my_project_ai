@@ -115,7 +115,19 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="适合人群" prop="targetAudience">
-              <el-input v-model="form.targetAudience" placeholder="如：上班族、学生" />
+              <el-select 
+                v-model="form.targetAudience" 
+                placeholder="请选择适合人群"
+                clearable
+                filterable
+              >
+                <el-option
+                  v-for="item in targetAudienceOptions"
+                  :key="item.code"
+                  :label="item.desc"
+                  :value="item.code"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -198,13 +210,19 @@ import '@wangeditor/editor/dist/css/style.css'
 const router = useRouter()
 //const itemId = router.query.id
 const projectId = ref(null)
+// 适合人群选项
+const targetAudienceOptions = ref([])
+
 
 
 // 初始化加载数据
-onMounted(() => {
+onMounted(async() => {
   const itemId = router.currentRoute.value.query.id;
   console.log('接收到的项目ID:', itemId);
   
+   // 加载适合人群选项
+  await loadTargetAudienceOptions()
+
   if (itemId && /^\d+$/.test(itemId)) {
     projectId.value = itemId
     loadProjectDetail(itemId);
@@ -214,6 +232,20 @@ onMounted(() => {
   }
 })
 
+// 获取适合人群选项
+const loadTargetAudienceOptions = async () => {
+  try {
+    const res = await get('/api/auth/common/getUserType')
+    if (res && Array.isArray(res)) {
+      targetAudienceOptions.value = res.map(item => ({
+        code: item.code,
+        desc: item.desc
+      }))
+    }
+  } catch (error) {
+    ElMessage.error('获取适合人群选项失败')
+  }
+}
 
 
 // 表单数据

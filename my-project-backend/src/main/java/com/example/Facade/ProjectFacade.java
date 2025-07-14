@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
 import com.example.entity.resp.*;
+import com.example.enums.CommonEnum;
 import com.example.enums.ProjectEnum;
 import com.example.enums.UserEnums;
 import com.example.service.*;
@@ -62,6 +63,8 @@ public class ProjectFacade {
 
         ProjectsDetail projectsDetail = projectsDetailService.selectByProjectId(projectId);
         BeanUtils.copyProperties(projectsDetail, r);
+
+        r.setTargetAudienceName(CommonEnum.UserTypeEnum.getByCode(projectsDetail.getTargetAudience()));
         return r;
     }
 

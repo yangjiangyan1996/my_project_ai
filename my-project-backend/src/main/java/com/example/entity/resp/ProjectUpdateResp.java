@@ -22,7 +22,8 @@ public class ProjectUpdateResp {
     private String tools;
     private String timePerDay;
     private String incomeEstimate;
-    private String targetAudience;
+    private Long targetAudience;
+    private String targetAudienceName;
     private String riskWarning;
     private Integer isRemote;
     private Integer isFreeEntry;
