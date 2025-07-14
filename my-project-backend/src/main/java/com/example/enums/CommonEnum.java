@@ -221,6 +221,15 @@ public class CommonEnum {
             this.subCategories = subCategories;
         }
 
+        public static String getEnum(Integer firstCategory) {
+            for (IndustryCategory value : IndustryCategory.values()) {
+                if (value.code == firstCategory) {
+                    return value.name;
+                }
+            }
+            return null;
+        }
+
         // Getters
         public int getCode() { return code; }
         public String getName() { return name; }

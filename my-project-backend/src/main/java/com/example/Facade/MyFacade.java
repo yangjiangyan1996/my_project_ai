@@ -57,8 +57,10 @@ public class MyFacade {
         List<MyPublishedResp> collect = myProjects.getRecords().stream().map(v -> {
             MyPublishedResp projectsResp = new MyPublishedResp();
             BeanUtils.copyProperties(v, projectsResp);
-            ProjectEnum.ProjectCategoryEnum difficultyEnum = ProjectEnum.ProjectCategoryEnum.getEnum(v.getCategory());
-            projectsResp.setCategoryName(difficultyEnum == null ? "未定义" : difficultyEnum.getName());
+            String firstCategoryName = CommonEnum.IndustryCategory.getEnum(v.getFirstCategory());
+            String secondCategoryName = CommonEnum.IndustryCategory.getEnum(v.getSecondCategory());
+            projectsResp.setFirstCategoryName(firstCategoryName);
+            projectsResp.setSecondCategoryName(secondCategoryName);
             projectsResp.setLikeCount(projectId2LikeCountMap.get(v.getId()));
             projectsResp.setCommentCount(projectId2CommentCountMap.get(v.getId()));
             projectsResp.setFavoriteCount(projectId2FavoriteCountMap.get(v.getId()));
@@ -87,8 +89,11 @@ public class MyFacade {
         List<MyPublishedResp> collect = projectList.stream().map(v -> {
             MyPublishedResp projectsResp = new MyPublishedResp();
             BeanUtils.copyProperties(v, projectsResp);
-            ProjectEnum.ProjectCategoryEnum difficultyEnum = ProjectEnum.ProjectCategoryEnum.getEnum(v.getCategory());
-            projectsResp.setCategoryName(difficultyEnum == null ? "未定义" : difficultyEnum.getName());
+            String firstCategoryName = CommonEnum.IndustryCategory.getEnum(v.getFirstCategory());
+            String secondCategoryName = CommonEnum.IndustryCategory.getEnum(v.getSecondCategory());
+            projectsResp.setFirstCategoryName(firstCategoryName);
+            projectsResp.setSecondCategoryName(secondCategoryName);
+
             projectsResp.setLikeCount(projectId2LikeCountMap.get(v.getId()));
             projectsResp.setCommentCount(projectId2CommentCountMap.get(v.getId()));
             projectsResp.setFavoriteCount(projectId2FavoriteCountMap.get(v.getId()));
@@ -115,8 +120,10 @@ public class MyFacade {
         List<MyPublishedResp> collect = projectList.stream().map(v -> {
             MyPublishedResp projectsResp = new MyPublishedResp();
             BeanUtils.copyProperties(v, projectsResp);
-            ProjectEnum.ProjectCategoryEnum difficultyEnum = ProjectEnum.ProjectCategoryEnum.getEnum(v.getCategory());
-            projectsResp.setCategoryName(difficultyEnum == null ? "未定义" : difficultyEnum.getName());
+            String firstCategoryName = CommonEnum.IndustryCategory.getEnum(v.getFirstCategory());
+            String secondCategoryName = CommonEnum.IndustryCategory.getEnum(v.getSecondCategory());
+            projectsResp.setFirstCategoryName(firstCategoryName);
+            projectsResp.setSecondCategoryName(secondCategoryName);
             projectsResp.setLikeCount(projectId2LikeCountMap.get(v.getId()));
             projectsResp.setCommentCount(projectId2CommentCountMap.get(v.getId()));
             projectsResp.setFavoriteCount(projectId2FavoriteCountMap.get(v.getId()));

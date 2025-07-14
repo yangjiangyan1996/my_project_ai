@@ -17,7 +17,8 @@ public class Projects extends BaseModel{
     @TableId(type = IdType.AUTO)
     private Long id;
     private String name;
-    private Integer category;
+    private Integer firstCategory;
+    private Integer secondCategory;
     private String description;
     private Integer difficulty;
     private String imageUrl;

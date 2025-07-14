@@ -33,7 +33,6 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
         return projectMapper.selectPage(
                 pageable,
                 new QueryWrapper<Projects>()
-                        .select("id", "name", "category", "description", "difficulty", "image_url", "created_at")
                         .eq("status", 1)
                         .eq(req.getCategory() != null, "category", req.getCategory())
                         .in(!CollectionUtils.isEmpty(req.getDifficulty()), "difficulty", req.getDifficulty())

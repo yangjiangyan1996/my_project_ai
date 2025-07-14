@@ -10,6 +10,7 @@ import com.example.entity.base.UserInfo;
 import com.example.entity.dto.Projects;
 import com.example.entity.req.*;
 import com.example.entity.resp.*;
+import com.example.enums.CommonEnum;
 import com.example.enums.ProjectEnum;
 import com.example.filter.UserUtil;
 import com.example.service.ProjectService;
@@ -460,8 +461,10 @@ public class ProjectController {
             List<ProjectsResp> collect = hotFuyeProjects.getRecords().stream().map(v -> {
                 ProjectsResp projectsResp = new ProjectsResp();
                 BeanUtils.copyProperties(v, projectsResp);
-                ProjectEnum.ProjectCategoryEnum difficultyEnum = ProjectEnum.ProjectCategoryEnum.getEnum(v.getCategory());
-                projectsResp.setCategoryName(difficultyEnum == null ? "未定义" : difficultyEnum.getName());
+                String firstCategoryName = CommonEnum.IndustryCategory.getEnum(v.getFirstCategory());
+                String secondCategoryName = CommonEnum.IndustryCategory.getEnum(v.getSecondCategory());
+                projectsResp.setFirstCategoryName(firstCategoryName);
+                projectsResp.setSecondCategoryName(secondCategoryName);
                 return projectsResp;
             }).collect(Collectors.toList());
 
@@ -473,6 +476,7 @@ public class ProjectController {
             log.error("ProjectController#showHotFuye,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
+            log.error("ProjectController#showHotFuye,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

@@ -24,7 +24,7 @@
           </el-upload>
         </el-form-item>
         
-        <el-form-item label="副业分类" prop="category">
+        <!-- <el-form-item label="副业分类" prop="category">
           <el-select v-model="form.category" placeholder="请选择分类">
             <el-option
               v-for="category in categories"
@@ -33,7 +33,28 @@
               :value="category.id">
             </el-option>
           </el-select>
-        </el-form-item>
+        </el-form-item> -->
+      <el-form-item label="一级分类" prop="firstCategory">
+        <el-select v-model="form.firstCategory" placeholder="请选择一级分类">
+          <el-option
+            v-for="item in firstCategoryOptions"
+            :key="item.code"
+            :label="item.desc"
+            :value="item.code"
+          />
+        </el-select>
+      </el-form-item>
+
+      <el-form-item label="二级分类" prop="secondCategory">
+        <el-select v-model="form.secondCategory" placeholder="请选择二级分类">
+          <el-option
+            v-for="item in secondCategoryOptions"
+            :key="item.code"
+            :label="item.desc"
+            :value="item.code"
+          />
+        </el-select>
+      </el-form-item>
         
         <el-form-item label="简短描述" prop="description">
           <el-input 
@@ -79,13 +100,13 @@
             <el-form-item label="月收益范围" prop="incomeEstimate">
               <div style="display: flex; align-items: center;">
                 <el-input-number
-                  v-model="form.incomeMin"
+                  v-model="form.incomeEstimateMin"
                   :min="0"
                   placeholder="最低"
                 />
                 <span style="margin: 0 10px;">~</span>
                 <el-input-number
-                  v-model="form.incomeMax"
+                  v-model="form.incomeEstimateMax"
                   :min="0"
                   placeholder="最高"
                 />
@@ -199,7 +220,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick, shallowRef, onBeforeUnmount } from 'vue'
+import { ref, reactive, onMounted, nextTick, shallowRef, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { post, get } from '@/net'
@@ -212,7 +233,9 @@ const router = useRouter()
 const projectId = ref(null)
 // 适合人群选项
 const targetAudienceOptions = ref([])
-
+const allCategoryData = ref([])           // 后端完整数据
+const firstCategoryOptions = ref([])      // 一级分类
+const secondCategoryOptions = ref([])     // 当前联动的二级分类
 
 
 // 初始化加载数据
@@ -222,6 +245,7 @@ onMounted(async() => {
   
    // 加载适合人群选项
   await loadTargetAudienceOptions()
+  await loadCategoryOptions();
 
   if (itemId && /^\d+$/.test(itemId)) {
     projectId.value = itemId
@@ -230,6 +254,34 @@ onMounted(async() => {
     // ElMessage.error('无效的项目ID参数');
     console.warn('非法项目ID:', itemId);
   }
+})
+
+
+// 表单数据
+const form = reactive({
+  // 项目字段
+  name: '',
+  firstCategory: null,     // 一级分类 code
+  secondCategory: null,    // 二级分类 code
+  description: '',
+  difficulty: 1,
+  imageUrl: '',
+
+  // 详情字段
+  steps: '',
+  tools: '',
+  timePerDay: 1,       // 数字（小时）
+  incomeEstimateMin: null,     // 最小收益
+  incomeEstimateMax: null,     // 最大收益
+  targetAudience: '',
+  riskWarning: '',
+  isRemote: true,
+  isFreeEntry: true,
+  tags: [],
+
+  // 成员招募
+  needMember: 1,
+  memberNum: null
 })
 
 // 获取适合人群选项
@@ -247,37 +299,35 @@ const loadTargetAudienceOptions = async () => {
   }
 }
 
+// 获取分类选项
+const loadCategoryOptions = async () => {
+  try {
+    const res = await get('/api/auth/common/category')
+    if (res && Array.isArray(res)) {
+      allCategoryData.value = res
+      firstCategoryOptions.value = res.map(item => ({
+        code: item.code,
+        desc: item.desc
+      }))
+    }
+  } catch (error) {
+    ElMessage.error('获取分类选项失败')
+  }
+}
 
-// 表单数据
-const form = reactive({
-  // 项目字段
-  name: '',
-  category: null,
-  description: '',
-  difficulty: 1,
-  imageUrl: '',
-
-  // 详情字段
-  steps: '',
-  tools: '',
-  timePerDay: 1,       // 数字（小时）
-  incomeMin: null,     // 数字
-  incomeMax: null,     // 数字
-  targetAudience: '',
-  riskWarning: '',
-  isRemote: true,
-  isFreeEntry: true,
-  tags: [],
-
-  // 成员招募
-  needMember: 1,
-  memberNum: null
+watch(() => form.firstCategory, (newVal) => {
+  const selected = allCategoryData.value.find(c => c.code === newVal)
+  secondCategoryOptions.value = selected?.subs || []
+  form.secondCategory = null
 })
+
+
 
 // 校验规则
 const rules = {
   name: [{ required: true, message: '请输入副业名称', trigger: 'blur' }],
-  category: [{ required: true, message: '请选择分类', trigger: 'change' }],
+  firstCategory: [{ required: true, message: '请选择一级分类', trigger: 'change' }],
+  secondCategory: [{ required: true, message: '请选择二级分类', trigger: 'change' }],
   description: [{ required: true, message: '请输入简短描述', trigger: 'blur' }],
   difficulty: [{ required: true, message: '请选择难度等级', trigger: 'change' }],
   steps: [{ required: true, message: '请输入操作步骤', trigger: 'blur' }],
@@ -294,12 +344,12 @@ const rules = {
   incomeEstimate: [
     {
       validator(rule, value, callback) {
-        if (form.incomeMin === null || form.incomeMax === null) {
-          callback(new Error('请输入完整的收益范围'))
-        } else if (form.incomeMin > form.incomeMax) {
-          callback(new Error('最小值不能大于最大值'))
+        if (form.incomeEstimateMin === null || form.incomeEstimateMax === null) {
+          callback(new Error('请输入完整的收益范围'));
+        } else if (form.incomeEstimateMin > form.incomeEstimateMax) {
+          callback(new Error('最小值不能大于最大值'));
         } else {
-          callback()
+          callback();
         }
       },
       trigger: 'blur'
@@ -409,15 +459,17 @@ const submitForm = () => {
       const requestData = {
         id: projectId.value,
         name: form.name,
-        category: form.category,
+        firstCategory: form.firstCategory,
+        secondCategory: form.secondCategory,
         description: form.description,
         difficulty: form.difficulty,
         imageUrl: form.imageUrl,
 
         steps: form.steps,
         tools: form.tools,
-        timePerDay: form.timePerDay + '小时',
-        incomeEstimate: `${form.incomeMin}-${form.incomeMax}元`,
+        timePerDay: form.timePerDay,
+        incomeEstimateMin: form.incomeEstimateMin,
+        incomeEstimateMax: form.incomeEstimateMax,
         targetAudience: form.targetAudience,
         riskWarning: form.riskWarning,
         isRemote: form.isRemote ? 1 : 0,
@@ -458,19 +510,20 @@ const resetForm = () => {
 const goBack = () => {
   router.go(-1)
 }
-
 const loadProjectDetail = async (id) => {
   try {
     console.log("id", id)
     const res = await get(`/api/auth/project/detailForUpdate?projectId=${id}`);
     const data = res;
+    console.log("form after before", data);
 
     // 逐个赋值
     form.imageUrl = data.imageUrl || '';
     form.steps = data.steps || '';
     form.tools = data.tools || '';
     form.timePerDay = data.timePerDay || '';
-    form.incomeEstimate = data.incomeEstimate || '';
+    form.incomeEstimateMin = data.incomeEstimateMin || '';
+    form.incomeEstimateMax = data.incomeEstimateMax || '';
     form.targetAudience = data.targetAudience || '';
     form.riskWarning = data.riskWarning || '';
     form.isRemote = data.isRemote === 1;
@@ -480,12 +533,42 @@ const loadProjectDetail = async (id) => {
 
     // 补充一些必须字段，防止报错（后端未返回）
     form.name = data.name || '从接口补充名称';
-    form.category = data.category || null;
     form.description = data.description || '';
     form.difficulty = data.difficulty || 1;
     form.needMember = data.needMember || 1;
     form.memberNum = data.memberNum || 1;
-    form.category = data.category || 1;
+
+    // 分类回显处理 - 先设置一级分类
+    form.firstCategory = data.firstCategory || null;
+    form.secondCategory = data.secondCategory || null;
+
+    // 如果有二级分类，需要先找到对应的一级分类，再设置二级分类选项
+    if (data.secondCategory) {
+      // 等待分类数据加载完成
+      await nextTick();
+      
+      // 查找当前二级分类属于哪个一级分类
+      const firstCategory = allCategoryData.value.find(item => 
+        item.subs && item.subs.some(sub => sub.code === data.secondCategory)
+      );
+      
+      if (firstCategory) {
+        // 设置一级分类
+        form.firstCategory = firstCategory.code;
+        // 设置二级分类选项
+        secondCategoryOptions.value = firstCategory.subs || [];
+        // 设置二级分类值
+        form.secondCategory = data.secondCategory;
+      }
+    } else if (data.firstCategory) {
+      // 只有一级分类的情况
+      const firstCategory = allCategoryData.value.find(item => item.code === data.firstCategory);
+      if (firstCategory) {
+        secondCategoryOptions.value = firstCategory.subs || [];
+      }
+    }
+
+    console.log("form after setting", form);
 
     // 等编辑器初始化完成后再设置内容
     nextTick(() => {

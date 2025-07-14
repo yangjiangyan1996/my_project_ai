@@ -2,6 +2,8 @@ package com.example.entity.resp;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -12,4 +14,6 @@ import lombok.Data;
 public class EnumResp {
     private Integer code;
     private String desc;
+
+    public List<EnumResp> subs;
 }

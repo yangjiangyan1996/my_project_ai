@@ -14,7 +14,8 @@ import java.util.List;
 public class CreateFindCollageReq {
     private Long id;
     private String name;
-    private Integer category;
+    private Integer firstCategory;
+    private Integer secondCategory;
     private String description;
     private Integer difficulty;
     //封面图片
@@ -22,8 +23,9 @@ public class CreateFindCollageReq {
     private Integer status;
     private String steps;
     private String tools;
-    private String timePerDay;
-    private String incomeEstimate;
+    private Long timePerDay;
+    private Long incomeEstimateMin;
+    private Long incomeEstimateMax;
     private Long targetAudience;
     private String riskWarning;
     private Integer isRemote;

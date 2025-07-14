@@ -12,7 +12,8 @@ import lombok.Data;
 public class ProjectUpdateResp {
     private Long id;
     private String name;
-    private Integer category;
+    private Integer firstCategory;
+    private Integer secondCategory;
     private String description;
     private Integer difficulty;
     private String imageUrl;
@@ -20,8 +21,9 @@ public class ProjectUpdateResp {
     private String reason;
     private String steps;
     private String tools;
-    private String timePerDay;
-    private String incomeEstimate;
+    private Long timePerDay;
+    private Long incomeEstimateMin;
+    private Long incomeEstimateMax;
     private Long targetAudience;
     private String targetAudienceName;
     private String riskWarning;

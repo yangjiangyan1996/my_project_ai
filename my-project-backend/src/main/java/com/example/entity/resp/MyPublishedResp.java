@@ -15,7 +15,8 @@ public class MyPublishedResp {
     private String reason;
     private String name;
     private String description;
-    private String categoryName;
+    private String firstCategoryName;
+    private String secondCategoryName;
     private java.util.Date createdAt;
     private Long likeCount;
     private Long commentCount;

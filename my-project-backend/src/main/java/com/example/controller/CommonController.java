@@ -15,6 +15,7 @@ import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -121,6 +122,17 @@ public class CommonController {
                     EnumResp r = new EnumResp();
                     r.setCode(v.getCode());
                     r.setDesc(v.getName());
+                    if (v.getSubCategories() != null && v.getSubCategories().length > 0) {
+                        CommonEnum.IndustryCategory.IndustrySubCategory[] sub = v.getSubCategories();
+                        List<EnumResp> subList = Arrays.stream(sub).map(s -> {
+                            EnumResp z = new EnumResp();
+                            z.setCode(s.getCode());
+                            z.setDesc(s.getName());
+                            return z;
+                        }).collect(Collectors.toList());
+                        r.setSubs(subList);
+
+                    }
                     return r;
                 }).sorted(Comparator.comparingInt(EnumResp::getCode))
                 .collect(Collectors.toList());

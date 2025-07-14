@@ -19,8 +19,9 @@ public class ProjectsDetail extends BaseModel {
     private Long projectsId;
     private String steps;
     private String tools;
-    private String timePerDay;
-    private String incomeEstimate;
+    private Long timePerDay;
+    private Long incomeEstimateMin;
+    private Long incomeEstimateMax;
     private Long targetAudience;
     private String riskWarning;
     private Integer isRemote;

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.example.entity.dto.BaseModel;
+import com.example.enums.CommonEnum;
 import lombok.Data;
 
 /**
@@ -18,6 +19,8 @@ public class ProjectsResp {
     private Long id;
     private String name;
     private String categoryName;
+    String firstCategoryName ;
+    String secondCategoryName;
     private String description;
     private Integer difficulty;
     private String imageUrl;

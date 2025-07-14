@@ -78,11 +78,13 @@ public class ProjectFacade {
         ProjectsDetail project = projectsDetailService.selectByProjectId(projectId);
         BeanUtils.copyProperties(project, r);
 
+
         r.setName(projectDown.getName());
         r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
         r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
-
-
+        r.setTimePerDay(project.getTimePerDay()+"小时/天");
+        r.setIncomeEstimate(project.getIncomeEstimateMin()+"-"+project.getIncomeEstimateMax()+"元/天");
+        r.setTargetAudience(CommonEnum.UserTypeEnum.getByCode(project.getTargetAudience()));
         r.setImageUrl(projectDown.getImageUrl());
         Account account = accountService.selectById(project.getCreatedBy());
         r.setCreatorName(account.getNickname());
@@ -277,7 +279,8 @@ public class ProjectFacade {
             }
             pd.setStatus(ProjectEnum.ProjectStatusEnum.WAITING.getCode());
             pd.setName(req.getName());
-            pd.setCategory(req.getCategory());
+            pd.setFirstCategory(req.getFirstCategory());
+            pd.setSecondCategory(req.getSecondCategory());
             pd.setDescription(req.getDescription());
             pd.setDifficulty(req.getDifficulty());
             pd.setImageUrl(req.getImageUrl());
@@ -299,7 +302,8 @@ public class ProjectFacade {
             pdd.setSteps(req.getSteps());
             pdd.setTools(req.getTools());
             pdd.setTimePerDay(req.getTimePerDay());
-            pdd.setIncomeEstimate(req.getIncomeEstimate());
+            pdd.setIncomeEstimateMin(req.getIncomeEstimateMin());
+            pdd.setIncomeEstimateMax(req.getIncomeEstimateMax());
             pdd.setTargetAudience(req.getTargetAudience());
             pdd.setRiskWarning(req.getRiskWarning());
             pdd.setIsRemote(req.getIsRemote());
@@ -325,7 +329,8 @@ public class ProjectFacade {
             // 1. 保存Projects表
             pd = new Projects();
             pd.setName(req.getName());
-            pd.setCategory(req.getCategory());
+            pd.setFirstCategory(req.getFirstCategory());
+            pd.setSecondCategory(req.getSecondCategory());
             pd.setDescription(req.getDescription());
             pd.setDifficulty(req.getDifficulty());
             pd.setImageUrl(req.getImageUrl());
@@ -345,7 +350,8 @@ public class ProjectFacade {
             pdd.setSteps(req.getSteps());
             pdd.setTools(req.getTools());
             pdd.setTimePerDay(req.getTimePerDay());
-            pdd.setIncomeEstimate(req.getIncomeEstimate());
+            pdd.setIncomeEstimateMin(req.getIncomeEstimateMin());
+            pdd.setIncomeEstimateMax(req.getIncomeEstimateMax());
             pdd.setTargetAudience(req.getTargetAudience());
             pdd.setRiskWarning(req.getRiskWarning());
             pdd.setIsRemote(req.getIsRemote());
