@@ -86,7 +86,8 @@
               <div class="activity-content">
                 <!-- 分类和时间放在原来状态标签的位置 -->
                 <div class="activity-meta-top">
-                  <div class="activity-type">{{ item.categoryName }}</div>
+                  <div class="activity-type">{{ item.firstCategoryName }}</div>
+                  <div class="activity-type">{{ item.secondCategoryName }}</div>
                   <div class="activity-time">{{ item.createdAt.slice(0, 10) }}</div>
                 </div>
 
@@ -147,7 +148,8 @@
         <el-tab-pane label="我收藏的" name="myFavorites" v-loading="favoritesLoading">
           <div class="infinite-list" v-infinite-scroll="loadMoreFavorites" :infinite-scroll-disabled="noMoreFavorites">
             <div class="activity-item" v-for="(item, index) in favoritesList" :key="'favorites-'+index" @click="goToDetail(item)">
-              <div class="activity-type">{{ item.categoryName }}</div>
+              <div class="activity-type">{{ item.firstCategoryName }}</div>
+              <div class="activity-type">{{ item.secondCategoryName }}</div>
               <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
               <div class="activity-content">
                 <h3 class="activity-title">{{ item.name }}</h3>
@@ -166,7 +168,8 @@
         <el-tab-pane label="我点赞的" name="myLike" v-loading="likeLoading">
           <div class="infinite-list" v-infinite-scroll="loadMoreLike" :infinite-scroll-disabled="noMoreLike">
             <div class="activity-item" v-for="(item, index) in likeList" :key="'like-'+index" @click="goToDetail(item)">
-              <div class="activity-type">{{ item.categoryName }}</div>
+              <div class="activity-type">{{ item.firstCategoryName }}</div>
+              <div class="activity-type">{{ item.secondCategoryName }}</div>
               <div class="activity-time">{{ item.createdAt.slice(0,10) }}</div>
               <div class="activity-content">
                 <h3 class="activity-title">{{ item.name }}</h3>
