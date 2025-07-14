@@ -16,9 +16,10 @@ public class CommonEnum {
     public enum LabelEnums {
         Long_Term_Cooperation(1, "长期合作"),
         Suitable_For_New_Users(2, "适合新手"),
-        Threshold_Low(3, "门槛低"),
+        Threshold_Low(3, "零门槛"),
         Can_Train(4, "可培训"),
         Easy_Money(5, "轻松赚钱"),
+        Remote(5, "可远程"),
 
         ;
         private Integer code;
