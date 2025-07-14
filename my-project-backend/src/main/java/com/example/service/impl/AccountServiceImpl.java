@@ -14,6 +14,7 @@ import com.example.mapper.AccountMapper;
 import com.example.service.AccountService;
 import com.example.service.RedisService;
 import com.example.utils.Const;
+import com.example.utils.DateUtils;
 import com.example.utils.FlowUtils;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
@@ -119,6 +120,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         Account account = new Account();
         account.setUsername(info.getUsername());
         account.setPassword(password);
+        account.setSecrecyId(DateUtils.generateTimestamp());
         account.setEmail(email);
 
         if (!this.save(account)) {
