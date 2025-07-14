@@ -52,17 +52,18 @@ public class CommonController {
     }
 
 
-    @GetMapping("/category")
-    public RespBean<List<EnumResp>> getAllCategories() {
-        List<EnumResp> collect = Arrays.stream(ProjectEnum.ProjectCategoryEnum.values()).map(v -> {
-                    EnumResp r = new EnumResp();
-                    r.setCode(v.getCode());
-                    r.setDesc(v.getName());
-                    return r;
-                }).sorted(Comparator.comparingInt(EnumResp::getCode))
-                .collect(Collectors.toList());
-        return RespBean.success(collect);
-    }
+//    @GetMapping("/category")
+//    public RespBean<List<EnumResp>> getAllCategories() {
+//        List<EnumResp> collect = Arrays.stream(ProjectEnum.ProjectCategoryEnum.values()).map(v -> {
+//                    EnumResp r = new EnumResp();
+//                    r.setCode(v.getCode());
+//                    r.setDesc(v.getName());
+//                    return r;
+//                }).sorted(Comparator.comparingInt(EnumResp::getCode))
+//                .collect(Collectors.toList());
+//        return RespBean.success(collect);
+//    }
+
 
     @GetMapping("/difficulty")
     public RespBean<List<EnumResp>> getAllDifficulties() {
@@ -87,5 +88,44 @@ public class CommonController {
                 .collect(Collectors.toList());
         return RespBean.success(collect);
     }
+
+
+    @GetMapping("/getLabels")
+    public RespBean<List<EnumResp>> getLabels() {
+        List<EnumResp> collect = Arrays.stream(CommonEnum.LabelEnums.values()).map(v -> {
+                    EnumResp r = new EnumResp();
+                    r.setCode(v.getCode());
+                    r.setDesc(v.getName());
+                    return r;
+                }).sorted(Comparator.comparingInt(EnumResp::getCode))
+                .collect(Collectors.toList());
+        return RespBean.success(collect);
+    }
+
+    @GetMapping("/getUserType")
+    public RespBean<List<EnumResp>> getUserType() {
+        List<EnumResp> collect = Arrays.stream(CommonEnum.UserTypeEnum.values()).map(v -> {
+                    EnumResp r = new EnumResp();
+                    r.setCode(v.getCode());
+                    r.setDesc(v.getName());
+                    return r;
+                }).sorted(Comparator.comparingInt(EnumResp::getCode))
+                .collect(Collectors.toList());
+        return RespBean.success(collect);
+    }
+
+    @GetMapping("/category")
+    public RespBean<List<EnumResp>> getAllCategories() {
+        CommonEnum.IndustryCategory[] values = CommonEnum.IndustryCategory.values();
+        List<EnumResp> collect = Arrays.stream(values).map(v -> {
+                    EnumResp r = new EnumResp();
+                    r.setCode(v.getCode());
+                    r.setDesc(v.getName());
+                    return r;
+                }).sorted(Comparator.comparingInt(EnumResp::getCode))
+                .collect(Collectors.toList());
+        return RespBean.success(collect);
+    }
+
 
 }

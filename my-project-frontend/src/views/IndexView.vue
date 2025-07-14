@@ -276,8 +276,9 @@
 
       <el-sub-menu index="2">
         <template #title><i class="el-icon-user"></i>找人合作</template>
+        <el-menu-item index="skill-match" @click="changeDisplayMode('skillMatch')">人才榜</el-menu-item>
+        <el-menu-item index="skill-match" @click="changeDisplayMode('talentMatch')">人才匹配</el-menu-item>
         <el-menu-item index="partner-map" @click="router.push({ name: 'partner-map' })">合作地图</el-menu-item>
-        <el-menu-item index="skill-match" @click="changeDisplayMode('skillMatch')">技能匹配</el-menu-item>
       </el-sub-menu>
 
       <el-sub-menu index="3">
@@ -374,6 +375,8 @@
 
     <MyInfo v-if="displayMode === 'myInfo'" />
 
+    <TalentMatch v-if="displayMode === 'talentMatch'" />
+
   </div>
 </template>
 
@@ -384,6 +387,7 @@ import router from "@/router";
 import { logout, post, get } from '@/net';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import SkillMatch from '@/views/SkillMatch.vue';
+import TalentMatch from '@/views/TalentMatch.vue';
 import MyInfo from '@/views/My.vue';
 import useUserInfo from '@/hooks/useUserInfo';
 //评论区导入

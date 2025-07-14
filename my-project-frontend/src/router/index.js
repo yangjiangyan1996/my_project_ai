@@ -90,6 +90,11 @@ const router = createRouter({
             name: 'userProfile',
             component: () => import('@/views/UserProfile.vue'),
             meta: { requiresAuth: true }
+        },{
+            path: '/index/talentMatch',
+            name: 'talentMatch',
+            component: () => import('@/views/TalentMatch.vue'),
+            meta: { requiresAuth: true }
         }
     ]
 })
