@@ -18,7 +18,6 @@ public class ProjectsResp {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String name;
-    private String categoryName;
     String firstCategoryName ;
     String secondCategoryName;
     private String description;
