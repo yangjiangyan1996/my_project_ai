@@ -14,7 +14,7 @@ import java.util.List;
 @Data
 public class ProjectListReq extends PageReq {
     // 项目分类
-    private Integer category;
+    private List<Integer> categories;
     // 项目难度
     private List<Integer> difficulty;
     // 项目名称

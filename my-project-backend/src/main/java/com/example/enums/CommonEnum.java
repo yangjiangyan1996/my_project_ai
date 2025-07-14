@@ -221,12 +221,45 @@ public class CommonEnum {
             this.subCategories = subCategories;
         }
 
-        public static String getEnum(Integer firstCategory) {
-            for (IndustryCategory value : IndustryCategory.values()) {
-                if (value.code == firstCategory) {
-                    return value.name;
+        public static int checkCodeLevel(int code) {
+            // First check if it's a top-level category code
+            for (IndustryCategory category : values()) {
+                if (category.code == code) {
+                    return 1; // Belongs to first level
                 }
             }
+
+            // Then check all subcategories
+            for (IndustryCategory category : values()) {
+                for (IndustrySubCategory subCategory : category.subCategories) {
+                    if (subCategory.code == code) {
+                        return 2; // Belongs to second level
+                    }
+                }
+            }
+
+            // If not found in either level
+            return 0; // Doesn't exist
+        }
+
+        public static String getNameByCode(int code) {
+            // First check top-level categories
+            for (IndustryCategory category : values()) {
+                if (category.code == code) {
+                    return category.name;
+                }
+            }
+
+            // Then check all subcategories
+            for (IndustryCategory category : values()) {
+                for (IndustrySubCategory subCategory : category.subCategories) {
+                    if (subCategory.code == code) {
+                        return subCategory.name;
+                    }
+                }
+            }
+
+            // If not found
             return null;
         }
 

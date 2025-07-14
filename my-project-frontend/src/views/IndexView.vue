@@ -307,13 +307,32 @@
     <div v-if="displayMode === 'project'">
       <div class="search-bar">
         <el-input v-model="search.name" placeholder="搜索副业名称" style="width: 200px; margin-right: 10px" />
-        <el-select v-model="search.category" placeholder="选择分类" style="width: 180px; margin-right: 10px">
-          <el-option
-            v-for="item in categories"
-            :key="item.code"
-            :label="item.desc"
-            :value="item.code"
-          />
+        <el-select
+          v-model="search.categories"
+          placeholder="选择分类"
+          multiple
+          filterable
+          collapse-tags
+          style="width: 300px; margin-right: 10px"
+        >
+          <el-option-group
+            v-for="group in categories"
+            :key="group.code"
+            :label="group.desc"
+          >
+            <!-- 一级分类选项 -->
+            <el-option
+              :label="group.desc"
+              :value="group.code"
+            />
+            <!-- 二级分类选项 -->
+            <el-option
+              v-for="sub in group.subs"
+              :key="sub.code"
+              :label="sub.desc"
+              :value="sub.code"
+            />
+          </el-option-group>
         </el-select>
         <el-select
           v-model="search.difficulties"
@@ -349,7 +368,8 @@
                 <div class="project-content">
                   <h3 class="project-title">{{ project.name }}</h3>
                   <div class="project-meta">
-                    <el-tag size="small">{{ project.category }}</el-tag>
+                    <el-tag size="small">{{ project.firstCategoryName }}</el-tag>
+                    <el-tag size="small">{{ project.secondCategoryName }}</el-tag>
                     <span class="project-difficulty">{{ project.difficulty }}</span>
                   </div>
                   <p class="project-description">{{ project.description }}</p>
@@ -406,7 +426,11 @@ const total = ref(0);
 const hasMore = ref(true);
 const categories = ref([]);
 const difficulties = ref([]);
-const search = ref({ name: '', category: '', difficulties: [] });
+const search = ref({ 
+  name: '', 
+  categories: [],  // 改为数组形式
+  difficulties: [] 
+});
 
 
 // 消息相关状态
@@ -949,7 +973,7 @@ const fetchProjectListData = async (params = {}) => {
     const res = await post('/api/auth/project/show', { 
       page: currentPage.value, 
       size: pageSize.value,
-      category: params?.category,
+      categories: params?.categories,  // 改为复数形式
       difficulty: params?.difficulty,
       projectName: params?.projectName
     });
@@ -964,7 +988,9 @@ const fetchProjectListData = async (params = {}) => {
       ...res.records.map(item => ({
         id: item.id,
         name: item.name,
-        category: item.categoryName,
+        //category: item.categoryName,
+        firstCategoryName: item.firstCategoryName,
+        secondCategoryName: item.secondCategoryName,
         description: item.description,
         difficulty: '★'.repeat(Number(item.difficulty || 1)),
         imageUrl: (item.imageUrl?.replace(/["]/g, '') || '/images/default-project.png')
@@ -991,13 +1017,14 @@ const loadProjects = async () => {
   });
 };
 
+// 修改搜索方法
 const onSearch = () => {
   currentPage.value = 1;
   projectList.value = [];
   hasMore.value = true;
   fetchProjectListData({
-    category: search.value.category,
-    difficulty: search.value.difficulties,
+    categories: search.value.categories,  // 改为复数形式
+    difficulties: search.value.difficulties,
     projectName: search.value.name
   });
 };

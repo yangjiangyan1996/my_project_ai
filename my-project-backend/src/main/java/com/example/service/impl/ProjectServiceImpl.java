@@ -29,12 +29,13 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
     private ProjectsMapper projectMapper;
 
     @Override
-    public Page<Projects> getHotFuyeProjects(Page<Projects> pageable, ProjectListReq req) {
+    public Page<Projects> getHotFuyeProjects(Page<Projects> pageable, ProjectListReq req,List<Integer> firstLevel,List<Integer> secondLevel) {
         return projectMapper.selectPage(
                 pageable,
                 new QueryWrapper<Projects>()
                         .eq("status", 1)
-                        .eq(req.getCategory() != null, "category", req.getCategory())
+                        .in(!CollectionUtils.isEmpty(firstLevel), "first_category", firstLevel)
+                        .in(!CollectionUtils.isEmpty(secondLevel), "second_category", secondLevel)
                         .in(!CollectionUtils.isEmpty(req.getDifficulty()), "difficulty", req.getDifficulty())
                         .like(StringUtils.isNotBlank(req.getProjectName()), "name", req.getProjectName())
                         .orderByDesc("created_at")

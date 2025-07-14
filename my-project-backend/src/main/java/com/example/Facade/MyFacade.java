@@ -57,8 +57,8 @@ public class MyFacade {
         List<MyPublishedResp> collect = myProjects.getRecords().stream().map(v -> {
             MyPublishedResp projectsResp = new MyPublishedResp();
             BeanUtils.copyProperties(v, projectsResp);
-            String firstCategoryName = CommonEnum.IndustryCategory.getEnum(v.getFirstCategory());
-            String secondCategoryName = CommonEnum.IndustryCategory.getEnum(v.getSecondCategory());
+            String firstCategoryName = CommonEnum.IndustryCategory.getNameByCode(v.getFirstCategory());
+            String secondCategoryName = CommonEnum.IndustryCategory.getNameByCode(v.getSecondCategory());
             projectsResp.setFirstCategoryName(firstCategoryName);
             projectsResp.setSecondCategoryName(secondCategoryName);
             projectsResp.setLikeCount(projectId2LikeCountMap.get(v.getId()));
@@ -89,8 +89,8 @@ public class MyFacade {
         List<MyPublishedResp> collect = projectList.stream().map(v -> {
             MyPublishedResp projectsResp = new MyPublishedResp();
             BeanUtils.copyProperties(v, projectsResp);
-            String firstCategoryName = CommonEnum.IndustryCategory.getEnum(v.getFirstCategory());
-            String secondCategoryName = CommonEnum.IndustryCategory.getEnum(v.getSecondCategory());
+            String firstCategoryName = CommonEnum.IndustryCategory.getNameByCode(v.getFirstCategory());
+            String secondCategoryName = CommonEnum.IndustryCategory.getNameByCode(v.getSecondCategory());
             projectsResp.setFirstCategoryName(firstCategoryName);
             projectsResp.setSecondCategoryName(secondCategoryName);
 
@@ -120,8 +120,8 @@ public class MyFacade {
         List<MyPublishedResp> collect = projectList.stream().map(v -> {
             MyPublishedResp projectsResp = new MyPublishedResp();
             BeanUtils.copyProperties(v, projectsResp);
-            String firstCategoryName = CommonEnum.IndustryCategory.getEnum(v.getFirstCategory());
-            String secondCategoryName = CommonEnum.IndustryCategory.getEnum(v.getSecondCategory());
+            String firstCategoryName = CommonEnum.IndustryCategory.getNameByCode(v.getFirstCategory());
+            String secondCategoryName = CommonEnum.IndustryCategory.getNameByCode(v.getSecondCategory());
             projectsResp.setFirstCategoryName(firstCategoryName);
             projectsResp.setSecondCategoryName(secondCategoryName);
             projectsResp.setLikeCount(projectId2LikeCountMap.get(v.getId()));

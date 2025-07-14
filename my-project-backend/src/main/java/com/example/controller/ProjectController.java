@@ -18,9 +18,11 @@ import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.util.CollectionUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -456,13 +458,27 @@ public class ProjectController {
     public RespBean<Page<ProjectsResp>> showHotFuye(@RequestBody ProjectListReq req) {
 
         try {
-            Page<Projects> hotFuyeProjects = projectService.getHotFuyeProjects(Page.of(req.getPage() - 1, req.getSize()), req);
+            List<Integer> firstLevel = new ArrayList<>();
+            List<Integer> secondLevel = new ArrayList<>();
+            List<Integer> categories = req.getCategories();
+            if (!CollectionUtils.isEmpty(categories)) {
+                for (Integer c : categories) {
+                    int i = CommonEnum.IndustryCategory.checkCodeLevel(c);
+                    if (i == 1) {
+                        firstLevel.add(c);
+                    } else if (i == 2) {
+                        secondLevel.add(c);
+                    }
+                }
+            }
+
+            Page<Projects> hotFuyeProjects = projectService.getHotFuyeProjects(Page.of(req.getPage() - 1, req.getSize()), req,firstLevel,secondLevel);
 
             List<ProjectsResp> collect = hotFuyeProjects.getRecords().stream().map(v -> {
                 ProjectsResp projectsResp = new ProjectsResp();
                 BeanUtils.copyProperties(v, projectsResp);
-                String firstCategoryName = CommonEnum.IndustryCategory.getEnum(v.getFirstCategory());
-                String secondCategoryName = CommonEnum.IndustryCategory.getEnum(v.getSecondCategory());
+                String firstCategoryName = CommonEnum.IndustryCategory.getNameByCode(v.getFirstCategory());
+                String secondCategoryName = CommonEnum.IndustryCategory.getNameByCode(v.getSecondCategory());
                 projectsResp.setFirstCategoryName(firstCategoryName);
                 projectsResp.setSecondCategoryName(secondCategoryName);
                 return projectsResp;
