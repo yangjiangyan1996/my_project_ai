@@ -24,8 +24,6 @@ public class ProjectsDetail extends BaseModel {
     private Long incomeEstimateMax;
     private Long targetAudience;
     private String riskWarning;
-    private Integer isRemote;
-    private Integer isFreeEntry;
     private String tags;
     private Integer needMember;
     private Integer memberNum;

@@ -310,8 +310,6 @@ public class ProjectFacade {
             pdd.setIncomeEstimateMax(req.getIncomeEstimateMax());
             pdd.setTargetAudience(req.getTargetAudience());
             pdd.setRiskWarning(req.getRiskWarning());
-            pdd.setIsRemote(req.getIsRemote());
-            pdd.setIsFreeEntry(req.getIsFreeEntry());
             pdd.setTags(req.getTags());
             pdd.setModifiedBy(userId);
             boolean updateDetail = projectsDetailService.updateById(pdd);
@@ -358,8 +356,6 @@ public class ProjectFacade {
             pdd.setIncomeEstimateMax(req.getIncomeEstimateMax());
             pdd.setTargetAudience(req.getTargetAudience());
             pdd.setRiskWarning(req.getRiskWarning());
-            pdd.setIsRemote(req.getIsRemote());
-            pdd.setIsFreeEntry(req.getIsFreeEntry());
             pdd.setTags(req.getTags());
             pdd.setCreatedBy(userId);
             pdd.setModifiedBy(userId);
