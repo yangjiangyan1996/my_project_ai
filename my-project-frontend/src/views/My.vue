@@ -253,7 +253,8 @@
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">个人技能：</span>
-                    <span class="intent-value">{{ form.skills || '未填写' }}</span>
+                    <!-- <span class="intent-value">{{ form.skills || '未填写' }}</span> -->
+                      {{ getSkillNames(form.skills) || '未填写' }}
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">我能提供：</span>
@@ -303,13 +304,35 @@
                     clearable
                   ></el-input>
                 </el-form-item>
-                <el-form-item label="个人技能">
-                  <el-input 
-                    v-model="form.skills" 
-                    placeholder="如：剪辑、写作、编程、社群运营等"
-                    clearable
-                  ></el-input>
-                </el-form-item>
+               <el-form-item label="个人技能">
+                <el-select
+                  v-model="form.skills"
+                  placeholder="选择技能分类"
+                  multiple
+                  filterable
+                  collapse-tags
+                  style="width: 100%"
+                >
+                  <el-option-group
+                    v-for="group in skillCategories"
+                    :key="group.code"
+                    :label="group.desc"
+                  >
+                    <!-- 一级分类选项 -->
+                    <el-option
+                      :label="group.desc"
+                      :value="group.code"
+                    />
+                    <!-- 二级分类选项 -->
+                    <el-option
+                      v-for="sub in group.subs"
+                      :key="sub.code"
+                      :label="sub.desc"
+                      :value="sub.code"
+                    />
+                  </el-option-group>
+                </el-select>
+              </el-form-item>
                 <el-form-item label="我能提供">
                   <el-input 
                     v-model="form.resources" 
@@ -537,7 +560,42 @@ const followerSize = ref(10)
 const followerTotal = ref(0)
 const followerLoading = ref(false)
 const followerFinished = ref(false)
+const skillCategories = ref([])
 
+// 添加获取技能分类的方法
+const fetchSkillCategories = async () => {
+  try {
+    const res = await get('/api/auth/common/category')
+    skillCategories.value = res
+  } catch (error) {
+    console.error('获取技能分类失败:', error)
+    ElMessage.error('获取技能分类失败')
+  }
+}
+
+// 添加获取技能名称的方法
+const getSkillNames = (skillCodes) => {
+  if (!skillCodes || !skillCodes.length) return ''
+  
+  const names = []
+  skillCategories.value.forEach(group => {
+    // 检查一级分类
+    if (skillCodes.includes(group.code)) {
+      names.push(group.desc)
+    }
+    
+    // 检查二级分类
+    if (group.subs) {
+      group.subs.forEach(sub => {
+        if (skillCodes.includes(sub.code)) {
+          names.push(sub.desc)
+        }
+      })
+    }
+  })
+  
+  return names.join('、') // 用顿号分隔多个技能
+}
 
 // 打开我关注的用户抽屉
 const openFolloweeDrawer = () => {
@@ -1040,12 +1098,14 @@ onMounted(() => {
       fetchFollowCount()
       fetchMyCount()
       loadIntentData()
+      fetchSkillCategories()
     });
   } else {
     fetchPublishData()
     fetchFollowCount()
     fetchMyCount()
     loadIntentData()
+    fetchSkillCategories()
   }
 });
 

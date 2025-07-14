@@ -383,8 +383,8 @@ public class ProjectFacade {
 
     public Boolean updateProjectOfMyShow(ProjectOfMyShowUpdateReq req, Long userId) {
         // 字段校验
-        if (StringUtils.isAnyBlank(req.getSkills(), req.getTime(), req.getAudience(), req.getResources())
-                || req.getStatus() == null) {
+        if (StringUtils.isAnyBlank(req.getTime(), req.getAudience(), req.getResources())
+                || req.getStatus() == null || CollectionUtils.isEmpty(req.getSkills())) {
             throw new ValidationException("所有字段必须填写");
         }
 
@@ -399,7 +399,10 @@ public class ProjectFacade {
         }
 
         // 更新字段
-        entity.setSkills(req.getSkills());
+        if (!CollectionUtils.isEmpty(req.getSkills())) {
+            String skillStr = req.getSkills().stream().map(v->String.valueOf(v)).collect(Collectors.joining(","));
+            entity.setSkills(skillStr);
+        }
         entity.setTimePerDay(req.getTime());
         entity.setAudience(req.getAudience());
         entity.setResources(req.getResources());

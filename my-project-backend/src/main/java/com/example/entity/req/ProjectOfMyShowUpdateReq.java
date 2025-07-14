@@ -2,6 +2,8 @@ package com.example.entity.req;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -12,7 +14,7 @@ import lombok.Data;
 public class ProjectOfMyShowUpdateReq {
     private String audience;
     private String resources;
-    private String skills;
+    private List<Long> skills;
     private Integer status;
     private String time;
 }
