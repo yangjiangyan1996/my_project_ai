@@ -73,9 +73,16 @@
         </el-form-item>
         
         <!-- 副业属性 -->
-        <el-form-item label="副业属性">
-          <el-checkbox v-model="form.isRemote" label="可远程" />
-          <el-checkbox v-model="form.isFreeEntry" label="零门槛" />
+        <el-form-item label="副业属性" prop="labels">
+          <el-checkbox-group v-model="form.tags">
+            <el-checkbox 
+              v-for="tag in tagsOptions" 
+              :key="tag.code"
+              :label="tag.code"
+            >
+              {{ tag.desc }}
+            </el-checkbox>
+          </el-checkbox-group>
         </el-form-item>
         
         <el-row :gutter="20">
@@ -153,7 +160,7 @@
           </el-col>
         </el-row>
         
-        <el-form-item label="标签" prop="tags">
+        <!-- <el-form-item label="标签" prop="tags">
           <el-tag
             v-for="tag in form.tags"
             :key="tag"
@@ -170,7 +177,7 @@
             @blur="addTag"
           />
           <el-button v-else size="small" @click="showTagInput">+ 添加标签</el-button>
-        </el-form-item>
+        </el-form-item> -->
         
         <!-- 详细内容 -->
         <el-divider>详细内容</el-divider>
@@ -236,7 +243,7 @@ const targetAudienceOptions = ref([])
 const allCategoryData = ref([])           // 后端完整数据
 const firstCategoryOptions = ref([])      // 一级分类
 const secondCategoryOptions = ref([])     // 当前联动的二级分类
-
+const tagsOptions = ref([])
 
 // 初始化加载数据
 onMounted(async() => {
@@ -246,6 +253,7 @@ onMounted(async() => {
    // 加载适合人群选项
   await loadTargetAudienceOptions()
   await loadCategoryOptions();
+  await loadTagsOptions(); 
 
   if (itemId && /^\d+$/.test(itemId)) {
     projectId.value = itemId
@@ -275,14 +283,29 @@ const form = reactive({
   incomeEstimateMax: null,     // 最大收益
   targetAudience: '',
   riskWarning: '',
-  isRemote: true,
-  isFreeEntry: true,
+  // isRemote: true,
+  // isFreeEntry: true,
   tags: [],
 
   // 成员招募
   needMember: 1,
   memberNum: null
 })
+
+// 获取副业属性选项
+const loadTagsOptions = async () => {
+  try {
+    const res = await get('/api/auth/common/getLabels')
+    if (res && Array.isArray(res)) {
+      tagsOptions.value = res.map(item => ({
+        code: item.code,
+        desc: item.desc
+      }))
+    }
+  } catch (error) {
+    ElMessage.error('获取副业属性选项失败')
+  }
+}
 
 // 获取适合人群选项
 const loadTargetAudienceOptions = async () => {
@@ -528,8 +551,9 @@ const loadProjectDetail = async (id) => {
     form.riskWarning = data.riskWarning || '';
     form.isRemote = data.isRemote === 1;
     form.isFreeEntry = data.isFreeEntry === 1;
-    form.tags = data.tags?.split(',') || [];
+    // form.tags = data.tags?.split(',') || [];
     form.memberNum = data.memberNum || null;
+    form.tags = data.tags ? data.tags.split(',').map(Number) : []; 
 
     // 补充一些必须字段，防止报错（后端未返回）
     form.name = data.name || '从接口补充名称';

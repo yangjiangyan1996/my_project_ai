@@ -16,7 +16,10 @@ public class CommonEnum {
     public enum LabelEnums {
         Long_Term_Cooperation(1, "长期合作"),
         Suitable_For_New_Users(2, "适合新手"),
-        Can_Train(3, "可培训"),
+        Threshold_Low(3, "零门槛"),
+        Can_Train(4, "可培训"),
+        Easy_Money(5, "轻松赚钱"),
+        Remote(5, "可远程"),
 
         ;
         private Integer code;
@@ -25,6 +28,15 @@ public class CommonEnum {
         LabelEnums(Integer code, String name) {
             this.code = code;
             this.name = name;
+        }
+
+        public static String getByCode(Integer v) {
+            for (LabelEnums value : LabelEnums.values()) {
+                if (value.code.equals(v)) {
+                    return value.name;
+                }
+            }
+            return null;
         }
     }
 

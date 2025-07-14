@@ -89,6 +89,10 @@ public class ProjectFacade {
         Account account = accountService.selectById(project.getCreatedBy());
         r.setCreatorName(account.getNickname());
         r.setSecrecyId(account.getSecrecyId());
+        if (StringUtils.isNotBlank(r.getTags())) {
+            String tags = Arrays.stream(r.getTags().split(",")).map(v->CommonEnum.LabelEnums.getByCode(Integer.valueOf(v))).collect(Collectors.joining(","));
+            r.setTags( tags);
+        }
 
         if (userId != null) {
             Boolean myLike = projectLikeService.selectByProjectIdAndUserId(projectId, userId);
