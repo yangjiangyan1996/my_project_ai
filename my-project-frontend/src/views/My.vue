@@ -246,7 +246,7 @@
                  
                   <div class="intent-item">
                     <span class="intent-label">我的身份：</span>
-                    <span class="intent-value">{{ form.audience || '未填写' }}</span>
+                    <span class="intent-value">{{ form.audienceDesc || '未填写' }}</span>
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">可投入时间：</span>
@@ -642,6 +642,7 @@ const getSkillNames = (skillCodes) => {
   return names.length ? names.join('、') : '未填写'
 }
 
+
 // 打开我关注的用户抽屉
 const openFolloweeDrawer = () => {
   followeeListVisible.value = true
@@ -961,22 +962,26 @@ const stats = ref({
   followCount: 0
 })
 
-// 加载用户意向数据
+// 修改 loadIntentData 方法，确保正确处理技能数据
 const loadIntentData = async () => {
   try {
     const res = await get('/api/auth/project/getProjectOfMyShow')
     if (res) {
       // 将 skills 从字符串转换为数组
-      // 将 skills 从字符串转换为数组
       const skills = res.skills ? 
         (Array.isArray(res.skills) ? 
           res.skills : 
           res.skills.split(',').filter(Boolean)
-        ) : []  // 这里添加了缺失的右括号
+        ) : []
       
+      // 查找对应的身份描述
+      const audienceDesc = userTypes.value.find(type => type.code === res.audience)?.desc || res.audienceName
+      
+      console.log("skills",skills)
       form.value = {
         id: res.id || '',
-        audience: res.audience || '',
+        audience: res.audience || '', // 使用code值
+        audienceDesc: audienceDesc, // 保存描述文本用于显示
         time: res.timePerDay || '',
         skills: skills, // 确保是数组格式
         resources: res.resources || '',
@@ -995,15 +1000,24 @@ const submitIntent = async () => {
   try {
     submitting.value = true
     
-    // 准备提交数据，确保 skills 是字符串格式
+    // 准备提交数据
     const submitData = {
       ...form.value,
-      skills: form.value.skills.join(',') // 将数组转换为逗号分隔的字符串
+      skills: Array.isArray(form.value.skills) ? form.value.skills.join(',') : form.value.skills,
+      // 确保audience是code值
+      audience: form.value.audience
     }
 
     await post('/api/auth/project/updateProjectOfMyShow', submitData)
     
-    // form.value.status = 1
+    // 更新显示用的描述文本
+    if (form.value.audience) {
+      const selectedType = userTypes.value.find(type => type.code === form.value.audience)
+      if (selectedType) {
+        form.value.audienceDesc = selectedType.desc
+      }
+    }
+    
     hasSubmitted.value = true
     editMode.value = false
     
@@ -1151,24 +1165,24 @@ const handleTabChange = (tab) => {
 }
 
 onMounted(() => {
-
-  if (!userInfo.data.id) {
-    loadUserInfo().then(() => {
+  fetchSkillCategories().then(() =>{
+    if (!userInfo.data.id) {
+      loadUserInfo().then(() => {
+        fetchPublishData()
+        fetchFollowCount()
+        fetchMyCount()
+        loadIntentData()
+        fetchUserTypes()
+      });
+    } else {
       fetchPublishData()
       fetchFollowCount()
       fetchMyCount()
       loadIntentData()
-      fetchSkillCategories()
       fetchUserTypes()
-    });
-  } else {
-    fetchPublishData()
-    fetchFollowCount()
-    fetchMyCount()
-    loadIntentData()
-    fetchSkillCategories()
-    fetchUserTypes()
-  }
+    }
+  })
+  
 });
 
 

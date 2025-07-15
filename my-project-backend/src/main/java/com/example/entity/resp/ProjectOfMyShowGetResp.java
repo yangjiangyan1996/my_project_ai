@@ -20,6 +20,7 @@ public class ProjectOfMyShowGetResp {
     private String audienceName;
     private String resources;
     private String skills;
+    private String skillNames;
     private Integer status;
     private Long timePerDay;
 }

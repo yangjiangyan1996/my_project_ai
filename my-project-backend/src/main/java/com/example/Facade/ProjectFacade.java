@@ -423,6 +423,11 @@ public class ProjectFacade {
         build.setAudienceName(CommonEnum.UserTypeEnum.getByCode(byUserId.getAudience()));
         build.setResources(byUserId.getResources());
         build.setSkills(byUserId.getSkills());
+
+        if (StringUtils.isNotBlank(byUserId.getSkills())) {
+            String skillNames = Arrays.stream(byUserId.getSkills().split(",")).map(z -> CommonEnum.IndustryCategory.getNameByCode(Integer.valueOf(z))).collect(Collectors.joining(","));
+            build.setSkillNames(skillNames);
+        }
         build.setStatus(byUserId.getStatus());
         build.setTimePerDay(byUserId.getTimePerDay());
         return build;
