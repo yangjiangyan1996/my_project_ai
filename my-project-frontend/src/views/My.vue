@@ -254,7 +254,8 @@
                   <div class="intent-item">
                     <span class="intent-label">个人技能：</span>
                     <!-- <span class="intent-value">{{ form.skills || '未填写' }}</span> -->
-                      {{ getSkillNames(form.skills) || '未填写' }}
+                      <!-- {{ getSkillNames(form.skills) || '未填写' }} -->
+                        <span class="intent-value">{{ getSkillNames(form.skills) }}</span>
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">我能提供：</span>
@@ -575,26 +576,31 @@ const fetchSkillCategories = async () => {
 
 // 添加获取技能名称的方法
 const getSkillNames = (skillCodes) => {
-  if (!skillCodes || !skillCodes.length) return ''
+  if (!skillCodes || (Array.isArray(skillCodes) && skillCodes.length === 0) || (typeof skillCodes === 'string' && skillCodes.trim() === '')) {
+    return '未填写'
+  }
+  
+  // 统一处理为数组格式
+  const codes = Array.isArray(skillCodes) ? skillCodes : skillCodes.split(',').filter(Boolean)
   
   const names = []
   skillCategories.value.forEach(group => {
     // 检查一级分类
-    if (skillCodes.includes(group.code)) {
+    if (codes.includes(String(group.code))) {
       names.push(group.desc)
     }
     
     // 检查二级分类
     if (group.subs) {
       group.subs.forEach(sub => {
-        if (skillCodes.includes(sub.code)) {
+        if (codes.includes(String(sub.code))) {
           names.push(sub.desc)
         }
       })
     }
   })
   
-  return names.join('、') // 用顿号分隔多个技能
+  return names.length ? names.join('、') : '未填写'
 }
 
 // 打开我关注的用户抽屉
@@ -921,14 +927,23 @@ const loadIntentData = async () => {
   try {
     const res = await get('/api/auth/project/getProjectOfMyShow')
     if (res) {
+      // 将 skills 从字符串转换为数组
+      // 将 skills 从字符串转换为数组
+      const skills = res.skills ? 
+        (Array.isArray(res.skills) ? 
+          res.skills : 
+          res.skills.split(',').filter(Boolean)
+        ) : []  // 这里添加了缺失的右括号
+      
       form.value = {
-        id:res.id||'',
+        id: res.id || '',
         audience: res.audience || '',
         time: res.time || '',
-        skills: res.skills || '',
+        skills: skills, // 确保是数组格式
         resources: res.resources || '',
         status: res.status ? 1 : 0
       }
+      console.log("form.value after load", form.value)
       hasSubmitted.value = true
     }
   } catch (error) {
@@ -941,7 +956,13 @@ const submitIntent = async () => {
   try {
     submitting.value = true
     
-    await post('/api/auth/project/updateProjectOfMyShow', form.value)
+    // 准备提交数据，确保 skills 是字符串格式
+    const submitData = {
+      ...form.value,
+      skills: form.value.skills.join(',') // 将数组转换为逗号分隔的字符串
+    }
+
+    await post('/api/auth/project/updateProjectOfMyShow', submitData)
     
     // form.value.status = 1
     hasSubmitted.value = true

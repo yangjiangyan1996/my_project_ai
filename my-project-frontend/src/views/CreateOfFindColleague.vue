@@ -23,17 +23,6 @@
             <el-icon v-else class="cover-uploader-icon"><Plus /></el-icon>
           </el-upload>
         </el-form-item>
-        
-        <!-- <el-form-item label="副业分类" prop="category">
-          <el-select v-model="form.category" placeholder="请选择分类">
-            <el-option
-              v-for="category in categories"
-              :key="category.id"
-              :label="category.name"
-              :value="category.id">
-            </el-option>
-          </el-select>
-        </el-form-item> -->
       <el-form-item label="一级分类" prop="firstCategory">
         <el-select v-model="form.firstCategory" placeholder="请选择一级分类">
           <el-option
