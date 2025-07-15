@@ -254,9 +254,9 @@
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">个人技能：</span>
-                    <!-- <span class="intent-value">{{ form.skills || '未填写' }}</span> -->
+                    <span class="intent-value">{{ form.skillNames || '未填写' }}</span>
                       <!-- {{ getSkillNames(form.skills) || '未填写' }} -->
-                        <span class="intent-value">{{ getSkillNames(form.skills) }}</span>
+                        <!-- <span class="intent-value">{{ getSkillNames(form.skills) }}</span> -->
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">我能提供：</span>
@@ -309,13 +309,11 @@
                 </el-form-item>
 
                 <el-form-item label="可投入时间">
-                    <el-row>
-                      <el-col :span="18">
                         <el-select
                           v-model="form.time" 
                           placeholder="请选择可投入时间"
                           clearable
-                          style="width: 100%"
+                          style="max-width: 100%; width: 100%;"
                         >
                           <el-option
                             v-for="hour in availableHours"
@@ -324,9 +322,6 @@
                             :value="hour"
                           />
                         </el-select>
-                      </el-col>
-                      
-                    </el-row>
                   </el-form-item>
                   
                <el-form-item label="个人技能">
@@ -590,6 +585,27 @@ const followerFinished = ref(false)
 const skillCategories = ref([])
 const tagsOptions = ref([])
 const userTypes = ref([])
+
+onMounted(() => {
+  fetchSkillCategories().then(() =>{
+    if (!userInfo.data.id) {
+      loadUserInfo().then(() => {
+        fetchPublishData()
+        fetchFollowCount()
+        fetchMyCount()
+        loadIntentData()
+        fetchUserTypes()
+      });
+    } else {
+      fetchPublishData()
+      fetchFollowCount()
+      fetchMyCount()
+      loadIntentData()
+      fetchUserTypes()
+    }
+  })
+  
+});
 
 
 // 添加获取技能分类的方法
@@ -858,6 +874,7 @@ const form = ref({
   audience: '',
   time: '',
   skills: '',
+  skillNames:'',
   resources: '',
   
   status: 1
@@ -970,8 +987,8 @@ const loadIntentData = async () => {
       // 将 skills 从字符串转换为数组
       const skills = res.skills ? 
         (Array.isArray(res.skills) ? 
-          res.skills : 
-          res.skills.split(',').filter(Boolean)
+          res.skills.map(Number) : 
+          res.skills.split(',').filter(Boolean).map(Number)
         ) : []
       
       // 查找对应的身份描述
@@ -984,6 +1001,7 @@ const loadIntentData = async () => {
         audienceDesc: audienceDesc, // 保存描述文本用于显示
         time: res.timePerDay || '',
         skills: skills, // 确保是数组格式
+        skillNames:res.skillNames,
         resources: res.resources || '',
         status: res.status ? 1 : 0
       }
@@ -1163,27 +1181,6 @@ const handleTabChange = (tab) => {
     fetchTeamData()
   }
 }
-
-onMounted(() => {
-  fetchSkillCategories().then(() =>{
-    if (!userInfo.data.id) {
-      loadUserInfo().then(() => {
-        fetchPublishData()
-        fetchFollowCount()
-        fetchMyCount()
-        loadIntentData()
-        fetchUserTypes()
-      });
-    } else {
-      fetchPublishData()
-      fetchFollowCount()
-      fetchMyCount()
-      loadIntentData()
-      fetchUserTypes()
-    }
-  })
-  
-});
 
 
 </script>
