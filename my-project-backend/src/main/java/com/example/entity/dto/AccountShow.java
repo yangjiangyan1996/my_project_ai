@@ -11,8 +11,8 @@ public class AccountShow extends BaseModel {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long userId;
-    private String timePerDay;
-    private String audience;
+    private Long timePerDay;
+    private Long audience;
     private String skills;
     private String resources;
     private Integer status;

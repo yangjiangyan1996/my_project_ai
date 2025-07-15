@@ -12,9 +12,9 @@ import java.util.List;
  */
 @Data
 public class ProjectOfMyShowUpdateReq {
-    private String audience;
+    private Long audience;
     private String resources;
-    private List<Long> skills;
+    private String skills;
     private Integer status;
-    private String time;
+    private Long time;
 }

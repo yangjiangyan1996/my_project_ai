@@ -16,9 +16,10 @@ public class ProjectOfMyShowGetResp {
     private Long id;
     private Long userId;
     private String userName;
-    private String audience;
+    private Long audience;
+    private String audienceName;
     private String resources;
     private String skills;
     private Integer status;
-    private String timePerDay;
+    private Long timePerDay;
 }

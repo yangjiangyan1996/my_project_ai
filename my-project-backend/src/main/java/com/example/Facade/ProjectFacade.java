@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
 import com.example.entity.resp.*;
+import com.example.enums.CommonConstant;
 import com.example.enums.CommonEnum;
 import com.example.enums.ProjectEnum;
 import com.example.enums.UserEnums;
@@ -20,6 +21,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @Author YangJian
@@ -383,8 +385,8 @@ public class ProjectFacade {
 
     public Boolean updateProjectOfMyShow(ProjectOfMyShowUpdateReq req, Long userId) {
         // 字段校验
-        if (StringUtils.isAnyBlank(req.getTime(), req.getAudience(), req.getResources())
-                || req.getStatus() == null || CollectionUtils.isEmpty(req.getSkills())) {
+        if (StringUtils.isAnyBlank(req.getResources())
+                || req.getStatus() == null || !StringUtils.isNotBlank(req.getSkills())||req.getTime() == null || null== req.getAudience()) {
             throw new ValidationException("所有字段必须填写");
         }
 
@@ -399,10 +401,7 @@ public class ProjectFacade {
         }
 
         // 更新字段
-        if (!CollectionUtils.isEmpty(req.getSkills())) {
-            String skillStr = req.getSkills().stream().map(v->String.valueOf(v)).collect(Collectors.joining(","));
-            entity.setSkills(skillStr);
-        }
+        entity.setSkills(req.getSkills());
         entity.setTimePerDay(req.getTime());
         entity.setAudience(req.getAudience());
         entity.setResources(req.getResources());
@@ -421,6 +420,7 @@ public class ProjectFacade {
         ProjectOfMyShowGetResp build = new ProjectOfMyShowGetResp();
         build.setId(byUserId.getId());
         build.setAudience(byUserId.getAudience());
+        build.setAudienceName(CommonEnum.UserTypeEnum.getByCode(byUserId.getAudience()));
         build.setResources(byUserId.getResources());
         build.setSkills(byUserId.getSkills());
         build.setStatus(byUserId.getStatus());
@@ -568,7 +568,7 @@ public class ProjectFacade {
             if (userId2ShowInfoMap.containsKey(v.getUserId())) {
                 AccountShow as = userId2ShowInfoMap.get(v.getUserId());
                 p.setTimePerDay(as.getTimePerDay());
-                p.setAudience(as.getAudience());
+                p.setAudience(CommonEnum.UserTypeEnum.getByCode(as.getAudience()));
                 p.setSkills(as.getSkills());
                 p.setResources(as.getResources());
             }

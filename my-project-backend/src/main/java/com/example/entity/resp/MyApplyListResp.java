@@ -24,7 +24,7 @@ public class MyApplyListResp {
     private String message;
 
     //技能
-    private String timePerDay;
+    private Long timePerDay;
     private String audience;
     private String skills;
     private String resources;

@@ -232,7 +232,6 @@ const targetAudienceOptions = ref([])
 const allCategoryData = ref([])           // 后端完整数据
 const firstCategoryOptions = ref([])      // 一级分类
 const secondCategoryOptions = ref([])     // 当前联动的二级分类
-const tagsOptions = ref([])
 
 // 初始化加载数据
 onMounted(async() => {

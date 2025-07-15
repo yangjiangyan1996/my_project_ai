@@ -243,13 +243,14 @@
               <template v-if="hasSubmitted && !editMode">
                 <!-- 已提交时的展示模式 -->
                 <div class="intent-display">
+                 
                   <div class="intent-item">
                     <span class="intent-label">我的身份：</span>
                     <span class="intent-value">{{ form.audience || '未填写' }}</span>
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">可投入时间：</span>
-                    <span class="intent-value">{{ form.time || '未填写' }}</span>
+                    <span class="intent-value">{{ form.time ? `${form.time}小时/天` : '未填写' }}</span>
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">个人技能：</span>
@@ -292,19 +293,42 @@
                 class="intent-form"
               >
                 <el-form-item label="我的身份">
-                  <el-input 
+                  <el-select
                     v-model="form.audience" 
-                    placeholder="如：上班族、大学生、宝妈等"
+                    placeholder="请选择身份"
                     clearable
-                  ></el-input>
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="type in userTypes"
+                      :key="type.code"
+                      :label="type.desc"
+                      :value="type.code"
+                    />
+                  </el-select>
                 </el-form-item>
+
                 <el-form-item label="可投入时间">
-                  <el-input 
-                    v-model="form.time" 
-                    placeholder="如：每天2小时、每周末全天"
-                    clearable
-                  ></el-input>
-                </el-form-item>
+                    <el-row>
+                      <el-col :span="18">
+                        <el-select
+                          v-model="form.time" 
+                          placeholder="请选择可投入时间"
+                          clearable
+                          style="width: 100%"
+                        >
+                          <el-option
+                            v-for="hour in availableHours"
+                            :key="hour"
+                            :label="`${hour}小时/天`"
+                            :value="hour"
+                          />
+                        </el-select>
+                      </el-col>
+                      
+                    </el-row>
+                  </el-form-item>
+                  
                <el-form-item label="个人技能">
                 <el-select
                   v-model="form.skills"
@@ -510,6 +534,8 @@ import { post, get } from '@/net'
 import { ElMessage } from 'element-plus'
 import useUserInfo from '@/hooks/useUserInfo';
 const { state: userInfo, loadUserInfo } = useUserInfo();
+const availableHours = ref([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+
 
 
 const router = useRouter()
@@ -562,6 +588,9 @@ const followerTotal = ref(0)
 const followerLoading = ref(false)
 const followerFinished = ref(false)
 const skillCategories = ref([])
+const tagsOptions = ref([])
+const userTypes = ref([])
+
 
 // 添加获取技能分类的方法
 const fetchSkillCategories = async () => {
@@ -571,6 +600,16 @@ const fetchSkillCategories = async () => {
   } catch (error) {
     console.error('获取技能分类失败:', error)
     ElMessage.error('获取技能分类失败')
+  }
+}
+
+const fetchUserTypes = async () => {
+  try {
+    const res = await get('/api/auth/common/getUserType')
+    userTypes.value = res
+  } catch (error) {
+    console.error('获取用户类型失败:', error)
+    ElMessage.error('获取用户类型失败')
   }
 }
 
@@ -938,7 +977,7 @@ const loadIntentData = async () => {
       form.value = {
         id: res.id || '',
         audience: res.audience || '',
-        time: res.time || '',
+        time: res.timePerDay || '',
         skills: skills, // 确保是数组格式
         resources: res.resources || '',
         status: res.status ? 1 : 0
@@ -1120,6 +1159,7 @@ onMounted(() => {
       fetchMyCount()
       loadIntentData()
       fetchSkillCategories()
+      fetchUserTypes()
     });
   } else {
     fetchPublishData()
@@ -1127,6 +1167,7 @@ onMounted(() => {
     fetchMyCount()
     loadIntentData()
     fetchSkillCategories()
+    fetchUserTypes()
   }
 });
 
