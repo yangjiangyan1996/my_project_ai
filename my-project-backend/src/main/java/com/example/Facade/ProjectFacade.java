@@ -691,6 +691,100 @@ public class ProjectFacade {
         return result;
     }
 
+    public Page<MatchUserResp> matchUser(Page<Projects> page, MatchUserReq req) {
+        Long projectId = req.getProjectId();
+        Projects p = projectService.selectByProjectId(projectId);
+        ProjectsDetail pd = projectsDetailService.selectByProjectId(projectId);
+
+        List<AccountShow> userList = accountShowService.selectAllList(UserEnums.AccountShowEnum.Yes.getCode());
+        Map<Long, AccountShow> userId2UseShowMap = userList.stream().collect(Collectors.toMap(AccountShow::getUserId, v -> v));
+        List<Account> userInfoList = accountService.selectFildByUserId();
+
+        List<ProjectMembers> pm = projectMembersService.selectByProjectId(projectId,null);
+        Map<Long, Integer> userId2UserStatusMap = pm.stream().collect(Collectors.toMap(v -> v.getUserId(), v -> v.getStatus()));
+
+        Map<Long, Account> userId2UserInfoMap = userInfoList.stream().collect(Collectors.toMap(Account::getId, v -> v));
+        // 2. 遍历计算匹配度
+        List<MatchUserResp> matchUserRespList = new ArrayList<>();
+        for (AccountShow user : userList) {
+            int score = 0;
+
+            // 技能匹配度（50分）
+            Set<Integer> projectSkills = new HashSet<>(Arrays.asList(p.getFirstCategory(), p.getSecondCategory()));
+            Set<Integer> userSkills = Arrays.stream(user.getSkills().split(",")).map(Integer::parseInt).collect(Collectors.toSet());
+            projectSkills.retainAll(userSkills);
+            int skillMatchCount = projectSkills.size();
+            score += Math.min(skillMatchCount * 10, 50); // 每个技能10分，最多50
+
+            // audience匹配（20分）
+            if (pd.getTargetAudience() == null) {
+                score += 20;
+            } else {
+                if (Objects.equals(pd.getTargetAudience(), user.getAudience())) {
+                    score += 20;
+                }
+            }
+
+            // 资源匹配（20分）
+//            if (!StringUtils.isEmpty(pd.getResources()) &&
+//                    user.getResources().contains(pd.getResources())) {
+//                score += 20;
+//            }
+            if (StringUtils.isNotBlank(user.getResources())) {
+                score += 5;
+            }
+
+            // 投入时间匹配（10分）
+            if (user.getTimePerDay() >= pd.getTimePerDay()) {
+                score += 25;
+            }  else if (user.getTimePerDay() >= pd.getTimePerDay() / 2) {
+                score += 15;
+            } else if (user.getTimePerDay() >= pd.getTimePerDay() / 4) {
+                score += 5;
+            }
+
+            // 封装结果
+            MatchUserResp resp = new MatchUserResp();
+            resp.setUserId(user.getUserId());
+            resp.setUsername(userId2UserInfoMap.get(user.getUserId()).getUsername());
+            resp.setAvatarUrl(userId2UserInfoMap.get(user.getUserId()).getAvatarUrl());
+            resp.setSex(userId2UserInfoMap.get(user.getUserId()).getSex());
+            resp.setProvince(userId2UserInfoMap.get(user.getUserId()).getProvince());
+            resp.setCity(userId2UserInfoMap.get(user.getUserId()).getCity());
+            resp.setCounty(userId2UserInfoMap.get(user.getUserId()).getCounty());
+            resp.setStatusOfUserInProject(userId2UserStatusMap.get(user.getUserId()));
+            resp.setMatchScore(score);
+
+            //private String audienceName;
+            //    private String resources;
+            //    private String skillNames;
+            //    private Long timePerDay;
+            resp.setAudienceName(CommonEnum.UserTypeEnum.getByCode(userId2UseShowMap.get(user.getUserId()).getAudience()));
+            resp.setResources(userId2UseShowMap.get(user.getUserId()).getResources());
+            String skillNames = Arrays.stream(userId2UseShowMap.get(user.getUserId()).getSkills().split(",")).map(z -> CommonEnum.IndustryCategory.getNameByCode(Integer.valueOf(z))).collect(Collectors.joining(","));
+            resp.setSkillNames(skillNames);
+            resp.setTimePerDay(userId2UseShowMap.get(user.getUserId()).getTimePerDay() + CommonConstant.TIME_PER_DAY);
+            matchUserRespList.add(resp);
+        }
+
+        // 3. 按匹配度降序排序
+        matchUserRespList.sort((a, b) -> Integer.compare(b.getMatchScore(), a.getMatchScore()));
+
+        // 4. 分页
+        int current = (int) page.getCurrent();
+        int size = (int) page.getSize();
+        int start = (current - 1) * size;
+        int end = Math.min(start + size, matchUserRespList.size());
+
+        List<MatchUserResp> pageRecords = start >= matchUserRespList.size()
+                ? Collections.emptyList()
+                : matchUserRespList.subList(start, end);
+
+        Page<MatchUserResp> resultPage = new Page<>(current, size, matchUserRespList.size());
+        resultPage.setRecords(pageRecords);
+        return resultPage;
+    }
+
     public Boolean cancelApply(CancelApproveReq req, Long userId) {
         ProjectApplications p = projectApplicationsService.selectByProjectIdAndUserId(req.getProjectId(), userId);
         if (p == null) {

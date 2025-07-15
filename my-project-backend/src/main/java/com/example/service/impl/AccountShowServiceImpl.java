@@ -37,4 +37,12 @@ public class AccountShowServiceImpl extends ServiceImpl<AccountShowMapper, Accou
                         .in("user_id", userIds)
         );
     }
+
+    @Override
+    public List<AccountShow> selectAllList(Integer  status) {
+        return baseMapper.selectList(
+                new QueryWrapper<AccountShow>()
+                        .eq("status", status)
+        );
+    }
 }

@@ -28,4 +28,6 @@ public interface AccountService extends IService<Account>, UserDetailsService {
     List<Account> searchByReq(SearchUserReq req);
 
     Account selectBySecrecyId(Long secrecyId);
+
+    List<Account> selectFildByUserId();
 }

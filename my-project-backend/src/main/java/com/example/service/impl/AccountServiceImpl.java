@@ -190,6 +190,13 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                 .eq("is_deleted", 0));
     }
 
+    @Override
+    public List<Account> selectFildByUserId() {
+        return this.baseMapper.selectList(new QueryWrapper<Account>()
+                .select("id", "username",  "avatar_url", "sex")
+                .eq("is_deleted", 0));
+    }
+
     /**
      * 移除Redis中存储的邮件验证码
      *

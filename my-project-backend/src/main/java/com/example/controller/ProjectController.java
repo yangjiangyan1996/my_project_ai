@@ -247,6 +247,21 @@ public class ProjectController {
         }
     }
 
+    @PostMapping("/matchUser")
+    public RespBean<Page<MatchUserResp>> matchUser(@RequestBody MatchUserReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Page<MatchUserResp> result = projectFacade.matchUser(Page.of(req.getPage(), req.getSize()), req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProjectController#applyJoinProject,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#changeShowStatus,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     @GetMapping("/getProjectOfMyShow")
     public RespBean<ProjectOfMyShowGetResp> getProjectOfMyShow(@RequestParam(value = "secrecyId", required = false) Long secrecyId) {
         try {
