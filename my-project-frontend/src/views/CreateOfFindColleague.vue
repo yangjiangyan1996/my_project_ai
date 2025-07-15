@@ -35,7 +35,7 @@
       </el-form-item>
 
       <el-form-item label="二级分类" prop="secondCategory">
-        <el-select v-model="form.secondCategory" placeholder="请选择二级分类">
+        <el-select v-model="form.secondCategory" :disabled="!form.firstCategory"  @click="checkFirstCategory" placeholder="请选择二级分类">
           <el-option
             v-for="item in secondCategoryOptions"
             :key="item.code"
@@ -232,6 +232,7 @@ const targetAudienceOptions = ref([])
 const allCategoryData = ref([])           // 后端完整数据
 const firstCategoryOptions = ref([])      // 一级分类
 const secondCategoryOptions = ref([])     // 当前联动的二级分类
+const tagsOptions = ref([])  
 
 // 初始化加载数据
 onMounted(async() => {
@@ -291,7 +292,14 @@ const loadTagsOptions = async () => {
       }))
     }
   } catch (error) {
+    console.log(error)
     ElMessage.error('获取副业属性选项失败')
+  }
+}
+
+const checkFirstCategory = () => {
+  if (!form.firstCategory) {
+    ElMessage.warning('请先选择一级分类')
   }
 }
 
