@@ -13,11 +13,11 @@
               <el-tag :type="skill.status === '公开' ? 'success' : 'info'">{{ skill.status }}</el-tag>
             </div>
             <div class="skill-body">
-              <p>🕒 每日投入: {{ skill.timePerDay }}</p>
-              <p>👤 身份: {{ skill.audience }}</p>
+              <p>🕒 每日投入: {{ skill.timePerDay }}小时/天</p>
+              <p>👤 身份: {{ skill.audienceName }}</p>
               <p>🛠️ 技能:
                 <el-tag
-                  v-for="(s, index) in skill.skills"
+                  v-for="(s, index) in skill.skillNames"
                   :key="index"
                   type="primary"
                   size="small"
@@ -79,7 +79,9 @@ const fetchSkillMatchData = async () => {
         userName: item.userName || '匿名',
         timePerDay: item.timePerDay ? `${item.timePerDay}` : '未填写',
         audience: item.audience || '未填写',
+        audienceName: item.audienceName || '未填写',
         skills: item.skills ? item.skills.split(',') : [],
+        skillNames: item.skillNames ? item.skillNames.split(',') : [],
         resources: item.resources ? item.resources.split(',') : [],
         status: item.status === 1 ? '公开' : '未公开'
       }));

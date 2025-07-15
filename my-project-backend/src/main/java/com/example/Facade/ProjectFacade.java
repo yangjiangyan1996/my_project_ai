@@ -461,6 +461,10 @@ public class ProjectFacade {
             if (userId2UserInfoMap.containsKey(v.getUserId())) {
                 projectsResp.setUserName(userId2UserInfoMap.get(v.getUserId()).getNickname());
             }
+
+            projectsResp.setAudienceName(CommonEnum.UserTypeEnum.getByCode(v.getAudience()));
+            String skillNames = Arrays.stream(v.getSkills().split(",")).map(s -> CommonEnum.IndustryCategory.getNameByCode(Integer.parseInt(s))).collect(Collectors.joining(","));
+            projectsResp.setSkillNames(skillNames);
             return projectsResp;
         }).collect(Collectors.toList());
 
