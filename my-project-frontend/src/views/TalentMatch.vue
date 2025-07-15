@@ -165,14 +165,70 @@
     </div>
 
     <!-- 用户详情对话框 -->
-    <el-dialog 
-      v-model="userDetailVisible" 
-      title="用户详情" 
-      width="60%"
-      top="5vh"
-    >
-      <!-- <user-detail-panel :user="currentUser" v-if="currentUser" /> -->
-    </el-dialog>
+        <el-dialog 
+        v-model="userDetailVisible" 
+        title="用户详情" 
+        width="60%"
+        top="5vh"
+        >
+        <div class="user-detail-container" v-if="currentUser">
+            <div class="user-basic-info">
+            <el-avatar :size="100" :src="currentUser.avatarUrl || defaultAvatar" />
+            <div class="user-meta">
+                <h2>{{ currentUser.nickname || currentUser.username }}</h2>
+                <p class="meta-item">
+                <span><i class="el-icon-user"></i> {{ getGenderText(currentUser.sex) }}</span>
+                <span><i class="el-icon-location-outline"></i> {{ currentUser.province }}{{ currentUser.city }}{{ currentUser.county }}</span>
+                </p>
+                <p class="meta-item">
+                <span><i class="el-icon-star"></i> 匹配度: {{ currentUser.matchScore }}%</span>
+                <span><i class="el-icon-time"></i> 每日可投入时间: {{ currentUser.timePerDay }}</span>
+                </p>
+            </div>
+            </div>
+
+            <el-divider />
+
+            <div class="detail-section">
+            <h3>基本信息</h3>
+            <div class="detail-grid">
+                <div class="detail-item">
+                <label>用户类型</label>
+                <p>{{ currentUser.audienceName || '未知' }}</p>
+                </div>
+                <div class="detail-item">
+                <label>资源</label>
+                <p>{{ currentUser.resources || '无' }}</p>
+                </div>
+            </div>
+            </div>
+
+            <el-divider />
+
+            <div class="detail-section">
+            <h3>技能标签</h3>
+            <div class="skills-container">
+                <el-tag 
+                v-for="skill in currentUser.skillNames?.split(',')" 
+                :key="skill"
+                type="info"
+                size="medium"
+                >
+                {{ skill }}
+                </el-tag>
+            </div>
+            </div>
+
+            <el-divider />
+
+            <div class="detail-section">
+            <h3>项目参与状态</h3>
+            <el-tag :type="currentUser.statusOfUserInProject === 0 ? 'success' : 'info'">
+                {{ currentUser.statusOfUserInProject === 0 ? '已邀请' : '可邀请' }}
+            </el-tag>
+            </div>
+        </div>
+        </el-dialog>
   </div>
 </template>
 
@@ -682,5 +738,74 @@ const resetMatch = () => {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* 用户详情样式 */
+.user-detail-container {
+  padding: 0 20px;
+}
+
+.user-basic-info {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+.user-meta h2 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+  color: #303133;
+}
+
+.meta-item {
+  margin: 8px 0;
+  color: #606266;
+  display: flex;
+  gap: 20px;
+}
+
+.meta-item i {
+  margin-right: 5px;
+  color: #909399;
+}
+
+.detail-section {
+  margin: 20px 0;
+}
+
+.detail-section h3 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  color: #303133;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.detail-item {
+  margin-bottom: 15px;
+}
+
+.detail-item label {
+  display: block;
+  font-size: 14px;
+  color: #909399;
+  margin-bottom: 5px;
+}
+
+.detail-item p {
+  margin: 0;
+  font-size: 16px;
+  color: #606266;
+}
+
+.skills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 </style>
