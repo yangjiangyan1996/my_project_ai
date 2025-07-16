@@ -41,8 +41,10 @@
         v-for="project in projects" 
         :key="project.projectId"
         class="project-card"
+        
         :class="{ 'is-flipped': project.isFlipped }"
-        @click="toggleFlip(project)"
+       @mouseenter="handleMouseEnter(project)"
+        @mouseleave="project.isFlipped = false"
       >
         <div class="card-face card-front">
           <!-- 项目封面 -->
@@ -384,6 +386,28 @@ const toggleFlip = async (project) => {
   }
 }
 
+// 修改鼠标悬停处理
+const handleMouseEnter = async (project) => {
+  project.isFlipped = true;
+  
+  // 如果还没有加载详情，则加载
+  if (!project.detail) {
+    try {
+      project.detailLoading = true;
+      const detail = await get(`/api/auth/project/detail?projectId=${project.projectId}`);
+      project.detail = {
+        ...detail,
+        tags: detail.tags ? detail.tags.split(',') : []
+      };
+    } catch (error) {
+      ElMessage.error('获取项目详情失败');
+    } finally {
+      project.detailLoading = false;
+    }
+  }
+};
+
+
 // 点赞项目
 const toggleLike = async (project) => {
   try {
@@ -533,16 +557,23 @@ const handleExceed = () => {
   background: white;
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  /* transition: all 0.3s ease; */
   cursor: pointer;
   position: relative;
   transform-style: preserve-3d;
   height: 380px;
+  transition: transform 0.6s ease;
+  /* transform-style: preserve-3d; */
+  perspective: 1000px;
 }
 
 .project-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  /* transform: translateY(-5px); */
+  /* box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); */
+
+   transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10;
 }
 
 .card-face {
@@ -552,11 +583,13 @@ const handleExceed = () => {
   backface-visibility: hidden;
   border-radius: 10px;
   overflow: hidden;
+  transition: all 0.6s ease;
 }
 
 .card-front {
   display: flex;
   flex-direction: column;
+  transform: rotateY(0deg);
 }
 
 .card-back {
@@ -586,6 +619,15 @@ const handleExceed = () => {
   font-size: 12px;
   color: white;
   background: var(--el-color-primary);
+}
+
+
+.is-flipped .card-front {
+  transform: rotateY(-180deg);
+}
+
+.is-flipped .card-back {
+  transform: rotateY(0deg);
 }
 
 .project-badge.recruiting {
