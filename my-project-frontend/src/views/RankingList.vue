@@ -21,11 +21,6 @@
           />
         </el-select>
         
-        <!-- <el-select v-model="filter.sortBy" placeholder="排序方式" clearable>
-          <el-option label="最新发布" value="newest" />
-          <el-option label="最热项目" value="hottest" />
-          <el-option label="最佳匹配" value="bestMatch" />
-        </el-select> -->
       </div>
       
       <el-button type="primary" @click="applyFilters" :loading="loading">
