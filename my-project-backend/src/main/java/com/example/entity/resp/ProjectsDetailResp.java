@@ -26,8 +26,8 @@ public class ProjectsDetailResp {
     private String incomeEstimate;
     private String targetAudience;
     private String riskWarning;
-    private Integer isRemote;
-    private Integer isFreeEntry;
+//    private Integer isRemote;
+//    private Integer isFreeEntry;
     private String tags;
     private String creatorName;
     private Boolean myLike;

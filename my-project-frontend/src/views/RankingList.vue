@@ -39,14 +39,14 @@
       <!-- 3D翻转卡片 -->
       <div 
         v-for="project in projects" 
-        :key="project.id"
+        :key="project.projectId"
         class="project-card"
         :class="{ 'is-flipped': project.isFlipped }"
         @click="toggleFlip(project)"
       >
         <div class="card-face card-front">
           <!-- 项目封面 -->
-          <div class="project-cover" :style="{ backgroundImage: `url(${project.cover || defaultCover})` }">
+          <div class="project-cover" :style="{ backgroundImage: `url(${project.imageUrl || defaultCover})` }">
             <div class="project-badge" :class="getStatusClass(project.status)">
               {{ getStatusText(project.status) }}
             </div>
@@ -58,7 +58,7 @@
             <div class="project-meta">
               <span class="industry">
                 <el-icon><OfficeBuilding /></el-icon>
-                {{ project.industry }}
+                {{ project.firstCategoryName }}
               </span>
               <span class="time">
                 <el-icon><Clock /></el-icon>
@@ -68,44 +68,47 @@
             
             <p class="project-desc">{{ truncate(project.description, 60) }}</p>
             
-            <!-- 技术栈标签云 -->
-            <div class="tech-tags">
-              <el-tag
-                v-for="tech in project.techStack.slice(0, 4)"
-                :key="tech"
-                size="small"
-                :type="getRandomTagType()"
-                effect="plain"
-              >
-                {{ tech }}
-              </el-tag>
-              <el-tag v-if="project.techStack.length > 4" size="small" type="info">
-                +{{ project.techStack.length - 4 }}
-              </el-tag>
+            <!-- 项目评分 -->
+            <div class="project-score">
+              <el-rate 
+                v-model="project.score" 
+                disabled 
+                show-score 
+                text-color="#ff9900" 
+                score-template="{value}" 
+                :max="1"
+              />
             </div>
           </div>
           
           <!-- 项目数据 -->
           <div class="project-stats">
             <div class="stat-item">
-              <el-icon><View /></el-icon>
-              <span>{{ project.views | formatNumber }}</span>
-            </div>
-            <div class="stat-item">
               <el-icon><Star /></el-icon>
-              <span>{{ project.likes | formatNumber }}</span>
+              <span>{{ project.likeCount || 0 }}</span>
             </div>
             <div class="stat-item">
-              <el-icon><Connection /></el-icon>
-              <span>{{ project.applicants | formatNumber }}</span>
+              <el-icon><ChatDotRound /></el-icon>
+              <span>{{ project.commentCount || 0 }}</span>
+            </div>
+            <div class="stat-item">
+              <el-icon><Collection /></el-icon>
+              <span>{{ project.favoriteCount || 0 }}</span>
             </div>
           </div>
         </div>
         
         <!-- 卡片背面 - 详细信息 -->
         <div class="card-face card-back">
-          <div class="back-content">
+          <div class="back-content" v-if="project.detailLoading">
+            <div class="loading-detail">
+              <el-icon class="is-loading"><Loading /></el-icon>
+              加载中...
+            </div>
+          </div>
+          <div class="back-content" v-else-if="project.detail">
             <h3 class="project-title">{{ project.name }}</h3>
+            <p class="creator">创建者: {{ project.detail.creatorName }}</p>
             
             <div class="detail-section">
               <h4><el-icon><Document /></el-icon> 项目描述</h4>
@@ -113,40 +116,62 @@
             </div>
             
             <div class="detail-section">
-              <h4><el-icon><List /></el-icon> 技术要求</h4>
-              <div class="tech-stack">
-                <div 
-                  v-for="tech in project.techStack" 
-                  :key="tech"
-                  class="tech-item"
-                >
-                  <span class="tech-name">{{ tech }}</span>
-                  <el-progress 
-                    :percentage="getRandomSkillLevel()" 
-                    :stroke-width="8" 
-                    :show-text="false"
-                  />
+              <h4><el-icon><List /></el-icon> 项目详情</h4>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <label>目标人群</label>
+                  <p>{{ project.detail.targetAudience || '无' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>每日投入</label>
+                  <p>{{ project.detail.timePerDay || '无' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>收入预估</label>
+                  <p>{{ project.detail.incomeEstimate || '无' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>风险提示</label>
+                  <p>{{ project.detail.riskWarning || '无' }}</p>
                 </div>
               </div>
             </div>
             
             <div class="detail-section">
-              <h4><el-icon><Opportunity /></el-icon> 项目优势</h4>
-              <ul class="advantages">
-                <li v-for="(adv, idx) in project.advantages" :key="idx">
-                  {{ adv }}
-                </li>
-              </ul>
+              <h4><el-icon><Tools /></el-icon> 所需工具</h4>
+              <p>{{ project.detail.tools || '无' }}</p>
+            </div>
+            
+            <div class="detail-section">
+              <h4><el-icon><Guide /></el-icon> 操作步骤</h4>
+              <pre class="steps-content">{{ project.detail.steps }}</pre>
             </div>
             
             <div class="project-actions">
-              <el-button type="primary" size="small" @click.stop="applyProject(project)">
+              <el-button 
+                type="primary" 
+                size="small" 
+                @click.stop="applyProject(project)"
+                :disabled="project.detail.applyStatus !== null"
+              >
                 <el-icon><Position /></el-icon>
-                立即申请
+                {{ project.detail.applyStatus !== null ? '已申请' : '立即申请' }}
               </el-button>
-              <el-button size="small" @click.stop="shareProject(project)">
-                <el-icon><Share /></el-icon>
-                分享项目
+              <el-button 
+                size="small" 
+                @click.stop="toggleLike(project)"
+                :type="project.detail.myLike ? 'danger' : ''"
+              >
+                <el-icon><Star /></el-icon>
+                {{ project.detail.myLike ? '已点赞' : '点赞' }}
+              </el-button>
+              <el-button 
+                size="small" 
+                @click.stop="toggleFavorite(project)"
+                :type="project.detail.myFavorite ? 'warning' : ''"
+              >
+                <el-icon><Collection /></el-icon>
+                {{ project.detail.myFavorite ? '已收藏' : '收藏' }}
               </el-button>
             </div>
           </div>
@@ -174,7 +199,7 @@
           <el-form-item label="申请职位">
             <el-select v-model="applyForm.position" placeholder="请选择申请职位">
               <el-option
-                v-for="pos in currentProject.positions"
+                v-for="pos in positions"
                 :key="pos"
                 :label="pos"
                 :value="pos"
@@ -227,10 +252,12 @@ import { ElMessage, ElNotification } from 'element-plus'
 import { 
   Search, Star, View, Connection, 
   Document, List, Opportunity, 
-  Position, Share, Loading,
-  OfficeBuilding, Clock
+  Position, Share, Loading, Collection,
+  OfficeBuilding, Clock, ChatDotRound,
+  Tools, Guide
 } from '@element-plus/icons-vue'
 import defaultCover from '@/assets/default-project-cover.jpg'
+import { get, post } from '@/net'
 
 // 筛选条件
 const filter = ref({
@@ -258,6 +285,11 @@ const techStacks = ref([
   'AWS', 'Azure', 'GCP', 'TensorFlow', 'PyTorch'
 ])
 
+// 职位选项
+const positions = ref([
+  '开发工程师', '产品经理', 'UI设计师', '测试工程师', '运维工程师'
+])
+
 // 项目数据
 const projects = ref([])
 const loading = ref(false)
@@ -282,25 +314,42 @@ onMounted(() => {
 // 获取项目数据
 const fetchProjects = async () => {
   try {
-    loading.value = true
-    // 模拟API调用
-    const mockProjects = generateMockProjects(pageSize.value)
-    projects.value = [...projects.value, ...mockProjects]
+    loading.value = true;
+    const response = await post('/api/auth/project/showHotProjectList', {
+      page: page.value,
+      size: pageSize.value
+    });
     
-    // 实际项目中替换为:
-    // const res = await post('/api/side-jobs', {
-    //   ...filter.value,
-    //   page: page.value,
-    //   size: pageSize.value
-    // })
-    // projects.value = [...projects.value, ...res.data]
-    // noMore.value = res.data.length < pageSize.value
+    if (response && response.records) {
+      // 转换API返回的数据格式
+      const formattedProjects = response.records.map(project => ({
+        ...project,
+        projectId: project.projectId, // 添加projectId字段保持一致性
+        isFlipped: false,
+        detail: null, // 存储详情数据
+        detailLoading: false // 详情加载状态
+      }));
+      
+      // 如果是第一页，直接替换数据；否则追加数据
+      if (page.value === 1) {
+        projects.value = formattedProjects;
+      } else {
+        projects.value = [...projects.value, ...formattedProjects];
+      }
+      
+      // 判断是否还有更多数据
+      noMore.value = page.value >= response.pages || 
+                     response.records.length < pageSize.value;
+    } else {
+      ElMessage.warning('获取的项目列表数据格式不正确');
+    }
   } catch (error) {
-    ElMessage.error('获取项目列表失败')
+    ElMessage.error('获取项目列表失败');
+    console.error('获取项目列表失败:', error);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // 应用筛选
 const applyFilters = () => {
@@ -310,16 +359,70 @@ const applyFilters = () => {
   fetchProjects()
 }
 
-// 翻转卡片
-const toggleFlip = (project) => {
+// 翻转卡片时获取详情
+const toggleFlip = async (project) => {
+   
   project.isFlipped = !project.isFlipped
+  
+  if (project.isFlipped && !project.detail) {
+    try {
+      project.detailLoading = true
+      
+       const detail = await get(`/api/auth/project/detail?projectId=${project.projectId}`);
+       console.log("toggleFlip", detail)
+      project.detail = {
+        ...detail,
+        // 处理可能的多选标签
+        tags: detail.tags ? detail.tags.split(',') : []
+      }
+    } catch (error) {
+      ElMessage.error('获取项目详情失败')
+      console.error('获取项目详情失败:', error)
+    } finally {
+      project.detailLoading = false
+    }
+  }
+}
+
+// 点赞项目
+const toggleLike = async (project) => {
+  try {
+    const action = project.detail.myLike ? 'unlike' : 'like'
+    await post(`/api/auth/project/${action}`, { projectId: project.projectId })
+    
+    // 更新状态
+    project.detail.myLike = !project.detail.myLike
+    project.likeCount += project.detail.myLike ? 1 : -1
+    
+    ElMessage.success(project.detail.myLike ? '点赞成功' : '已取消点赞')
+  } catch (error) {
+    ElMessage.error('操作失败')
+    console.error('点赞操作失败:', error)
+  }
+}
+
+// 收藏项目
+const toggleFavorite = async (project) => {
+  try {
+    const action = project.detail.myFavorite ? 'unfavorite' : 'favorite'
+    await post(`/api/auth/project/${action}`, { projectId: project.projectId })
+    
+    // 更新状态
+    project.detail.myFavorite = !project.detail.myFavorite
+    project.favoriteCount += project.detail.myFavorite ? 1 : -1
+    
+    ElMessage.success(project.detail.myFavorite ? '收藏成功' : '已取消收藏')
+  } catch (error) {
+    ElMessage.error('操作失败')
+    console.error('收藏操作失败:', error)
+  }
 }
 
 // 申请项目
 const applyProject = (project) => {
   currentProject.value = project
   applyForm.value = {
-    position: project.positions[0] || '',
+    position: positions.value[0] || '',
     introduction: '',
     portfolio: []
   }
@@ -327,13 +430,29 @@ const applyProject = (project) => {
 }
 
 // 提交申请
-const submitApplication = () => {
-  ElNotification.success({
-    title: '申请成功',
-    message: `已成功申请项目 ${currentProject.value.name}`,
-    duration: 3000
-  })
-  applyDialogVisible.value = false
+const submitApplication = async () => {
+  try {
+    // 这里调用申请API
+    await post('/api/auth/project/apply', {
+      projectId: currentProject.value.projectId,
+      position: applyForm.value.position,
+      introduction: applyForm.value.introduction
+      // 文件上传需要额外处理
+    })
+    
+    // 更新申请状态
+    currentProject.value.detail.applyStatus = 1
+    
+    ElNotification.success({
+      title: '申请成功',
+      message: `已成功申请项目 ${currentProject.value.name}`,
+      duration: 3000
+    })
+    applyDialogVisible.value = false
+  } catch (error) {
+    ElMessage.error('申请失败')
+    console.error('申请失败:', error)
+  }
 }
 
 // 分享项目
@@ -344,91 +463,35 @@ const shareProject = (project) => {
 
 // 辅助函数
 const formatDate = (dateStr) => {
-  // 实现日期格式化
-  return new Date(dateStr).toLocaleDateString()
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
 }
 
 const truncate = (text, length) => {
-  return text.length > length ? text.substring(0, length) + '...' : text
+  return text && text.length > length ? text.substring(0, length) + '...' : text
 }
 
 const getStatusText = (status) => {
   const statusMap = {
-    0: '招募中',
-    1: '进行中',
-    2: '已结束'
+    'published': '已发布',
+    'draft': '草稿',
+    'closed': '已关闭'
   }
-  return statusMap[status] || '未知状态'
+  return statusMap[status] || status || '未知状态'
 }
 
 const getStatusClass = (status) => {
   const classMap = {
-    0: 'recruiting',
-    1: 'ongoing',
-    2: 'ended'
+    'published': 'recruiting',
+    'draft': 'info',
+    'closed': 'ended'
   }
   return classMap[status] || ''
 }
 
-const getRandomTagType = () => {
-  const types = ['', 'success', 'info', 'warning', 'danger']
-  return types[Math.floor(Math.random() * types.length)]
-}
-
-const getRandomSkillLevel = () => {
-  return Math.floor(Math.random() * 40) + 60 // 60-100之间的随机数
-}
-
 const handleExceed = () => {
   ElMessage.warning('最多只能上传3个文件')
-}
-
-// 模拟数据生成
-const generateMockProjects = (count) => {
-  const mockProjects = []
-  const statuses = [0, 1, 2]
-  const mockIndustries = ['互联网/IT', '金融', '教育', '医疗健康', '制造业']
-  
-  for (let i = 0; i < count; i++) {
-    const techCount = Math.floor(Math.random() * 6) + 3
-    const techStack = []
-    for (let j = 0; j < techCount; j++) {
-      const randomTech = techStacks.value[Math.floor(Math.random() * techStacks.value.length)]
-      if (!techStack.includes(randomTech)) {
-        techStack.push(randomTech)
-      }
-    }
-    
-    const positionCount = Math.floor(Math.random() * 3) + 1
-    const positions = []
-    for (let k = 0; k < positionCount; k++) {
-      positions.push(`开发工程师${k+1}`)
-    }
-    
-    const advantageCount = Math.floor(Math.random() * 3) + 2
-    const advantages = []
-    for (let l = 0; l < advantageCount; l++) {
-      advantages.push(`项目优势示例${l+1}`)
-    }
-    
-    mockProjects.push({
-      id: `project-${page.value}-${i}`,
-      name: `示例项目 ${page.value}-${i}`,
-      description: '这是一个示例项目描述，展示项目的主要内容和目标。该项目旨在解决某一特定领域的问题，需要具备相关技术栈的开发者参与。',
-      industry: mockIndustries[Math.floor(Math.random() * mockIndustries.length)],
-      techStack,
-      positions,
-      advantages,
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      views: Math.floor(Math.random() * 1000),
-      likes: Math.floor(Math.random() * 500),
-      applicants: Math.floor(Math.random() * 100),
-      createdAt: new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)).toISOString(),
-      isFlipped: false
-    })
-  }
-  
-  return mockProjects
 }
 </script>
 
@@ -529,12 +592,12 @@ const generateMockProjects = (count) => {
   background: var(--el-color-success);
 }
 
-.project-badge.ongoing {
-  background: var(--el-color-warning);
+.project-badge.info {
+  background: var(--el-color-info);
 }
 
 .project-badge.ended {
-  background: var(--el-color-info);
+  background: var(--el-color-warning);
 }
 
 /* 项目信息 */
@@ -578,12 +641,17 @@ const generateMockProjects = (count) => {
   flex: 1;
 }
 
-/* 技术标签 */
-.tech-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+.project-score {
+  margin: 10px 0;
+}
+
+.project-score :deep(.el-rate) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.project-score :deep(.el-rate__item) {
+  margin-right: 2px;
 }
 
 /* 项目数据 */
@@ -610,10 +678,27 @@ const generateMockProjects = (count) => {
 /* 卡片背面内容 */
 .back-content {
   padding: 15px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.loading-detail {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--el-text-color-secondary);
 }
 
 .back-content .project-title {
   font-size: 18px;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+.creator {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
   margin-bottom: 15px;
   text-align: center;
 }
@@ -634,32 +719,38 @@ const generateMockProjects = (count) => {
   margin-right: 5px;
 }
 
-.tech-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 15px;
 }
 
-.tech-item {
-  display: flex;
-  align-items: center;
+.detail-item {
+  margin-bottom: 10px;
 }
 
-.tech-name {
-  width: 80px;
+.detail-item label {
+  display: block;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+  margin-bottom: 5px;
 }
 
-.advantages {
+.detail-item p {
   margin: 0;
-  padding-left: 18px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--el-text-color-regular);
 }
 
-.advantages li {
-  margin-bottom: 5px;
+.steps-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--el-text-color-regular);
+  white-space: pre-wrap;
+  background: var(--el-fill-color-light);
+  padding: 10px;
+  border-radius: 4px;
 }
 
 .project-actions {
@@ -669,6 +760,7 @@ const generateMockProjects = (count) => {
   margin-top: 15px;
   padding-top: 15px;
   border-top: 1px solid var(--el-border-color-light);
+  flex-wrap: wrap;
 }
 
 /* 加载更多 */
@@ -719,6 +811,10 @@ const generateMockProjects = (count) => {
   .project-card {
     height: auto;
     min-height: 350px;
+  }
+  
+  .detail-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

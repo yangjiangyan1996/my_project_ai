@@ -802,4 +802,58 @@ public class ProjectFacade {
         return projectService.updateStatus(projectId, ProjectEnum.ProjectStatusEnum.NO.getCode(), reason, userId);
     }
 
+    public Page<ShowHotProjectListPageResp> showHotProjectList(ShowHotProjectListPageReq req, Long userId) {
+        //根据点赞*0.4 + 收藏* 0.4 +评论 *0.15 +  浏览*0.05排序
+        Map<Long, Integer> projectId2FavoriteCount =projectFavoriteService.selectProjectId2FavoriteCount();
+        Map<Long, Integer> projectId2LikeCount = projectLikeService.selectProjectId2LikeCount();
+
+        Set<Long> projectIds = new HashSet<>(projectId2FavoriteCount.keySet());
+        projectIds.addAll(projectId2LikeCount.keySet());
+
+
+        List<ShowHotProjectListPageResp> paixuProjectIds =new ArrayList<>();
+        List<Projects> projects = projectService.listByIds(projectIds);
+
+        for (Projects p : projects) {
+            Double score = 0d;
+            if (!p.getStatus().equals(ProjectEnum.ProjectStatusEnum.PUBLISHING.getCode())) {
+                continue;
+            }
+            Integer favoriteCount = 0;
+            if (projectId2FavoriteCount.containsKey(p.getId())) {
+                favoriteCount = projectId2FavoriteCount.get(p.getId());
+                score += favoriteCount * 0.4;
+            }
+            Integer likeCount=0;
+            if (projectId2LikeCount.containsKey(p.getId())) {
+                likeCount = projectId2LikeCount.get(p.getId());
+                score += likeCount * 0.4;
+            }
+
+            Integer commentCount = 0;
+            ShowHotProjectListPageResp r = new ShowHotProjectListPageResp();
+            r.setProjectId(p.getId());
+            r.setImageUrl(p.getImageUrl());
+            r.setName(p.getName());
+            r.setDescription(p.getDescription());
+            r.setCreatedAt(p.getCreatedAt());
+            r.setStatus(ProjectEnum.ProjectStatusEnum.getByCode(p.getStatus()));
+            r.setFirstCategoryName(CommonEnum.IndustryCategory.getNameByCode(p.getFirstCategory()));
+            r.setSecondCategoryName(CommonEnum.IndustryCategory.getNameByCode(p.getSecondCategory()));
+            r.setLikeCount(likeCount);
+            r.setCommentCount(commentCount);
+            r.setFavoriteCount(favoriteCount);
+            r.setScore(score);
+            paixuProjectIds.add(r);
+        }
+
+        List<ShowHotProjectListPageResp> list = paixuProjectIds.stream().sorted(Comparator.comparing(ShowHotProjectListPageResp::getScore)).collect(Collectors.toList());
+
+        //根据分页参数，获取list的字集
+        List<ShowHotProjectListPageResp> sub = list.stream().skip((req.getPage()-1) * req.getSize()).limit(req.getSize()).collect(Collectors.toList());
+        Page<ShowHotProjectListPageResp> result = Page.of(req.getPage(), req.getSize());
+        result.setTotal(list.size());
+        result.setRecords(sub);
+        return result;
+    }
 }

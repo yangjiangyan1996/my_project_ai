@@ -16,4 +16,13 @@ public class ProjectFavorite extends BaseModel {
     private Long id;
     private Long userId;
     private Long projectId;
+
+    public ProjectFavorite(Long id, Long userId, Long projectId) {
+        this.id = id;
+        this.userId = userId;
+        this.projectId = projectId;
+    }
+
+    //查询sql的字段
+    private Integer favoriteCount;
 }

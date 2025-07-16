@@ -511,4 +511,20 @@ public class ProjectController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+    @PostMapping("/showHotProjectList")
+    public RespBean<Page<ShowHotProjectListPageResp>> showHotProjectList(@RequestBody ShowHotProjectListPageReq req) {
+
+        try {
+            Long userId = UserUtil.getCurrentUser().getId();;
+            Page<ShowHotProjectListPageResp> list = projectFacade.showHotProjectList(req, userId);
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("ProjectController#showHotProjectList,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#showHotProjectList,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 }

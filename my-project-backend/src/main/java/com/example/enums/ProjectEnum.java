@@ -113,6 +113,15 @@ public class ProjectEnum {
             this.code = code;
             this.name = name;
         }
+
+        public static String getByCode(Integer status) {
+            for (ProjectStatusEnum value : values()) {
+                if (value.code.equals(status)) {
+                    return value.getName();
+                }
+            }
+            return null;
+        }
     }
 
     /**

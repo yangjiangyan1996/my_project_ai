@@ -16,4 +16,12 @@ public class ProjectLike extends BaseModel {
     private Long id;
     private Long userId;
     private Long projectId;
+
+    public ProjectLike(Long id, Long userId, Long projectId) {
+        this.id = id;
+        this.userId = userId;
+        this.projectId = projectId;
+    }
+    //查询sql新增
+    private Integer favoriteCount;
 }

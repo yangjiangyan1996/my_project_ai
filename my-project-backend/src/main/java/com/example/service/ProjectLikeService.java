@@ -23,4 +23,6 @@ public interface ProjectLikeService extends IService<ProjectLike> {
     Page<ProjectLike> getMyProjects(Page<ProjectLike> of, Long userId);
 
     Map<Long, Long> selectLikeCountByProjectIds(List<Long> projectIds);
+
+    Map<Long, Integer> selectProjectId2LikeCount();
 }

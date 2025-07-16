@@ -20,4 +20,6 @@ public interface ProjectFavoriteService extends IService<ProjectFavorite> {
     Page<ProjectFavorite> getMyProjects(Page<ProjectFavorite> of, Long userId);
 
     Map<Long, Long> selectFavoriteCountByProjectIds(List<Long> projectIds);
+
+    Map<Long, Integer> selectProjectId2FavoriteCount();
 }
