@@ -95,7 +95,12 @@ const router = createRouter({
             name: 'talentMatch',
             component: () => import('@/views/TalentMatch.vue'),
             meta: { requiresAuth: true }
-        }
+        },{
+            path: '/index/rankingList',
+            name: 'rankingList',
+            component: () => import('@/views/RankingList.vue'),
+            meta: { requiresAuth: true }
+        },
     ]
 })
 
