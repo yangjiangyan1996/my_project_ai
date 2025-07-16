@@ -3,7 +3,7 @@
     <!-- 顶部筛选栏 -->
     <div class="filter-bar">
       <div class="filter-group">
-        <el-select v-model="filter.industry" multiple placeholder="行业" clearable>
+        <el-select v-model="filter.industry" multiple placeholder="行业" clearable class="filter-select">
           <el-option
             v-for="item in industries"
             :key="item.value"
@@ -12,7 +12,7 @@
           />
         </el-select>
         
-        <el-select v-model="filter.techStack" multiple placeholder="技术栈" filterable clearable>
+        <el-select v-model="filter.techStack" multiple placeholder="技术栈" filterable clearable class="filter-select">
           <el-option
             v-for="item in techStacks"
             :key="item"
@@ -21,11 +21,11 @@
           />
         </el-select>
         
-        <el-select v-model="filter.sortBy" placeholder="排序方式" clearable>
+        <!-- <el-select v-model="filter.sortBy" placeholder="排序方式" clearable>
           <el-option label="最新发布" value="newest" />
           <el-option label="最热项目" value="hottest" />
           <el-option label="最佳匹配" value="bestMatch" />
-        </el-select>
+        </el-select> -->
       </div>
       
       <el-button type="primary" @click="applyFilters" :loading="loading">
@@ -521,9 +521,11 @@ const handleExceed = () => {
 
 <style scoped>
 .side-job-container {
-  padding: 20px;
-  max-width: 1400px;
+  width: 80vw;
+  max-width: 1400px; /* 最大宽度限制 */
   margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 /* 筛选栏样式 */
@@ -859,4 +861,105 @@ const handleExceed = () => {
     grid-template-columns: 1fr;
   }
 }
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .side-job-container {
+    width: 90vw;
+  }
+}
+
+@media (max-width: 768px) {
+  .side-job-container {
+    width: 95vw;
+    padding: 15px;
+  }
+  
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .project-showcase {
+    grid-template-columns: 1fr;
+  }
+  
+  .project-card {
+    height: auto;
+    min-height: 350px;
+  }
+  
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .side-job-container {
+    width: 100vw;
+    padding: 10px;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+  }
+}
+/* 修改筛选栏样式 */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  gap: 15px;
+}
+
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-select {
+  flex: 1 1 30%;
+  min-width: 200px;
+  max-width: 80vw;
+}
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .filter-select {
+    flex: 1 1 45%;
+  }
+}
+
+@media (max-width: 768px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+  }
+  
+  .filter-select {
+    flex: 1 1 100%;
+    min-width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-bar {
+    padding: 10px;
+  }
+}
+
 </style>
