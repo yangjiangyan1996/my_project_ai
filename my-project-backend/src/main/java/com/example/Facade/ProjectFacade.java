@@ -857,7 +857,13 @@ public class ProjectFacade {
             paixuProjectIds.add(r);
         }
 
-        List<ShowHotProjectListPageResp> list = paixuProjectIds.stream().sorted(Comparator.comparing(ShowHotProjectListPageResp::getScore).reversed()).collect(Collectors.toList());
+        List<ShowHotProjectListPageResp> list = paixuProjectIds.stream()
+                .sorted(Comparator.comparing(ShowHotProjectListPageResp::getScore).reversed())
+                .collect(Collectors.toList());
+
+        for (int i = 0; i < list.size(); i++) {
+            list.get(i).setRank(i + 1);
+        }
 
         //根据分页参数，获取list的字集
         List<ShowHotProjectListPageResp> sub = list.stream().skip((req.getPage()-1) * req.getSize()).limit(req.getSize()).collect(Collectors.toList());

@@ -60,10 +60,15 @@
       >
         <div class="card-face card-front">
           <!-- 项目封面 -->
-          <div class="project-cover" :style="{ backgroundImage: `url(${project.imageUrl || defaultCover})` }">
-            <div class="project-badge" :class="getStatusClass(project.status)">
-              {{ getStatusText(project.status) }}
-            </div>
+           <!-- 项目封面 -->
+            <div class="project-cover" :style="{ backgroundImage: `url(${project.imageUrl || defaultCover})` }">
+            <!-- 排名徽章 -->
+                <div class="rank-badge" v-if="index < 3">
+                    {{ index + 1 }}
+                </div>
+                <div class="project-badge" :class="getStatusClass(project.status)">
+                    {{ getStatusText(project.status) }}
+                </div>
           </div>
           
           <!-- 项目基本信息 -->
@@ -1089,5 +1094,42 @@ const handleExceed = () => {
     padding: 10px;
   }
 }
+.rank-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 24px;
+  height: 24px;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 2;
+}
 
+/* 不同排名的颜色 */
+.rank-badge:nth-child(1) { /* 第一名 */
+  background: linear-gradient(135deg, #ffd700, #ff9800);
+}
+.rank-badge:nth-child(2) { /* 第二名 */
+  background: linear-gradient(135deg, #c0c0c0, #9e9e9e);
+}
+.rank-badge:nth-child(3) { /* 第三名 */
+  background: linear-gradient(135deg, #cd7f32, #a67c52);
+}
+
+/* 排名卡片特殊样式 */
+.project-card.top-1 {
+  border: 2px solid #ffd700;
+}
+.project-card.top-2 {
+  border: 2px solid #c0c0c0;
+}
+.project-card.top-3 {
+  border: 2px solid #cd7f32;
+}
 </style>

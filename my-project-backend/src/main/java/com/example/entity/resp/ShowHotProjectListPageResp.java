@@ -25,4 +25,5 @@ public class ShowHotProjectListPageResp {
     private Integer commentCount;
     private Integer favoriteCount;
     private Double score;
+    private int rank;
 }
