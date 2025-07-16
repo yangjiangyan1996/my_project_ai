@@ -26,5 +26,5 @@ public class ProjectFavorite extends BaseModel {
 
     //查询sql的字段
     @TableField(exist = false)
-    private Integer favoriteCount;
+    private Integer count;
 }

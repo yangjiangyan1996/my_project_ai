@@ -25,5 +25,5 @@ public class ProjectLike extends BaseModel {
     }
     //查询sql新增
     @TableField(exist = false)
-    private Integer favoriteCount;
+    private Integer count;
 }

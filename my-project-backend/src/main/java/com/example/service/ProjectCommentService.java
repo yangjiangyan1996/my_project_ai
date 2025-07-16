@@ -26,4 +26,6 @@ public interface ProjectCommentService extends IService<ProjectComment> {
     Map<Long, Long> selectCommentCountByProjectIds(List<Long> projectIds);
 
     ProjectComment selectById(Long id);
+
+    Map<Long, Integer> selectProjectId2CommentCount();
 }

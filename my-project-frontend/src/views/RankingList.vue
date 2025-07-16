@@ -3,21 +3,38 @@
     <!-- 顶部筛选栏 -->
     <div class="filter-bar">
       <div class="filter-group">
-        <el-select v-model="filter.industry" multiple placeholder="行业" clearable class="filter-select">
+        <el-select 
+          v-model="filter.industry" 
+          multiple 
+          placeholder="请选择" 
+          clearable 
+          class="filter-select"
+          @change="handleIndustryChange"
+          :loading="categoryLoading"
+        >
           <el-option
-            v-for="item in industries"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
+            v-for="item in industryOptions"
+            :key="item.code"
+            :label="item.desc"
+            :value="item.code"
           />
         </el-select>
         
-        <el-select v-model="filter.techStack" multiple placeholder="技术栈" filterable clearable class="filter-select">
+        <el-select 
+          v-model="filter.techStack" 
+          multiple 
+          placeholder="请选择" 
+          filterable 
+          clearable 
+          class="filter-select"
+          :disabled="!filter.industry || filter.industry.length === 0"
+          :loading="categoryLoading"
+        >
           <el-option
-            v-for="item in techStacks"
-            :key="item"
-            :label="item"
-            :value="item"
+            v-for="item in techStackOptions"
+            :key="item.code"
+            :label="item.desc"
+            :value="item.code"
           />
         </el-select>
         
@@ -187,59 +204,30 @@
     
     <!-- 项目申请对话框 -->
     <el-dialog 
-      v-model="applyDialogVisible" 
-      :title="`申请项目 - ${currentProject?.name}`"
-      width="50%"
-    >
-      <div v-if="currentProject" class="apply-dialog">
-        <el-form :model="applyForm" label-width="100px">
-          <el-form-item label="申请职位">
-            <el-select v-model="applyForm.position" placeholder="请选择申请职位">
-              <el-option
-                v-for="pos in positions"
-                :key="pos"
-                :label="pos"
-                :value="pos"
-              />
-            </el-select>
-          </el-form-item>
-          
-          <el-form-item label="个人简介">
-            <el-input
-              v-model="applyForm.introduction"
-              type="textarea"
-              :rows="4"
-              placeholder="请简要介绍你的相关经验和技能"
-              maxlength="500"
-              show-word-limit
-            />
-          </el-form-item>
-          
-          <el-form-item label="作品集">
-            <el-upload
-              action="#"
-              multiple
-              :limit="3"
-              :file-list="applyForm.portfolio"
-              :on-exceed="handleExceed"
-              :auto-upload="false"
-            >
-              <el-button type="primary">点击上传</el-button>
-              <template #tip>
-                <div class="el-upload__tip">
-                  可上传作品集(不超过3个文件)
-                </div>
-              </template>
-            </el-upload>
-          </el-form-item>
-        </el-form>
-        
-        <div class="dialog-footer">
-          <el-button @click="applyDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitApplication">提交申请</el-button>
+        v-model="applyDialogVisible" 
+        :title="`申请项目 - ${currentProject?.name}`"
+        width="50%"
+        >
+        <div v-if="currentProject" class="apply-dialog">
+            <el-form :model="applyForm" label-width="100px">
+            <el-form-item label="申请留言">
+                <el-input
+                v-model="applyForm.message"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入申请理由和相关经验"
+                maxlength="500"
+                show-word-limit
+                />
+            </el-form-item>
+            </el-form>
+            
+            <div class="dialog-footer">
+            <el-button @click="applyDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="submitApplication">提交申请</el-button>
+            </div>
         </div>
-      </div>
-    </el-dialog>
+        </el-dialog>
   </div>
 </template>
 
@@ -255,6 +243,17 @@ import {
 } from '@element-plus/icons-vue'
 import defaultCover from '@/assets/default-project-cover.jpg'
 import { get, post } from '@/net'
+
+
+// 行业分类数据
+const categoryData = ref([])
+// 加载状态
+const categoryLoading = ref(false)
+
+// 行业选项 (第一层级)
+const industryOptions = ref([])
+// 技术栈选项 (第二层级)
+const techStackOptions = ref([])
 
 // 筛选条件
 const filter = ref({
@@ -305,8 +304,60 @@ const applyForm = ref({
 
 // 初始化加载项目
 onMounted(() => {
+  fetchCategoryData()
   fetchProjects()
 })
+
+// 获取分类数据
+const fetchCategoryData = async () => {
+  try {
+    categoryLoading.value = true
+    const response = await get('/api/auth/common/category')
+    if (response && Array.isArray(response)) {
+      categoryData.value = response
+      initCategoryOptions()
+    } else {
+      ElMessage.error('获取分类数据失败，数据格式不正确')
+    }
+  } catch (error) {
+    ElMessage.error('获取分类数据失败')
+    console.error('获取分类数据失败:', error)
+  } finally {
+    categoryLoading.value = false
+  }
+}
+
+// 初始化行业选项 (第一层级)
+const initCategoryOptions = () => {
+  industryOptions.value = categoryData.value.map(item => ({
+    code: item.code,
+    desc: item.desc
+  }))
+}
+
+// 处理行业选择变化
+const handleIndustryChange = (selectedIndustries) => {
+  // 清空已选的技术栈
+  filter.value.techStack = []
+  
+  // 如果没有选择任何行业，清空技术栈选项
+  if (!selectedIndustries || selectedIndustries.length === 0) {
+    techStackOptions.value = []
+    return
+  }
+  
+  // 获取所有选中的行业的子分类
+  const allSubs = []
+  selectedIndustries.forEach(code => {
+    const industry = categoryData.value.find(item => item.code === code)
+    if (industry && industry.subs) {
+      allSubs.push(...industry.subs)
+    }
+  })
+  
+  // 更新技术栈选项
+  techStackOptions.value = allSubs
+}
 
 // 获取项目数据
 const fetchProjects = async () => {
@@ -349,11 +400,87 @@ const fetchProjects = async () => {
 };
 
 // 应用筛选
-const applyFilters = () => {
-  page.value = 1
-  projects.value = []
-  noMore.value = false
-  fetchProjects()
+// 应用筛选
+const applyFilters = async () => {
+  try {
+    page.value = 1
+    projects.value = []
+    noMore.value = false
+    loading.value = true
+    
+    // 合并选中的行业和技术栈code
+    const categoryIds = [
+      ...(filter.value.industry || []),
+      ...(filter.value.techStack || [])
+    ]
+    
+    const response = await post('/api/auth/project/showHotProjectList', {
+      page: page.value,
+      size: pageSize.value,
+      categoryIds: categoryIds.length > 0 ? categoryIds : undefined // 如果有选中的分类才传这个参数
+    })
+    
+    if (response && response.records) {
+      projects.value = response.records.map(project => ({
+        ...project,
+        projectId: project.projectId,
+        isFlipped: false,
+        detail: null,
+        detailLoading: false
+      }))
+      
+      noMore.value = page.value >= response.pages || 
+                     response.records.length < pageSize.value
+    }
+  } catch (error) {
+    ElMessage.error('获取项目列表失败')
+    console.error('获取项目列表失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 在滚动加载时调用的方法（如果有的话）
+const loadMore = async () => {
+  if (loading.value || noMore.value) return
+  
+  try {
+    page.value++
+    loading.value = true
+    
+    // 同样合并选中的分类
+    const categoryIds = [
+      ...(filter.value.industry || []),
+      ...(filter.value.techStack || [])
+    ]
+    
+    const response = await post('/api/auth/project/showHotProjectList', {
+      page: page.value,
+      size: pageSize.value,
+      categoryIds: categoryIds.length > 0 ? categoryIds : undefined
+    })
+    
+    if (response && response.records) {
+      projects.value = [
+        ...projects.value,
+        ...response.records.map(project => ({
+          ...project,
+          projectId: project.projectId,
+          isFlipped: false,
+          detail: null,
+          detailLoading: false
+        }))
+      ]
+      
+      noMore.value = page.value >= response.pages || 
+                     response.records.length < pageSize.value
+    }
+  } catch (error) {
+    ElMessage.error('加载更多项目失败')
+    console.error('加载更多项目失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 // 翻转卡片时获取详情
@@ -406,16 +533,19 @@ const handleMouseEnter = async (project) => {
 // 点赞项目
 const toggleLike = async (project) => {
   try {
-    const action = project.detail.myLike ? 'unlike' : 'like'
-    await post(`/api/auth/project/${action}`, { projectId: project.projectId })
+    // 获取当前点赞状态
+    const liked = !project.detail.myLike
+    
+    // 调用点赞接口
+    await get(`/api/auth/project/likeProject?projectId=${project.projectId}&liked=${liked}`)
     
     // 更新状态
-    project.detail.myLike = !project.detail.myLike
-    project.likeCount += project.detail.myLike ? 1 : -1
+    project.detail.myLike = liked
+    project.likeCount = liked ? project.likeCount + 1 : project.likeCount - 1
     
-    ElMessage.success(project.detail.myLike ? '点赞成功' : '已取消点赞')
+    ElMessage.success(liked ? '点赞成功' : '已取消点赞')
   } catch (error) {
-    ElMessage.error('操作失败')
+    ElMessage.error('操作失败: ' + (error.message || '未知错误'))
     console.error('点赞操作失败:', error)
   }
 }
@@ -423,16 +553,19 @@ const toggleLike = async (project) => {
 // 收藏项目
 const toggleFavorite = async (project) => {
   try {
-    const action = project.detail.myFavorite ? 'unfavorite' : 'favorite'
-    await post(`/api/auth/project/${action}`, { projectId: project.projectId })
+    // 获取当前收藏状态
+    const liked = !project.detail.myFavorite
+    
+    // 调用收藏接口
+    await get(`/api/auth/project/favoriteProject?projectId=${project.projectId}&liked=${liked}`)
     
     // 更新状态
-    project.detail.myFavorite = !project.detail.myFavorite
-    project.favoriteCount += project.detail.myFavorite ? 1 : -1
+    project.detail.myFavorite = liked
+    project.favoriteCount = liked ? project.favoriteCount + 1 : project.favoriteCount - 1
     
-    ElMessage.success(project.detail.myFavorite ? '收藏成功' : '已取消收藏')
+    ElMessage.success(liked ? '收藏成功' : '已取消收藏')
   } catch (error) {
-    ElMessage.error('操作失败')
+    ElMessage.error('操作失败: ' + (error.message || '未知错误'))
     console.error('收藏操作失败:', error)
   }
 }
@@ -441,22 +574,22 @@ const toggleFavorite = async (project) => {
 const applyProject = (project) => {
   currentProject.value = project
   applyForm.value = {
-    position: positions.value[0] || '',
-    introduction: '',
-    portfolio: []
+    message: '' // 只保留留言字段
   }
   applyDialogVisible.value = true
 }
 
 // 提交申请
 const submitApplication = async () => {
+  if (!applyForm.value.message) {
+    ElMessage.warning('请填写申请留言')
+    return
+  }
+
   try {
-    // 这里调用申请API
-    await post('/api/auth/project/apply', {
+    await post('/api/auth/project/applyJoinProject', {
       projectId: currentProject.value.projectId,
-      position: applyForm.value.position,
-      introduction: applyForm.value.introduction
-      // 文件上传需要额外处理
+      message: applyForm.value.message
     })
     
     // 更新申请状态
@@ -469,7 +602,7 @@ const submitApplication = async () => {
     })
     applyDialogVisible.value = false
   } catch (error) {
-    ElMessage.error('申请失败')
+    ElMessage.error('申请失败: ' + (error.message || '未知错误'))
     console.error('申请失败:', error)
   }
 }

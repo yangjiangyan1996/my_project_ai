@@ -806,6 +806,7 @@ public class ProjectFacade {
         //根据点赞*0.4 + 收藏* 0.4 +评论 *0.15 +  浏览*0.05排序
         Map<Long, Integer> projectId2FavoriteCount =projectFavoriteService.selectProjectId2FavoriteCount();
         Map<Long, Integer> projectId2LikeCount = projectLikeService.selectProjectId2LikeCount();
+        Map<Long, Integer> projectId2CommentCount = projectCommentService.selectProjectId2CommentCount();
 
         Set<Long> projectIds = new HashSet<>(projectId2FavoriteCount.keySet());
         projectIds.addAll(projectId2LikeCount.keySet());
@@ -819,6 +820,11 @@ public class ProjectFacade {
             if (!p.getStatus().equals(ProjectEnum.ProjectStatusEnum.PUBLISHING.getCode())) {
                 continue;
             }
+            if (!CollectionUtils.isEmpty(req.getCategoryIds())) {
+                if (!req.getCategoryIds().contains(p.getFirstCategory()) && !req.getCategoryIds().contains(p.getSecondCategory())) {
+                    continue;
+                }
+            }
             Integer favoriteCount = 0;
             if (projectId2FavoriteCount.containsKey(p.getId())) {
                 favoriteCount = projectId2FavoriteCount.get(p.getId());
@@ -831,6 +837,10 @@ public class ProjectFacade {
             }
 
             Integer commentCount = 0;
+            if (projectId2CommentCount.containsKey(p.getId())) {
+                commentCount = projectId2CommentCount.get(p.getId());
+                score += commentCount * 0.2;
+            }
             ShowHotProjectListPageResp r = new ShowHotProjectListPageResp();
             r.setProjectId(p.getId());
             r.setImageUrl(p.getImageUrl());
@@ -847,7 +857,7 @@ public class ProjectFacade {
             paixuProjectIds.add(r);
         }
 
-        List<ShowHotProjectListPageResp> list = paixuProjectIds.stream().sorted(Comparator.comparing(ShowHotProjectListPageResp::getScore)).collect(Collectors.toList());
+        List<ShowHotProjectListPageResp> list = paixuProjectIds.stream().sorted(Comparator.comparing(ShowHotProjectListPageResp::getScore).reversed()).collect(Collectors.toList());
 
         //根据分页参数，获取list的字集
         List<ShowHotProjectListPageResp> sub = list.stream().skip((req.getPage()-1) * req.getSize()).limit(req.getSize()).collect(Collectors.toList());

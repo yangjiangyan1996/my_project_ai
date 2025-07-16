@@ -79,9 +79,9 @@ public class ProjectFavoriteServiceImpl extends ServiceImpl<ProjectFavoriteMappe
         //统计出projectID对应的user_id的人数
         List<ProjectFavorite> projectFavorites = this.baseMapper.selectList(
                 new QueryWrapper<ProjectFavorite>()
-                        .select("project_id, count(user_id) as favoriteCount")
+                        .select("project_id, count(user_id) as count")
                         .groupBy("project_id")
         );
-        return projectFavorites.stream().collect(Collectors.toMap(ProjectFavorite::getProjectId, ProjectFavorite::getFavoriteCount));
+        return projectFavorites.stream().collect(Collectors.toMap(ProjectFavorite::getProjectId, ProjectFavorite::getCount));
     }
 }

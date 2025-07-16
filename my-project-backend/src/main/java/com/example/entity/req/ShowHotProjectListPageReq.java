@@ -3,6 +3,8 @@ package com.example.entity.req;
 import com.example.entity.base.PageReq;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -11,4 +13,5 @@ import lombok.Data;
  */
 @Data
 public class ShowHotProjectListPageReq extends PageReq {
+    private List<Integer> categoryIds;
 }

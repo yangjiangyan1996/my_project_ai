@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ProjectComment;
 import com.example.entity.dto.ProjectFavorite;
+import com.example.enums.ProjectEnum;
 import com.example.mapper.ProjectCommentMapper;
 import com.example.service.ProjectCommentService;
 import org.springframework.stereotype.Service;
@@ -91,5 +92,18 @@ public class ProjectCommentServiceImpl extends ServiceImpl<ProjectCommentMapper,
     @Override
     public ProjectComment selectById(Long id) {
         return this.baseMapper.selectById(id);
+    }
+
+    @Override
+    public Map<Long, Integer> selectProjectId2CommentCount() {
+        //统计出projectID对应的user_id的人数
+        List<ProjectComment> projectFavorites = this.baseMapper.selectList(
+                new QueryWrapper<ProjectComment>()
+                        .select("project_id, count(user_id) as count")
+                        .eq("status", ProjectEnum.ProjectCommentStatusEnum.ok.getCode())
+                        .groupBy("project_id")
+        );
+        return projectFavorites.stream().collect(Collectors.toMap(ProjectComment::getProjectId, ProjectComment::getCount));
+
     }
 }

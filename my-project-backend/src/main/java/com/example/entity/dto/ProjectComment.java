@@ -1,6 +1,7 @@
 package com.example.entity.dto;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -20,4 +21,7 @@ public class ProjectComment extends BaseModel {
     private Long replyToUserId;
     private String replyToUsername;
     private Integer likes;
+
+    @TableField(exist = false)
+    private Integer count;
 }

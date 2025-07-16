@@ -78,9 +78,9 @@ public class ProjectLikeServiceImpl extends ServiceImpl<ProjectLikeMapper, Proje
         //统计出projectID对应的user_id的人数
         List<ProjectLike> projectFavorites = this.baseMapper.selectList(
                 new QueryWrapper<ProjectLike>()
-                        .select("project_id, count(user_id) as favoriteCount")
+                        .select("project_id, count(user_id) as count")
                         .groupBy("project_id")
         );
-        return projectFavorites.stream().collect(Collectors.toMap(ProjectLike::getProjectId, ProjectLike::getFavoriteCount));
+        return projectFavorites.stream().collect(Collectors.toMap(ProjectLike::getProjectId, ProjectLike::getCount));
     }
 }
