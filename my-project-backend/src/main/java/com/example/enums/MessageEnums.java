@@ -67,6 +67,9 @@ public class MessageEnums {
         LIKE_POST(101, "点赞项目"),
         REPLY_PROJECT(102, "回复项目"),
         JOIN_PROJECT(103, "加入项目"),
+        Refuse_PROJECT(104, "拒绝加入项目"),
+        Pass_PROJECT(105, "同意加入项目"),
+
 
         LIKE_COMMENT(110, "点赞评论"),
         REPLY_COMMENT(111, "回复评论"),

@@ -3,13 +3,11 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.config.AsyncTaskUtil;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
 import com.example.entity.resp.*;
-import com.example.enums.CommonConstant;
-import com.example.enums.CommonEnum;
-import com.example.enums.ProjectEnum;
-import com.example.enums.UserEnums;
+import com.example.enums.*;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -32,6 +30,8 @@ import java.util.stream.Stream;
 @Service
 public class ProjectFacade {
 
+    @Resource
+    ProjectWatchService projectWatchService;
     @Resource
     MessageFacade messageFacade;
     @Resource
@@ -84,16 +84,16 @@ public class ProjectFacade {
         r.setName(projectDown.getName());
         r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
         r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
-        r.setTimePerDay(project.getTimePerDay()+"小时/天");
-        r.setIncomeEstimate(project.getIncomeEstimateMin()+"-"+project.getIncomeEstimateMax()+"元/天");
+        r.setTimePerDay(project.getTimePerDay() + "小时/天");
+        r.setIncomeEstimate(project.getIncomeEstimateMin() + "-" + project.getIncomeEstimateMax() + "元/天");
         r.setTargetAudience(CommonEnum.UserTypeEnum.getByCode(project.getTargetAudience()));
         r.setImageUrl(projectDown.getImageUrl());
         Account account = accountService.selectById(project.getCreatedBy());
         r.setCreatorName(account.getNickname());
         r.setSecrecyId(account.getSecrecyId());
         if (StringUtils.isNotBlank(r.getTags())) {
-            String tags = Arrays.stream(r.getTags().split(",")).map(v->CommonEnum.LabelEnums.getByCode(Integer.valueOf(v))).collect(Collectors.joining(","));
-            r.setTags( tags);
+            String tags = Arrays.stream(r.getTags().split(",")).map(v -> CommonEnum.LabelEnums.getByCode(Integer.valueOf(v))).collect(Collectors.joining(","));
+            r.setTags(tags);
         }
 
         if (userId != null) {
@@ -116,9 +116,9 @@ public class ProjectFacade {
     public Boolean likeProject(Long projectId, Long id, Boolean liked) {
         Boolean result = projectLikeService.likeProject(projectId, id, liked);
         if (liked) {
-            messageFacade.createMessageOfLike(projectId, null, id);
+            messageFacade.createMessageOfLike(projectId, projectId, id, true);
         } else {
-            messageFacade.deletedMessageOfLike(projectId, null, id);
+            messageFacade.deletedMessageOfLike(projectId, projectId, id, true);
         }
         return result;
     }
@@ -237,7 +237,7 @@ public class ProjectFacade {
             throw new ValidationException("已点赞，无需重复操作！");
         }
         Boolean result = projectCommentLikeService.insert(commentId, projectId, userId);
-        messageFacade.createMessageOfLike(projectId, commentId, userId);
+        messageFacade.createMessageOfLike(projectId, commentId, userId, false);
         return result;
     }
 
@@ -257,14 +257,14 @@ public class ProjectFacade {
 
     public Boolean concernPublisherCancel(ConcernPublisherCancelReq req, Long userId) {
         UserFollow useFollwe = userFollowService.selectUserByUserId(userId, req.getFolloweeId());
-        if (useFollwe ==null) {
+        if (useFollwe == null) {
             return true;
         }
         if (useFollwe.getIsMutual().equals(UserEnums.FollowEnum.Yes.getCode())) {
             userFollowService.updateIsMutual(req.getFolloweeId(), userId, UserEnums.FollowEnum.No.getCode());
         }
         Boolean result = userFollowService.removeUserByUserId(userId, req.getFolloweeId());
-        messageFacade.deletedMessageOfPublisher(userId, req.getFolloweeId());
+        messageFacade.deletedMessageOfPublisher(userId, req.getFolloweeId(), MessageEnums.MessageType.PUBLISHER.getCode());
         return result;
     }
 
@@ -386,7 +386,7 @@ public class ProjectFacade {
     public Boolean updateProjectOfMyShow(ProjectOfMyShowUpdateReq req, Long userId) {
         // 字段校验
         if (StringUtils.isAnyBlank(req.getResources())
-                || req.getStatus() == null || !StringUtils.isNotBlank(req.getSkills())||req.getTime() == null || null== req.getAudience()) {
+                || req.getStatus() == null || !StringUtils.isNotBlank(req.getSkills()) || req.getTime() == null || null == req.getAudience()) {
             throw new ValidationException("所有字段必须填写");
         }
 
@@ -516,7 +516,10 @@ public class ProjectFacade {
         entity.setApplyTime(new Date());
         entity.setProcessedBy(pd.getCreatedBy());
         entity.setMessage(message);
-        return projectApplicationsService.save(entity);
+        boolean save = projectApplicationsService.save(entity);
+
+        AsyncTaskUtil.execute(() -> messageFacade.createApprove(pd.getCreatedBy(), userid, projectId));
+        return save;
     }
 
 
@@ -572,13 +575,18 @@ public class ProjectFacade {
             p.setUserId(v.getUserId());
             if (userId2UserInfoMap.containsKey(v.getUserId())) {
                 p.setUserName(userId2UserInfoMap.get(v.getUserId()).getNickname());
+                p.setAvatarUrl(userId2UserInfoMap.get(v.getUserId()).getAvatarUrl());
+                p.setSecrecyId(userId2UserInfoMap.get(v.getUserId()).getSecrecyId());
             }
 
             if (userId2ShowInfoMap.containsKey(v.getUserId())) {
                 AccountShow as = userId2ShowInfoMap.get(v.getUserId());
-                p.setTimePerDay(as.getTimePerDay());
+                p.setTimePerDayStr(as.getTimePerDay() + CommonConstant.TIME_PER_DAY);
                 p.setAudience(CommonEnum.UserTypeEnum.getByCode(as.getAudience()));
-                p.setSkills(as.getSkills());
+                if (StringUtils.isNotBlank(as.getSkills())) {
+                    String skillNames = Arrays.stream(as.getSkills().split(",")).map(z -> CommonEnum.IndustryCategory.getNameByCode(Integer.valueOf(z))).collect(Collectors.joining(","));
+                    p.setSkillsName(skillNames);
+                }
                 p.setResources(as.getResources());
             }
 
@@ -615,6 +623,7 @@ public class ProjectFacade {
         if (Boolean.TRUE.equals(projectFull(project.getId()))) {
             projectApplicationsService.updateStatusByProjectId(ProjectEnum.ProjectApplyStatusEnum.REJECTED.getCode(), project.getId(), ProjectEnum.ProjectApplyStatusEnum.APPROVED.getCode());
         }
+        AsyncTaskUtil.execute(() -> messageFacade.createApprovePass(pa.getUserId(), userId, project.getId()));
         return true;
     }
 
@@ -634,7 +643,11 @@ public class ProjectFacade {
     }
 
     public Boolean rejectApply(ApproveApplyReq req, Long id) {
+        ProjectApplications pa = projectApplicationsService.getById(req.getId());
         Integer result = projectApplicationsService.updateStatus(req.getId(), ProjectEnum.ProjectApplyStatusEnum.REJECTED.getCode(), id);
+        if (result > 0) {
+            AsyncTaskUtil.execute(()->messageFacade.createApproveRefuse(pa.getUserId(), pa.getProcessedBy(),pa.getProjectId()));
+        }
         return result == 1;
     }
 
@@ -700,7 +713,7 @@ public class ProjectFacade {
         Map<Long, AccountShow> userId2UseShowMap = userList.stream().collect(Collectors.toMap(AccountShow::getUserId, v -> v));
         List<Account> userInfoList = accountService.selectFildByUserId();
 
-        List<ProjectMembers> pm = projectMembersService.selectByProjectId(projectId,null);
+        List<ProjectMembers> pm = projectMembersService.selectByProjectId(projectId, null);
         Map<Long, Integer> userId2UserStatusMap = pm.stream().collect(Collectors.toMap(v -> v.getUserId(), v -> v.getStatus()));
 
         Map<Long, Account> userId2UserInfoMap = userInfoList.stream().collect(Collectors.toMap(Account::getId, v -> v));
@@ -737,7 +750,7 @@ public class ProjectFacade {
             // 投入时间匹配（10分）
             if (user.getTimePerDay() >= pd.getTimePerDay()) {
                 score += 25;
-            }  else if (user.getTimePerDay() >= pd.getTimePerDay() / 2) {
+            } else if (user.getTimePerDay() >= pd.getTimePerDay() / 2) {
                 score += 15;
             } else if (user.getTimePerDay() >= pd.getTimePerDay() / 4) {
                 score += 5;
@@ -790,7 +803,11 @@ public class ProjectFacade {
         if (p == null) {
             return false;
         }
-        return projectApplicationsService.updateStatus(p.getId(), ProjectEnum.ProjectApplyStatusEnum.CANCELED.getCode(), userId) > 0;
+        Boolean result = projectApplicationsService.updateStatus(p.getId(), ProjectEnum.ProjectApplyStatusEnum.CANCELED.getCode(), userId) > 0;
+        if (result) {
+            AsyncTaskUtil.execute(()->messageFacade.deletedMessage(userId, p.getProcessedBy(), p.getProjectId(), MessageEnums.MessageType.JOIN_PROJECT.getCode()));
+        }
+        return result;
     }
 
 
@@ -804,15 +821,18 @@ public class ProjectFacade {
 
     public Page<ShowHotProjectListPageResp> showHotProjectList(ShowHotProjectListPageReq req, Long userId) {
         //根据点赞*0.4 + 收藏* 0.4 +评论 *0.15 +  浏览*0.05排序
-        Map<Long, Integer> projectId2FavoriteCount =projectFavoriteService.selectProjectId2FavoriteCount();
+        Map<Long, Integer> projectId2FavoriteCount = projectFavoriteService.selectProjectId2FavoriteCount();
         Map<Long, Integer> projectId2LikeCount = projectLikeService.selectProjectId2LikeCount();
         Map<Long, Integer> projectId2CommentCount = projectCommentService.selectProjectId2CommentCount();
 
         Set<Long> projectIds = new HashSet<>(projectId2FavoriteCount.keySet());
         projectIds.addAll(projectId2LikeCount.keySet());
 
+        if (CollectionUtils.isEmpty(projectIds)) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
 
-        List<ShowHotProjectListPageResp> paixuProjectIds =new ArrayList<>();
+        List<ShowHotProjectListPageResp> paixuProjectIds = new ArrayList<>();
         List<Projects> projects = projectService.listByIds(projectIds);
 
         for (Projects p : projects) {
@@ -830,7 +850,7 @@ public class ProjectFacade {
                 favoriteCount = projectId2FavoriteCount.get(p.getId());
                 score += favoriteCount * 0.4;
             }
-            Integer likeCount=0;
+            Integer likeCount = 0;
             if (projectId2LikeCount.containsKey(p.getId())) {
                 likeCount = projectId2LikeCount.get(p.getId());
                 score += likeCount * 0.4;
@@ -866,10 +886,18 @@ public class ProjectFacade {
         }
 
         //根据分页参数，获取list的字集
-        List<ShowHotProjectListPageResp> sub = list.stream().skip((req.getPage()-1) * req.getSize()).limit(req.getSize()).collect(Collectors.toList());
+        List<ShowHotProjectListPageResp> sub = list.stream().skip((req.getPage() - 1) * req.getSize()).limit(req.getSize()).collect(Collectors.toList());
         Page<ShowHotProjectListPageResp> result = Page.of(req.getPage(), req.getSize());
         result.setTotal(list.size());
         result.setRecords(sub);
         return result;
+    }
+
+    public Boolean addProjectWatch(Long projectId, Long userId) {
+        ProjectWatch pw = projectWatchService.selectByProjectIdAndUserId(projectId, userId);
+        if (pw != null) {
+            return true;
+        }
+        return projectWatchService.insertOne(projectId, userId);
     }
 }

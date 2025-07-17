@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.Projects;
 import com.example.entity.req.ProjectListReq;
+import com.example.enums.ProjectEnum;
 import com.example.mapper.ProjectsMapper;
 import com.example.service.ProjectService;
 import jakarta.annotation.Resource;
@@ -33,7 +34,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
         return projectMapper.selectPage(
                 pageable,
                 new QueryWrapper<Projects>()
-                        .eq("status", 1)
+                        .gt("status", ProjectEnum.ProjectStatusEnum.NO.getCode())
                         .in(!CollectionUtils.isEmpty(firstLevel), "first_category", firstLevel)
                         .in(!CollectionUtils.isEmpty(secondLevel), "second_category", secondLevel)
                         .in(!CollectionUtils.isEmpty(req.getDifficulty()), "difficulty", req.getDifficulty())
@@ -65,7 +66,8 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
     @Override
     public boolean isProjectDown(Long projectId) {
         Projects projects = projectMapper.selectOne(new QueryWrapper<Projects>().eq("id", projectId)
-                .eq("status", 1));
+                .gt("status", ProjectEnum.ProjectStatusEnum.NO.getCode())
+                .lt("status", ProjectEnum.ProjectStatusEnum.CLOSED.getCode()));
         return projects != null;
     }
 
@@ -82,7 +84,9 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
 
     @Override
     public List<Projects> selectByProjectIds(List<Long> projectIds) {
-        return this.baseMapper.selectList(new QueryWrapper<Projects>().in("id", projectIds).eq("status", 1).eq("is_deleted", 0));
+        return this.baseMapper.selectList(new QueryWrapper<Projects>().in("id", projectIds)
+                .gt("status", ProjectEnum.ProjectStatusEnum.NO.getCode())
+                .lt("status", ProjectEnum.ProjectStatusEnum.CLOSED.getCode()).eq("is_deleted", 0));
     }
 
     @Override

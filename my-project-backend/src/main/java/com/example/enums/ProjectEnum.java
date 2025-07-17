@@ -14,8 +14,8 @@ public class ProjectEnum {
     @Getter
     public enum MemberStatusEnum {
         IN(0, "已加入"),
-        ADMIN_QUIT(1, "管理员退出"),
-        SELF_QUIT(2, "自己退出");
+        ADMIN_QUIT(1, "管理员移出"),
+        SELF_QUIT(2, "成员自己退出");
         private Integer code;
         private String name;
 
@@ -98,13 +98,15 @@ public class ProjectEnum {
     }
 
     /**
-     * 难度等级
+     * 状态 0=待审核  5=退回  10=招募中 11=已满员 12=已关闭
      */
     @Getter
     public enum ProjectStatusEnum {
         WAITING(0, "待审核"),
-        PUBLISHING(1, "发布"),
-        NO(2, "退回"),
+        NO(5, "退回"),
+        PUBLISHING(10, "招募中"),
+        FULL(11, "已满员"),
+        CLOSED(30, "已关闭"),
         ;
         private Integer code;
         private String name;

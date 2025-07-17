@@ -100,7 +100,14 @@ const router = createRouter({
             name: 'rankingList',
             component: () => import('@/views/RankingList.vue'),
             meta: { requiresAuth: true }
-        },
+        }
+        // ,{
+        //     path: '/index/growthCenter',
+        //     name: 'growthCenter',
+        //     component: () => import('@/views/GrowthCenter.vue'),
+        //     meta: { requiresAuth: true }
+        // }
+
     ]
 })
 

@@ -163,7 +163,7 @@
             
             <div class="detail-section">
               <h4><el-icon><Guide /></el-icon> 操作步骤</h4>
-              <pre class="steps-content">{{ project.detail.steps }}</pre>
+              <el-card class="section" v-html="project.detail.steps" />
             </div>
             
             <div class="project-actions">

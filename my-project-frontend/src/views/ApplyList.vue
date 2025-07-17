@@ -21,12 +21,13 @@
             @mouseenter="hoveredItem = index"
             @mouseleave="hoveredItem = null"
           >
-            <div class="apply-header">
+            <div class="apply-header" >
               <el-avatar 
-                :src="item.avatar" 
+                @click="goToUserProfile(item.secrecyId)"
+                :src="item.avatarUrl" 
                 size="medium"
                 :style="{
-                  backgroundColor: item.avatar ? 'transparent' : '#409EFF',
+                  backgroundColor: item.avatarUrl ? 'transparent' : '#409EFF',
                   color: 'white',
                   fontSize: '18px'
                 }"
@@ -34,7 +35,7 @@
                 {{ item.username?.charAt(0) || '用' }}
               </el-avatar>
               <div class="user-info">
-                <div class="username">{{ item.username || '用户名' }}</div>
+                <div class="username">{{ item.userName || '用户名' }}</div>
                 <div class="apply-time">{{ formatTime(item.applyTime) }}</div>
               </div>
             </div>
@@ -63,8 +64,8 @@
               v-if="hoveredItem === index"
             >
               <p><b>身份：</b>{{ item.audience || '未填写' }}</p>
-              <p><b>可投入时间：</b>{{ item.timePerDay || '未填写' }}</p>
-              <p><b>技能：</b>{{ item.skills || '未填写' }}</p>
+              <p><b>可投入时间：</b>{{ item.timePerDayStr || '未填写' }}</p>
+              <p><b>技能：</b>{{ item.skillsName || '未填写' }}</p>
               <p><b>资源：</b>{{ item.resources || '未填写' }}</p>
             </div>
 
@@ -133,6 +134,12 @@ const hoveredItem = ref(null)
 const formatTime = (timeString) => {
   if (!timeString) return ''
   return new Date(timeString).toLocaleString()
+}
+
+const goToUserProfile = (userId) => {
+  console.log("访问用户详情页",userId)
+  // router.push(`/index/user/${userId}`)
+  window.open(`/index/user/${userId}`, '_blank');
 }
 
 const getStatusText = (status) => {

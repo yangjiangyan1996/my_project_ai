@@ -16,16 +16,18 @@ public class MyApplyListResp {
     private String projectName;
     private String description;
 
+    private String avatarUrl;
     private String userName;
     private Long userId;
+    private Long secrecyId;
 
     private Integer status;
     private Date applyTime;
     private String message;
 
     //技能
-    private Long timePerDay;
+    private String timePerDayStr;
     private String audience;
-    private String skills;
+    private String skillsName;
     private String resources;
 }

@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CommonFacade;
 import com.example.Facade.ProjectFacade;
+import com.example.config.AsyncTaskUtil;
 import com.example.config.QqMailService;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
@@ -438,6 +439,7 @@ public class ProjectController {
             log.error("ProjectController#likeProject,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
+            log.error("ProjectController#likeProject,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -451,6 +453,10 @@ public class ProjectController {
                 userId = null;
             }
             ProjectsDetailResp result = projectFacade.selectByProjectId(projectId, userId);
+
+            AsyncTaskUtil.execute(() -> {
+                projectFacade.addProjectWatch(projectId, user.getId());
+            });
             return RespBean.success(result);
         } catch (Exception e) {
             log.error("ProjectController#detail,error,projectId:{}", projectId, e);

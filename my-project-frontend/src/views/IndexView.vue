@@ -296,7 +296,7 @@
 
       <el-sub-menu index="5">
         <template #title><i class="el-icon-s-custom"></i>AI推荐</template>
-        <el-menu-item index="ai-assistant" @click="router.push({ name: 'ai-assistant' })">副业推荐助手</el-menu-item>
+        <el-menu-item index="ai-assistant"  @click="changeDisplayMode('growthCenter')" >副业推荐助手</el-menu-item>
       </el-sub-menu>
 
       
@@ -399,6 +399,8 @@
 
      <RankingList v-if="displayMode === 'rankingList'" />
 
+     <!-- <GrowthCenter v-if="displayMode === 'growthCenter'" /> -->
+
   </div>
 </template>
 
@@ -411,6 +413,8 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import SkillMatch from '@/views/SkillMatch.vue';
 import TalentMatch from '@/views/TalentMatch.vue';
 import RankingList from '@/views/RankingList.vue';
+// import GrowthCenter from '@/views/GrowthCenter.vue';
+
 import MyInfo from '@/views/My.vue';
 import useUserInfo from '@/hooks/useUserInfo';
 //评论区导入

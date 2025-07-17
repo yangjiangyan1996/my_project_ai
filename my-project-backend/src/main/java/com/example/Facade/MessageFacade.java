@@ -43,20 +43,37 @@ public class MessageFacade {
     @Resource
     ProjectService projectService;
 
+
+    public void createApprove(Long targetId, Long currentUserId, Long relationId) {
+        messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.JOIN_PROJECT.getCode(), "通过了您的申请", relationId, null);
+    }
+
+    public void createApprovePass(Long targetId, Long currentUserId, Long relationId) {
+        messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.Pass_PROJECT.getCode(), "通过了您的申请", relationId, null);
+    }
+
+    public void createApproveRefuse(Long targetId, Long currentUserId, Long relationId) {
+        messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.Refuse_PROJECT.getCode(), "拒绝了您的申请", relationId, null);
+    }
+
     public void createMessageOfPublisher(Long targetId, Long currentUserId) {
         messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.PUBLISHER.getCode(), "关注了您", null, null);
     }
 
-    public void deletedMessageOfPublisher(Long targetId, Long currentUserId) {
-        messagesService.deletedNotification(targetId, currentUserId, MessageEnums.MessageType.PUBLISHER.getCode(), null);
+    public void deletedMessage(Long targetId, Long currentUserId, Long relationId, Integer type) {
+        messagesService.deletedNotification(targetId, currentUserId, type, relationId);
     }
 
-    public void deletedMessageOfLike(Long projectId, Long relatedId, Long currentUserId) {
+    public void deletedMessageOfPublisher(Long targetId, Long currentUserId, Integer type) {
+        messagesService.deletedNotification(targetId, currentUserId, type, null);
+    }
+
+    public void deletedMessageOfLike(Long projectId, Long relatedId, Long currentUserId, Boolean isProject) {
         Long receiverId = 0L; // 获取接收者id
         Integer type = null;
         Projects p = projectService.selectByProjectId(projectId);
 
-        if (relatedId != null) {
+        if (!isProject) {
             ProjectComment pc = projectCommentService.selectById(relatedId);
             type = MessageEnums.MessageType.LIKE_COMMENT.getCode();
             receiverId = pc.getUserId();
@@ -70,14 +87,15 @@ public class MessageFacade {
         }
         messagesService.deletedNotification(receiverId, currentUserId, type, relatedId);
     }
-    public void createMessageOfLike(Long projectId, Long relatedId, Long currentUserId) {
+
+    public void createMessageOfLike(Long projectId, Long relatedId, Long currentUserId, Boolean isProject) {
         Long receiverId = 0L; // 获取接收者id
         Integer type = null;
         String content = null;
         String relatedWords = null;
         Projects p = projectService.selectByProjectId(projectId);
 
-        if (relatedId != null) {
+        if (!isProject) {
             ProjectComment pc = projectCommentService.selectById(relatedId);
             type = MessageEnums.MessageType.LIKE_COMMENT.getCode();
             content = "点赞了您的评论";
@@ -233,10 +251,17 @@ public class MessageFacade {
             commentMap = commentList.stream().collect(Collectors.toMap(ProjectComment::getId, v -> v));
         }
 
+        Map<Long, Projects> projectId2ProjectsMap = new HashMap<>();
+        List<Projects> projects = projectService.selectByProjectIds(replyCommentIds);
+        if (projects != null) {
+            projectId2ProjectsMap = projects.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+        }
+
         List<Long> userIds = list.getRecords().stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
         List<Account> accounts = accountService.selectByIds(userIds);
         Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
         Map<Long, ProjectComment> finalCommentMap = commentMap;
+        Map<Long, Projects> finalProjectId2ProjectsMap = projectId2ProjectsMap;
         List<MsgOfLikedPageResp> collect = list.getRecords().stream().map(v -> {
                     MsgOfLikedPageResp projectsResp = new MsgOfLikedPageResp();
                     BeanUtils.copyProperties(v, projectsResp);
@@ -244,7 +269,12 @@ public class MessageFacade {
                     if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
                         projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
                     }
-                    projectsResp.setProjectId(finalCommentMap.get(v.getRelatedId()).getProjectId());
+                    if (finalCommentMap.containsKey(v.getRelatedId())) {
+                        projectsResp.setProjectId(finalCommentMap.get(v.getRelatedId()).getProjectId());
+                    }
+                    if (finalProjectId2ProjectsMap.containsKey(v.getRelatedId())) {
+                        projectsResp.setProjectId(finalProjectId2ProjectsMap.get(v.getRelatedId()).getId());
+                    }
                     projectsResp.setCommentId(v.getRelatedId());
                     return projectsResp;
                 })
@@ -280,5 +310,6 @@ public class MessageFacade {
         }
         return messagesService.allMarkRead(types, userId) > 0;
     }
+
 
 }

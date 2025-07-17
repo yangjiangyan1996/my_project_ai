@@ -73,13 +73,12 @@
             >
               <div class="activity-header">
                 <h3 class="activity-title">{{ item.name }}</h3>
-                <!-- 状态标签移到右上角 -->
                 <el-tag
                   class="activity-status"
-                  :type="item.status === 0 ? 'warning' : item.status === 1 ? 'success' : 'danger'"
+                  :type="getStatusTagType(item.status)"
                   size="small"
                 >
-                  {{ item.status === 0 ? '待审核' : item.status === 1 ? '已通过' : '已拒绝' }}
+                  {{ getStatusText(item.status) }}
                 </el-tag>
               </div>
               
@@ -94,13 +93,13 @@
                 <div class="activity-detail">{{ item.description }}</div>
 
                 <!-- 如果是拒绝，展示理由 -->
-                <div v-if="item.status === 2" class="activity-reason">
+                <div v-if="item.status === 5" class="activity-reason">
                   <strong>拒绝理由：</strong>{{ item.reason || '无' }}
                 </div>
 
                 <!-- 重新编辑按钮 -->
                 <el-button
-                  v-if="item.status === 2"
+                  v-if="item.status === 5"
                   type="primary"
                   size="small"
                   @click.stop="goToCreateSidejob(item.id)"
@@ -606,6 +605,29 @@ onMounted(() => {
   })
   
 });
+
+const getStatusText = (status) => {
+  const statusMap = {
+    0: '待审核',
+    5: '已退回', 
+    10: '招募中',
+    11: '已满员',
+    12: '已关闭'
+  }
+  return statusMap[status] || '未知状态'
+}
+
+// 状态标签类型映射  
+const getStatusTagType = (status) => {
+  const typeMap = {
+    0: 'warning',  // 待审核-黄色
+    5: 'danger',   // 已退回-红色
+    10: 'success', // 招募中-绿色
+    11: 'info',    // 已满员-蓝色
+    12: 'danger'   // 已关闭-红色
+  }
+  return typeMap[status] || ''
+}
 
 
 // 添加获取技能分类的方法
