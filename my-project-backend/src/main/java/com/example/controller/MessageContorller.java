@@ -4,10 +4,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.MessageFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
-import com.example.entity.req.MarkMsgAsReadReq;
-import com.example.entity.req.MsgOfCommentListPageReq;
-import com.example.entity.req.MsgOfFollowedPageReq;
-import com.example.entity.req.MsgOfLikedPageReq;
+import com.example.entity.req.*;
+import com.example.entity.resp.MsgOfApplyPageResp;
 import com.example.entity.resp.MsgOfCommentListResp;
 import com.example.entity.resp.MsgOfFollowerResp;
 import com.example.entity.resp.MsgOfLikedPageResp;
@@ -76,6 +74,8 @@ public class MessageContorller {
                 types = LettuceLists.newList(MessageEnums.MessageType.PUBLISHER.getCode());
             } else if ("like".equals(type)) {
                 types = LettuceLists.newList(MessageEnums.MessageType.LIKE_POST.getCode(), MessageEnums.MessageType.LIKE_COMMENT.getCode());
+            } else if ("apply".equals(type)) {
+                types = LettuceLists.newList(MessageEnums.MessageType.JOIN_PROJECT.getCode(), MessageEnums.MessageType.Refuse_PROJECT.getCode(), MessageEnums.MessageType.JOIN_PROJECT.getCode(), MessageEnums.MessageType.Refuse_PROJECT.getCode(), MessageEnums.MessageType.Pass_PROJECT.getCode());
             }
             Boolean list = messageFacade.allMarkRead(types, user.getId());
             return RespBean.success(list);
@@ -130,6 +130,21 @@ public class MessageContorller {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("MessageContorller#msgOfLiked, error", e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
+
+    @PostMapping("/msgOfApply")
+    public RespBean<Page<MsgOfApplyPageResp>> msgOfApply(@RequestBody MsgOfApplyPageReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Page<MsgOfApplyPageResp> list = messageFacade.msgOfApply(req, user.getId());
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("MessageContorller#msgOfApply,req:{}", req, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("MessageContorller#msgOfApply, error", e);
             return RespBean.failure(999, e.getMessage());
         }
     }

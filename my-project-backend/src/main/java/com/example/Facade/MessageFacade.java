@@ -2,10 +2,8 @@ package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
-import com.example.entity.req.MarkMsgAsReadReq;
-import com.example.entity.req.MsgOfCommentListPageReq;
-import com.example.entity.req.MsgOfFollowedPageReq;
-import com.example.entity.req.MsgOfLikedPageReq;
+import com.example.entity.req.*;
+import com.example.entity.resp.MsgOfApplyPageResp;
 import com.example.entity.resp.MsgOfCommentListResp;
 import com.example.entity.resp.MsgOfFollowerResp;
 import com.example.entity.resp.MsgOfLikedPageResp;
@@ -45,15 +43,18 @@ public class MessageFacade {
 
 
     public void createApprove(Long targetId, Long currentUserId, Long relationId) {
-        messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.JOIN_PROJECT.getCode(), "通过了您的申请", relationId, null);
+        Projects p = projectService.selectByProjectId(relationId);
+        messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.JOIN_PROJECT.getCode(), "申请加入项目", relationId, p.getName());
     }
 
     public void createApprovePass(Long targetId, Long currentUserId, Long relationId) {
-        messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.Pass_PROJECT.getCode(), "通过了您的申请", relationId, null);
+        Projects p = projectService.selectByProjectId(relationId);
+        messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.Pass_PROJECT.getCode(), "通过了您的申请", relationId, p.getName());
     }
 
     public void createApproveRefuse(Long targetId, Long currentUserId, Long relationId) {
-        messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.Refuse_PROJECT.getCode(), "拒绝了您的申请", relationId, null);
+        Projects p = projectService.selectByProjectId(relationId);
+        messagesService.createNotification(targetId, currentUserId, MessageEnums.MessageType.Refuse_PROJECT.getCode(), "拒绝了您的申请", relationId, p.getName());
     }
 
     public void createMessageOfPublisher(Long targetId, Long currentUserId) {
@@ -288,12 +289,72 @@ public class MessageFacade {
         return result;
     }
 
+
+    public Page<MsgOfApplyPageResp> msgOfApply(MsgOfApplyPageReq req, Long userId) {
+        List<Integer> types = LettuceLists.newList(MessageEnums.MessageType.JOIN_PROJECT.getCode(),
+                MessageEnums.MessageType.Refuse_PROJECT.getCode(),
+                MessageEnums.MessageType.Pass_PROJECT.getCode());
+        Page<Messages> list = messagesService.getPage(Page.of(req.getPage() - 1, req.getSize()), userId, types);
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+        if (list.getRecords().isEmpty()) {
+            return Page.of(req.getPage() - 1, req.getSize());
+        }
+
+        Map<Long, ProjectComment> commentMap = new HashMap<>();
+        List<Long> replyCommentIds = list.getRecords().stream().map(v -> v.getRelatedId()).distinct().collect(Collectors.toList());
+        List<ProjectComment> commentList = projectCommentService.selectByIds(replyCommentIds);
+        if (commentList != null) {
+            commentMap = commentList.stream().collect(Collectors.toMap(ProjectComment::getId, v -> v));
+        }
+
+        Map<Long, Projects> projectId2ProjectsMap = new HashMap<>();
+        List<Projects> projects = projectService.selectByProjectIds(replyCommentIds);
+        if (projects != null) {
+            projectId2ProjectsMap = projects.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+        }
+
+        List<Long> userIds = list.getRecords().stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+        Map<Long, ProjectComment> finalCommentMap = commentMap;
+        Map<Long, Projects> finalProjectId2ProjectsMap = projectId2ProjectsMap;
+        List<MsgOfApplyPageResp> collect = list.getRecords().stream().map(v -> {
+                    MsgOfApplyPageResp projectsResp = new MsgOfApplyPageResp();
+                    BeanUtils.copyProperties(v, projectsResp);
+
+                    if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getSenderId())) {
+                        projectsResp.setSenderName(userId2UserInfoMap.get(v.getSenderId()).getNickname());
+                    }
+                    if (finalCommentMap.containsKey(v.getRelatedId())) {
+                        projectsResp.setProjectId(finalCommentMap.get(v.getRelatedId()).getProjectId());
+                    }
+                    if (finalProjectId2ProjectsMap.containsKey(v.getRelatedId())) {
+                        projectsResp.setProjectId(finalProjectId2ProjectsMap.get(v.getRelatedId()).getId());
+                    }
+                    projectsResp.setType(v.getType());
+                    return projectsResp;
+                })
+                .sorted(Comparator.comparing(MsgOfApplyPageResp::getIsRead)
+                        .thenComparing(MsgOfApplyPageResp::getCreatedAt, Comparator.reverseOrder()))
+                .collect(Collectors.toList());
+
+        Page<MsgOfApplyPageResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(list.getTotal());
+        result.setRecords(collect);
+        return result;
+    }
+
     public Long unreadMsgCount(Long userId) {
         List<Integer> types = LettuceLists.newList(
                 MessageEnums.MessageType.REPLY_PROJECT.getCode(),
                 MessageEnums.MessageType.REPLY_COMMENT.getCode(),
                 MessageEnums.MessageType.PUBLISHER.getCode(),
                 MessageEnums.MessageType.LIKE_POST.getCode(),
+                MessageEnums.MessageType.JOIN_PROJECT.getCode(),
+                MessageEnums.MessageType.Refuse_PROJECT.getCode(),
+                MessageEnums.MessageType.Pass_PROJECT.getCode(),
                 MessageEnums.MessageType.LIKE_COMMENT.getCode());
 
 

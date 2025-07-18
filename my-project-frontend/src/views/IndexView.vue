@@ -202,6 +202,40 @@
             </div>
           </div>
         </el-tab-pane>
+
+        <el-tab-pane label="申请通知" name="apply">
+          <div class="message-list">
+            <div 
+              v-for="item in applyMessages" 
+              :key="item.id" 
+              class="message-item"
+              :class="{ 'unread-message': item.isRead === 0 }"
+              @click="showApplyDetail(item)"
+            >
+              <div class="message-unread-dot" v-if="item.isRead === 0"></div>
+              <div class="message-content">
+                <div class="message-header">
+                  <span class="message-time">{{ formatTime(item.createdAt) }}</span>
+                </div>
+                <div class="message-text">
+                  <span class="sender-name">{{ item.senderName }}</span>
+                  <span class="message-content-text">{{ item.content }}</span>
+                  <span class="related-words">"{{ item.relatedWords }}"</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="applyLoading" class="loading-more">
+              <el-icon class="is-loading"><Loading /></el-icon>
+            </div>
+            <div v-else-if="applyHasMore" class="load-more" @click="loadMoreApplies">
+              加载更多
+            </div>
+            <div v-else-if="applyMessages.length === 0" class="no-message">
+              暂无消息
+            </div>
+          </div>
+        </el-tab-pane>
         
         <el-tab-pane label="点赞通知" name="like">
           <div class="message-list">
@@ -478,6 +512,33 @@ const replyContent = ref('');
 const replyToUsername = ref('');
 const currentProjectId = ref(null);
 
+// 申请通知消息
+const applyMessages = ref([]);
+const applyPage = ref(1);
+const applySize = ref(10);
+const applyHasMore = ref(true);
+const applyLoading = ref(false);
+
+
+
+// 加载申请通知消息
+const loadApplyMessages = async () => {
+  if (applyLoading.value) return;
+  applyLoading.value = true;
+  try {
+    const res = await post('/api/auth/msg/msgOfApply', {
+      page: applyPage.value,
+      size: applySize.value
+    });
+    applyMessages.value = [...applyMessages.value, ...(res.records || [])];
+    applyHasMore.value = applyMessages.value.length < (res.total || 0);
+  } catch (e) {
+    console.error('加载神奇通知失败:', e);
+  } finally {
+    applyLoading.value = false;
+  }
+};
+
 // 回关用户
 const followBack = async (senderId) => {
   try {
@@ -508,6 +569,26 @@ const followBack = async (senderId) => {
 };
 
 
+// 显示神奇通知详情
+const showApplyDetail = async (item) => {
+  try {
+    await markMessagesAsRead(item.id);//标记为已读
+    
+    // 根据type字段进行不同的跳转
+    if (item.type === 103) {
+      // type为103时跳转到申请列表页
+      router.push('/index/my/applyList');
+    } else if (item.type === 104) {
+      router.push('/index/my/applicationList');
+    } else if (item.type === 105) {
+      router.push('/index/my/myMemberGroupDetail/' + item.projectId);
+    }
+  } catch (e) {
+    console.error('处理申请通知失败:', e);
+    ElMessage.error('加载详情失败');
+  }
+};
+
 const goToUserProfile = (userId) => {
   console.log("访问用户详情页",userId)
   // router.push(`/index/user/${userId}`)
@@ -529,6 +610,9 @@ const markAllAsRead = async (tab) => {
           break;
         case 'like':
           likeMessages.value.forEach(msg => msg.isRead = 1);
+          break;
+        case 'apply':
+          applyMessages.value.forEach(msg => msg.isRead = 1);
           break;
       }
       
@@ -858,6 +942,12 @@ const loadMoreLikes = () => {
   loadLikeMessages();
 };
 
+// 加载更多申请通知
+const loadMoreApplies = () => {
+  applyPage.value += 1;
+  loadApplyMessages();
+};
+
 // 点击消息图标
 const handleMessageClick = () => {
   if (!messageVisible.value) {
@@ -877,6 +967,11 @@ const handleMessageClick = () => {
         likeMessages.value = [];
         likePage.value = 1;
         loadLikeMessages();
+        break;
+      case 'apply':
+        applyMessages.value = [];
+        applyPage.value = 1;
+        loadApplyMessages();
         break;
     }
   }
@@ -916,6 +1011,12 @@ const updateMessageReadStatus = (messageId) => {
   if (likeIndex !== -1) {
     likeMessages.value[likeIndex].isRead = 1;
   }
+
+  // 更新神奇通知消息
+  const applyIndex = applyMessages.value.findIndex(m => m.id === messageId);
+  if (applyIndex !== -1) {
+    applyMessages.value[applyIndex].isRead = 1;
+  }
 };
 
 // 监听tab切换
@@ -935,6 +1036,11 @@ watch(activeMessageTab, (newVal) => {
       case 'like':
         if (likeMessages.value.length === 0) {
           loadLikeMessages();
+        }
+        break;
+      case 'apply':
+        if (applyMessages.value.length === 0) {
+          loadApplyMessages();
         }
         break;
     }
