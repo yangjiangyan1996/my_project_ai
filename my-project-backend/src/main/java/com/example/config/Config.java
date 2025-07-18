@@ -17,6 +17,11 @@ public class Config {
             "/api/auth/verifyEmail",
             "/api/auth/sendVerifyEmail",
             "/api/unauth/**",
-            "/api/auth/project/simple"
+            "/api/auth/project/simple",
+
+            "/api/auth/common/category",
+            "/api/auth/project/show",
+            "/api/auth/common/difficulty",
+
     };
 }
