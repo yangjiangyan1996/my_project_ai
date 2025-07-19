@@ -67,7 +67,7 @@ const fetchSkillMatchData = async () => {
 
   loading.value = true;
   try {
-    const res = await post('/api/auth/project/projectShowList', {
+    const res = await post('/api/unauth/project/projectShowList', {
       page: page.value,
       size: size.value
     });

@@ -28,6 +28,7 @@ const router = createRouter({
             path: '/index',
             name: 'index',
             component: () => import('@/views/IndexView.vue'),
+            meta: { requiresAuth: false },
         }, {
             path: '/name-generator',
             name: 'name-generator',

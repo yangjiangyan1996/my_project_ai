@@ -532,7 +532,7 @@ const goBack = () => {
 const loadProjectDetail = async (id) => {
   try {
     console.log("id", id)
-    const res = await get(`/api/auth/project/detailForUpdate?projectId=${id}`);
+    const res = await get(`/api/unauth/project/detailForUpdate?projectId=${id}`);
     const data = res;
     console.log("form after before", data);
 

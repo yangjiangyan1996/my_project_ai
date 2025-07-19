@@ -343,7 +343,7 @@ const fetchMatchedUsers = async () => {
   
   try {
     loadingUsers.value = true
-    const res = await post('/api/auth/project/matchUser', {
+    const res = await post('/api/unauth/project/matchUser', {
       projectId: activeProjectId.value,
       page: currentPage.value,
       size: pageSize.value

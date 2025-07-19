@@ -635,7 +635,7 @@ const showCommentDetail = async (item) => {
     currentProjectId.value = item.projectId; // 设置当前项目ID
 
     // 获取所有评论
-    const res = await get(`/api/auth/project/commentShow?projectId=${item.projectId}`);
+    const res = await get(`/api/unauth/project/commentShow?projectId=${item.projectId}`);
     allComments.value = res || [];
     currentCommentId.value = item.commentId;
     commentDialogVisible.value = true;
@@ -665,7 +665,7 @@ const showLikeDetail = async (item) => {
     if (item.targetType === 'comment') {
       // 如果是评论点赞，显示评论详情
       currentProjectId.value = item.projectId;
-      const res = await get(`/api/auth/project/commentShow?projectId=${item.projectId}`);
+      const res = await get(`/api/unauth/project/commentShow?projectId=${item.projectId}`);
       allComments.value = res || [];
       currentCommentId.value = item.commentId;
       commentDialogVisible.value = true;
@@ -1068,8 +1068,8 @@ const fetchOptions = async () => {
     categories.value = catRes || [];
     difficulties.value = diffRes || [];
 
-    console.log("categories",categories)
-    console.log("difficulties",difficulties)
+    // console.log("categories",categories)
+    // console.log("difficulties",difficulties)
 
   } catch (e) {
     ElMessage.error('加载搜索选项失败');
@@ -1083,7 +1083,7 @@ const fetchProjectListData = async (params = {}) => {
   
   loading.value = true;
   try {
-    const res = await post('/api/auth/project/show', { 
+    const res = await post('/api/unauth/project/show', { 
       page: currentPage.value, 
       size: pageSize.value,
       categories: params?.categories,  // 改为复数形式
@@ -1154,7 +1154,11 @@ const handleScroll = (e) => {
 };
 
 onMounted(() => {
-  console.log("indexView页面的用户数据",state)
+  // console.log("indexView页面的用户数据",state)
+  // 无论是否登录都执行这两个方法
+  loadProjects();
+    fetchUnreadCount();
+
   if (!state.data.id) {
     loadUserInfo().then(() => {
       loadProjects();

@@ -368,7 +368,7 @@ const handleIndustryChange = (selectedIndustries) => {
 const fetchProjects = async () => {
   try {
     loading.value = true;
-    const response = await post('/api/auth/project/showHotProjectList', {
+    const response = await post('/api/unauth/project/showHotProjectList', {
       page: page.value,
       size: pageSize.value
     });
@@ -419,7 +419,7 @@ const applyFilters = async () => {
       ...(filter.value.techStack || [])
     ]
     
-    const response = await post('/api/auth/project/showHotProjectList', {
+    const response = await post('/api/unauth/project/showHotProjectList', {
       page: page.value,
       size: pageSize.value,
       categoryIds: categoryIds.length > 0 ? categoryIds : undefined // 如果有选中的分类才传这个参数
@@ -459,7 +459,7 @@ const loadMore = async () => {
       ...(filter.value.techStack || [])
     ]
     
-    const response = await post('/api/auth/project/showHotProjectList', {
+    const response = await post('/api/unauth/project/showHotProjectList', {
       page: page.value,
       size: pageSize.value,
       categoryIds: categoryIds.length > 0 ? categoryIds : undefined
@@ -497,7 +497,7 @@ const toggleFlip = async (project) => {
     try {
       project.detailLoading = true
       
-       const detail = await get(`/api/auth/project/detail?projectId=${project.projectId}`);
+       const detail = await get(`/api/unauth/project/detail?projectId=${project.projectId}`);
        console.log("toggleFlip", detail)
       project.detail = {
         ...detail,
@@ -521,7 +521,7 @@ const handleMouseEnter = async (project) => {
   if (!project.detail) {
     try {
       project.detailLoading = true;
-      const detail = await get(`/api/auth/project/detail?projectId=${project.projectId}`);
+      const detail = await get(`/api/unauth/project/detail?projectId=${project.projectId}`);
       project.detail = {
         ...detail,
         tags: detail.tags ? detail.tags.split(',') : []

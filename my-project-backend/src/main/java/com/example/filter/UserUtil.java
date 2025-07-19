@@ -1,5 +1,6 @@
 package com.example.filter;
 
+import com.example.config.UserNotLoggedInException;
 import com.example.entity.base.UserInfo;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,7 +18,7 @@ public class UserUtil {
                 return (UserInfo) principal;
             }
         }
-        return null;
+        throw new UserNotLoggedInException("用户未登录");
     }
 
     public static Long getCurrentUserId() {

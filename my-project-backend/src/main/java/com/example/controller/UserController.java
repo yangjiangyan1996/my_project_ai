@@ -4,14 +4,18 @@ import com.example.Facade.CommonFacade;
 import com.example.Facade.UserFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
+import com.example.entity.req.SearchUserReq;
 import com.example.entity.req.UpdateUserInfoReq;
 import com.example.entity.resp.UserAllInfo;
+import com.example.entity.resp.UserSearchResp;
 import com.example.enums.CommonEnum;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @Slf4j
@@ -22,6 +26,20 @@ public class UserController {
     CommonFacade commonFacade;
     @Resource
     UserFacade userFacade;
+
+    @PostMapping("/searchUser")
+    public RespBean<List<UserSearchResp>> searchUser(@RequestBody SearchUserReq req) {
+        try {
+            List<UserSearchResp> list = commonFacade.myMemberGroups(req);
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("CommonController#searchUser,req:{}", req,e);
+            return RespBean.failure(999, e.getMessage());
+        }  catch (Exception e) {
+            log.error("CommonController#searchUser, error",e);
+            return RespBean.failure(999, e.getMessage());
+        }
+    }
 
 
     @PostMapping("/updateUserInfo")

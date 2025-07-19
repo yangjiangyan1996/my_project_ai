@@ -19,9 +19,8 @@ public class Config {
             "/api/unauth/**",
             "/api/auth/project/simple",
 
-            "/api/auth/common/category",
-            "/api/auth/project/show",
-            "/api/auth/common/difficulty",
+            "/api/unauth/project/**",
+            "/api/auth/common/**",
 
     };
 }

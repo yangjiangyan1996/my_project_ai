@@ -155,7 +155,7 @@ onMounted(() => {
 
 const loadProjectInfo = async () => {
   try {
-    const res = await get(`/api/auth/project/detail?projectId=${projectId.value}`)
+    const res = await get(`/api/unauth/project/detail?projectId=${projectId.value}`)
     projectName.value = res.name || '项目名称'
   } catch (error) {
     ElMessage.error('加载项目信息失败')
@@ -216,9 +216,7 @@ const searchUser = async () => {
     return
   }
   try {
-    //const res = await get(`/api/auth/common/searchUser?keyword=${addMemberForm.value.keyword}`)
-
-    const res = await post('/api/auth/common/searchUser', {
+    const res = await post('/api/auth/user/searchUser', {
       username:addMemberForm.value.keyword
     })
 
