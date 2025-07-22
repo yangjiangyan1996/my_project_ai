@@ -82,8 +82,12 @@ public class UnauthController {
     @GetMapping("/commentShow")
     public RespBean<List<ProjectCommentResp>> commentShow(@RequestParam("projectId") Long projectId) {
         try {
+            Long userId = null;
             UserInfo user = UserUtil.getCurrentUser();
-            List<ProjectCommentResp> result = projectFacade.commentShow(projectId, user.getId());
+            if(user != null) {
+                userId = user.getId();
+            }
+            List<ProjectCommentResp> result = projectFacade.commentShow(projectId, userId);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ProjectController#commentShow,req:{}", e);

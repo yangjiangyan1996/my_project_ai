@@ -18,7 +18,7 @@ public class UserUtil {
                 return (UserInfo) principal;
             }
         }
-        throw new UserNotLoggedInException("用户未登录");
+        return null;
     }
 
     public static Long getCurrentUserId() {
