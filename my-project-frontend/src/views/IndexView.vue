@@ -275,21 +275,33 @@
     </el-popover>
 
     <!-- 头像下拉菜单 -->
-    <el-dropdown class="avatar-dropdown" trigger="click">
-      <div class="avatar-wrapper">
-        <el-avatar :src="state.data.avatarUrl || '/images/default-avatar.png'" />
-      </div>
-      <template #dropdown>
-        <el-dropdown-menu>
-          <el-dropdown-item @click="changeDisplayMode('myInfo')">
-            <i class="el-icon-user"></i>我的
-          </el-dropdown-item>
-          <el-dropdown-item divided @click="userLogout">
-            <i class="el-icon-switch-button"></i>退出登录
-          </el-dropdown-item>
-        </el-dropdown-menu>
+      <template v-if="state.data.id">
+        <el-dropdown class="avatar-dropdown" trigger="click">
+          <div class="avatar-wrapper">
+            <el-avatar :src="state.data.avatarUrl || '/images/default-avatar.png'" />
+          </div>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="changeDisplayMode('myInfo')">
+                <i class="el-icon-user"></i>我的
+              </el-dropdown-item>
+              <el-dropdown-item divided @click="userLogout">
+                <i class="el-icon-switch-button"></i>退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </template>
-    </el-dropdown>
+      <template v-else>
+        <el-button 
+          class="login-button" 
+          type="primary" 
+          size="small" 
+          @click="goToLogin"
+        >
+          登录/注册
+        </el-button>
+      </template>
 
     <el-menu 
       mode="horizontal"
@@ -533,6 +545,10 @@ const fetchUnreadCount = async () => {
   } catch (e) {
     console.error('获取未读消息数失败:', e);
   }
+};
+
+const goToLogin = () => {
+  router.push({ name: 'welcome-login' });
 };
 
 // 加载申请通知消息
@@ -1678,5 +1694,11 @@ function userLogout() {
   border-bottom: 1px solid #f0f0f0;
   position: relative;
   transition: all 0.3s;
+}
+.login-button {
+  position: absolute;
+  right: 20px;
+  top: 10px;
+  z-index: 1001;
 }
 </style>
