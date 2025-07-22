@@ -520,6 +520,20 @@ const applyHasMore = ref(true);
 const applyLoading = ref(false);
 
 
+// 获取未读消息数
+const fetchUnreadCount = async () => {
+  try {
+    console.log("获取未读消息数",state.data.id)
+    if(state.data.id) {
+      const res = await get('/api/auth/msg/unreadMsgCount');
+      unreadCount.value = res || 0;
+    } else {
+      console.log("未登录，不获取未读消息数")
+    }
+  } catch (e) {
+    console.error('获取未读消息数失败:', e);
+  }
+};
 
 // 加载申请通知消息
 const loadApplyMessages = async () => {
@@ -717,16 +731,6 @@ const handleDialogClosed = () => {
   currentCommentId.value = null;
 };
 
-
-// 获取未读消息数
-const fetchUnreadCount = async () => {
-  try {
-    const res = await get('/api/auth/msg/unreadMsgCount');
-    unreadCount.value = res || 0;
-  } catch (e) {
-    console.error('获取未读消息数失败:', e);
-  }
-};
 
 const formatTime = (timeString) => {
   if (!timeString) return '';

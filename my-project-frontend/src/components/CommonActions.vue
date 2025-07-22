@@ -12,7 +12,8 @@ const router = useRouter()
 const goBack = () => router.go(-1)
 const userLogout = () => {
   localStorage.removeItem('token')
-  router.push('/login')
+  //router.push('/login')
+   return router.push({ name: 'welcome-login' });
 }
 </script>
 

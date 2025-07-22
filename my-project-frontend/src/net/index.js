@@ -86,7 +86,7 @@ function deleteAccessToken(redirect = false) {
     localStorage.removeItem(authItemName);
     sessionStorage.removeItem(authItemName);
     if (redirect) {
-        console.log("====deleteAccessToken",config)
+         console.log("去登录1")
         router.push({ name: 'welcome-login' });
     }
 }
@@ -98,14 +98,16 @@ function internalPost(url, data, headers, success = () => {}, failure = defaultF
         if (responseData.code === 200) {
             success(responseData.data);
             return responseData.data;
-        } else if (responseData.code === 401) {
+        } else if (responseData.code === 401 && !url.startsWith('/api/unauth') && !url.startsWith('/api/auth/user/getCurrentUserInfo')) {
             // failure('登录状态已过期，请重新登录！');
             failure(responseData.message, responseData.code, url);
             deleteAccessToken(true);
             throw new Error('需要重新认证');
         } else {
-            failure(responseData.message, responseData.code, url);
-            throw new Error(responseData.message);
+            if(!url.startsWith('/api/auth/user/getCurrentUserInfo')) {
+                failure(responseData.message, responseData.code, url);
+                 throw new Error(responseData.message);
+            }
         }
     }).catch(err => {
         console.log("接口调用失败", err);
@@ -121,15 +123,17 @@ function internalGet(url, headers, success = () => {}, failure = defaultFailure,
         if (responseData.code === 200) {
             success(responseData.data);
             return responseData.data;
-        } else if (responseData.code === 401) {
+        } else if (responseData.code === 401 && !url.startsWith('/api/unauth') && !url.startsWith('/api/auth/user/getCurrentUserInfo')) {
             failure('登录状态已过期，请重新登录！');
             deleteAccessToken(true);
             throw new Error('需要重新认证');
         } else if (responseData.code === 999) {
             failure(responseData.message);
         } else {
-            failure(responseData.message, responseData.code, url);
-            throw new Error(responseData.message);
+            if(!url.startsWith('/api/auth/user/getCurrentUserInfo')) {
+                failure(responseData.message, responseData.code, url);
+                 throw new Error(responseData.message);
+            }
         }
     }).catch(err => {
         error(err);
@@ -181,7 +185,17 @@ function unauthorized() {
 
 // 添加全局 token 检查
 router.beforeEach((to, from, next) => {
-    if (to.name !== 'welcome-login' && unauthorized()) {
+    // 定义不需要认证的路由名称
+    const unauthRoutes = ['welcome-login', 'welcome-register', 'welcome-forget'];
+    
+    // 如果当前路由不需要认证，直接放行
+    if (unauthRoutes.includes(to.name)) {
+        return next();
+    }
+    
+    // 如果路由需要认证但用户未授权，且不是API路由(/api/unauth)，则跳转登录
+    if (to.matched.some(record => record.meta.requiresAuth) && unauthorized()) {
+        console.log("去登录2 - 需要认证的路由");
         next({ name: 'welcome-login' });
     } else {
         next();
@@ -190,10 +204,14 @@ router.beforeEach((to, from, next) => {
 
 axios.interceptors.request.use(config => {
     const token = takeAccessToken();
+    const isUnauth = config.url && config.url.startsWith('/api/unauth');
+    
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-    } else if (router.currentRoute.value.name !== 'welcome-login') {
-        deleteAccessToken(true);
+    } else if (!isUnauth && router.currentRoute.value.name !== 'welcome-login') {
+        // 只有非unauth接口且不在登录页时才可能跳转
+        // 这里不再自动跳转，由路由守卫处理
+        console.log("检测到未授权但不需要跳转");
     }
     return config;
 });

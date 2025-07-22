@@ -114,13 +114,21 @@ const router = createRouter({
 
 // 导航守卫正确定义在路由实例之后
 router.beforeEach((to, from, next) => {
-  if (to.matched.some(record => record.meta.requiresAuth) && unauthorized()) {
-    next({ name: 'welcome-login' })
-  } else if (to.name === 'welcome' && !unauthorized()) {
-    next('/index')
-  } else {
-    next()
-  }
-})
+    const isUnauthRoute = to.matched.some(record => 
+        record.path.startsWith('/api/unauth') || 
+        record.name === 'welcome-login' || 
+        record.name === 'welcome-register' || 
+        record.name === 'welcome-forget'
+    );
+    
+    if (to.matched.some(record => record.meta.requiresAuth) && unauthorized() && !isUnauthRoute) {
+         console.log("去登录3")
+        next({ name: 'welcome-login' });
+    } else if (to.name === 'welcome' && !unauthorized()) {
+        next('/index');
+    } else {
+        next();
+    }
+});
 
 export default router

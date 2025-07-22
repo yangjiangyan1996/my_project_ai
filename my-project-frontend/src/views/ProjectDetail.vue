@@ -495,7 +495,8 @@ async function fetchComments() {
 const handleConcernPublisher = async (userId) => {
   if (concernLoading.value) return;
   if (!userInfo.data?.id) {
-    return router.push('/login');
+    // return router.push('/login');
+    return router.push({ name: 'welcome-login' });
   }
   
   try {
