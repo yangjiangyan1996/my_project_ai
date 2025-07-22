@@ -480,7 +480,7 @@ function findCommentInReplies(replies, commentId) {
 
 async function fetchComments() {
   try {
-    const res = await get(`/api/auth/project/commentShow?projectId=${projectId}`);
+    const res = await get(`/api/unauth/project/commentShow?projectId=${projectId}`);
     comments.value = res || [];
     comments.value.forEach(comment => {
       if (comment.replies?.length) {
@@ -578,7 +578,7 @@ const submitApply = async () => {
 
 async function fetchDetail() {
   try {
-    const res = await get(`/api/auth/project/detail?projectId=${projectId}`);
+    const res = await get(`/api/unauth/project/detail?projectId=${projectId}`);
     isConcerned.value = res.followed || false;
     concernCount.value = res.concernCount || 0;
     if (!res) {
