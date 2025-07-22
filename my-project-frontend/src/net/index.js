@@ -11,7 +11,7 @@ const accessHeader = () => {
 }
 
 const defaultError = (error) => {
-    console.error(error);
+    console.log(error);
     const status = error.response?.status;
     if (status === 429) {
         ElMessage.error(error.response.data.message);
@@ -86,12 +86,15 @@ function deleteAccessToken(redirect = false) {
     localStorage.removeItem(authItemName);
     sessionStorage.removeItem(authItemName);
     if (redirect) {
+        console.log("====deleteAccessToken",config)
         router.push({ name: 'welcome-login' });
     }
 }
 
 function internalPost(url, data, headers, success = () => {}, failure = defaultFailure, error = defaultError) {
     return axios.post(url, data, { headers: headers }).then(({ data: responseData }) => {
+        console.log("====internalPost",url)
+
         if (responseData.code === 200) {
             success(responseData.data);
             return responseData.data;
@@ -113,6 +116,8 @@ function internalPost(url, data, headers, success = () => {}, failure = defaultF
 
 function internalGet(url, headers, success = () => {}, failure = defaultFailure, error = defaultError) {
     return axios.get(url, { headers: headers }).then(({ data: responseData }) => {
+        console.log("====internalGet",url)
+
         if (responseData.code === 200) {
             success(responseData.data);
             return responseData.data;
@@ -145,12 +150,16 @@ function login(username, password, remember, success, failure = defaultFailure) 
     }, failure);
 }
 
+// 修改post函数
 function post(url, data, success, failure = defaultFailure) {
-    return internalPost(url, data, accessHeader(), success, failure);
+    const isUnauth = url.startsWith('/api/unauth');
+    return internalPost(url, data, isUnauth ? {} : accessHeader(), success, failure);
 }
 
+// 修改get函数
 function get(url, success, failure = defaultFailure) {
-    return internalGet(url, accessHeader(), success, failure);
+    const isUnauth = url.startsWith('/api/unauth');
+    return internalGet(url, isUnauth ? {} : accessHeader(), success, failure);
 }
 
 import useUserInfo from '@/hooks/useUserInfo';

@@ -115,7 +115,7 @@ const userForm = ref({
 // 获取行业列表
 const fetchIndustryOptions = async () => {
   try {
-    const res = await get('/api/auth/common/industrys')
+    const res = await get('/api/unauth/common/industrys')
     industryOptions.value = res || []
   } catch (e) {
     ElMessage.error('加载行业选项失败')

@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @Slf4j
-@RequestMapping("/api/auth/common/")
+@RequestMapping("/api/unauth/common/")
 public class CommonController {
 
     @GetMapping("/difficulty")

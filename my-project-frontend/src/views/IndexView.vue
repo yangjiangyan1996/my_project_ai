@@ -1059,11 +1059,11 @@ function goToDetail(project) {
 //加载下拉框的数据
 const fetchOptions = async () => {
   try {
-    const res = await get('/api/auth/common/category');
+    const res = await get('/api/unauth/common/category');
 
     const [catRes, diffRes] = await Promise.all([
-      get('/api/auth/common/category'),
-      get('/api/auth/common/difficulty')
+      get('/api/unauth/common/category'),
+      get('/api/unauth/common/difficulty')
     ]);
     categories.value = catRes || [];
     difficulties.value = diffRes || [];
@@ -1101,7 +1101,6 @@ const fetchProjectListData = async (params = {}) => {
       ...res.records.map(item => ({
         id: item.id,
         name: item.name,
-        //category: item.categoryName,
         firstCategoryName: item.firstCategoryName,
         secondCategoryName: item.secondCategoryName,
         description: item.description,

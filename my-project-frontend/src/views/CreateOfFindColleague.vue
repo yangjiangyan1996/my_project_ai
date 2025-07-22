@@ -284,7 +284,7 @@ const form = reactive({
 // 获取副业属性选项
 const loadTagsOptions = async () => {
   try {
-    const res = await get('/api/auth/common/getLabels')
+    const res = await get('/api/unauth/common/getLabels')
     if (res && Array.isArray(res)) {
       tagsOptions.value = res.map(item => ({
         code: item.code,
@@ -306,7 +306,7 @@ const checkFirstCategory = () => {
 // 获取适合人群选项
 const loadTargetAudienceOptions = async () => {
   try {
-    const res = await get('/api/auth/common/getUserType')
+    const res = await get('/api/unauth/common/getUserType')
     if (res && Array.isArray(res)) {
       targetAudienceOptions.value = res.map(item => ({
         code: item.code,
@@ -321,7 +321,7 @@ const loadTargetAudienceOptions = async () => {
 // 获取分类选项
 const loadCategoryOptions = async () => {
   try {
-    const res = await get('/api/auth/common/category')
+    const res = await get('/api/unauth/common/category')
     if (res && Array.isArray(res)) {
       allCategoryData.value = res
       firstCategoryOptions.value = res.map(item => ({

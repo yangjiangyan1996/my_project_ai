@@ -317,7 +317,7 @@ onMounted(() => {
 const fetchCategoryData = async () => {
   try {
     categoryLoading.value = true
-    const response = await get('/api/auth/common/category')
+    const response = await get('/api/unauth/common/category')
     if (response && Array.isArray(response)) {
       categoryData.value = response
       initCategoryOptions()

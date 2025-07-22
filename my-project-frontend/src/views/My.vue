@@ -633,7 +633,7 @@ const getStatusTagType = (status) => {
 // 添加获取技能分类的方法
 const fetchSkillCategories = async () => {
   try {
-    const res = await get('/api/auth/common/category')
+    const res = await get('/api/unauth/common/category')
     skillCategories.value = res
   } catch (error) {
     console.error('获取技能分类失败:', error)
@@ -643,7 +643,7 @@ const fetchSkillCategories = async () => {
 
 const fetchUserTypes = async () => {
   try {
-    const res = await get('/api/auth/common/getUserType')
+    const res = await get('/api/unauth/common/getUserType')
     userTypes.value = res
   } catch (error) {
     console.error('获取用户类型失败:', error)
