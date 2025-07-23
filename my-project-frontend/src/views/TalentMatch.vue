@@ -19,9 +19,9 @@
           :class="{ active: activeProjectId === project.id }"
           @click="selectProject(project)"
         >
-            <div class="project-badge" :class="getStatusTagClass(project.status)">
-              {{ getStatusText(project.status) }}
-            </div>  
+          <div class="project-badge" :class="getStatusTagClass(project.status)">
+            {{ getStatusText(project.status) }}
+          </div>
           
           <h3>{{ project.name }}</h3>
           <p class="category">
@@ -82,7 +82,6 @@
         >
           查找匹配用户
         </el-button>
-        <!-- <el-button @click="resetMatch">重置筛选</el-button> -->
       </div>
     </div>
 
@@ -121,7 +120,7 @@
           </div>
           
           <div class="user-info">
-            <h3 @click="goToUserProfile(user.secrecyId)" >{{ user.nickname || user.username }}</h3>
+            <h3 @click="goToUserProfile(user.secrecyId)">{{ user.nickname || user.username }}</h3>
             <p class="meta">
               <span><i class="el-icon-user"></i> {{ getGenderText(user.sex) }}</span>
               <span><i class="el-icon-location-outline"></i> {{ user.province }}{{ user.city }}</span>
@@ -165,80 +164,83 @@
     </div>
 
     <!-- 用户详情对话框 -->
-        <el-dialog 
-        v-model="userDetailVisible" 
-        title="用户详情" 
-        width="60%"
-        top="5vh"
-        >
-        <div class="user-detail-container" v-if="currentUser">
-            <div class="user-basic-info">
-            <el-avatar :size="100" :src="currentUser.avatarUrl || defaultAvatar" />
-            <div class="user-meta">
-                <h2>{{ currentUser.nickname || currentUser.username }}</h2>
-                <p class="meta-item">
-                <span><i class="el-icon-user"></i> {{ getGenderText(currentUser.sex) }}</span>
-                <span><i class="el-icon-location-outline"></i> {{ currentUser.province }}{{ currentUser.city }}{{ currentUser.county }}</span>
-                </p>
-                <p class="meta-item">
-                <span><i class="el-icon-star"></i> 匹配度: {{ currentUser.matchScore }}%</span>
-                <span><i class="el-icon-time"></i> 每日可投入时间: {{ currentUser.timePerDay }}</span>
-                </p>
-            </div>
-            </div>
-
-            <el-divider />
-
-            <div class="detail-section">
-            <h3>基本信息</h3>
-            <div class="detail-grid">
-                <div class="detail-item">
-                <label>用户类型</label>
-                <p>{{ currentUser.audienceName || '未知' }}</p>
-                </div>
-                <div class="detail-item">
-                <label>资源</label>
-                <p>{{ currentUser.resources || '无' }}</p>
-                </div>
-            </div>
-            </div>
-
-            <el-divider />
-
-            <div class="detail-section">
-            <h3>技能标签</h3>
-            <div class="skills-container">
-                <el-tag 
-                v-for="skill in currentUser.skillNames?.split(',')" 
-                :key="skill"
-                type="info"
-                size="medium"
-                >
-                {{ skill }}
-                </el-tag>
-            </div>
-            </div>
-
-            <el-divider />
-
-            <div class="detail-section">
-            <h3>项目参与状态</h3>
-            <el-tag :type="currentUser.statusOfUserInProject === 0 ? 'success' : 'info'">
-                {{ currentUser.statusOfUserInProject === 0 ? '已邀请' : '可邀请' }}
-            </el-tag>
-            </div>
+    <el-dialog 
+      v-model="userDetailVisible" 
+      title="用户详情" 
+      width="90%"
+      top="5vh"
+      :fullscreen="isMobile"
+    >
+      <div class="user-detail-container" v-if="currentUser">
+        <div class="user-basic-info">
+          <el-avatar :size="isMobile ? 60 : 100" :src="currentUser.avatarUrl || defaultAvatar" />
+          <div class="user-meta">
+            <h2>{{ currentUser.nickname || currentUser.username }}</h2>
+            <p class="meta-item">
+              <span><i class="el-icon-user"></i> {{ getGenderText(currentUser.sex) }}</span>
+              <span><i class="el-icon-location-outline"></i> {{ currentUser.province }}{{ currentUser.city }}{{ currentUser.county }}</span>
+            </p>
+            <p class="meta-item">
+              <span><i class="el-icon-star"></i> 匹配度: {{ currentUser.matchScore }}%</span>
+              <span><i class="el-icon-time"></i> 每日可投入时间: {{ currentUser.timePerDay }}</span>
+            </p>
+          </div>
         </div>
-        </el-dialog>
+
+        <el-divider />
+
+        <div class="detail-section">
+          <h3>基本信息</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>用户类型</label>
+              <p>{{ currentUser.audienceName || '未知' }}</p>
+            </div>
+            <div class="detail-item">
+              <label>资源</label>
+              <p>{{ currentUser.resources || '无' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <el-divider />
+
+        <div class="detail-section">
+          <h3>技能标签</h3>
+          <div class="skills-container">
+            <el-tag 
+              v-for="skill in currentUser.skillNames?.split(',')" 
+              :key="skill"
+              type="info"
+              size="medium"
+            >
+              {{ skill }}
+            </el-tag>
+          </div>
+        </div>
+
+        <el-divider />
+
+        <div class="detail-section">
+          <h3>项目参与状态</h3>
+          <el-tag :type="currentUser.statusOfUserInProject === 0 ? 'success' : 'info'">
+            {{ currentUser.statusOfUserInProject === 0 ? '已邀请' : '可邀请' }}
+          </el-tag>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { post } from '@/net'
 import { Loading } from '@element-plus/icons-vue'
-// import UserDetailPanel from '@/components/UserDetailPanel.vue'
 import defaultAvatar from '@/assets/default-avatar.png'
+
+// 响应式判断
+const isMobile = computed(() => window.innerWidth < 768)
 
 // 数据状态
 const projects = ref([])
@@ -263,7 +265,12 @@ const currentUser = ref(null)
 // 初始化加载项目列表
 onMounted(() => {
   fetchMyProjects(true)
+  window.addEventListener('resize', handleResize)
 })
+
+const handleResize = () => {
+  // 响应式处理
+}
 
 // 获取我的项目列表
 const fetchMyProjects = async (reset = false) => {
@@ -279,7 +286,6 @@ const fetchMyProjects = async (reset = false) => {
       size: projectPageSize.value
     })
     
-    console.log("项目列表", res)
     if (reset) {
       projects.value = res.records || []
     } else {
@@ -300,13 +306,9 @@ const fetchMyProjects = async (reset = false) => {
   }
 }
 
-
 const goToUserProfile = (userId) => {
-  console.log("访问用户详情页",userId)
-  // router.push(`/index/user/${userId}`)
-  window.open(`/index/user/${userId}`, '_blank');
+  window.open(`/index/user/${userId}`, '_blank')
 }
-
 
 // 加载更多项目
 const loadMoreProjects = async () => {
@@ -334,7 +336,6 @@ const loadMoreProjects = async () => {
     loadingProjects.value = false
   }
 }
-
 
 // 选择项目
 const selectProject = (project) => {
@@ -366,12 +367,9 @@ const fetchMatchedUsers = async () => {
   }
 }
 
-// 计算匹配率 (示例逻辑，根据实际需求调整)
+// 计算匹配率
 const calculateMatchRate = (user) => {
-  // 这里可以根据项目需求和用户属性计算匹配率
-  // 示例：随机生成70-95%的匹配率
-console.log("user",user)
-  return Math.floor(user.matchScore);
+  return Math.floor(user.matchScore)
 }
 
 // 分页变化
@@ -395,20 +393,18 @@ const inviteUser = async (user) => {
       userId: user.userId
     })
     ElMessage.success('邀请已发送')
-    user.statusOfUserInProject = 0 // 标记为已邀请
+    user.statusOfUserInProject = 0
   } catch (error) {
     console.log("邀请失败",error)
-    // ElMessage.error('邀请失败')
   }
 }
 
 // 辅助函数
 const formatDate = (dateStr, format = 'YYYY-MM-DD') => {
-  // 实现日期格式化
-  return dateStr // 实际项目中可以使用day.js等库
+  return dateStr
 }
 
-//状态 0=待审核  1=退回 10=招募中 11=已满员 30=已关闭
+// 状态文本
 const getStatusText = (status) => {
   const statusMap = {
     0: '待审核',
@@ -420,14 +416,14 @@ const getStatusText = (status) => {
   return statusMap[status] || '未知状态'
 }
 
-// 获取申请按钮类型
+// 状态标签类
 const getStatusTagClass = (status) => {
   const classMap = {
-    0: 'warning',  // 待审核 - 黄色
-    1: 'danger',   // 退回 - 红色
-    10: 'success', // 招募中 - 绿色
-    11: 'info',    // 已满员 - 蓝色
-    30: 'danger'   // 已关闭 - 红色
+    0: 'warning',
+    1: 'danger',
+    10: 'success',
+    11: 'info',
+    30: 'danger'
   }
   return classMap[status] || ''
 }
@@ -468,26 +464,104 @@ const resetMatch = () => {
 <style scoped>
 .match-container {
   display: flex;
-  height: calc(100vh - 60px);
+  flex-direction: column;
+  height: 100vh;
   background-color: #f5f7fa;
-  padding: 20px;
-  gap: 20px;
+  padding: 15px;
+  gap: 15px;
 }
 
-/* 左侧项目列表 */
-.project-list-container {
-  width: 320px;
+/* 移动端布局 */
+@media (max-width: 768px) {
+  .match-container {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .project-list-container,
+  .project-detail-container,
+  .user-list-container {
+    width: 100% !important;
+    margin-bottom: 10px;
+  }
+  
+  .project-card {
+    min-height: 100px !important;
+    padding: 10px !important;
+  }
+  
+  .user-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .user-avatar {
+    margin-right: 0 !important;
+    margin-bottom: 10px;
+  }
+  
+  .user-actions {
+    justify-content: flex-start !important;
+    margin-top: 10px;
+  }
+}
+
+/* 平板布局 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .match-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .project-list-container {
+    width: 100% !important;
+    order: 1;
+  }
+  
+  .project-detail-container,
+  .user-list-container {
+    width: calc(50% - 10px) !important;
+    order: 2;
+  }
+}
+
+/* 桌面布局 */
+@media (min-width: 1025px) {
+  .match-container {
+    flex-direction: row;
+    height: calc(100vh - 60px);
+  }
+  
+  .project-list-container {
+    width: 320px;
+    order: 1;
+  }
+  
+  .project-detail-container {
+    flex: 1;
+    order: 2;
+  }
+  
+  .user-list-container {
+    width: 380px;
+    order: 3;
+  }
+}
+
+/* 通用样式 */
+.project-list-container,
+.project-detail-container,
+.user-list-container {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px); /* 保证有滚动空间 */
   overflow: hidden;
-  
 }
 
-.project-list-container .header {
+.project-list-container .header,
+.user-list-header {
   padding: 15px;
   display: flex;
   justify-content: space-between;
@@ -499,12 +573,10 @@ const resetMatch = () => {
   flex: 1;
   overflow-y: auto;
   padding: 10px;
-  height: 100%; /* 原来是 calc(100% - 60px)，但不一定有父高度，改成 100% */
-  max-height: calc(100vh - 160px); /* 适配页面视口 */
 }
 
 .project-card {
-    min-height: 120px;
+  min-height: 120px;
   padding: 15px;
   margin-bottom: 10px;
   border-radius: 6px;
@@ -531,8 +603,11 @@ const resetMatch = () => {
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 10px;
-  background: #909399;
   color: white;
+}
+
+.project-badge.warning {
+  background: #e6a23c;
 }
 
 .project-badge.success {
@@ -541,6 +616,10 @@ const resetMatch = () => {
 
 .project-badge.danger {
   background: #f56c6c;
+}
+
+.project-badge.info {
+  background: #909399;
 }
 
 .project-card h3 {
@@ -579,12 +658,7 @@ const resetMatch = () => {
   margin-right: 3px;
 }
 
-/* 中间项目详情 */
 .project-detail-container {
-  flex: 1;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
   padding: 20px;
   overflow-y: auto;
 }
@@ -639,29 +713,6 @@ const resetMatch = () => {
 .match-controls {
   margin-top: 30px;
   text-align: center;
-}
-
-/* 右侧用户列表 */
-.user-list-container {
-  width: 380px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-  display: flex;
-  flex-direction: column;
-}
-
-.user-list-header {
-  padding: 15px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.user-list-header h2 {
-  margin: 0;
-  font-size: 16px;
 }
 
 .user-list {
@@ -741,7 +792,6 @@ const resetMatch = () => {
   height: 200px;
 }
 
-/* 新增样式 */
 .loading-more, .no-more {
   text-align: center;
   padding: 10px;
@@ -763,7 +813,6 @@ const resetMatch = () => {
   }
 }
 
-/* 用户详情样式 */
 .user-detail-container {
   padding: 0 20px;
 }
