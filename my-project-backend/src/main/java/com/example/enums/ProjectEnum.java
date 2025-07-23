@@ -10,6 +10,7 @@ import lombok.Getter;
  */
 public class ProjectEnum {
 
+
     //状态 0=在，1=管理员退出，2=自己退出
     @Getter
     public enum MemberStatusEnum {
@@ -56,10 +57,16 @@ public class ProjectEnum {
      */
     @Getter
     public enum ProjectApplyStatusEnum {
-        WAIT_AUDIT(0, "待审核"),
-        APPROVED(1, "已通过"),
-        REJECTED(2, "已拒绝"),
-        CANCELED(3, "已撤销");
+        WAIT_AUDIT(0, "普通用户发起-待审核"),
+        APPROVED(1, "普通用户发起-已通过"),
+        REJECTED(2, "普通用户发起-已拒绝"),
+        CANCELED(3, "普通用户发起-已撤销"),
+
+        //TODO yang 后续新增
+        M_WAIT_AUDIT(10, "项目管理员发起-待审核"),
+        M_APPROVED(11, "项目管理员发起-已通过"),
+        M_REJECTED(12, "项目管理员发起-已拒绝"),
+        M_CANCELED(13, "项目管理员发起-已撤销");
         private final Integer code;
         private final String name;
 

@@ -19,7 +19,7 @@ public class CommonEnum {
         Threshold_Low(3, "零门槛"),
         Can_Train(4, "可培训"),
         Easy_Money(5, "轻松赚钱"),
-        Remote(5, "可远程"),
+        Remote(6, "可远程"),
 
         ;
         private Integer code;

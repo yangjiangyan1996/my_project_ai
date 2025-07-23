@@ -59,6 +59,11 @@ public class ProjectController {
     }
 
 
+    /**
+     * 申请加入项目
+     * @param req
+     * @return
+     */
     @PostMapping("/applyJoinProject")
     public RespBean<Boolean> applyJoinProject(@RequestBody ApplyJoinProjectReq req) {
         try {
@@ -123,6 +128,11 @@ public class ProjectController {
         }
     }
 
+    /**
+     * 管理员审核通过
+     * @param req
+     * @return
+     */
     @PostMapping("/adminApprovePass")
     public RespBean<Boolean> adminApprovePass(@RequestBody AdminApproveReq req) {
         try {
@@ -141,6 +151,11 @@ public class ProjectController {
         }
     }
 
+    /**
+     * 管理员审核不通过
+     * @param req
+     * @return
+     */
     @PostMapping("/adminApproveNo")
     public RespBean<Boolean> adminApproveNo(@RequestBody AdminApproveReq req) {
         try {
@@ -159,6 +174,12 @@ public class ProjectController {
         }
     }
 
+
+    /**
+     *
+     * @param req
+     * @return
+     */
     @PostMapping("/myApplicationList")
     public RespBean<Page<MyApplicationListResp>> myApplicationList(@RequestBody MyApplyListReq req) {
         try {
@@ -174,6 +195,11 @@ public class ProjectController {
         }
     }
 
+    /**
+     * 我的申请列表
+     * @param req
+     * @return
+     */
     @PostMapping("/myApplyList")
     public RespBean<Page<MyApplyListResp>> myApplyList(@RequestBody MyApplyListReq req) {
         try {
@@ -189,6 +215,11 @@ public class ProjectController {
         }
     }
 
+    /**
+     * 加入项目申请，审批通过
+     * @param req
+     * @return
+     */
     @PostMapping("/approveApply")
     public RespBean<Boolean> approveApply(@RequestBody ApproveApplyReq req) {
         try {
@@ -204,6 +235,11 @@ public class ProjectController {
         }
     }
 
+    /**
+     * 取消申请
+     * @param req
+     * @return
+     */
     @PostMapping("/cancelApply")
     public RespBean<Boolean> cancelApply(@RequestBody CancelApproveReq req) {
         try {
@@ -219,6 +255,11 @@ public class ProjectController {
         }
     }
 
+    /**
+     * 拒绝申请
+     * @param req
+     * @return
+     */
     @PostMapping("/rejectApply")
     public RespBean<Boolean> rejectApply(@RequestBody ApproveApplyReq req) {
         try {

@@ -79,7 +79,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
     @Override
     public Projects selectByProjectIdAndStatus(Long projectId, Integer status) {
         return projectMapper.selectOne(new QueryWrapper<Projects>().eq("id", projectId)
-                .eq("status", status));
+                .eq(status!=null, "status", status));
     }
 
     @Override
@@ -95,7 +95,9 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
         projects.setStatus(status);
         projects.setModifiedBy(userId);
         projects.setModifiedAt(new Date());
-        projects.setReason(reason);
+        if (StringUtils.isNotBlank(reason)) {
+            projects.setReason(reason);
+        }
         return this.baseMapper.update(projects, new QueryWrapper<Projects>().eq("id", projectId)) > 0;
     }
 }

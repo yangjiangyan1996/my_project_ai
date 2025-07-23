@@ -603,25 +603,44 @@ public class ProjectFacade {
 
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Boolean approveApply(ApproveApplyReq req, Long userId) {
         ProjectApplications pa = projectApplicationsService.getById(req.getId());
         if (pa == null) {
             throw new ValidationException("申请不存在");
         }
-        Projects project = projectService.selectByProjectIdAndStatus(pa.getProjectId(), ProjectEnum.ProjectStatusEnum.PUBLISHING.getCode());
-        ProjectMembers entity = new ProjectMembers();
-        entity.setProjectId(project.getId());
-        entity.setUserId(pa.getUserId());
-        entity.setJoinTime(new Date());
-        entity.setRole(ProjectEnum.ProjectMemberRoleEnum.NORMAL.getCode());
-        boolean save = projectMembersService.save(entity);
-        if (!save) {
+        Projects project = projectService.selectByProjectIdAndStatus(pa.getProjectId(), null);
+
+        boolean saveOrUpdate = false;
+        ProjectMembers pm = projectMembersService.selectByProjectIdAndUserId(pa.getProjectId(), pa.getUserId());
+        if (pm != null) {
+            if (pm.getStatus().equals(ProjectEnum.MemberStatusEnum.IN.getCode())) {
+                throw new ValidationException("用户已加入项目");
+            } else {
+                pm.setJoinTime(new Date());
+                pm.setRole(ProjectEnum.ProjectMemberRoleEnum.NORMAL.getCode());
+                pm.setStatus(ProjectEnum.MemberStatusEnum.IN.getCode());
+                saveOrUpdate = projectMembersService.updateById(pm);
+            }
+        } else {
+            ProjectMembers entity = new ProjectMembers();
+            entity.setProjectId(project.getId());
+            entity.setUserId(pa.getUserId());
+            entity.setJoinTime(new Date());
+            entity.setRole(ProjectEnum.ProjectMemberRoleEnum.NORMAL.getCode());
+            saveOrUpdate = projectMembersService.save(entity);
+        }
+
+
+        if (!saveOrUpdate) {
             throw new ValidationException("内部错误，加入失败");
         }
         projectApplicationsService.updateStatus(req.getId(), ProjectEnum.ProjectApplyStatusEnum.APPROVED.getCode(), pa.getUserId());
-
         if (Boolean.TRUE.equals(projectFull(project.getId()))) {
+            //更新其他人的申请状态
             projectApplicationsService.updateStatusByProjectId(ProjectEnum.ProjectApplyStatusEnum.REJECTED.getCode(), project.getId(), ProjectEnum.ProjectApplyStatusEnum.APPROVED.getCode());
+            //更改项目状态
+            projectService.updateStatus(project.getId(), ProjectEnum.ProjectStatusEnum.FULL.getCode(), null, userId);
         }
         AsyncTaskUtil.execute(() -> messageFacade.createApprovePass(pa.getUserId(), userId, project.getId()));
         return true;

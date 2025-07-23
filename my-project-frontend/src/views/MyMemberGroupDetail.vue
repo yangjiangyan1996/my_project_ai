@@ -30,7 +30,8 @@
         </el-table-column>
 
         <el-table-column prop="nickname" label="昵称" width="150" />
-        <el-table-column prop="statusName" label="状态" width="150" />
+         <el-table-column prop="sexName" label="性别" width="100" />
+        <el-table-column prop="statusName" label="状态" width="100" />
 
         <el-table-column label="角色" width="120">
           <template #default="{ row }">
@@ -40,7 +41,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="email" label="邮箱" />
+        <el-table-column prop="email" label="邮箱" width="200"/>
         <el-table-column label="地区">
           <template #default="{ row }">
             {{ row.province || '' }}{{ row.city || '' }}

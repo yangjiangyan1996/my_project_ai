@@ -27,7 +27,7 @@ public class ProjectsDetailResp {
     private String targetAudience;
     private String riskWarning;
 //    private Integer isRemote;
-//    private Integer isFreeEntry;
+    private Boolean isConcerned;
     private String tags;
     private String creatorName;
     private Boolean myLike;

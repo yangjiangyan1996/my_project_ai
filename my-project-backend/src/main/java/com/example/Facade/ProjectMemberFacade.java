@@ -2,6 +2,7 @@ package com.example.Facade;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.config.AsyncTaskUtil;
 import com.example.entity.dto.Account;
 import com.example.entity.dto.ProjectApplications;
 import com.example.entity.dto.ProjectMembers;
@@ -12,6 +13,7 @@ import com.example.entity.req.RemoveMemberReq;
 import com.example.entity.resp.MemberListResp;
 import com.example.entity.resp.MyMemberGroupsResp;
 import com.example.enums.ProjectEnum;
+import com.example.enums.UserEnums;
 import com.example.service.AccountService;
 import com.example.service.ProjectApplicationsService;
 import com.example.service.ProjectMembersService;
@@ -37,11 +39,15 @@ import java.util.stream.Collectors;
 @Service
 public class ProjectMemberFacade {
     @Resource
+    ProjectFacade projectFacade;
+    @Resource
     AccountService accountService;
     @Resource
     ProjectApplicationsService projectApplicationsService;
     @Resource
     ProjectService projectService;
+    @Resource
+    MessageFacade messageFacade;
     @Resource
     private ProjectMembersService projectMembersService;
 
@@ -83,6 +89,7 @@ public class ProjectMemberFacade {
         List<MemberListResp.MemberInfo> list = members.stream().map(v -> {
                     MemberListResp.MemberInfo memberGetResp = new MemberListResp.MemberInfo();
                     memberGetResp.setId(v.getId());
+                    memberGetResp.setSexName(UserEnums.SexEnum.getByCode(userId2UserInfoMap.get(v.getUserId()).getSex()).getName());
                     memberGetResp.setAvatarUrl(userId2UserInfoMap.get(v.getUserId()).getAvatarUrl());
                     memberGetResp.setNickname(userId2UserInfoMap.get(v.getUserId()).getNickname());
                     memberGetResp.setStatusName(ProjectEnum.MemberStatusEnum.getByCode(v.getStatus()).getName());
@@ -135,6 +142,9 @@ public class ProjectMemberFacade {
             throw new ValidationException("更新成员失败");
         }
         boolean remove = projectApplicationsService.remove(new QueryWrapper<ProjectApplications>().eq("project_id", req.getProjectId()).eq("user_id", projectMembers.getUserId()));
+        if (remove && Boolean.FALSE.equals(projectFacade.projectFull(req.getProjectId()))){
+            projectService.updateStatus(req.getProjectId(), ProjectEnum.ProjectStatusEnum.PUBLISHING.getCode(), null, userId);
+        }
 
         return b;
     }

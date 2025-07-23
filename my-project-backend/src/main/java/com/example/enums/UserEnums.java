@@ -9,6 +9,31 @@ import lombok.Getter;
  * @Date 2025/6/23 16:33
  */
 public class UserEnums {
+
+    //0=未知 1=男 2=女
+    @Getter
+    public enum  SexEnum {
+        UNKNOWN(0, "未知"),
+        MALE(1, "男"),
+        FEMALE(2, "女");
+        private Integer code;
+        private String name;
+
+        SexEnum(Integer code, String name) {
+            this.code = code;
+            this.name = name;
+        }
+
+        public static SexEnum getByCode(Integer status) {
+            for (SexEnum value : values()) {
+                if (value.code.equals(status)) {
+                    return value;
+                }
+            }
+            return null;
+        }
+    }
+
     //是否互相关注
     @Getter
     public enum AccountShowEnum {
