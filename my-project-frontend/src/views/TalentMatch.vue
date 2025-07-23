@@ -173,9 +173,9 @@
     >
       <div class="user-detail-container" v-if="currentUser">
         <div class="user-basic-info">
-          <el-avatar :size="isMobile ? 60 : 100" :src="currentUser.avatarUrl || defaultAvatar" />
+          <el-avatar :size="isMobile ? 60 : 100" :src="currentUser.avatarUrl || defaultAvatar" @click="goToUserProfile(currentUser.secrecyId)"/>
           <div class="user-meta">
-            <h2>{{ currentUser.nickname || currentUser.username }}</h2>
+            <h2 @click="goToUserProfile(currentUser.secrecyId)">{{ currentUser.nickname || currentUser.username }}</h2>
             <p class="meta-item">
               <span><i class="el-icon-user"></i> {{ getGenderText(currentUser.sex) }}</span>
               <span><i class="el-icon-location-outline"></i> {{ currentUser.province }}{{ currentUser.city }}{{ currentUser.county }}</span>
