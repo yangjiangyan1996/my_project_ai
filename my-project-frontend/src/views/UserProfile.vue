@@ -201,27 +201,26 @@
             <el-card class="intent-card" shadow="always">
               <h2>🧍 我的加入意向</h2>
               
+             <!-- 修改意向表单展示部分 -->
               <template v-if="hasSubmitted && !editMode">
                 <!-- 已提交时的展示模式 -->
                 <div class="intent-display">
                   <div class="intent-item">
                     <span class="intent-label">我的身份：</span>
-                    <span class="intent-value">{{ form.audience || '未填写' }}</span>
+                    <span class="intent-value">{{ form.audienceName || '未填写' }}</span>
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">可投入时间：</span>
-                    <span class="intent-value">{{ form.timePerDay || '未填写' }}</span>
+                    <span class="intent-value">{{ form.timePerDay ? `${form.timePerDay}小时/天` : '未填写' }}</span>
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">个人技能：</span>
-                    <span class="intent-value">{{ form.skills || '未填写' }}</span>
+                    <span class="intent-value">{{ form.skillNames || '未填写' }}</span>
                   </div>
                   <div class="intent-item">
                     <span class="intent-label">我能提供：</span>
                     <span class="intent-value">{{ form.resources || '未填写' }}</span>
                   </div>
-                  
-                  
                 </div>
               </template>
               
@@ -710,10 +709,12 @@ const loadIntentData = async () => {
     const res = await get(`/api/auth/project/getProjectOfMyShow?secrecyId=${secrecyId.value}`);
     if (res) {
       form.value = {
-        id:res.id||'',
+         id: res.id || '',
         audience: res.audience || '',
+        audienceName: res.audienceName || '',
         timePerDay: res.timePerDay || '',
         skills: res.skills || '',
+        skillNames: res.skillNames || '',
         resources: res.resources || '',
         status: res.status ? 1 : 0
       }

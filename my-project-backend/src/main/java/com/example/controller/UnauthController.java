@@ -63,6 +63,11 @@ public class UnauthController {
     }
 
 
+    /**
+     * 匹配用户
+     * @param req
+     * @return
+     */
     @PostMapping("/matchUser")
     public RespBean<Page<MatchUserResp>> matchUser(@RequestBody MatchUserReq req) {
         try {

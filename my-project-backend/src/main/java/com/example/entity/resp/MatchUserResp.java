@@ -11,6 +11,7 @@ import lombok.Data;
 @Data
 public class MatchUserResp {
     private Long userId;
+    private Long secrecyId;
     private String username;
     private String avatarUrl;
     private Integer sex;

@@ -733,7 +733,7 @@ public class ProjectFacade {
         List<Account> userInfoList = accountService.selectFildByUserId();
 
         List<ProjectMembers> pm = projectMembersService.selectByProjectId(projectId, null);
-        Map<Long, Integer> userId2UserStatusMap = pm.stream().collect(Collectors.toMap(v -> v.getUserId(), v -> v.getStatus()));
+        Map<Long, Integer> userId2UserStatusMap = pm.stream().collect(Collectors.toMap(v -> v.getUserId(), v -> v.getStatus(), (l1, l2) -> l2));
 
         Map<Long, Account> userId2UserInfoMap = userInfoList.stream().collect(Collectors.toMap(Account::getId, v -> v));
         // 2. 遍历计算匹配度
@@ -779,6 +779,7 @@ public class ProjectFacade {
             MatchUserResp resp = new MatchUserResp();
             resp.setUserId(user.getUserId());
             resp.setUsername(userId2UserInfoMap.get(user.getUserId()).getUsername());
+            resp.setSecrecyId(userId2UserInfoMap.get(user.getUserId()).getSecrecyId());
             resp.setAvatarUrl(userId2UserInfoMap.get(user.getUserId()).getAvatarUrl());
             resp.setSex(userId2UserInfoMap.get(user.getUserId()).getSex());
             resp.setProvince(userId2UserInfoMap.get(user.getUserId()).getProvince());

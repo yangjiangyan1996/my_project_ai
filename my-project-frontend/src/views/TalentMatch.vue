@@ -19,9 +19,9 @@
           :class="{ active: activeProjectId === project.id }"
           @click="selectProject(project)"
         >
-          <div class="project-badge" v-if="project.status === 0">审核中</div>
-          <div class="project-badge success" v-else-if="project.status === 1">已发布</div>
-          <div class="project-badge danger" v-else>已拒绝</div>
+            <div class="project-badge" :class="getStatusTagClass(project.status)">
+              {{ getStatusText(project.status) }}
+            </div>  
           
           <h3>{{ project.name }}</h3>
           <p class="category">
@@ -105,7 +105,7 @@
           :key="user.id"
           class="user-card"
         >
-          <div class="user-avatar">
+          <div class="user-avatar" @click="goToUserProfile(user.secrecyId)">
             <el-avatar :size="60" :src="user.avatarUrl || defaultAvatar">
               {{ user.nickname?.charAt(0) || 'U' }}
             </el-avatar>
@@ -121,7 +121,7 @@
           </div>
           
           <div class="user-info">
-            <h3>{{ user.nickname || user.username }}</h3>
+            <h3 @click="goToUserProfile(user.secrecyId)" >{{ user.nickname || user.username }}</h3>
             <p class="meta">
               <span><i class="el-icon-user"></i> {{ getGenderText(user.sex) }}</span>
               <span><i class="el-icon-location-outline"></i> {{ user.province }}{{ user.city }}</span>
@@ -300,6 +300,14 @@ const fetchMyProjects = async (reset = false) => {
   }
 }
 
+
+const goToUserProfile = (userId) => {
+  console.log("访问用户详情页",userId)
+  // router.push(`/index/user/${userId}`)
+  window.open(`/index/user/${userId}`, '_blank');
+}
+
+
 // 加载更多项目
 const loadMoreProjects = async () => {
   if (loadingProjects.value || noMoreProjects.value) return
@@ -400,13 +408,28 @@ const formatDate = (dateStr, format = 'YYYY-MM-DD') => {
   return dateStr // 实际项目中可以使用day.js等库
 }
 
+//状态 0=待审核  1=退回 10=招募中 11=已满员 30=已关闭
 const getStatusText = (status) => {
   const statusMap = {
-    0: '审核中',
-    1: '已发布',
-    2: '已拒绝'
+    0: '待审核',
+    1: '退回',
+    10: '招募中',
+    11: '已满员',
+    30: '已关闭'
   }
   return statusMap[status] || '未知状态'
+}
+
+// 获取申请按钮类型
+const getStatusTagClass = (status) => {
+  const classMap = {
+    0: 'warning',  // 待审核 - 黄色
+    1: 'danger',   // 退回 - 红色
+    10: 'success', // 招募中 - 绿色
+    11: 'info',    // 已满员 - 蓝色
+    30: 'danger'   // 已关闭 - 红色
+  }
+  return classMap[status] || ''
 }
 
 const getStatusTagType = (status) => {

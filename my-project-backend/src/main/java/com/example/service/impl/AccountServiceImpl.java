@@ -193,7 +193,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     @Override
     public List<Account> selectFildByUserId() {
         return this.baseMapper.selectList(new QueryWrapper<Account>()
-                .select("id", "username",  "avatar_url", "sex" , "province", "city", "county")
+                .select("id", "username","secrecy_id",  "avatar_url", "sex" , "province", "city", "county")
                 .eq("is_deleted", 0));
     }
 
