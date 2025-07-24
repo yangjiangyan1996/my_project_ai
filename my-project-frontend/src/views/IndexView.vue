@@ -320,25 +320,27 @@
         </el-menu-item>
       </el-sub-menu>
 
+
       <el-sub-menu index="2">
+        <template #title><i class="el-icon-chat-dot-round"></i>社区互动</template>
+        <el-menu-item index="forum" @click="changeDisplayMode('sendPost')">圈子论坛</el-menu-item>
+        <el-menu-item index="qa" @click="router.push({ name: 'qa' })">问答专区</el-menu-item>
+      </el-sub-menu>
+
+      <el-sub-menu index="3">
         <template #title><i class="el-icon-user"></i>找人合作</template>
         <el-menu-item index="skill-match" @click="changeDisplayMode('skillMatch')">人才榜</el-menu-item>
         <el-menu-item index="skill-match" @click="changeDisplayMode('talentMatch')">人才匹配</el-menu-item>
         <!-- <el-menu-item index="partner-map" @click="router.push({ name: 'partner-map' })">合作地图</el-menu-item> -->
       </el-sub-menu>
 
-      <el-sub-menu index="3">
+      <el-sub-menu index="4">
         <template #title><i class="el-icon-guide"></i>导航工具</template>
         <el-menu-item index="fuyeceping" @click="router.push({ name: 'survey' })">副业测评</el-menu-item>
         <el-menu-item index="gongjuxiang" @click="router.push({ name: 'toolbox' })">工具箱</el-menu-item>
         <el-menu-item index="ziyuandaohang" @click="router.push({ name: 'resources' })">资源导航</el-menu-item>
       </el-sub-menu>
 
-      <el-sub-menu index="4">
-        <template #title><i class="el-icon-chat-dot-round"></i>社区互动</template>
-        <el-menu-item index="forum" @click="router.push({ name: 'forum' })">圈子论坛</el-menu-item>
-        <el-menu-item index="qa" @click="router.push({ name: 'qa' })">问答专区</el-menu-item>
-      </el-sub-menu>
 
       <el-sub-menu index="5">
         <template #title><i class="el-icon-s-custom"></i>AI推荐</template>
@@ -445,6 +447,8 @@
 
      <RankingList v-if="displayMode === 'rankingList'" />
 
+     <SendPost v-if="displayMode === 'sendPost'" />
+
      <!-- <GrowthCenter v-if="displayMode === 'growthCenter'" /> -->
 
   </div>
@@ -459,6 +463,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import SkillMatch from '@/views/SkillMatch.vue';
 import TalentMatch from '@/views/TalentMatch.vue';
 import RankingList from '@/views/RankingList.vue';
+import SendPost from '@/views/SendPost.vue';
 // import GrowthCenter from '@/views/GrowthCenter.vue';
 
 import MyInfo from '@/views/My.vue';

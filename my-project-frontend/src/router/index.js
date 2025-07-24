@@ -101,6 +101,11 @@ const router = createRouter({
             name: 'rankingList',
             component: () => import('@/views/RankingList.vue'),
             meta: { requiresAuth: true }
+        },{
+            path: '/index/sendPost',
+            name: 'sendPost',
+            component: () => import('@/views/SendPost.vue'),
+            meta: { requiresAuth: true }
         }
         // ,{
         //     path: '/index/growthCenter',
