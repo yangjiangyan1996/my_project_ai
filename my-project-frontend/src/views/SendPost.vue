@@ -3,7 +3,7 @@
     <!-- 左侧分类导航 -->
     <div class="left-sidebar">
       <div class="sidebar-header">
-        <h3>贴吧分类</h3>
+        <h3>圈分类</h3>
         <el-button type="text" @click="refreshCategories">
           <el-icon><Refresh /></el-icon>
         </el-button>
@@ -39,7 +39,7 @@
       </div>
       
       <div class="my-bars">
-        <h4>我关注的吧</h4>
+        <h4>我关注的</h4>
         <div v-if="followedBars.length > 0" class="followed-list">
           <div 
             v-for="bar in followedBars"
@@ -52,14 +52,14 @@
             <el-badge :value="bar.unread" :max="99" class="unread-count" />
           </div>
         </div>
-        <el-empty v-else description="暂无关注贴吧" :image-size="80" />
+        <el-empty v-else description="暂无关注圈" :image-size="80" />
       </div>
     </div>
     
     <!-- 中间帖子列表 -->
     <div class="main-content">
       <div class="content-header">
-        <h3>{{ currentCategory || '全部贴吧' }}</h3>
+        <h3>{{ currentCategory || '全部圈' }}</h3>
         <el-input
           v-model="searchQuery"
           placeholder="搜索帖子"
@@ -159,8 +159,20 @@
     <!-- 右侧边栏 -->
     <div class="right-sidebar">
       <div class="sidebar-section">
+        <el-button 
+          type="primary" 
+          @click="showCreateDialog"
+          class="create-bar-btn"
+          style="width: 100%"
+        >
+          <el-icon><Plus /></el-icon>
+          新建圈
+        </el-button>
+      </div>
+
+      <div class="sidebar-section">
         <div class="section-header">
-          <h4>热门吧</h4>
+          <h4>热门</h4>
           <el-button type="text" @click="refreshHotBars">
             <el-icon><Refresh /></el-icon>
             换一换
@@ -196,7 +208,7 @@
       
       <div class="sidebar-section">
         <div class="section-header">
-          <h4>贴吧热议榜</h4>
+          <h4>圈热议榜</h4>
         </div>
         
         <div class="hot-topics">
@@ -218,10 +230,83 @@
       </div>
     </div>
   </div>
+
+  <!-- 创建圈对话框 -->
+  <el-dialog
+    v-model="createDialogVisible"
+    title="新建圈"
+    width="600px"
+    :before-close="handleClose"
+  >
+    <el-form 
+      ref="createFormRef" 
+      :model="createForm" 
+      :rules="createRules"
+      label-width="100px"
+    >
+      <el-form-item label="圈名称" prop="name">
+        <el-input 
+          v-model="createForm.name" 
+          placeholder="请输入圈名称"
+          clearable
+        />
+      </el-form-item>
+      
+      <el-form-item label="圈分类" prop="category">
+        <el-cascader
+          v-model="createForm.category"
+          :options="categoryOptions"
+          :props="categoryProps"
+          placeholder="请选择圈分类"
+          style="width: 100%"
+          clearable
+          filterable
+        />
+      </el-form-item>
+      
+      <el-form-item label="圈图标" prop="avatar">
+        <el-upload
+          class="avatar-uploader"
+          action="#"
+          :show-file-list="false"
+          :auto-upload="false"
+          :on-change="handleAvatarChange"
+          accept="image/*"
+        >
+          <img v-if="createForm.avatar" :src="createForm.avatar" class="avatar">
+          <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+        </el-upload>
+        <div class="upload-tip">建议尺寸 200×200px，支持 JPG/PNG 格式</div>
+      </el-form-item>
+      
+      <el-form-item label="圈简介" prop="description">
+        <el-input
+          v-model="createForm.description"
+          type="textarea"
+          :rows="4"
+          placeholder="请输入圈简介"
+          maxlength="200"
+          show-word-limit
+        />
+      </el-form-item>
+    </el-form>
+    
+    <template #footer>
+      <el-button @click="createDialogVisible = false">取消</el-button>
+      <el-button 
+        type="primary" 
+        @click="submitCreateForm"
+        :loading="submitting"
+      >
+        创建
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { 
   ArrowDown, Refresh, Search, View, 
@@ -276,7 +361,7 @@ const categoryGroups = ref([
   }
 ])
 
-// 右侧热门吧数据
+// 右侧热门数据
 const hotBars = ref([
   {
     id: 1,
@@ -359,7 +444,7 @@ const hotTopics = ref([
   }
 ])
 
-// 我关注的吧
+// 我关注的
 const followedBars = ref([
   {
     id: 2,
@@ -369,7 +454,7 @@ const followedBars = ref([
   },
   {
     id: 6,
-    name: '游戏开发吧',
+    name: '游戏开发',
     avatar: 'https://via.placeholder.com/60?text=游戏开发',
     unread: 0
   },
@@ -388,13 +473,13 @@ const posts = ref([
     title: '大一遇到的奇葩舍友',
     content: '深夜宿舍小动作，舍友都看出来他丫丫一下跪倒个女号逗他',
     userAvatar: 'https://via.placeholder.com/40?text=用户',
-    username: '孙笑川吧',
+    username: '孙笑川',
     time: '2分钟之前',
     views: '2289',
     comments: '124',
     likes: '56',
     liked: false,
-    barName: '孙笑川吧',
+    barName: '孙笑川',
     images: [
       'https://via.placeholder.com/300x200?text=图片1',
       'https://via.placeholder.com/300x200?text=图片2',
@@ -407,13 +492,13 @@ const posts = ref([
     title: '山上看的人生居然是这样的啊',
     content: '父亲是寒门出身，考上京都大学，成了高材生，后面当了建筑工程师，娶了社长千金并生下了三个孩子。他是老二，他有一个哥哥，一个妹妹但是由于门第差距加上工作压力，父亲承受不住，自杀了当时他母亲还怀着他妹妹...',
     userAvatar: 'https://via.placeholder.com/40?text=用户',
-    username: '2ch吧',
+    username: '2ch',
     time: '1小时前',
     views: '1895',
     comments: '256',
     likes: '189',
     liked: true,
-    barName: '2ch吧',
+    barName: '2ch',
     images: []
   },
   {
@@ -427,7 +512,7 @@ const posts = ref([
     comments: '89',
     likes: '342',
     liked: false,
-    barName: '游戏开发吧',
+    barName: '游戏开发',
     images: [
       'https://via.placeholder.com/300x200?text=状态机图',
       'https://via.placeholder.com/300x200?text=代码示例'
@@ -444,7 +529,7 @@ const posts = ref([
     comments: '156',
     likes: '421',
     liked: false,
-    barName: '前端技术吧',
+    barName: '前端技术',
     images: [
       'https://via.placeholder.com/300x200?text=性能图表'
     ]
@@ -460,6 +545,129 @@ const loadingPosts = ref(false)
 const hasMorePosts = ref(true)
 const page = ref(1)
 const pageSize = ref(10)
+
+// 创建圈相关状态
+const createDialogVisible = ref(false)
+const submitting = ref(false)
+const createFormRef = ref(null)
+
+const createForm = ref({
+  name: '',
+  category: [],
+  avatar: '',
+  description: ''
+})
+
+const createRules = ref({
+  name: [
+    { required: true, message: '请输入圈名称', trigger: 'blur' },
+    { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+  ],
+  category: [
+    { required: true, message: '请选择圈分类', trigger: 'change' }
+  ],
+  avatar: [
+    { required: true, message: '请上传圈图标', trigger: 'change' }
+  ],
+  description: [
+    { required: true, message: '请输入圈简介', trigger: 'blur' },
+    { min: 10, max: 200, message: '长度在 10 到 200 个字符', trigger: 'blur' }
+  ]
+})
+
+const categoryOptions = ref([])
+const categoryProps = ref({
+  value: 'code',
+  label: 'desc',
+  children: 'subs'
+})
+
+// 在原有方法后添加
+// 获取分类数据
+const fetchCategories = async () => {
+  try {
+    // 模拟API请求
+    const response = await fetch('/api/unauth/common/category')
+    const data = await response.json()
+    
+    categoryOptions.value = data.map(item => ({
+      code: item.code,
+      desc: item.desc,
+      subs: item.subs
+    }))
+  } catch (error) {
+    console.error('获取分类数据失败:', error)
+    ElMessage.error('获取分类数据失败，请稍后重试')
+  }
+}
+
+// 显示创建对话框
+const showCreateDialog = () => {
+  createDialogVisible.value = true
+  if (createFormRef.value) {
+    createFormRef.value.resetFields()
+  }
+}
+
+// 处理头像上传
+const handleAvatarChange = (file) => {
+  const isImage = file.raw.type.includes('image')
+  const isLt2M = file.raw.size / 1024 / 1024 < 2
+  
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB!')
+    return false
+  }
+  
+  createForm.value.avatar = URL.createObjectURL(file.raw)
+  return true
+}
+
+// 提交创建表单
+const submitCreateForm = () => {
+  createFormRef.value.validate(async (valid) => {
+    if (!valid) return
+    
+    submitting.value = true
+    
+    try {
+      // 模拟API请求
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      ElMessage.success('圈创建成功!')
+      createDialogVisible.value = false
+      
+      // 创建成功后可以刷新热门列表
+      refreshHotBars()
+    } catch (error) {
+      console.error('创建圈失败:', error)
+      ElMessage.error('创建圈失败，请稍后重试')
+    } finally {
+      submitting.value = false
+    }
+  })
+}
+
+// 关闭对话框前的确认
+const handleClose = (done) => {
+  if (createFormRef.value && createFormRef.value.isClean?.()) {
+    done()
+    return
+  }
+  
+  ElMessageBox.confirm('确定要放弃创建吗?', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    done()
+  }).catch(() => {})
+}
 
 // 计算属性
 const filteredPosts = computed(() => {
@@ -511,7 +719,7 @@ const toggleFollowBar = (bar) => {
 }
 
 const refreshHotBars = () => {
-  // 模拟刷新热门吧
+  // 模拟刷新热门
   hotBars.value = [...hotBars.value].sort(() => Math.random() - 0.5)
   hotBars.value.forEach((bar, index) => {
     bar.rank = index + 1
@@ -570,6 +778,8 @@ const getRankClass = (rank) => {
 
 // 初始化
 onMounted(() => {
+    fetchCategories()
+
   fetchPosts()
 })
 </script>
@@ -1090,5 +1300,46 @@ onMounted(() => {
     width: calc(50% - 4px);
     height: 100px;
   }
+}
+
+.avatar-uploader {
+  border: 1px dashed var(--el-border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  width: 120px;
+  height: 120px;
+  transition: var(--el-transition-duration-fast);
+}
+
+.avatar-uploader:hover {
+  border-color: var(--el-color-primary);
+}
+
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 120px;
+  height: 120px;
+  text-align: center;
+  line-height: 120px;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-top: 8px;
+}
+
+.create-bar-btn {
+  margin-bottom: 15px;
 }
 </style>
