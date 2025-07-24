@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
-import java.util.Date;
 
 @Data
 @TableName("quan_bars")
@@ -13,10 +12,10 @@ public class QuanBars extends BaseModel {
     private Integer id;
     private Integer status;
     private String name;
-    private Integer categoryId;
+    private Integer firstCategory;
+    private Integer secondCategory;
     private String description;
     private String avatar;
-    private String coverImage;
     private Integer followerCount;
     private Integer postCount;
 }

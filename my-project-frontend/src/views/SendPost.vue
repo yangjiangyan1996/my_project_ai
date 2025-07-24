@@ -252,33 +252,57 @@
         />
       </el-form-item>
       
-      <el-form-item label="圈分类" prop="category">
-        <el-cascader
-          v-model="createForm.category"
-          :options="categoryOptions"
-          :props="categoryProps"
-          placeholder="请选择圈分类"
-          style="width: 100%"
+    <el-form-item label="圈分类" required>
+      <div class="category-selectors">
+        <el-select
+          v-model="createForm.firstCategory"
+          placeholder="请选择一级分类"
+          style="width: 48%; margin-right: 4%"
           clearable
-          filterable
-        />
-      </el-form-item>
+          @change="handleFirstCategoryChange"
+        >
+          <el-option
+            v-for="item in categoryOptions"
+            :key="item.code"
+            :label="item.desc"
+            :value="item.code"
+          />
+        </el-select>
+        
+        <el-select
+          v-model="createForm.secondCategory"
+          placeholder="请选择二级分类"
+          style="width: 48%"
+          clearable
+          :disabled="!createForm.firstCategory"
+        >
+          <el-option
+            v-for="sub in secondCategoryOptions"
+            :key="sub.code"
+            :label="sub.desc"
+            :value="sub.code"
+          />
+        </el-select>
+      </div>
+    </el-form-item>
       
+
+
+      <!-- 1. 修改头像上传组件部分 -->
       <el-form-item label="圈图标" prop="avatar">
         <el-upload
           class="avatar-uploader"
-          action="#"
+          action="http://localhost:8080/api/unauth/common/upload"
           :show-file-list="false"
-          :auto-upload="false"
-          :on-change="handleAvatarChange"
-          accept="image/*"
+          :on-success="handleAvatarSuccess"
+          :before-upload="beforeAvatarUpload"
         >
           <img v-if="createForm.avatar" :src="createForm.avatar" class="avatar">
           <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
         </el-upload>
         <div class="upload-tip">建议尺寸 200×200px，支持 JPG/PNG 格式</div>
       </el-form-item>
-      
+
       <el-form-item label="圈简介" prop="description">
         <el-input
           v-model="createForm.description"
@@ -314,6 +338,8 @@ import {
   Plus, CircleCheckFilled, Picture,
   Loading
 } from '@element-plus/icons-vue'
+import { logout, post, get } from '@/net';
+
 
 const router = useRouter()
 
@@ -553,7 +579,8 @@ const createFormRef = ref(null)
 
 const createForm = ref({
   name: '',
-  category: [],
+  firstCategory: null,
+  secondCategory: null,
   avatar: '',
   description: ''
 })
@@ -563,8 +590,11 @@ const createRules = ref({
     { required: true, message: '请输入圈名称', trigger: 'blur' },
     { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
   ],
-  category: [
-    { required: true, message: '请选择圈分类', trigger: 'change' }
+  firstCategory: [
+    { required: true, message: '请选择一级分类', trigger: 'change' }
+  ],
+  secondCategory: [
+    { required: true, message: '请选择二级分类', trigger: 'change' }
   ],
   avatar: [
     { required: true, message: '请上传圈图标', trigger: 'change' }
@@ -576,28 +606,35 @@ const createRules = ref({
 })
 
 const categoryOptions = ref([])
+const secondCategoryOptions = ref([])
+
 const categoryProps = ref({
   value: 'code',
   label: 'desc',
   children: 'subs'
 })
 
-// 在原有方法后添加
 // 获取分类数据
 const fetchCategories = async () => {
   try {
-    // 模拟API请求
-    const response = await fetch('/api/unauth/common/category')
-    const data = await response.json()
+    const response = await get('/api/unauth/common/category');
+    console.log("分类数据:", response); // 调试用
     
-    categoryOptions.value = data.map(item => ({
-      code: item.code,
-      desc: item.desc,
-      subs: item.subs
-    }))
+    if (response && response.length > 0) {
+      categoryOptions.value = response.map(item => ({
+        code: item.code,
+        desc: item.desc,
+        subs: item.subs || [] // 确保 subs 有默认值
+      }));
+      console.log("处理后的分类选项:", categoryOptions.value); // 调试用
+    } else {
+      ElMessage.warning('暂无分类数据');
+      categoryOptions.value = [];
+    }
   } catch (error) {
-    console.error('获取分类数据失败:', error)
-    ElMessage.error('获取分类数据失败，请稍后重试')
+    console.error('获取分类数据失败:', error);
+    ElMessage.error('获取分类数据失败，请稍后重试');
+    categoryOptions.value = [];
   }
 }
 
@@ -609,22 +646,18 @@ const showCreateDialog = () => {
   }
 }
 
-// 处理头像上传
-const handleAvatarChange = (file) => {
-  const isImage = file.raw.type.includes('image')
-  const isLt2M = file.raw.size / 1024 / 1024 < 2
-  
-  if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
+const beforeAvatarUpload = (file) => {
+  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isJPG) {
+    ElMessage.error('头像图片只能是 JPG/PNG 格式!')
     return false
   }
-  
   if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB!')
+    ElMessage.error('头像图片大小不能超过 2MB!')
     return false
   }
-  
-  createForm.value.avatar = URL.createObjectURL(file.raw)
   return true
 }
 
@@ -633,24 +666,71 @@ const submitCreateForm = () => {
   createFormRef.value.validate(async (valid) => {
     if (!valid) return
     
+    // 检查是否已上传图片
+    console.log("createForm.value.avatar:", createForm.value)
+    if (!createForm.value.avatar) {
+      ElMessage.error('请上传圈图标')
+      return
+    }
+    
     submitting.value = true
     
     try {
-      // 模拟API请求
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await post('/api/auth/quan/createBar', {
+        name: createForm.value.name,
+        firstCategory: createForm.value.firstCategory,
+        secondCategory: createForm.value.secondCategory,
+        avatar: createForm.value.avatar,
+        description: createForm.value.description
+      })
       
       ElMessage.success('圈创建成功!')
       createDialogVisible.value = false
-      
-      // 创建成功后可以刷新热门列表
       refreshHotBars()
     } catch (error) {
       console.error('创建圈失败:', error)
-      ElMessage.error('创建圈失败，请稍后重试')
     } finally {
       submitting.value = false
     }
   })
+}
+
+const handleFirstCategoryChange = (value) => {
+  createForm.value.secondCategory = null
+  if (value) {
+    const selectedCategory = categoryOptions.value.find(item => item.code === value)
+    secondCategoryOptions.value = selectedCategory?.subs || []
+  } else {
+    secondCategoryOptions.value = []
+  }
+}
+
+// 头像上传成功处理
+const handleAvatarSuccess = (response) => {
+  createForm.value.avatar = response.data
+  ElMessage.success('头像上传成功')
+}
+
+// 封面图片上传成功处理 (保持不变)
+const handleCoverSuccess = (response) => {
+  form.imageUrl = response.data
+  ElMessage.success('上传成功')
+}
+
+// 封面图片上传前校验 (保持不变)
+const beforeCoverUpload = (file) => {
+  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isJPG) {
+    ElMessage.error('封面图片只能是 JPG/PNG 格式!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('封面图片大小不能超过 2MB!')
+    return false
+  }
+  return true
 }
 
 // 关闭对话框前的确认
@@ -1341,5 +1421,46 @@ onMounted(() => {
 
 .create-bar-btn {
   margin-bottom: 15px;
+}
+
+.avatar-uploader {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  width: 120px;
+  height: 120px;
+}
+
+.avatar-uploader:hover {
+  border-color: #409eff;
+}
+
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 120px;
+  height: 120px;
+  line-height: 120px;
+  text-align: center;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #8c939d;
+  margin-top: 8px;
+}
+
+.category-selectors {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
 }
 </style>

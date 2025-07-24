@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @RestController
 @Slf4j
 @RequestMapping("/api/unauth/project/")
-public class UnauthController {
+public class UnauthProjectController {
 
     @Resource
     CommonFacade commonFacade;
