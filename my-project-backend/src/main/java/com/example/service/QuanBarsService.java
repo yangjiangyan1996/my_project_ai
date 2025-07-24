@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface QuanBarsService extends IService<QuanBars> {
     List<QuanBars> selectByName(String name);
+
+    List<QuanBars> selectByFirstCategory(Long categoryId);
 }

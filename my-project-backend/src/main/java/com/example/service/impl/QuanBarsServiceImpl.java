@@ -20,4 +20,13 @@ public class QuanBarsServiceImpl extends ServiceImpl<QuanBarsMapper,QuanBars > i
                         .eq("is_deleted", 0)
         );
     }
+
+    @Override
+    public List<QuanBars> selectByFirstCategory(Long categoryId) {
+        return this.baseMapper.selectList(
+                new QueryWrapper<QuanBars>()
+                        .eq(categoryId!=null, "first_category", categoryId)
+                        .eq("is_deleted", 0)
+        );
+    }
 }

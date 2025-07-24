@@ -9,7 +9,7 @@ import lombok.Data;
 @TableName("quan_bars")
 public class QuanBars extends BaseModel {
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
     private Integer status;
     private String name;
     private Integer firstCategory;

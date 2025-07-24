@@ -2,6 +2,7 @@ package com.example.Facade;
 
 import com.example.entity.dto.QuanBars;
 import com.example.entity.req.QuanBarCreateReq;
+import com.example.entity.resp.BarsByCategoryResp;
 import com.example.enums.QuanEnum;
 import com.example.service.QuanBarsService;
 import jakarta.annotation.Resource;
@@ -9,8 +10,10 @@ import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @Author YangJian
@@ -23,6 +26,7 @@ public class QuanFacade {
 
     @Resource
     QuanBarsService quanBarsService;
+
     public Boolean createBar(QuanBarCreateReq req, Long userId) {
         List<QuanBars> q = quanBarsService.selectByName(req.getName());
         if (!CollectionUtils.isEmpty(q)) {
@@ -43,5 +47,25 @@ public class QuanFacade {
         e.setModifiedAt(new Date());
         e.setModifiedBy(userId);
         return quanBarsService.save(e);
+    }
+
+    public List<BarsByCategoryResp> getBarsByCategory(Long categoryId) {
+        if (categoryId == null) {
+            return new ArrayList<>(1);
+        }
+        List<QuanBars> list = quanBarsService.selectByFirstCategory(categoryId);
+        if (CollectionUtils.isEmpty(list)) {
+            return new ArrayList<>(1);
+        }
+        return list.stream().sorted((o1, o2) -> o2.getFollowerCount().compareTo(o1.getFollowerCount()))
+                .map(v -> {
+                    BarsByCategoryResp barsByCategoryResp = new BarsByCategoryResp();
+                    barsByCategoryResp.setId(v.getId());
+                    barsByCategoryResp.setName(v.getName());
+                    barsByCategoryResp.setAvatar(v.getAvatar());
+                    barsByCategoryResp.setFollowerCount(v.getFollowerCount());
+                    barsByCategoryResp.setPostCount(v.getPostCount());
+                    return barsByCategoryResp;
+                }).collect(Collectors.toList());
     }
 }
