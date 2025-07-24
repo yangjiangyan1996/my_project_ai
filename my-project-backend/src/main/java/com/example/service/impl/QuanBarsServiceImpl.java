@@ -7,5 +7,5 @@ import com.example.service.QuanBarsService;
 import org.springframework.stereotype.Service;
 
 @Service
-public class QuanBarsServiceImpl extends ServiceImpl<QuanBarsMapper, QuanBars> implements QuanBarsService {
+public class QuanBarsServiceImpl extends ServiceImpl<QuanBarsMapper,QuanBars > implements QuanBarsService {
 }
