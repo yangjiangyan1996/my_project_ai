@@ -31,9 +31,9 @@ public class UnauthQuanController {
     QuanFacade quanFacade;
 
     @GetMapping("/getBarsByCategory")
-    public RespBean<List<BarsByCategoryResp>> getBarsByCategory(@RequestParam("categoryId") Long categoryId) {
+    public RespBean<List<BarsByCategoryResp>> getBarsByCategory(@RequestParam("categoryCode") Long categoryCode) {
         try {
-            List<BarsByCategoryResp> result = quanFacade.getBarsByCategory(categoryId);
+            List<BarsByCategoryResp> result = quanFacade.getBarsByCategory(categoryCode);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("UnauthQuanController#getBarsByCategory,req:{}", e);

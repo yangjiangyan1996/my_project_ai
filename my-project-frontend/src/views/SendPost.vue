@@ -11,32 +11,38 @@
       
       <div class="category-list">
         <div 
-          v-for="group in categoryGroups" 
-          :key="group.title"
+          v-for="category in firstLevelCategories" 
+          :key="category.code"
           class="category-group"
         >
-          <div class="group-header" @click="toggleGroup(group)">
-            <span>{{ group.title }}</span>
-            <el-icon :class="{ 'rotate-180': group.expanded }">
+          <div class="group-header" @click="toggleCategory(category)">
+            <span>{{ category.desc }}</span>
+            <el-icon :class="{ 'rotate-180': category.expanded }">
               <ArrowDown />
             </el-icon>
           </div>
           
           <el-collapse-transition>
-            <div v-show="group.expanded" class="group-tags">
-              <el-tag
-                v-for="tag in group.tags"
-                :key="tag"
-                class="category-tag"
-                :effect="activeTag === tag ? 'dark' : 'plain'"
-                @click="handleTagClick(tag)"
-              >
-                {{ tag }}
-              </el-tag>
+            <div v-show="category.expanded" class="group-tags">
+              <div v-if="loadingBars[category.code]" class="loading-bars">
+                <el-icon class="is-loading"><Loading /></el-icon>
+              </div>
+              <template v-else>
+                <el-tag
+                  v-for="bar in categoryBars[category.code]"
+                  :key="bar.id"
+                  class="category-tag"
+                  :effect="activeBar === bar.id ? 'dark' : 'plain'"
+                  @click="handleBarClick(bar)"
+                >
+                  {{ bar.name }}
+                </el-tag>
+              </template>
             </div>
           </el-collapse-transition>
         </div>
       </div>
+      
       
       <div class="my-bars">
         <h4>我关注的</h4>
@@ -577,6 +583,13 @@ const createDialogVisible = ref(false)
 const submitting = ref(false)
 const createFormRef = ref(null)
 
+
+// 状态管理
+const firstLevelCategories = ref([]); // 一级分类列表
+const categoryBars = ref({}); // 各分类下的圈子列表 {分类code: [圈子列表]}
+const loadingBars = ref({}); // 各分类的加载状态 {分类code: boolean}
+const activeBar = ref(null); // 当前选中的圈子ID
+
 const createForm = ref({
   name: '',
   firstCategory: null,
@@ -613,6 +626,67 @@ const categoryProps = ref({
   label: 'desc',
   children: 'subs'
 })
+
+
+// 获取一级分类
+const fetchFirstLevelCategories = async () => {
+  try {
+    const response = await get('/api/unauth/common/category');
+    if (response && response.length > 0) {
+      firstLevelCategories.value = response.map(item => ({
+        code: item.code,
+        desc: item.desc,
+        expanded: false // 默认折叠
+      }));
+    } else {
+      ElMessage.warning('暂无分类数据');
+      firstLevelCategories.value = [];
+    }
+  } catch (error) {
+    console.error('获取分类数据失败:', error);
+    ElMessage.error('获取分类数据失败，请稍后重试');
+    firstLevelCategories.value = [];
+  }
+};
+
+// 切换分类展开状态
+const toggleCategory = async (category) => {
+  category.expanded = !category.expanded;
+  
+  // 如果展开且尚未加载过该分类的圈子，则加载
+  if (category.expanded && !categoryBars.value[category.code]) {
+    await fetchBarsByCategory(category.code);
+  }
+};
+
+// 根据分类获取圈子列表
+const fetchBarsByCategory = async (categoryCode) => {
+  loadingBars.value[categoryCode] = true;
+  try {
+    const response = await get(`/api/unauth/quan/getBarsByCategory?categoryCode=${categoryCode}`);
+    categoryBars.value[categoryCode] = response || [];
+  } catch (error) {
+    console.error(`获取分类${categoryCode}的圈子列表失败:`, error);
+    ElMessage.error('获取圈子列表失败，请稍后重试');
+    categoryBars.value[categoryCode] = [];
+  } finally {
+    loadingBars.value[categoryCode] = false;
+  }
+};
+
+// 点击圈子标签
+const handleBarClick = (bar) => {
+  activeBar.value = bar.id;
+  // 这里可以根据需要跳转到圈子页面或过滤帖子
+  navigateToBar(bar.id);
+};
+
+// 刷新分类
+const refreshCategories = () => {
+  fetchFirstLevelCategories();
+  // 清空已加载的圈子数据
+  categoryBars.value = {};
+};
 
 // 获取分类数据
 const fetchCategories = async () => {
@@ -806,17 +880,6 @@ const refreshHotBars = () => {
   })
 }
 
-const refreshCategories = () => {
-  // 模拟刷新分类
-  categoryGroups.value.forEach(group => {
-    group.expanded = false
-  })
-  setTimeout(() => {
-    categoryGroups.value.forEach(group => {
-      group.expanded = true
-    })
-  }, 100)
-}
 
 const fetchPosts = () => {
   // 模拟API请求
@@ -858,7 +921,7 @@ const getRankClass = (rank) => {
 
 // 初始化
 onMounted(() => {
-    fetchCategories()
+    fetchFirstLevelCategories()
 
   fetchPosts()
 })
