@@ -1,5 +1,6 @@
 package com.example.Facade;
 
+import com.example.config.AsyncTaskUtil;
 import com.example.entity.dto.QuanBars;
 import com.example.entity.dto.QuanUserBarFollows;
 import com.example.entity.req.QuanBarCreateReq;
@@ -9,7 +10,9 @@ import com.example.service.QuanBarsService;
 import com.example.service.QuanUserBarFollowsService;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -44,8 +47,8 @@ public class QuanFacade {
         e.setSecondCategory(req.getSecondCategory());
         e.setDescription(req.getDescription());
         e.setAvatar(req.getAvatar());
-        e.setFollowerCount(0);
-        e.setPostCount(0);
+        e.setFollowerCount(0L);
+        e.setPostCount(0L);
         e.setCreatedAt(new Date());
         e.setCreatedBy(userId);
         e.setModifiedAt(new Date());
@@ -90,12 +93,29 @@ public class QuanFacade {
         return barsByCategoryResp;
     }
 
+    @Transactional
     public Boolean followBar(Long userId, Long barId) {
         QuanUserBarFollows f = quanUserBarFollowsService.selectByBarIdAndUserId(barId, userId);
         if (f != null) {
             throw new ValidationException("已关注");
         }
-        return quanUserBarFollowsService.insert(barId, userId);
+
+        Boolean insert = quanUserBarFollowsService.insert(barId, userId);
+        //异步更新圈子关注数
+        if (Boolean.TRUE.equals(insert)) {
+            AsyncTaskUtil.execute(() -> updateBarFollowCount(barId));
+        }
+        return insert;
+    }
+
+    public void updateBarFollowCount(Long barId) {
+        QuanBars bar = quanBarsService.getById(barId);
+        if (bar == null) {
+            return;
+        }
+        Long followerCount = quanUserBarFollowsService.selectCountByBarId(barId);
+        bar.setFollowerCount(followerCount);
+        quanBarsService.updateById(bar);
     }
 
     public Boolean unFollowBar(Long userId, Long barId) {
@@ -103,7 +123,12 @@ public class QuanFacade {
         if (f == null) {
             return true;
         }
-        return quanUserBarFollowsService.removeById(f.getId());
+        Boolean r = quanUserBarFollowsService.removeById(f.getId());
+        //异步更新圈子关注数
+        if (Boolean.TRUE.equals(r)) {
+            AsyncTaskUtil.execute(() -> updateBarFollowCount(barId));
+        }
+        return r;
     }
 
     public Boolean isFollowBar(Long userId, Long barId) {

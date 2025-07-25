@@ -13,6 +13,6 @@ public class BarsInfoResp {
     private Long id;
     private String name;
     private String avatar;
-    private Integer followerCount;
-    private Integer postCount;
+    private Long followerCount;
+    private Long postCount;
 }

@@ -37,4 +37,11 @@ public class QuanUserBarFollowsServiceImpl extends ServiceImpl<QuanUserBarFollow
         q.setIsDeleted(0);
         return this.baseMapper.insert(q) >0;
     }
+
+    @Override
+    public Long selectCountByBarId(Long barId) {
+        return this.baseMapper.selectCount(new QueryWrapper<QuanUserBarFollows>()
+                .eq("bar_id", barId)
+                .eq("is_deleted", 0));
+    }
 }

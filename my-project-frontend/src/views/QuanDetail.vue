@@ -23,14 +23,16 @@
           </div>
         </div>
         <el-button 
-          type="primary" 
-          class="follow-btn" 
-          size="small" 
-          round
-          @click="toggleFollow"
+            :type="isFollowed ? 'success' : 'primary'"
+            :class="['follow-btn', { 'followed': isFollowed }]"
+            size="small" 
+            round
+            @click="toggleFollow"
         >
-          <el-icon><Plus /></el-icon>
-          <span>{{ isFollowed ? '已关注' : '关注' }}</span>
+            <el-icon>
+            <component :is="isFollowed ? 'CircleCheckFilled' : 'Plus'" />
+            </el-icon>
+            <span>{{ isFollowed ? '已关注' : '关注' }}</span>
         </el-button>
       </div>
     </div>
@@ -249,10 +251,11 @@
 import { ref, computed,onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { get, post } from '@/net';
+
 import { 
   Search, User, Document, Plus, MoreFilled, View, 
   ChatDotRound, Star, Share, UserFilled, Medal, 
-  Folder, EditPen 
+  Folder, EditPen ,CircleCheckFilled
 } from '@element-plus/icons-vue';
 import useUserInfo from '@/hooks/useUserInfo';
 
@@ -348,14 +351,14 @@ const toggleFollow = async () => {
     if (isFollowed.value) {
       // 调用取消关注API
       await post('/api/auth/quan/unFollowBar', { 
-        barId: barInfo.value.id, 
+        barId: barId, 
         userId: userInfo.data.id 
       });
       barInfo.value.followerCount--; // 更新关注数
     } else {
       // 调用关注API
       await post('/api/auth/quan/followBar', { 
-        barId: barInfo.value.id, 
+        barId: barId, 
         userId: userInfo.data.id 
       });
       barInfo.value.followerCount++; // 更新关注数
@@ -911,6 +914,61 @@ const submitPost = () => {
   
   .post-content {
     font-size: 14px;
+  }
+}
+
+follow-btn {
+  align-self: flex-start;
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-width: 1px;
+  border-style: solid;
+  
+  // 关注状态样式
+  &:not(.followed) {
+    background: linear-gradient(135deg, #409EFF 0%, #64B5FF 100%);
+    border-color: #409EFF;
+    box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+    
+    &:hover {
+      background: linear-gradient(135deg, #64B5FF 0%, #409EFF 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
+    }
+    
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(64, 158, 255, 0.3);
+    }
+  }
+  
+  // 已关注状态样式
+  &.followed {
+    background: linear-gradient(135deg, #67C23A 0%, #85CE61 100%);
+    border-color: #67C23A;
+    box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
+    
+    .el-icon {
+      color: white;
+    }
+    
+    &:hover {
+      background: linear-gradient(135deg, #85CE61 0%, #67C23A 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(103, 194, 58, 0.4);
+    }
+    
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(103, 194, 58, 0.3);
+    }
+  }
+  
+  .el-icon {
+    margin-right: 4px;
+    font-size: 14px;
+    transition: all 0.3s ease;
   }
 }
 </style>

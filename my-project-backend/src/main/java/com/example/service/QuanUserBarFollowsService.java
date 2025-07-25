@@ -13,4 +13,6 @@ public interface QuanUserBarFollowsService extends IService<QuanUserBarFollows> 
     QuanUserBarFollows selectByBarIdAndUserId(Long barId, Long userId);
 
     Boolean insert(Long barId, Long userId);
+
+    Long selectCountByBarId(Long barId);
 }

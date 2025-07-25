@@ -16,6 +16,6 @@ public class QuanBars extends BaseModel {
     private Integer secondCategory;
     private String description;
     private String avatar;
-    private Integer followerCount;
-    private Integer postCount;
+    private Long followerCount;
+    private Long postCount;
 }
