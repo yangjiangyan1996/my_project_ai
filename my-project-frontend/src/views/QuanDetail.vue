@@ -218,15 +218,23 @@
         <el-form-item label="标题">
           <el-input v-model="postForm.title" placeholder="请输入标题" />
         </el-form-item>
-        <el-form-item label="内容">
-          <el-input 
-            v-model="postForm.content" 
-            type="textarea" 
-            :rows="8" 
-            placeholder="请输入内容"
-            resize="none"
+         <el-form-item label="内容" prop="content">
+        <div style="border: 1px solid #dcdfe6; border-radius: 4px;">
+          <Toolbar
+            style="border-bottom: 1px solid #dcdfe6"
+            :editor="editorRef"
+            :defaultConfig="toolbarConfig"
+            mode="default"
           />
-        </el-form-item>
+          <Editor
+            style="height: 400px; overflow-y: hidden;"
+            v-model="postForm.content"
+            :defaultConfig="editorConfig"
+            mode="default"
+            @onCreated="handleEditorCreated"
+          />
+        </div>
+      </el-form-item>
         <el-form-item label="图片">
           <el-upload
             action="#"
@@ -248,10 +256,11 @@
 </template>
 
 <script setup>
-import { ref, computed,onMounted } from 'vue';
+import { ref, computed,onMounted,shallowRef, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { get, post } from '@/net';
-
+import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
+import '@wangeditor/editor/dist/css/style.css'
 import { 
   Search, User, Document, Plus, MoreFilled, View, 
   ChatDotRound, Star, Share, UserFilled, Medal, 
@@ -269,10 +278,9 @@ const hoverPost = ref(null);
 const searchQuery = ref('');
 const showPostDialog = ref(false);
 const barId = route.params.id;
-const postForm = ref({
-  title: '',
-  content: ''
-});
+
+// 提交状态
+const submitting = ref(false)
 
 // 贴吧信息
 const barInfo = ref({
@@ -282,7 +290,25 @@ const barInfo = ref({
   followerCount: 0,
   postCount: 0
 });
-
+// 富文本编辑器相关
+const editorRef = shallowRef()
+const toolbarConfig = {}
+const editorConfig = {
+  placeholder: '请输入帖子内容...',
+  MENU_CONF: {
+    uploadImage: {
+      server: 'http://localhost:8080/api/unauth/common/upload',
+      fieldName: 'file',
+      maxFileSize: 2 * 1024 * 1024, // 2M
+      allowedFileTypes: ['image/*'],
+      customInsert(res, insertFn) {
+        if (res && res.data) {
+          insertFn(res.data)
+        }
+      }
+    }
+  }
+}
 // 是否已关注
 const isFollowed = ref(false);
 
@@ -300,6 +326,23 @@ onMounted(() => {
         checkFollowStatus();
     }
 });
+
+onBeforeUnmount(() => {
+  const editor = editorRef.value
+  if (editor == null) return
+  editor.destroy()
+})
+
+// 发帖表单数据
+const postForm = ref({
+  title: '',
+  content: '',
+  images: []
+})
+
+const handleEditorCreated = (editor) => {
+  editorRef.value = editor
+}
 
 // 检查用户是否已关注该贴吧
 const checkFollowStatus = async () => {
@@ -465,11 +508,62 @@ const handleSearch = () => {
   console.log('搜索:', searchQuery.value);
 };
 
-const submitPost = () => {
-  console.log('提交帖子:', postForm.value);
-  showPostDialog.value = false;
-  postForm.value = { title: '', content: '' };
-};
+// 提交帖子
+const submitPost = async () => {
+  if (!postForm.value.title.trim()) {
+    ElMessage.error('请输入标题')
+    return
+  }
+  
+  if (!postForm.value.content.trim()) {
+    ElMessage.error('请输入内容')
+    return
+  }
+
+  submitting.value = true
+  
+  try {
+    // 准备表单数据
+    const formData = new FormData()
+    formData.append('title', postForm.value.title)
+    formData.append('content', postForm.value.content)
+    formData.append('barId', barId)
+    
+    // 添加图片文件
+    postForm.value.images.forEach((file, index) => {
+      formData.append(`image${index}`, file.raw)
+    })
+
+    // 调用API
+    const response = await post('/api/auth/bar/createTie', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    ElMessage.success('发帖成功')
+    showPostDialog.value = false
+    resetPostForm()
+    // 这里可以添加刷新帖子列表的逻辑
+  } catch (error) {
+    console.error('发帖失败:', error)
+    ElMessage.error(error.message || '发帖失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 重置发帖表单
+const resetPostForm = () => {
+  postForm.value = {
+    title: '',
+    content: '',
+    images: []
+  }
+  if (editorRef.value) {
+    editorRef.value.clear()
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -970,5 +1064,16 @@ follow-btn {
     font-size: 14px;
     transition: all 0.3s ease;
   }
+}
+
+/* 富文本编辑器样式调整 */
+.w-e-toolbar {
+  background-color: #f5f7fa !important;
+  border-bottom: 1px solid #e4e7ed !important;
+}
+
+.w-e-text-container {
+  background-color: #fff !important;
+  border: none !important;
 }
 </style>
