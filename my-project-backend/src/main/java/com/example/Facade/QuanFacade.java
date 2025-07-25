@@ -90,6 +90,7 @@ public class QuanFacade {
         barsByCategoryResp.setAvatar(v.getAvatar());
         barsByCategoryResp.setFollowerCount(v.getFollowerCount());
         barsByCategoryResp.setPostCount(v.getPostCount());
+        barsByCategoryResp.setDescription(v.getDescription());
         return barsByCategoryResp;
     }
 

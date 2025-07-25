@@ -2,10 +2,12 @@ package com.example.controller;
 
 import com.alibaba.fastjson2.JSON;
 import com.example.Facade.QuanFacade;
+import com.example.Facade.TieFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.req.BarFollowReq;
 import com.example.entity.req.QuanBarCreateReq;
+import com.example.entity.req.QuanTieCreateReq;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -28,7 +30,24 @@ import org.springframework.web.bind.annotation.RestController;
 public class QuanController {
 
     @Resource
+    TieFacade tieFacade;
+    @Resource
     private QuanFacade quanFacade;
+
+    @PostMapping("/createTie")
+    public RespBean<Boolean> createTie(@RequestBody @Valid QuanTieCreateReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = tieFacade.createTie(req, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("QuanController#createTie,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#createTie,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
     /**
      * 创建圈子

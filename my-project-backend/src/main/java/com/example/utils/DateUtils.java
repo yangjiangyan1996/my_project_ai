@@ -1,7 +1,9 @@
 package com.example.utils;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 /**
  * @Author YangJian
@@ -23,5 +25,11 @@ public class DateUtils {
 
         // 格式化并转换为Long
         return Long.parseLong(now.format(formatter));
+    }
+
+    //Date转换字符串的方法
+    public static String date2Str(Date time, String format) {
+        SimpleDateFormat sdf = new SimpleDateFormat(format);
+        return sdf.format(time);
     }
 }

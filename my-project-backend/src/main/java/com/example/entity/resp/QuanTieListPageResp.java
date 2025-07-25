@@ -6,15 +6,13 @@ import lombok.Data;
  * @Author YangJian
  * @Description
  * @Email 1776080295@qq.com
- * @Date 2025/7/24 17:30
+ * @Date 2025/7/25 15:25
  */
 @Data
-public class BarsInfoResp {
+public class QuanTieListPageResp {
     private Long id;
-    private String name;
+    private String title;
     private String avatar;
-    private Long followerCount;
-    private Long postCount;
-    private String description;
-
+    private String createdName;
+    private String createdTime;
 }

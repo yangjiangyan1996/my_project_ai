@@ -35,4 +35,31 @@ public class QuanEnum {
         }
     }
 
+
+    /**
+     * 帖子的状态
+     */
+    @Getter
+    public enum TieStatusEnums {
+        NORMAL(0, "正常"),
+        DISABLED(1, "禁用"),
+        ;
+        private Integer code;
+        private String name;
+
+        TieStatusEnums(Integer code, String name) {
+            this.code = code;
+            this.name = name;
+        }
+
+        public static String getByCode(Integer v) {
+            for (TieStatusEnums value : TieStatusEnums.values()) {
+                if (value.code.equals(v)) {
+                    return value.name;
+                }
+            }
+            return null;
+        }
+    }
+
 }

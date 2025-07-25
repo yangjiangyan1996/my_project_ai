@@ -1,15 +1,18 @@
 package com.example.controller;
 
+import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.QuanFacade;
+import com.example.Facade.TieFacade;
 import com.example.entity.base.RespBean;
+import com.example.entity.req.QuanTieListPageReq;
 import com.example.entity.resp.BarsInfoResp;
+import com.example.entity.resp.MyMemberGroupsResp;
+import com.example.entity.resp.QuanTieListPageResp;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -24,6 +27,8 @@ import java.util.List;
 @RequestMapping("/api/unauth/quan")
 public class UnauthQuanController {
 
+    @Resource
+    TieFacade tieFacade;
     @Resource
     QuanFacade quanFacade;
 
@@ -63,6 +68,20 @@ public class UnauthQuanController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("UnauthQuanController#getBarInfo,req:{}", barId,e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @PostMapping("/getTiePageOfBar")
+    public RespBean<Page<QuanTieListPageResp>> getTiePageOfBar(@RequestBody QuanTieListPageReq req) {
+        try {
+            Page<QuanTieListPageResp> list = tieFacade.getTiePageOfBar(req);
+            return RespBean.success(list);
+        } catch (ValidationException e) {
+            log.error("UnauthQuanController#getTiePageOfBar,req:{}", JSON.toJSONString(req),e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("UnauthQuanController#getTiePageOfBar,req:{}", JSON.toJSONString(req),e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

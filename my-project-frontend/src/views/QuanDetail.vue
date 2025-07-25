@@ -19,7 +19,7 @@
             </span>
           </div>
           <div class="bar-category">
-            <el-tag size="small" effect="plain">游戏主播及平台</el-tag>
+              <el-tag size="small" effect="plain">{{ barInfo.description || '暂无描述' }}</el-tag>
           </div>
         </div>
         <el-button 
@@ -102,14 +102,17 @@
           </div>
         </div>
         
+                
         <el-pagination
-          class="pagination"
-          :page-size="10"
-          :pager-count="5"
-          layout="prev, pager, next"
-          :total="100"
-          background
-          hide-on-single-page
+        class="pagination"
+        v-model:current-page="currentPage"
+        :page-size="pageSize"
+        :pager-count="5"
+        layout="prev, pager, next"
+        :total="total"
+        background
+        hide-on-single-page
+        @current-change="fetchPosts"
         />
       </div>
 
@@ -244,7 +247,7 @@
             :on-success="handleImageSuccess"
             :before-upload="beforeImageUpload"
         >
-            <img v-if="postForm.picUrl" :src="postForm.picUrl" class="cover-image">
+            <img v-if="postForm.avatar" :src="postForm.avatar" class="cover-image">
             <el-icon v-else class="cover-uploader-icon"><Plus /></el-icon>
         </el-upload>
         </el-form-item>
@@ -281,7 +284,11 @@ const hoverPost = ref(null);
 const searchQuery = ref('');
 const showPostDialog = ref(false);
 const barId = route.params.id;
-
+// 帖子数据和分页相关
+const posts = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 // 提交状态
 const submitting = ref(false)
 
@@ -291,7 +298,8 @@ const barInfo = ref({
   name: '',
   avatar: '',
   followerCount: 0,
-  postCount: 0
+  postCount: 0,
+  description: ''
 });
 // 富文本编辑器相关
 const editorRef = shallowRef()
@@ -318,17 +326,21 @@ const isFollowed = ref(false);
 
 onMounted(() => {
   if (!userInfo.data.id) {
-      loadUserInfo().then(() => {
-        console.log("当前用户", userInfo)
-        fetchBarInfo();
-        checkFollowStatus();
-      });
-    } else {
-        console.log("当前用户", userInfo)
-        fetchBarInfo();
-        checkFollowStatus();
-    }
-});
+    loadUserInfo().then(() => {
+      console.log("当前用户", userInfo)
+      fetchBarInfo().then(() => {
+        fetchPosts()
+      })
+      checkFollowStatus()
+    })
+  } else {
+    console.log("当前用户", userInfo)
+    fetchBarInfo().then(() => {
+      fetchPosts()
+    })
+    checkFollowStatus()
+  }
+})
 
 onBeforeUnmount(() => {
   const editor = editorRef.value
@@ -340,12 +352,12 @@ onBeforeUnmount(() => {
 const postForm = ref({
   title: '',
   content: '',
-  picUrl: '' // 改为单个图片URL
+  avatar: '' // 改为单个图片URL
 })
 
 // 图片上传成功处理
 const handleImageSuccess = (response) => {
-  postForm.value.picUrl = response.data;
+  postForm.value.avatar = response.data;
   ElMessage.success('上传成功');
 };
 
@@ -381,6 +393,37 @@ const handleEditorCreated = (editor) => {
   editorRef.value = editor
 }
 
+
+// 获取帖子列表
+const fetchPosts = async (page = 1) => {
+  try {
+    const response = await post('/api/unauth/quan/getTiePageOfBar', {
+      page: page,
+      size: pageSize.value,
+      barId: barId
+    })
+    
+    console.log("获取帖子列表", response.records)
+    if (response && response.records) {
+      posts.value = response.records.map(item => ({
+        id: item.id,
+        title: item.title,
+        content: '', // 接口未返回内容，可以留空或后续添加
+        userAvatar: item.avatar ,
+        username: item.createdName,
+        time: item.createdTime,
+        views: '0', // 接口未返回，可以留空或后续添加
+        comments: '0', // 接口未返回，可以留空或后续添加
+        likes: 0 // 接口未返回，可以留空或后续添加
+      }))
+      total.value = response.total || 0
+      currentPage.value = page
+    }
+  } catch (error) {
+    console.error('获取帖子列表失败:', error)
+  }
+}
+
 // 检查用户是否已关注该贴吧
 const checkFollowStatus = async () => {
   try {
@@ -409,7 +452,8 @@ const fetchBarInfo = async () => {
         name: response.name,
         avatar: response.avatar,
         followerCount: response.followerCount,
-        postCount: response.postCount
+        postCount: response.postCount,
+        description: response.description
       };
     }
   } catch (error) {
@@ -461,52 +505,9 @@ const formatNumber = (value) => {
 
 // 导航项
 const navItems = ref([
-  '首页', '精华', '热门', '视频', '图片', '吧务', '活动'
+//   '首页', '精华', '热门', '视频', '图片', '吧务', '活动'
 ]);
 
-// 帖子数据
-const posts = ref([
-  {
-    id: 1,
-    title: '抖音被小红书入侵了是吧？',
-    content: '拳师的角度越来越新奇了',
-    userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
-    username: '易炎嘉',
-    time: '07-24 10:30',
-    views: '7',
-    comments: '3'
-  },
-  {
-    id: 2,
-    title: '为什么没木鼠找我',
-    content: '剪完发感觉自己变帅了，为什么还没木薯找我',
-    userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
-    username: '被现实打垮',
-    time: '07-24 09:15',
-    views: '194',
-    comments: '42'
-  },
-  {
-    id: 3,
-    title: '把黑猴看成流浪地球的话，明末现在算不算上海堡垒？',
-    content: '经典刷开门又把门带上',
-    userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
-    username: '暴雨之夜',
-    time: '07-24 08:45',
-    views: '62',
-    comments: '18'
-  },
-  {
-    id: 4,
-    title: '给哥们谈到绘梨衣了',
-    content: '上辈子修来的福气谈到这么好的女朋友，鼠鼠必不放手',
-    userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
-    username: '上辈子修来的福气',
-    time: '07-23 22:10',
-    views: '4422',
-    comments: '521'
-  }
-]);
 
 // 友情贴吧
 const friendBars = ref([
@@ -561,10 +562,10 @@ const submitPost = async () => {
   
   try {
     // 调用API
-    const response = await post('/api/auth/bar/createTie', {
+    const response = await post('/api/auth/quan/createTie', {
       title: postForm.value.title,
       content: postForm.value.content,
-      picUrl: postForm.value.picUrl,
+      avatar: postForm.value.avatar,
       barId: barId
     })
 
@@ -584,7 +585,7 @@ const resetPostForm = () => {
   postForm.value = {
     title: '',
     content: '',
-    picUrl: ''
+    avatar: ''
   }
   if (editorRef.value) {
     editorRef.value.clear()
