@@ -10,4 +10,7 @@ import com.example.entity.dto.QuanUserBarFollows;
  * @Date 2025/7/24 16:00
  */
 public interface QuanUserBarFollowsService extends IService<QuanUserBarFollows> {
+    QuanUserBarFollows selectByBarIdAndUserId(Long barId, Long userId);
+
+    Boolean insert(Long barId, Long userId);
 }

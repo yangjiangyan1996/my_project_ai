@@ -9,7 +9,7 @@ import lombok.Data;
 @TableName("quan_user_bar_follows")
 public class QuanUserBarFollows extends BaseModel {
     @TableId(type = IdType.AUTO)
-    private Integer id;
-    private Integer userId;
-    private Integer barId;
+    private Long id;
+    private Long userId;
+    private Long barId;
 }

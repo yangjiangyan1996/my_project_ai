@@ -1,10 +1,11 @@
 package com.example.controller;
 
+import com.alibaba.fastjson2.JSON;
 import com.example.Facade.QuanFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
+import com.example.entity.req.BarFollowReq;
 import com.example.entity.req.QuanBarCreateReq;
-import com.example.entity.req.RemoveMemberReq;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -31,6 +32,7 @@ public class QuanController {
 
     /**
      * 创建圈子
+     *
      * @param req
      * @return
      */
@@ -45,6 +47,66 @@ public class QuanController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("QuanController#create,req:{}", req, e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 关注圈子成员
+     *
+     * @param req
+     * @return
+     */
+    @PostMapping("/followBar")
+    public RespBean<Boolean> followBar(@RequestBody @Valid BarFollowReq req) {
+        try {
+            Boolean result = quanFacade.followBar(req.getUserId(), req.getBarId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("QuanController#followBar,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#followBar,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 取消关注圈子
+     *
+     * @param req
+     * @return
+     */
+    @PostMapping("/unFollowBar")
+    public RespBean<Boolean> unFollowBar(@RequestBody @Valid BarFollowReq req) {
+        try {
+            Boolean result = quanFacade.unFollowBar(req.getUserId(), req.getBarId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("QuanController#unFollowBar,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#unFollowBar,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 判断用户是否关注圈子
+     *
+     * @param req
+     * @return
+     */
+    @PostMapping("/isFollowBar")
+    public RespBean<Boolean> isFollowBar(@RequestBody @Valid BarFollowReq req) {
+        try {
+            Boolean result = quanFacade.isFollowBar(req.getUserId(), req.getBarId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("QuanController#isFollowBar,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#isFollowBar,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

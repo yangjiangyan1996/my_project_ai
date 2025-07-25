@@ -1,30 +1,36 @@
 <template>
   <div class="tieba-container">
     <!-- 顶部贴吧信息栏 -->
-    <div class="bar-header">
+<div class="bar-header">
       <div class="bar-info">
         <div class="bar-avatar">
-          <el-avatar :size="60" src="https://via.placeholder.com/60" shape="square" />
+          <el-avatar :size="60" :src="barInfo.avatar" shape="square" />
         </div>
         <div class="bar-meta">
-          <h1 class="bar-name" @click="navigateToBar('孙笑川吧')">孙笑川吧</h1>
+          <h1 class="bar-name" @click="navigateToBar(barInfo.name)">{{ barInfo.name }}</h1>
           <div class="bar-stats">
             <span class="stat-item">
               <el-icon><User /></el-icon>
-              <span class="stat-value">7,083,430</span>
+              <span class="stat-value">{{ barInfo.followerCount | formatNumber }}</span>
             </span>
             <span class="stat-item">
               <el-icon><Document /></el-icon>
-              <span class="stat-value">206,865,412</span>
+              <span class="stat-value">{{ barInfo.postCount | formatNumber }}</span>
             </span>
           </div>
           <div class="bar-category">
             <el-tag size="small" effect="plain">游戏主播及平台</el-tag>
           </div>
         </div>
-        <el-button type="primary" class="follow-btn" size="small" round>
+        <el-button 
+          type="primary" 
+          class="follow-btn" 
+          size="small" 
+          round
+          @click="toggleFollow"
+        >
           <el-icon><Plus /></el-icon>
-          <span>关注</span>
+          <span>{{ isFollowed ? '已关注' : '关注' }}</span>
         </el-button>
       </div>
     </div>
@@ -240,25 +246,135 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed,onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { get, post } from '@/net';
 import { 
   Search, User, Document, Plus, MoreFilled, View, 
   ChatDotRound, Star, Share, UserFilled, Medal, 
   Folder, EditPen 
 } from '@element-plus/icons-vue';
+import useUserInfo from '@/hooks/useUserInfo';
 
+const route = useRoute();
 const router = useRouter();
+const { state: userInfo, loadUserInfo } = useUserInfo();
 
 // 响应式数据
 const activeNav = ref(0);
 const hoverPost = ref(null);
 const searchQuery = ref('');
 const showPostDialog = ref(false);
+const barId = route.params.id;
 const postForm = ref({
   title: '',
   content: ''
 });
+
+// 贴吧信息
+const barInfo = ref({
+  id: 0,
+  name: '',
+  avatar: '',
+  followerCount: 0,
+  postCount: 0
+});
+
+// 是否已关注
+const isFollowed = ref(false);
+
+
+onMounted(() => {
+  if (!userInfo.data.id) {
+      loadUserInfo().then(() => {
+        console.log("当前用户", userInfo)
+        fetchBarInfo();
+        checkFollowStatus();
+      });
+    } else {
+        console.log("当前用户", userInfo)
+        fetchBarInfo();
+        checkFollowStatus();
+    }
+});
+
+// 检查用户是否已关注该贴吧
+const checkFollowStatus = async () => {
+  try {
+    if (!userInfo.data.id) return; // 未登录不检查
+    
+    const response = await post('/api/auth/quan/isFollowBar', { 
+      barId: barId, 
+      userId: userInfo.data.id 
+    });
+    console.log("检查关注状态", response)
+    isFollowed.value = response; // 假设返回的data字段为布尔值
+  } catch (error) {
+    console.error('检查关注状态失败:', error);
+    isFollowed.value = false; // 出错时默认未关注
+  }
+};
+
+// 获取贴吧信息
+const fetchBarInfo = async () => {
+  try {
+    const response = await get(`/api/unauth/quan/getBarInfo?barId=${barId}`);
+    
+    if (response) {
+      barInfo.value = {
+        id: response.id,
+        name: response.name,
+        avatar: response.avatar,
+        followerCount: response.followerCount,
+        postCount: response.postCount
+      };
+    }
+  } catch (error) {
+    console.error('获取贴吧信息失败:', error);
+  }
+};
+
+
+// 关注/取消关注
+// 关注/取消关注
+const toggleFollow = async () => {
+  try {
+    if (!userInfo.data.id) {
+      // 未登录处理，可以跳转到登录页
+      router.push('/login');
+      return;
+    }
+
+    if (isFollowed.value) {
+      // 调用取消关注API
+      await post('/api/auth/quan/unFollowBar', { 
+        barId: barInfo.value.id, 
+        userId: userInfo.data.id 
+      });
+      barInfo.value.followerCount--; // 更新关注数
+    } else {
+      // 调用关注API
+      await post('/api/auth/quan/followBar', { 
+        barId: barInfo.value.id, 
+        userId: userInfo.data.id 
+      });
+      barInfo.value.followerCount++; // 更新关注数
+    }
+    isFollowed.value = !isFollowed.value;
+  } catch (error) {
+    console.error('操作失败:', error);
+    ElMessage.error(isFollowed.value ? '取消关注失败' : '关注失败');
+  }
+};
+
+
+// 数字格式化过滤器
+const formatNumber = (value) => {
+  if (value >= 10000) {
+    return (value / 10000).toFixed(1) + '万';
+  }
+  return value;
+};
 
 // 导航项
 const navItems = ref([

@@ -48,16 +48,21 @@ public class UnauthQuanController {
     }
 
 
+    /**
+     * 获取圈子信息
+     * @param barId
+     * @return
+     */
     @GetMapping("/getBarInfo")
     public RespBean<BarsInfoResp> getBarInfo(@RequestParam("barId") Long barId) {
         try {
             BarsInfoResp result = quanFacade.getBarInfo(barId);
             return RespBean.success(result);
         } catch (ValidationException e) {
-            log.error("UnauthQuanController#getBarInfo,req:{}", e);
+            log.error("UnauthQuanController#getBarInfo,req:{}", barId,e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("UnauthQuanController#getBarInfo,req:{}", e);
+            log.error("UnauthQuanController#getBarInfo,req:{}", barId,e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

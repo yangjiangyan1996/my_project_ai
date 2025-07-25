@@ -1,10 +1,12 @@
 package com.example.Facade;
 
 import com.example.entity.dto.QuanBars;
+import com.example.entity.dto.QuanUserBarFollows;
 import com.example.entity.req.QuanBarCreateReq;
 import com.example.entity.resp.BarsInfoResp;
 import com.example.enums.QuanEnum;
 import com.example.service.QuanBarsService;
+import com.example.service.QuanUserBarFollowsService;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,8 @@ import java.util.stream.Collectors;
 @Service
 public class QuanFacade {
 
+    @Resource
+    QuanUserBarFollowsService quanUserBarFollowsService;
     @Resource
     QuanBarsService quanBarsService;
 
@@ -84,5 +88,26 @@ public class QuanFacade {
         barsByCategoryResp.setFollowerCount(v.getFollowerCount());
         barsByCategoryResp.setPostCount(v.getPostCount());
         return barsByCategoryResp;
+    }
+
+    public Boolean followBar(Long userId, Long barId) {
+        QuanUserBarFollows f = quanUserBarFollowsService.selectByBarIdAndUserId(barId, userId);
+        if (f != null) {
+            throw new ValidationException("已关注");
+        }
+        return quanUserBarFollowsService.insert(barId, userId);
+    }
+
+    public Boolean unFollowBar(Long userId, Long barId) {
+        QuanUserBarFollows f = quanUserBarFollowsService.selectByBarIdAndUserId(barId, userId);
+        if (f == null) {
+            return true;
+        }
+        return quanUserBarFollowsService.removeById(f.getId());
+    }
+
+    public Boolean isFollowBar(Long userId, Long barId) {
+        QuanUserBarFollows f = quanUserBarFollowsService.selectByBarIdAndUserId(barId, userId);
+        return f != null;
     }
 }
