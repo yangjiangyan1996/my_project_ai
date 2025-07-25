@@ -235,17 +235,20 @@
           />
         </div>
       </el-form-item>
-        <el-form-item label="图片">
-          <el-upload
-            action="#"
-            list-type="picture-card"
-            :auto-upload="false"
-            :limit="9"
-            multiple
-          >
-            <el-icon><Plus /></el-icon>
-          </el-upload>
+       
+        <el-form-item label="图片" prop="images">
+        <el-upload
+            class="cover-uploader"
+            action="http://localhost:8080/api/unauth/common/upload"
+            :show-file-list="false"
+            :on-success="handleImageSuccess"
+            :before-upload="beforeImageUpload"
+        >
+            <img v-if="postForm.picUrl" :src="postForm.picUrl" class="cover-image">
+            <el-icon v-else class="cover-uploader-icon"><Plus /></el-icon>
+        </el-upload>
         </el-form-item>
+
       </el-form>
       <template #footer>
         <el-button @click="showPostDialog = false">取消</el-button>
@@ -337,8 +340,42 @@ onBeforeUnmount(() => {
 const postForm = ref({
   title: '',
   content: '',
-  images: []
+  picUrl: '' // 改为单个图片URL
 })
+
+// 图片上传成功处理
+const handleImageSuccess = (response) => {
+  postForm.value.picUrl = response.data;
+  ElMessage.success('上传成功');
+};
+
+// 图片上传前校验
+const beforeImageUpload = (file) => {
+  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png';
+  const isLt2M = file.size / 1024 / 1024 < 2;
+  const isSizeValid = new Promise((resolve) => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      const valid = img.width <= 2000 && img.height <= 2000;
+      if (!valid) {
+        ElMessage.error('图片尺寸不能超过2000x2000像素');
+      }
+      resolve(valid);
+    };
+  });
+
+  if (!isJPG) {
+    ElMessage.error('图片只能是 JPG/PNG 格式!');
+    return false;
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB!');
+    return false;
+  }
+  
+  return isJPG && isLt2M && isSizeValid;
+};
 
 const handleEditorCreated = (editor) => {
   editorRef.value = editor
@@ -523,28 +560,17 @@ const submitPost = async () => {
   submitting.value = true
   
   try {
-    // 准备表单数据
-    const formData = new FormData()
-    formData.append('title', postForm.value.title)
-    formData.append('content', postForm.value.content)
-    formData.append('barId', barId)
-    
-    // 添加图片文件
-    postForm.value.images.forEach((file, index) => {
-      formData.append(`image${index}`, file.raw)
-    })
-
     // 调用API
-    const response = await post('/api/auth/bar/createTie', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+    const response = await post('/api/auth/bar/createTie', {
+      title: postForm.value.title,
+      content: postForm.value.content,
+      picUrl: postForm.value.picUrl,
+      barId: barId
     })
 
     ElMessage.success('发帖成功')
     showPostDialog.value = false
     resetPostForm()
-    // 这里可以添加刷新帖子列表的逻辑
   } catch (error) {
     console.error('发帖失败:', error)
     ElMessage.error(error.message || '发帖失败')
@@ -558,7 +584,7 @@ const resetPostForm = () => {
   postForm.value = {
     title: '',
     content: '',
-    images: []
+    picUrl: ''
   }
   if (editorRef.value) {
     editorRef.value.clear()
