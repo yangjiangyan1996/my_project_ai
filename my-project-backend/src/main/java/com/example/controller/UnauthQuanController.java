@@ -8,6 +8,7 @@ import com.example.entity.base.RespBean;
 import com.example.entity.req.QuanTieListPageReq;
 import com.example.entity.resp.BarsInfoResp;
 import com.example.entity.resp.MyMemberGroupsResp;
+import com.example.entity.resp.QuanTieBaseInfoResp;
 import com.example.entity.resp.QuanTieListPageResp;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -32,6 +33,20 @@ public class UnauthQuanController {
     @Resource
     QuanFacade quanFacade;
 
+
+    @GetMapping("/getTieBaseInfo")
+    public RespBean<QuanTieBaseInfoResp> getTieBaseInfo(@RequestParam("tieId") Long tieId) {
+        try {
+            QuanTieBaseInfoResp result = tieFacade.getTieBaseInfo(tieId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("UnauthQuanController#getTieBaseInfo,req:{}",tieId, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("UnauthQuanController#getTieBaseInfo,req:{}", tieId,e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
     /**
      * 获取分类下的所有圈子

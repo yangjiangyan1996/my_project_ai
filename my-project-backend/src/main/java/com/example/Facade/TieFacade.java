@@ -8,6 +8,7 @@ import com.example.entity.dto.QuanBarTie;
 import com.example.entity.req.QuanTieCreateReq;
 import com.example.entity.req.QuanTieListPageReq;
 import com.example.entity.resp.MyMemberGroupsResp;
+import com.example.entity.resp.QuanTieBaseInfoResp;
 import com.example.entity.resp.QuanTieListPageResp;
 import com.example.enums.ProjectEnum;
 import com.example.enums.QuanEnum;
@@ -50,7 +51,7 @@ public class TieFacade {
     }
 
     public Page<QuanTieListPageResp> getTiePageOfBar(QuanTieListPageReq req) {
-        Page<QuanBarTie> page = quanBarTieService.getTiePageOfBar(Page.of(req.getPage(), req.getSize()),req);
+        Page<QuanBarTie> page = quanBarTieService.getTiePageOfBar(Page.of(req.getPage(), req.getSize()), req);
         if (page.getRecords().isEmpty()) {
             return Page.of(req.getPage(), req.getSize());
         }
@@ -65,7 +66,7 @@ public class TieFacade {
             r.setTitle(v.getTitle());
             r.setAvatar(v.getAvatar());
             r.setCreatedName(userId2UserInfoMap.get(v.getCreatedBy()).getNickname());
-            r.setCreatedTime(DateUtils.date2Str(v.getCreatedAt(), "yyyy-MM-dd HH:mm"));
+            r.setCreatedTime(DateUtils.date2Str(v.getCreatedAt()));
             return r;
         }).collect(Collectors.toList());
 
@@ -74,4 +75,23 @@ public class TieFacade {
         result.setRecords(collect);
         return result;
     }
+
+    public QuanTieBaseInfoResp getTieBaseInfo(Long tieId) {
+        QuanBarTie e = quanBarTieService.getById(tieId);
+        if (e == null) {
+            return null;
+        }
+        Account account = accountService.selectById(e.getCreatedBy());
+        QuanTieBaseInfoResp r = new QuanTieBaseInfoResp();
+        r.setId(e.getId());
+        r.setTitle(e.getTitle());
+        r.setAvatar(e.getAvatar());
+        r.setContent(e.getContent());
+        if (account != null) {
+            r.setCreatedName(account.getNickname());
+        }
+        r.setCreatedTime(DateUtils.date2Str(e.getCreatedAt()));
+        return r;
+    }
+
 }

@@ -111,6 +111,11 @@ const router = createRouter({
             name: 'quanDetail',
             component: () => import('@/views/QuanDetail.vue'),
             meta: { requiresAuth: true }
+        },{
+            path: '/index/quan/QuanTieDetail/:id',
+            name: 'quanTieDetail',
+            component: () => import('@/views/QuanTieDetail.vue'),
+            meta: { requiresAuth: true }
         }
         // ,{
         //     path: '/index/growthCenter',

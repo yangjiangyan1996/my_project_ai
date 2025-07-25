@@ -393,6 +393,17 @@ const handleEditorCreated = (editor) => {
   editorRef.value = editor
 }
 
+const navigateToPost = (tieId) => {
+  console.log("访问用户详情页",tieId)
+  // router.push(`/index/user/${userId}`)
+  window.open(`/index/quan/QuanTieDetail/${tieId}`, '_blank');
+};
+
+// const navigateToPost = (postId) => {
+//   console.log('查看帖子:', postId);
+  // router.push({ name: 'post', params: { id: postId } });
+// };
+
 
 // 获取帖子列表
 const fetchPosts = async (page = 1) => {
@@ -533,10 +544,7 @@ const navigateToBar = (barName) => {
   // router.push({ name: 'bar', params: { name: barName } });
 };
 
-const navigateToPost = (postId) => {
-  console.log('查看帖子:', postId);
-  // router.push({ name: 'post', params: { id: postId } });
-};
+
 
 const showPostMenu = (postId) => {
   console.log('显示帖子菜单:', postId);

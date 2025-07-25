@@ -28,8 +28,8 @@ public class DateUtils {
     }
 
     //Date转换字符串的方法
-    public static String date2Str(Date time, String format) {
-        SimpleDateFormat sdf = new SimpleDateFormat(format);
+    public static String date2Str(Date time) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return sdf.format(time);
     }
 }
