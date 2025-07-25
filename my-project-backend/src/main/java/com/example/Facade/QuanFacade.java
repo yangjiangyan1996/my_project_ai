@@ -2,7 +2,7 @@ package com.example.Facade;
 
 import com.example.entity.dto.QuanBars;
 import com.example.entity.req.QuanBarCreateReq;
-import com.example.entity.resp.BarsByCategoryResp;
+import com.example.entity.resp.BarsInfoResp;
 import com.example.enums.QuanEnum;
 import com.example.service.QuanBarsService;
 import jakarta.annotation.Resource;
@@ -49,7 +49,7 @@ public class QuanFacade {
         return quanBarsService.save(e);
     }
 
-    public List<BarsByCategoryResp> getBarsByCategory(Long categoryId) {
+    public List<BarsInfoResp> getBarsByCategory(Long categoryId) {
         if (categoryId == null) {
             return new ArrayList<>(1);
         }
@@ -59,7 +59,7 @@ public class QuanFacade {
         }
         return list.stream().sorted((o1, o2) -> o2.getFollowerCount().compareTo(o1.getFollowerCount()))
                 .map(v -> {
-                    BarsByCategoryResp barsByCategoryResp = new BarsByCategoryResp();
+                    BarsInfoResp barsByCategoryResp = new BarsInfoResp();
                     barsByCategoryResp.setId(v.getId());
                     barsByCategoryResp.setName(v.getName());
                     barsByCategoryResp.setAvatar(v.getAvatar());
@@ -67,5 +67,22 @@ public class QuanFacade {
                     barsByCategoryResp.setPostCount(v.getPostCount());
                     return barsByCategoryResp;
                 }).collect(Collectors.toList());
+    }
+
+    public BarsInfoResp getBarInfo(Long barId) {
+        if (barId == null) {
+            return null;
+        }
+        QuanBars v = quanBarsService.getById(barId);
+        if (v == null) {
+            return null;
+        }
+        BarsInfoResp barsByCategoryResp = new BarsInfoResp();
+        barsByCategoryResp.setId(v.getId());
+        barsByCategoryResp.setName(v.getName());
+        barsByCategoryResp.setAvatar(v.getAvatar());
+        barsByCategoryResp.setFollowerCount(v.getFollowerCount());
+        barsByCategoryResp.setPostCount(v.getPostCount());
+        return barsByCategoryResp;
     }
 }

@@ -102,9 +102,14 @@ const router = createRouter({
             component: () => import('@/views/RankingList.vue'),
             meta: { requiresAuth: true }
         },{
-            path: '/index/sendPost',
-            name: 'sendPost',
-            component: () => import('@/views/SendPost.vue'),
+            path: '/index/QuanList',
+            name: 'quanList',
+            component: () => import('@/views/QuanList.vue'),
+            meta: { requiresAuth: true }
+        },{
+            path: '/index/quan/QuanDetail/:id',
+            name: 'quanDetail',
+            component: () => import('@/views/QuanDetail.vue'),
             meta: { requiresAuth: true }
         }
         // ,{

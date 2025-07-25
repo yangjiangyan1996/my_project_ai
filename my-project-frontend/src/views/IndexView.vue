@@ -323,7 +323,7 @@
 
       <el-sub-menu index="2">
         <template #title><i class="el-icon-chat-dot-round"></i>社区互动</template>
-        <el-menu-item index="forum" @click="changeDisplayMode('sendPost')">圈子论坛</el-menu-item>
+        <el-menu-item index="forum" @click="changeDisplayMode('quanList')">圈子论坛</el-menu-item>
         <el-menu-item index="qa" @click="router.push({ name: 'qa' })">问答专区</el-menu-item>
       </el-sub-menu>
 
@@ -447,7 +447,7 @@
 
      <RankingList v-if="displayMode === 'rankingList'" />
 
-     <SendPost v-if="displayMode === 'sendPost'" />
+     <QuanList v-if="displayMode === 'quanList'" />
 
      <!-- <GrowthCenter v-if="displayMode === 'growthCenter'" /> -->
 
@@ -463,7 +463,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import SkillMatch from '@/views/SkillMatch.vue';
 import TalentMatch from '@/views/TalentMatch.vue';
 import RankingList from '@/views/RankingList.vue';
-import SendPost from '@/views/SendPost.vue';
+import QuanList from '@/views/QuanList.vue';
 // import GrowthCenter from '@/views/GrowthCenter.vue';
 
 import MyInfo from '@/views/My.vue';

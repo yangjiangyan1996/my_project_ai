@@ -2,10 +2,7 @@ package com.example.controller;
 
 import com.example.Facade.QuanFacade;
 import com.example.entity.base.RespBean;
-import com.example.entity.base.UserInfo;
-import com.example.entity.resp.BarsByCategoryResp;
-import com.example.entity.resp.ProjectCommentResp;
-import com.example.filter.UserUtil;
+import com.example.entity.resp.BarsInfoResp;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -30,16 +27,37 @@ public class UnauthQuanController {
     @Resource
     QuanFacade quanFacade;
 
+
+    /**
+     * 获取分类下的所有圈子
+     * @param categoryCode
+     * @return
+     */
     @GetMapping("/getBarsByCategory")
-    public RespBean<List<BarsByCategoryResp>> getBarsByCategory(@RequestParam("categoryCode") Long categoryCode) {
+    public RespBean<List<BarsInfoResp>> getBarsByCategory(@RequestParam("categoryCode") Long categoryCode) {
         try {
-            List<BarsByCategoryResp> result = quanFacade.getBarsByCategory(categoryCode);
+            List<BarsInfoResp> result = quanFacade.getBarsByCategory(categoryCode);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("UnauthQuanController#getBarsByCategory,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("UnauthQuanController#getBarsByCategory,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+    @GetMapping("/getBarInfo")
+    public RespBean<BarsInfoResp> getBarInfo(@RequestParam("barId") Long barId) {
+        try {
+            BarsInfoResp result = quanFacade.getBarInfo(barId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("UnauthQuanController#getBarInfo,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("UnauthQuanController#getBarInfo,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

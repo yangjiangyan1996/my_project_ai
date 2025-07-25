@@ -22,21 +22,34 @@
             </el-icon>
           </div>
           
-          <el-collapse-transition>
+            <el-collapse-transition>
             <div v-show="category.expanded" class="group-tags">
               <div v-if="loadingBars[category.code]" class="loading-bars">
                 <el-icon class="is-loading"><Loading /></el-icon>
               </div>
               <template v-else>
-                <el-tag
+                <div 
                   v-for="bar in categoryBars[category.code]"
                   :key="bar.id"
-                  class="category-tag"
-                  :effect="activeBar === bar.id ? 'dark' : 'plain'"
-                  @click="handleBarClick(bar)"
+                  class="bar-item"
+                  :class="{ 'active': activeBar === bar.id }"
+                  @click="goToUserProfile(bar.id)" 
                 >
-                  {{ bar.name }}
-                </el-tag>
+                  <el-avatar :size="40" :src="bar.avatar" class="bar-avatar" />
+                  <div class="bar-info">
+                    <div class="bar-name">{{ bar.name }}</div>
+                    <div class="bar-stats">
+                      <span class="follower-count">
+                        <el-icon><User /></el-icon>
+                        {{ bar.followerCount }}
+                      </span>
+                      <span class="post-count">
+                        <el-icon><Document /></el-icon>
+                        {{ bar.postCount }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </template>
             </div>
           </el-collapse-transition>
@@ -342,7 +355,7 @@ import {
   ArrowDown, Refresh, Search, View, 
   ChatDotRound, Star, StarFilled, 
   Plus, CircleCheckFilled, Picture,
-  Loading
+  Loading, User, Document
 } from '@element-plus/icons-vue'
 import { logout, post, get } from '@/net';
 
@@ -627,6 +640,11 @@ const categoryProps = ref({
   children: 'subs'
 })
 
+const goToUserProfile = (barId) => {
+  console.log("访问帖子详情页",barId)
+  // router.push(`/index/user/${userId}`)
+  window.open(`/index/quan/QuanDetail/${barId}`, '_blank');
+}
 
 // 获取一级分类
 const fetchFirstLevelCategories = async () => {
@@ -675,11 +693,11 @@ const fetchBarsByCategory = async (categoryCode) => {
 };
 
 // 点击圈子标签
-const handleBarClick = (bar) => {
-  activeBar.value = bar.id;
-  // 这里可以根据需要跳转到圈子页面或过滤帖子
-  navigateToBar(bar.id);
-};
+// const handleBarClick = (bar) => {
+//   activeBar.value = bar.id;
+//   // 这里可以根据需要跳转到圈子页面或过滤帖子
+//   navigateToBar(bar.id);
+// };
 
 // 刷新分类
 const refreshCategories = () => {
@@ -713,12 +731,22 @@ const fetchCategories = async () => {
 }
 
 // 显示创建对话框
-const showCreateDialog = () => {
-  createDialogVisible.value = true
+const showCreateDialog = async () => {
+  createDialogVisible.value = true;
   if (createFormRef.value) {
-    createFormRef.value.resetFields()
+    createFormRef.value.resetFields();
   }
-}
+  
+  // 确保分类数据已加载
+  if (categoryOptions.value.length === 0) {
+    try {
+      await fetchCategories();
+    } catch (error) {
+      console.error('加载分类数据失败:', error);
+      ElMessage.error('加载分类数据失败');
+    }
+  }
+};
 
 const beforeAvatarUpload = (file) => {
   const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
@@ -1525,5 +1553,68 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   width: 100%;
+}
+
+.group-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.bar-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background-color: #f9f9f9;
+}
+
+.bar-item:hover {
+  background-color: #f0f7ff;
+}
+
+.bar-item.active {
+  background-color: #e6f1ff;
+}
+
+.bar-avatar {
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+.bar-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bar-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.bar-stats .el-icon {
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+.loading-bars {
+  display: flex;
+  justify-content: center;
+  padding: 10px;
 }
 </style>

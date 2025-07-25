@@ -9,7 +9,7 @@ import lombok.Data;
  * @Date 2025/7/24 17:30
  */
 @Data
-public class BarsByCategoryResp {
+public class BarsInfoResp {
     private Long id;
     private String name;
     private String avatar;
