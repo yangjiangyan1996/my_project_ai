@@ -1,26 +1,24 @@
 package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.example.entity.dto.Account;
-import com.example.entity.dto.ProjectMembers;
-import com.example.entity.dto.Projects;
-import com.example.entity.dto.QuanBarTie;
+import com.example.entity.dto.*;
+import com.example.entity.req.QuanTieCommentPageReq;
+import com.example.entity.req.QuanTieCommentReq;
 import com.example.entity.req.QuanTieCreateReq;
 import com.example.entity.req.QuanTieListPageReq;
-import com.example.entity.resp.MyMemberGroupsResp;
-import com.example.entity.resp.QuanTieBaseInfoResp;
-import com.example.entity.resp.QuanTieListPageResp;
+import com.example.entity.resp.*;
 import com.example.enums.ProjectEnum;
 import com.example.enums.QuanEnum;
 import com.example.service.AccountService;
 import com.example.service.QuanBarTieService;
+import com.example.service.QuanTieCommentLikeService;
+import com.example.service.QuanTieCommentService;
 import com.example.utils.DateUtils;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -31,6 +29,12 @@ import java.util.stream.Collectors;
  */
 @Service
 public class TieFacade {
+    @Resource
+    MessageFacade messageFacade;
+    @Resource
+    QuanTieCommentLikeService quanTieCommentLikeService;
+    @Resource
+    QuanTieCommentService quanTieCommentService;
     @Resource
     AccountService accountService;
     @Resource
@@ -94,4 +98,100 @@ public class TieFacade {
         return r;
     }
 
+    public Boolean comment(QuanTieCommentReq req, Long userId, String userName) {
+        Long commentId = quanTieCommentService.comment(req.getTieId(), userId, userName, req.getContent(), req.getReplyTo(), req.getFirstLevelCommonId());
+        if (commentId != null) {
+            //TODO yang 这里要处理下，提供一个公用的
+            //messageFacade.createMessageOfComment(req.getTieId(), commentId, req.getReplyTo(), userId);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public Page<QuanTieCommentResp> commentShow(QuanTieCommentPageReq req, Long currentUserId) {
+        Page<QuanTieComment> firstLevelCommentPage = quanTieCommentService.getFirstLevelCommentPageOfBar(Page.of(req.getPage(), req.getSize()), req);
+        if (firstLevelCommentPage .getRecords().isEmpty()) {
+            return Page.of(req.getPage(), req.getSize());
+        }
+
+
+
+        List<QuanTieCommentLike> likes = quanTieCommentLikeService.selectByTieId(req.getTieId());
+
+
+        List<Long> userIds = firstLevelCommentPage.getRecords().stream().map(v -> v.getUserId()).distinct().collect(Collectors.toList());
+        List<Account> userInfoList = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = userInfoList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+        // 1. 映射全部评论
+        Map<Long, List<QuanTieCommentLike>> commentId2LikeListMap = likes.stream().collect(Collectors.groupingBy(QuanTieCommentLike::getCommentId));
+
+        // 构建第一层评论（replyTo=0）
+        Map<Long, QuanTieCommentResp> firstLevelMap = firstLevelCommentPage.getRecords().stream()
+                .filter(c -> c.getReplyTo() < 0)
+                .collect(Collectors.toMap(
+                        QuanTieComment::getId,
+                        c -> convertToVO(c, currentUserId, commentId2LikeListMap, userId2UserInfoMap)
+                ));
+
+        // 构建第二层评论（first_level_common_id对应第一层ID）
+        Map<Long, List<QuanTieCommentResp>> secondLevelMap = firstLevelCommentPage.getRecords().stream()
+                .filter(c -> c.getReplyTo() > 0)
+                .collect(Collectors.groupingBy(
+                        QuanTieComment::getFirstLevelCommonId,
+                        Collectors.mapping(
+                                c -> convertToVO(c, currentUserId, commentId2LikeListMap, userId2UserInfoMap),
+                                Collectors.toList()
+                        )
+                ));
+
+        // 组装评论树
+        List<QuanTieCommentResp> result = new ArrayList<>();
+        for (Long firstCommentId : firstLevelMap.keySet()) {
+            QuanTieCommentResp firstLevel = firstLevelMap.get(firstCommentId);
+            if (secondLevelMap.containsKey(firstCommentId)) {
+                List<QuanTieCommentResp> secondList = secondLevelMap.get(firstCommentId);
+                if (secondList != null) {
+                    List<QuanTieCommentResp> collect = secondList.stream()
+                            .sorted(Comparator.comparing(QuanTieCommentResp::getCreatedAt))
+                            .collect(Collectors.toList());
+                    firstLevel.setReplies(collect);
+                }
+            }
+            result.add(firstLevel);
+        }
+
+        List<QuanTieCommentResp> r = result.stream()
+                .sorted(Comparator.comparing(QuanTieCommentResp::getCreatedAt))
+                .collect(Collectors.toList());
+
+
+        Page<QuanTieCommentResp> pageResult = Page.of(req.getPage() - 1, req.getSize());
+        pageResult.setTotal(firstLevelCommentPage.getTotal());
+        pageResult.setRecords(r);
+        return pageResult;
+    }
+
+
+    private QuanTieCommentResp convertToVO(QuanTieComment comment, Long currentUserId, Map<Long, List<QuanTieCommentLike>> commentId2LikeListMap, Map<Long, Account> userId2UserInfoMap) {
+        QuanTieCommentResp vo = new QuanTieCommentResp();
+        vo.setId(comment.getId());
+        vo.setTieId(comment.getTieId());
+        vo.setContent(comment.getStatus().equals(ProjectEnum.ProjectCommentStatusEnum.hide.getCode()) ? "本条评论已被用户删除～" : comment.getContent());
+        vo.setCreatedAt(comment.getCreatedAt());
+        vo.setReplyTo(comment.getReplyTo());
+        vo.setReplyToName(comment.getReplyToUsername());
+        vo.setDeleted(comment.getIsDeleted() != 0);
+        vo.setLikes(commentId2LikeListMap.containsKey(comment.getId()) ? commentId2LikeListMap.get(comment.getId()).size() : 0);
+        vo.setIsMine(comment.getUserId().equals(currentUserId));
+        vo.setFirstLevelCommonId(comment.getFirstLevelCommonId());
+        vo.setSecrecyId(userId2UserInfoMap.get(comment.getUserId()).getSecrecyId());
+
+        // 获取用户昵称头像
+        Account account = accountService.selectById(comment.getUserId());
+        vo.setUsername(account.getNickname());
+        vo.setAvatar(account.getAvatarUrl());
+        return vo;
+    }
 }

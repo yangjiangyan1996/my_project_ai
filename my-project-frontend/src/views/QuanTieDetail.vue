@@ -267,12 +267,10 @@ const fetchTieDetail = async () => {
 // 获取评论列表
 const fetchComments = async (page = 1) => {
   try {
-    const res = await get(`/api/unauth/quan/getTieComments`, {
-      params: {
+    const res = await post(`/api/auth/quan/commentShow`, {
         tieId: tieId,
         page: page,
         size: commentPageSize.value
-      }
     });
     
     if (res) {

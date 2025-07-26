@@ -1,13 +1,12 @@
 package com.example.controller;
-
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.alibaba.fastjson2.JSON;
 import com.example.Facade.QuanFacade;
 import com.example.Facade.TieFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
-import com.example.entity.req.BarFollowReq;
-import com.example.entity.req.QuanBarCreateReq;
-import com.example.entity.req.QuanTieCreateReq;
+import com.example.entity.req.*;
+import com.example.entity.resp.QuanTieCommentResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -33,6 +32,41 @@ public class QuanController {
     TieFacade tieFacade;
     @Resource
     private QuanFacade quanFacade;
+
+
+    @PostMapping("/commentShow")
+    public RespBean<Page<QuanTieCommentResp>> commentShow(@RequestBody @Valid QuanTieCommentPageReq req) {
+        try {
+            Long userId = null;
+            UserInfo user = UserUtil.getCurrentUser();
+            if(user != null) {
+                userId = user.getId();
+            }
+            Page<QuanTieCommentResp> result = tieFacade.commentShow(req, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("QuanController#commentShow,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#commentShow,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @PostMapping("/comment")
+    public RespBean<Boolean> comment(@RequestBody @Valid QuanTieCommentReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = tieFacade.comment(req, user.getId(), user.getNikeName());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("QuanController#comment,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#comment,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
     @PostMapping("/createTie")
     public RespBean<Boolean> createTie(@RequestBody @Valid QuanTieCreateReq req) {

@@ -1,5 +1,9 @@
 package com.example.service;
 
+import com.example.entity.dto.QuanTieCommentLike;
+
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -7,4 +11,5 @@ package com.example.service;
  * @Date 2025/7/25 17:27
  */
 public interface QuanTieCommentLikeService {
+    List<QuanTieCommentLike> selectByTieId(Long tieId);
 }
