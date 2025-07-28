@@ -29,6 +29,7 @@ public class QuanBarTieServiceImpl extends ServiceImpl<QuanBarTieMapper, QuanBar
                 new QueryWrapper<QuanBarTie>()
                         .eq("bar_id", req.getBarId())
                         .eq("is_deleted", 0)
+                        .like(req.getKeyword() != null, "title", req.getKeyword())
                         .eq("status", QuanEnum.TieStatusEnums.NORMAL.getCode())
                         .orderByDesc("created_at")
         );

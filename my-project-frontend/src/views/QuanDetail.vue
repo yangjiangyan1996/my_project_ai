@@ -124,6 +124,8 @@
             size="large"
             v-model="searchQuery"
             @keyup.enter="handleSearch"
+            clearable
+            @clear="handleSearch" 
           >
             <template #prefix>
               <el-icon><Search /></el-icon>
@@ -169,7 +171,7 @@
             class="friend-bar" 
             v-for="bar in friendBars" 
             :key="bar.id" 
-            @click="navigateToBar(bar.name)"
+            @click="navigateToBar(bar.id)"
           >
             <el-avatar :size="24" :src="bar.avatar" />
             <span>{{ bar.name }}</span>
@@ -277,7 +279,7 @@
         class="friend-bar-item" 
         v-for="bar in dialogFriendBars" 
         :key="bar.id"
-        @click="navigateToBar(bar.name)"
+        @click="navigateToBar(bar.id)"
       >
         <div class="friend-bar-avatar">
           <el-avatar :size="48" :src="bar.avatar" shape="square" />
@@ -331,6 +333,7 @@ import {
   Folder, EditPen ,CircleCheckFilled
 } from '@element-plus/icons-vue';
 import useUserInfo from '@/hooks/useUserInfo';
+import { debounce } from 'lodash-es';
 
 const route = useRoute();
 const router = useRouter();
@@ -496,6 +499,18 @@ const fetchFriendBars = async (page = 1, size = 5) => {
   }
 };
 
+// 添加防抖的搜索处理函数
+const debouncedSearch = debounce(() => {
+  currentPage.value = 1;
+  fetchPosts();
+}, 500);
+
+const handleSearch = () => {
+  console.log('搜索:', searchQuery.value);
+  currentPage.value = 1; // 重置为第一页
+  fetchPosts(); // 重新获取帖子列表
+  debouncedSearch();
+};
 
 // 数字格式化过滤器
 const formatNumber = (value) => {
@@ -562,11 +577,6 @@ const navigateToPost = (tieId) => {
   window.open(`/index/quan/QuanTieDetail/${tieId}?barId=${barId}`, '_blank');
 };
 
-// const navigateToPost = (postId) => {
-//   console.log('查看帖子:', postId);
-  // router.push({ name: 'post', params: { id: postId } });
-// };
-
 
 // 获取帖子列表
 const fetchPosts = async (page = 1) => {
@@ -574,7 +584,8 @@ const fetchPosts = async (page = 1) => {
     const response = await post('/api/unauth/quan/getTiePageOfBar', {
       page: page,
       size: pageSize.value,
-      barId: barId
+      barId: barId,
+      keyword: searchQuery.value || undefined // 添加keyword参数
     })
     
     console.log("获取帖子列表", response.records)
@@ -681,9 +692,9 @@ const navItems = ref([
 const isMobile = computed(() => window.innerWidth < 768);
 
 // 方法
-const navigateToBar = (barName) => {
-  console.log('跳转到贴吧:', barName);
-  // router.push({ name: 'bar', params: { name: barName } });
+const navigateToBar = (barId) => {
+  console.log('跳转到贴吧:', barId);
+   window.open(`/index/quan/QuanDetail/${barId}`, '_blank');
 };
 
 
@@ -692,9 +703,12 @@ const showPostMenu = (postId) => {
   console.log('显示帖子菜单:', postId);
 };
 
-const handleSearch = () => {
-  console.log('搜索:', searchQuery.value);
-};
+
+// const handleSearch = () => {
+//   console.log('搜索:', searchQuery.value);
+//   currentPage.value = 1; // 重置为第一页
+//   fetchPosts(); // 重新获取帖子列表
+// };
 
 // 提交帖子
 const submitPost = async () => {
