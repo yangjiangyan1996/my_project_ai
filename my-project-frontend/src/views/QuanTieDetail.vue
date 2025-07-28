@@ -4,7 +4,7 @@
     <el-button @click="goBack" class="back-button">返回</el-button>
     
     <el-card class="tie-detail-card">
-      <!-- 帖子头部 -->
+      <!-- 帖子头部部分保持不变 -->
       <div class="tie-header">
         <div class="tie-meta">
           <el-avatar :size="48" :src="tieDetail.avatar" class="user-avatar"></el-avatar>
@@ -39,11 +39,11 @@
       
       <el-divider>评论区</el-divider>
       
-      <!-- 评论组件 -->
+      <!-- 主评论输入框 (固定位置) -->
       <div class="zhihu-comment-editor">
         <div class="editor-header">
           <div class="avatar">{{ userInitial }}</div>
-          <span>{{ replyToCommentId ? `回复 ${replyToUsername}` : '写下你的评论...' }}</span>
+          <span>写下你的评论...</span>
         </div>
         <el-input
           v-model="newComment"
@@ -63,8 +63,6 @@
               </span>
             </div>
           </el-popover>
-          
-          <button class="cancel-button" v-if="replyToCommentId" @click="cancelReply">取消</button>
           <button class="submit-button" @click="submitComment">发布</button>
         </div>
       </div>
@@ -82,7 +80,7 @@
           </div>
           
           <div class="comment-actions">
-            <el-button text @click="replyTo(comment.id, comment.username)">回复</el-button>
+            <el-button text @click="toggleReplyBox(comment.id, comment.username)">回复</el-button>
             <el-button text @click="likeComment(comment.id)">👍 {{ comment.likes }}</el-button>
             <el-button text v-if="comment.isMine" @click="deleteComment(comment.id)">删除</el-button>
             
@@ -94,6 +92,36 @@
               查看全部 {{ comment.replyCount }} 条回复
               <el-icon><ArrowRight /></el-icon>
             </el-button>
+          </div>
+
+          <!-- 一级评论的回复框 -->
+          <div v-if="activeReplyBox === comment.id" class="zhihu-reply-editor">
+            <div class="editor-header">
+              <div class="avatar">{{ userInitial }}</div>
+              <span>回复 {{ replyToUsername }}</span>
+            </div>
+            <el-input
+              v-model="replyContent"
+              type="textarea"
+              :placeholder="`回复 ${replyToUsername}...`"
+              :autosize="{ minRows: 4, maxRows: 8 }"
+              class="markdown-textarea"
+            />
+            <div class="editor-footer">
+              <el-popover placement="top" width="250" trigger="click">
+                <template #reference>
+                  <el-button size="small" text type="primary">😊 表情</el-button>
+                </template>
+                <div class="emoji-list">
+                  <span v-for="emoji in emojis" :key="emoji" class="emoji" @click="insertEmojiToReply(emoji)">
+                    {{ emoji }}
+                  </span>
+                </div>
+              </el-popover>
+              
+              <button class="cancel-button" @click="cancelReply">取消</button>
+              <button class="submit-button" @click="submitReply(comment.id)">发布</button>
+            </div>
           </div>
 
           <!-- 预览回复 (默认显示2条) -->
@@ -110,8 +138,38 @@
                 <span v-html="renderMarkdown(reply.content)" class="md-content" />
               </span>
               <div class="comment-actions">
-                <el-button text @click="replyTo(reply.id, reply.username)">回复</el-button>
+                <el-button text @click="toggleReplyBox(reply.id, reply.username)">回复</el-button>
                 <el-button text @click="likeComment(reply.id)">👍 {{ reply.likes }}</el-button>
+              </div>
+
+              <!-- 二级评论的回复框 -->
+              <div v-if="activeReplyBox === reply.id" class="zhihu-reply-editor">
+                <div class="editor-header">
+                  <div class="avatar">{{ userInitial }}</div>
+                  <span>回复 {{ replyToUsername }}</span>
+                </div>
+                <el-input
+                  v-model="replyContent"
+                  type="textarea"
+                  :placeholder="`回复 ${replyToUsername}...`"
+                  :autosize="{ minRows: 4, maxRows: 8 }"
+                  class="markdown-textarea"
+                />
+                <div class="editor-footer">
+                  <el-popover placement="top" width="250" trigger="click">
+                    <template #reference>
+                      <el-button size="small" text type="primary">😊 表情</el-button>
+                    </template>
+                    <div class="emoji-list">
+                      <span v-for="emoji in emojis" :key="emoji" class="emoji" @click="insertEmojiToReply(emoji)">
+                        {{ emoji }}
+                      </span>
+                    </div>
+                  </el-popover>
+                  
+                  <button class="cancel-button" @click="cancelReply">取消</button>
+                  <button class="submit-button" @click="submitReply(reply.id)">发布</button>
+                </div>
               </div>
             </div>
           </div>
@@ -149,8 +207,38 @@
             <span v-html="renderMarkdown(reply.content)" class="md-content" />
           </span>
           <div class="comment-actions">
-            <el-button text @click="replyTo(reply.id, reply.username)">回复</el-button>
+            <el-button text @click="toggleDialogReplyBox(reply.id, reply.username)">回复</el-button>
             <el-button text @click="likeComment(reply.id)">👍 {{ reply.likes }}</el-button>
+          </div>
+
+          <!-- 弹窗中的回复框 -->
+          <div v-if="dialogActiveReplyBox === reply.id" class="zhihu-reply-editor">
+            <div class="editor-header">
+              <div class="avatar">{{ userInitial }}</div>
+              <span>回复 {{ dialogReplyToUsername }}</span>
+            </div>
+            <el-input
+              v-model="dialogReplyContent"
+              type="textarea"
+              :placeholder="`回复 ${dialogReplyToUsername}...`"
+              :autosize="{ minRows: 4, maxRows: 8 }"
+              class="markdown-textarea"
+            />
+            <div class="editor-footer">
+              <el-popover placement="top" width="250" trigger="click">
+                <template #reference>
+                  <el-button size="small" text type="primary">😊 表情</el-button>
+                </template>
+                <div class="emoji-list">
+                  <span v-for="emoji in emojis" :key="emoji" class="emoji" @click="insertEmojiToDialogReply(emoji)">
+                    {{ emoji }}
+                  </span>
+                </div>
+              </el-popover>
+              
+              <button class="cancel-button" @click="cancelDialogReply">取消</button>
+              <button class="submit-button" @click="submitDialogReply(reply.id)">发布</button>
+            </div>
           </div>
         </div>
         
@@ -169,7 +257,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue';
+import { ref, computed, onMounted, inject, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { get, post } from '@/net';
 import { ElMessage } from 'element-plus';
@@ -199,6 +287,7 @@ const tieDetail = ref({
 // 评论相关数据
 const comments = ref([]);
 const newComment = ref("");
+const replyContent = ref("");
 const replyToCommentId = ref(null);
 const replyToUsername = ref("");
 const activeReplyBox = ref(null);
@@ -219,6 +308,9 @@ const dialogReplies = ref([]);
 const dialogReplyPage = ref(1);
 const currentReplyCount = ref(0);
 const currentCommentId = ref(null);
+const dialogActiveReplyBox = ref(null);
+const dialogReplyToUsername = ref("");
+const dialogReplyContent = ref("");
 
 // Markdown解析器
 const mdParser = markdownIt().use(emoji);
@@ -272,12 +364,91 @@ const fetchComments = async (page = 1) => {
   }
 };
 
+// 切换回复框显示状态
+const toggleReplyBox = (commentId, username) => {
+  // 如果点击的是已经打开的回复框，则关闭它
+  if (activeReplyBox.value === commentId) {
+    cancelReply();
+    return;
+  }
+  
+  replyToCommentId.value = commentId;
+  replyToUsername.value = username;
+  activeReplyBox.value = commentId;
+  replyContent.value = '';
+  
+  // 滚动到回复框位置
+  nextTick(() => {
+    const editor = document.querySelector(`.comment-item[data-id="${commentId}"] .zhihu-reply-editor`);
+    if (editor) {
+      editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+};
+
+// 取消回复
+const cancelReply = () => {
+  replyToCommentId.value = null;
+  replyToUsername.value = "";
+  activeReplyBox.value = null;
+  replyContent.value = "";
+};
+
+// 提交主评论
+const submitComment = async () => {
+  if (!newComment.value.trim()) {
+    ElMessage.warning('评论内容不能为空');
+    return;
+  }
+
+  try {
+    await post('/api/auth/quan/comment', {
+      tieId: tieId,
+      content: newComment.value,
+      replyTo: null,
+      firstLevelCommonId: null
+    });
+    newComment.value = "";
+    fetchComments(commentPage.value);
+    ElMessage.success('评论成功');
+  } catch (err) {
+    ElMessage.error('评论失败');
+  }
+};
+
+// 提交回复
+const submitReply = async (commentId) => {
+  if (!replyContent.value.trim()) {
+    ElMessage.warning('回复内容不能为空');
+    return;
+  }
+
+  console.log("提交回复commentId",commentId)
+  try {
+    await post('/api/auth/quan/comment', {
+      tieId: tieId,
+      content: replyContent.value,
+      replyTo: commentId,
+      firstLevelCommonId: findFirstLevelCommentId(commentId)
+    });
+    
+    replyContent.value = "";
+    cancelReply();
+    fetchComments(commentPage.value);
+    ElMessage.success('回复成功');
+  } catch (err) {
+    ElMessage.error('回复失败');
+  }
+};
+
 // 显示回复弹窗
 const showReplyDialog = async (comment) => {
   replyDialogVisible.value = true;
   currentCommentId.value = comment.id;
   currentReplyCount.value = comment.replyCount;
   dialogReplyPage.value = 1;
+  dialogActiveReplyBox.value = null;
+  dialogReplyContent.value = "";
   await fetchDialogReplies(comment.id, 1);
 };
 
@@ -307,6 +478,105 @@ const handleDialogPageChange = (page) => {
   fetchDialogReplies(currentCommentId.value, page);
 };
 
+// 弹窗中切换回复框
+const toggleDialogReplyBox = (replyId, username) => {
+  // 如果点击的是已经打开的回复框，则关闭它
+  if (dialogActiveReplyBox.value === replyId) {
+    cancelDialogReply();
+    return;
+  }
+  
+  dialogActiveReplyBox.value = replyId;
+  dialogReplyToUsername.value = username;
+  dialogReplyContent.value = "";
+  
+  // 滚动到回复框位置
+  nextTick(() => {
+    const editor = document.querySelector(`.reply-item[data-id="${replyId}"] .zhihu-reply-editor`);
+    if (editor) {
+      editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+};
+
+// 取消弹窗中的回复
+const cancelDialogReply = () => {
+  dialogActiveReplyBox.value = null;
+  dialogReplyToUsername.value = "";
+  dialogReplyContent.value = "";
+};
+
+// 提交弹窗中的回复
+const submitDialogReply = async (replyId) => {
+  if (!dialogReplyContent.value.trim()) {
+    ElMessage.warning('回复内容不能为空');
+    return;
+  }
+
+  console.log("提交弹窗中的回复currentCommentId",currentCommentId.value)
+  try {
+    await post('/api/auth/quan/comment', {
+      tieId: tieId,
+      content: dialogReplyContent.value,
+      replyTo: replyId,
+      firstLevelCommonId: currentCommentId.value
+    });
+    
+    dialogReplyContent.value = "";
+    cancelDialogReply();
+    fetchDialogReplies(currentCommentId.value, dialogReplyPage.value);
+    ElMessage.success('回复成功');
+  } catch (err) {
+    ElMessage.error('回复失败');
+  }
+};
+
+// 查找一级评论ID
+// function findFirstLevelCommentId(commentId) {
+//   const comment = comments.value.find(c => c.id === commentId);
+//   if (!comment) return -1;
+  
+//   if (comment.firstLevelCommonId && comment.firstLevelCommonId !== -1) {
+//     return comment.firstLevelCommonId;
+//   }
+  
+//   return commentId;
+// }
+
+function findFirstLevelCommentId(commentId) {
+  const topLevelComment = comments.value.find(c => c.id === commentId);
+  if (topLevelComment) {
+    return topLevelComment.id;
+  }
+  
+  for (const comment of comments.value) {
+    console.log("comment.replies",comment.replies)
+    if (comment.replies && comment.replies.length > 0) {
+      const foundReply = findCommentInReplies(comment.replies, commentId);
+      if (foundReply) {
+        return foundReply.firstLevelCommonId;
+      }
+    }
+  }
+  
+  return -1;
+}
+
+function findCommentInReplies(replies, commentId) {
+  for (const reply of replies) {
+    if (reply.id === commentId) {
+      return reply;
+    }
+    if (reply.replies) {
+      const found = findCommentInReplies(reply.replies, commentId);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+}
+
 // 点赞帖子
 const handleLike = async () => {
   try {
@@ -323,9 +593,19 @@ const handleLike = async () => {
   }
 };
 
-// 插入表情
+// 插入表情到主评论
 function insertEmojiToNewComment(emoji) {
   newComment.value += emoji;
+}
+
+// 插入表情到回复
+function insertEmojiToReply(emoji) {
+  replyContent.value += emoji;
+}
+
+// 插入表情到弹窗回复
+function insertEmojiToDialogReply(emoji) {
+  dialogReplyContent.value += emoji;
 }
 
 // 格式化时间
@@ -342,6 +622,9 @@ async function likeComment(commentId) {
     if (res) {
       ElMessage.success('点赞成功');
       fetchComments(commentPage.value);
+      if (replyDialogVisible.value) {
+        fetchDialogReplies(currentCommentId.value, dialogReplyPage.value);
+      }
     }
   } catch (err) {
     ElMessage.error('点赞失败');
@@ -366,68 +649,6 @@ function renderMarkdown(text) {
   return mdParser.render(text || '');
 }
 
-// 回复评论
-function replyTo(commentId, username) {
-  replyToCommentId.value = commentId;
-  replyToUsername.value = username;
-  activeReplyBox.value = commentId;
-  
-  // 滚动到评论框
-  nextTick(() => {
-    const editor = document.querySelector('.zhihu-comment-editor');
-    if (editor) {
-      editor.scrollIntoView({ behavior: 'smooth' });
-    }
-  });
-}
-
-// 取消回复
-function cancelReply() {
-  replyToCommentId.value = null;
-  replyToUsername.value = "";
-  activeReplyBox.value = null;
-}
-
-// 提交评论
-async function submitComment() {
-  if (!newComment.value.trim()) {
-    ElMessage.warning('评论内容不能为空');
-    return;
-  }
-
-  try {
-    await post('/api/auth/quan/comment', {
-      tieId: tieId,
-      content: newComment.value,
-      replyTo: replyToCommentId.value,
-      firstLevelCommonId: replyToCommentId.value ? findFirstLevelCommentId(replyToCommentId.value) : null
-    });
-    newComment.value = "";
-    cancelReply();
-    fetchComments(commentPage.value);
-    ElMessage.success('评论成功');
-  } catch (err) {
-    ElMessage.error('评论失败');
-  }
-}
-
-// 查找一级评论ID
-function findFirstLevelCommentId(commentId) {
-  const comment = comments.value.find(c => c.id === commentId);
-  if (!comment) return -1;
-  
-  if (comment.firstLevelCommonId && comment.firstLevelCommonId !== -1) {
-    return comment.firstLevelCommonId;
-  }
-  
-  return commentId;
-}
-
-// 跳转到用户主页
-const goToUserProfile = (userId) => {
-  window.open(`/index/user/${userId}`, '_blank');
-};
-
 // 返回上一页
 const goBack = () => {
   router.go(-1);
@@ -447,13 +668,25 @@ const goBack = () => {
   left: 30px;
   top: 30px;
   z-index: 1000;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(5px);
+  border: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateX(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
 }
 
 .tie-detail-card {
   background-color: #fff;
   padding: 30px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
 }
 
 .tie-header {
@@ -468,6 +701,12 @@ const goBack = () => {
 
 .user-avatar {
   margin-right: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    transform: scale(1.05);
+  }
 }
 
 .user-info {
@@ -479,6 +718,12 @@ const goBack = () => {
   font-size: 16px;
   font-weight: 500;
   color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: var(--el-color-primary);
+  }
 }
 
 .post-time {
@@ -491,6 +736,7 @@ const goBack = () => {
   font-weight: 700;
   margin-bottom: 20px;
   color: #222;
+  line-height: 1.4;
 }
 
 .tie-content {
@@ -506,7 +752,7 @@ const goBack = () => {
   align-items: center;
   gap: 20px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .action-btn {
@@ -516,9 +762,14 @@ const goBack = () => {
   font-size: 14px;
   color: #666;
   cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 20px;
+  transition: all 0.2s ease;
   
   &:hover {
     color: var(--el-color-primary);
+    background: rgba(64, 158, 255, 0.1);
+    transform: translateY(-1px);
   }
 }
 
@@ -527,36 +778,40 @@ const goBack = () => {
 }
 
 .comment-item {
-  margin-bottom: 16px;
-  padding: 16px;
-  background: #fafafa;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
 }
 
 .comment-header {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .comment-user {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .comment-user .user-avatar {
   background-color: #ff9800;
+  margin-right: 10px;
 }
 
 .username {
-  font-size: 14px;
+  font-size: 15px;
   color: #333;
   margin-right: 10px;
-  cursor: pointer;
-  
-  &:hover {
-    color: var(--el-color-primary);
-  }
+  font-weight: 600;
 }
 
 .comment-time {
@@ -565,10 +820,11 @@ const goBack = () => {
 }
 
 .md-content {
-  line-height: 1.6;
+  line-height: 1.7;
   word-break: break-word;
   color: #333;
-  font-size: 14px;
+  font-size: 15px;
+  padding-left: 42px;
 }
 
 .md-content :deep(*) {
@@ -589,18 +845,40 @@ const goBack = () => {
 }
 
 .preview-replies {
-  margin-top: 10px;
-  border-left: 2px solid #f0f0f0;
-  padding-left: 12px;
+  margin-top: 15px;
+  border-left: 2px solid rgba(0, 0, 0, 0.05);
+  padding-left: 20px;
+  position: relative;
+}
+
+.preview-replies::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, rgba(64, 158, 255, 0.3), transparent);
 }
 
 .reply-item {
-  padding: 10px 0;
-  border-bottom: 1px dashed #f0f0f0;
-}
+  padding: 15px 0;
+  position: relative;
+  transition: all 0.2s ease;
 
-.reply-item:last-child {
-  border-bottom: none;
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.05), transparent);
+  }
+
+  &:hover {
+    transform: translateX(3px);
+  }
 }
 
 .deleted {
@@ -609,80 +887,180 @@ const goBack = () => {
   margin-left: 10px;
 }
 
+.view-all-replies {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.view-all-replies-btn {
+  background: rgba(64, 158, 255, 0.1);
+  color: #409EFF;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background: rgba(64, 158, 255, 0.2);
+    transform: translateY(-1px);
+  }
+}
+
 .zhihu-comment-editor {
-  margin-bottom: 20px;
-  border: 1px solid #f0f2f7;
-  border-radius: 4px;
-  padding: 12px;
+  margin-bottom: 30px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.zhihu-reply-editor {
+  margin-top: 15px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
 }
 
 .editor-header {
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .editor-header .avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background-color: #409EFF;
+  background: linear-gradient(135deg, #409EFF, #79bbff);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 8px;
+  margin-right: 12px;
   font-weight: bold;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .markdown-textarea {
   width: 100%;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+
+  &:deep(.el-textarea__inner) {
+    min-height: 100px !important;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+
+    &:focus {
+      border-color: #409EFF;
+      box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+    }
+  }
 }
 
 .editor-footer {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
 }
 
 .submit-button {
-  background-color: #0084ff;
+  background: linear-gradient(to right, #409EFF, #64b5ff);
   color: white;
   border: none;
-  padding: 6px 16px;
-  border-radius: 4px;
+  padding: 8px 20px;
+  border-radius: 20px;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
+  }
 }
 
 .cancel-button {
   background: none;
   border: none;
   color: #8590a6;
-  padding: 6px 12px;
+  padding: 8px 16px;
   cursor: pointer;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.03);
+    color: #666;
+  }
 }
 
 .emoji-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
 }
 
 .emoji {
   cursor: pointer;
-  font-size: 20px;
-  padding: 2px;
+  font-size: 22px;
+  padding: 4px;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+
+  &:hover {
+    transform: scale(1.2);
+    background: rgba(0, 0, 0, 0.05);
+  }
 }
 
 .comment-actions {
   display: flex;
   gap: 12px;
-  margin-top: 10px;
+  margin-top: 12px;
+  padding-left: 42px;
+
+  .el-button {
+    font-size: 13px;
+    color: #666;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: #409EFF;
+      transform: translateY(-1px);
+    }
+  }
 }
 
 .comment-pagination {
-  margin-top: 20px;
+  margin-top: 30px;
   justify-content: center;
 }
 
@@ -691,11 +1069,33 @@ const goBack = () => {
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f8fafc;
+  
+  :deep(.el-dialog__header) {
+    background: linear-gradient(to right, #409EFF, #64b5ff);
+    margin: 0;
+    padding: 16px 24px;
+    
+    .el-dialog__title {
+      color: white;
+    }
+    
+    .el-dialog__headerbtn {
+      color: white;
+      
+      &:hover {
+        color: rgba(255, 255, 255, 0.8);
+      }
+    }
+  }
   
   :deep(.el-dialog__body) {
     flex: 1;
     overflow: auto;
     padding: 20px;
+    background: #f8fafc;
   }
 }
 
@@ -706,12 +1106,17 @@ const goBack = () => {
 }
 
 .dialog-reply-list .reply-item {
-  padding: 15px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
+  padding: 18px;
+  margin-bottom: 12px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
 
-.dialog-reply-list .reply-item:last-child {
-  border-bottom: none;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
 }
 
 .dialog-pagination {
@@ -735,15 +1140,68 @@ const goBack = () => {
   .reply-dialog {
     width: 90% !important;
   }
+  
+  .md-content {
+    padding-left: 0;
+  }
+  
+  .comment-actions {
+    padding-left: 0;
+  }
 }
 
 /* 调整分页样式 */
 :deep(.el-pagination.is-background .btn-prev),
 :deep(.el-pagination.is-background .btn-next),
 :deep(.el-pagination.is-background .el-pager li) {
-  min-width: 28px;
-  height: 28px;
-  line-height: 28px;
-  margin: 0 2px;
+  min-width: 32px;
+  height: 32px;
+  line-height: 32px;
+  margin: 0 4px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+:deep(.el-pagination.is-background .el-pager li:not(.is-disabled).is-active) {
+  background: linear-gradient(to right, #409EFF, #64b5ff);
+  box-shadow: 0 2px 6px rgba(64, 158, 255, 0.3);
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.comment-item {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.reply-item {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
 }
 </style>

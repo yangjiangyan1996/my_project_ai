@@ -61,7 +61,7 @@ public class QuanTieCommentServiceImpl  extends ServiceImpl<QuanTieCommentMapper
                         .eq( req.getFirstCommenId() != null, "first_level_common_id", req.getFirstCommenId())
                         .eq( req.getFirstCommenId() == null, "first_level_common_id", -1)
                         .eq("status", TieEnum.CommentStatusEnum.ok.getCode())
-                        .orderByDesc("created_at")
+                        .orderByAsc("created_at")
         );
     }
 
