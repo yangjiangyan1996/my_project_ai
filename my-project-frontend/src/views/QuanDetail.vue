@@ -176,7 +176,7 @@
           </div>
         </div>
         
-        <div class="sidebar-section">
+       <div class="sidebar-section">
           <div class="section-header">
             <h3>今日热议</h3>
           </div>
@@ -192,9 +192,9 @@
             <div class="topic-content">
               <div class="topic-title">{{ topic.title }}</div>
               <div class="topic-meta">
-                <span>{{ topic.views }}阅读</span>
+                <span>{{ topic.views | formatNumber }}阅读</span>
                 <span>·</span>
-                <span>{{ topic.comments }}评论</span>
+                <span>{{ topic.comments | formatNumber }}评论</span>
               </div>
             </div>
           </div>
@@ -350,11 +350,9 @@ const total = ref(0)
 // 提交状态
 const submitting = ref(false)
 
-// 友情贴吧
-// const friendBars = ref([
-//   { id: 1, name: '焕得醉夕霞', avatar: 'https://via.placeholder.com/24' },
-//   { id: 2, name: '新世界的...', avatar: 'https://via.placeholder.com/24' }
-// ]);
+// 今日热议数据
+const hotTopics = ref([]);
+
 // 友情贴吧数据
 const friendBars = ref([]);
 const friendBarPage = ref(1);
@@ -403,6 +401,8 @@ const isFollowed = ref(false);
 
 onMounted(() => {
   fetchFriendBars();
+    fetchHotTopics();
+
   if (!userInfo.data.id) {
     loadUserInfo().then(() => {
       console.log("当前用户", userInfo)
@@ -432,6 +432,26 @@ const postForm = ref({
   content: '',
   avatar: '' // 改为单个图片URL
 })
+
+
+// 获取今日热议
+const fetchHotTopics = async () => {
+  try {
+    const response = await get('/api/unauth/quan/getTodayHotTie');
+    
+    if (response) {
+      hotTopics.value = response.map((topic, index) => ({
+        id: topic.id,
+        rank: index + 1,
+        title: topic.title,
+        views: topic.views,
+        comments: topic.comments
+      }));
+    }
+  } catch (error) {
+    console.error('获取今日热议失败:', error);
+  }
+};
 
 // 获取友情贴吧
 const fetchFriendBars = async (page = 1, size = 5) => {
@@ -474,6 +494,16 @@ const fetchFriendBars = async (page = 1, size = 5) => {
   } catch (error) {
     console.error('获取友情贴吧失败:', error);
   }
+};
+
+
+// 数字格式化过滤器
+const formatNumber = (value) => {
+  if (!value) return '0';
+  if (value >= 10000) {
+    return (value / 10000).toFixed(1) + '万';
+  }
+  return value;
 };
 
 // 打开友情贴吧弹窗
@@ -641,28 +671,11 @@ const toggleFollow = async () => {
 };
 
 
-// 数字格式化过滤器
-const formatNumber = (value) => {
-  if (value >= 10000) {
-    return (value / 10000).toFixed(1) + '万';
-  }
-  return value;
-};
-
 // 导航项
 const navItems = ref([
 //   '首页', '精华', '热门', '视频', '图片', '吧务', '活动'
 ]);
 
-
-// 今日热议
-const hotTopics = ref([
-  { id: 1, rank: 1, title: '如何看待最近的明星事件', views: '12.5万', comments: '3.2万' },
-  { id: 2, rank: 2, title: '游戏圈最新动态讨论', views: '8.7万', comments: '1.9万' },
-  { id: 3, rank: 3, title: '技术分享：前端开发新趋势', views: '6.3万', comments: '1.2万' },
-  { id: 4, rank: 4, title: '生活小技巧分享', views: '5.1万', comments: '0.8万' },
-  { id: 5, rank: 5, title: '美食探店合集', views: '4.2万', comments: '0.7万' }
-]);
 
 // 计算属性
 const isMobile = computed(() => window.innerWidth < 768);

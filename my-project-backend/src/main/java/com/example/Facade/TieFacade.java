@@ -129,7 +129,7 @@ public class TieFacade {
         if (!CollectionUtils.isEmpty(quanTieComments)) {
             r.setComments(quanTieComments.size());
         }
-        if (!CollectionUtils.isEmpty(quanTieFavoriteList)){
+        if (!CollectionUtils.isEmpty(quanTieFavoriteList)) {
             r.setLikes(quanTieFavoriteList.size());
         }
         if (!CollectionUtils.isEmpty(quanTieWatches)) {
@@ -273,5 +273,28 @@ public class TieFacade {
             }
             return quanTieFavoriteService.removeOne(tieId, userId);
         }
+    }
+
+    public List<QuanTieTodayHotResp> getTodayHotTie() {
+        List<QuanTieComment> qs = quanTieCommentService.select10Tie();
+        List<Long> tieids = qs.stream().map(v -> v.getTieId()).distinct().collect(Collectors.toList());
+        List<QuanTieWatch> quanTieWatches = quanTieWatchService.selectByTieIds(tieids);
+        Map<Long, List<QuanTieWatch>> tieId2WatchListMap = quanTieWatches.stream().collect(Collectors.groupingBy(v -> v.getTieId()));
+        List<QuanBarTie> quanBarTies = quanBarTieService.selectByTieIds(tieids);
+        Map<Long, QuanBarTie> tieId2BarTieMap = quanBarTies.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+        List<QuanTieComment> quanTieWatchList = quanTieCommentService.selectByTieIds(tieids);
+        Map<Long, List<QuanTieComment>> quanTieCommentListMap = quanTieWatchList.stream().collect(Collectors.groupingBy(v -> v.getTieId()));
+
+        List<QuanTieTodayHotResp> result = new ArrayList<>();
+        for (QuanTieComment q : qs) {
+            QuanTieTodayHotResp r = new QuanTieTodayHotResp();
+            r.setId(q.getTieId());
+            r.setComments(quanTieCommentListMap.get(q.getTieId()).size());
+            r.setTitle(tieId2BarTieMap.get(q.getTieId()).getTitle());
+            r.setViews(tieId2WatchListMap.get(q.getTieId()).size());
+            result.add(r);
+        }
+        return result;
     }
 }

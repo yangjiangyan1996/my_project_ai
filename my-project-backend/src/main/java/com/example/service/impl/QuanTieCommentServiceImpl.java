@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.QuanTieComment;
+import com.example.entity.dto.QuanTieWatch;
 import com.example.entity.req.QuanTieCommentPageReq;
 import com.example.enums.TieEnum;
 import com.example.mapper.QuanTieCommentMapper;
@@ -95,6 +96,18 @@ public class QuanTieCommentServiceImpl extends ServiceImpl<QuanTieCommentMapper,
         return this.baseMapper.selectList(new QueryWrapper<QuanTieComment>()
                 .in("tie_id", tieIds)
                 .eq("is_deleted", 0));
+    }
+
+    @Override
+    public List<QuanTieComment> select10Tie() {
+            return this.baseMapper.selectList(new QueryWrapper<QuanTieComment>()
+                    .inSql("id", "SELECT MAX(c.id) FROM quan_tie_comments c " +
+                            "JOIN (SELECT tie_id FROM quan_tie_comments WHERE is_deleted = 0 " +
+                            "GROUP BY tie_id ORDER BY COUNT(*) DESC LIMIT 10) t " +
+                            "ON c.tie_id = t.tie_id " +
+                            "GROUP BY c.tie_id")
+                    .orderByDesc("created_at")
+            );
     }
 
     @Override

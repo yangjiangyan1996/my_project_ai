@@ -9,10 +9,7 @@ import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.req.BarRelationPageReq;
 import com.example.entity.req.QuanTieListPageReq;
-import com.example.entity.resp.BarsInfoResp;
-import com.example.entity.resp.MyMemberGroupsResp;
-import com.example.entity.resp.QuanTieBaseInfoResp;
-import com.example.entity.resp.QuanTieListPageResp;
+import com.example.entity.resp.*;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -29,7 +26,7 @@ import java.util.List;
  */
 @RestController
 @Slf4j
-@RequestMapping("/api/unauth/quan")
+@RequestMapping("/api/unauth/quan/")
 public class UnauthQuanController {
 
     @Resource
@@ -37,8 +34,29 @@ public class UnauthQuanController {
     @Resource
     QuanFacade quanFacade;
 
+
     /**
-     * 获取关联的
+     * 获取分类下的所有圈子
+     * @param categoryCode
+     * @return
+     */
+    @GetMapping("/getTodayHotTie")
+    public RespBean<List<QuanTieTodayHotResp>> getTodayHotTie() {
+        try {
+            List<QuanTieTodayHotResp> result = tieFacade.getTodayHotTie();
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("UnauthQuanController#getTodayHotTie,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("UnauthQuanController#getTodayHotTie,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+    /**
+     * 获取关联的圈
      * @return
      */
     @PostMapping("/getRelationBar")

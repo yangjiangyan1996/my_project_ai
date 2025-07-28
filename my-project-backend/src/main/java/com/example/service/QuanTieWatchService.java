@@ -15,4 +15,6 @@ public interface QuanTieWatchService {
 
     List<QuanTieWatch> selectByTieIds(List<Long> tieIds);
     List<QuanTieWatch> selectByTieId(Long tieId);
+
+    List<QuanTieWatch> select10Tie();
 }

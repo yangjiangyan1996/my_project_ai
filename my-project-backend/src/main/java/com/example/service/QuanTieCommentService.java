@@ -29,4 +29,6 @@ public interface QuanTieCommentService {
     List<QuanTieComment> selectByTieIds(List<Long> tieIds);
 
     List<QuanTieComment> selectByTieId(Long tieId);
+
+    List<QuanTieComment> select10Tie();
 }

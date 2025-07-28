@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.QuanBarTie;
 import com.example.entity.req.QuanTieListPageReq;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -13,4 +15,6 @@ import com.example.entity.req.QuanTieListPageReq;
  */
 public interface QuanBarTieService extends IService<QuanBarTie> {
     Page<QuanBarTie> getTiePageOfBar(Page<QuanBarTie> of, QuanTieListPageReq req);
+
+    List<QuanBarTie> selectByTieIds(List<Long> tieids);
 }

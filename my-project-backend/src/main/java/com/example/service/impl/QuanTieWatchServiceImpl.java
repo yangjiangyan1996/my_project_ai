@@ -36,6 +36,12 @@ public class QuanTieWatchServiceImpl  extends ServiceImpl<QuanTieWatchMapper, Qu
         return this.baseMapper.selectList(new QueryWrapper<QuanTieWatch>().eq("tie_id", tieId).eq("is_deleted", 0));
     }
 
+    //查询tie_id相同的最多的10个帖子
+    @Override
+    public List<QuanTieWatch> select10Tie() {
+        return this.baseMapper.selectList(new QueryWrapper<QuanTieWatch>().eq("is_deleted", 0).groupBy("tie_id").orderByDesc("count(*)").last("limit 10"));
+    }
+
     @Override
     public List<QuanTieWatch> selectByTieIds(List<Long> tieIds) {
         return this.baseMapper.selectList(new QueryWrapper<QuanTieWatch>().in("tie_id", tieIds).eq("is_deleted", 0));

@@ -12,6 +12,8 @@ import com.example.mapper.QuanBarTieMapper;
 import com.example.service.QuanBarTieService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -31,4 +33,14 @@ public class QuanBarTieServiceImpl extends ServiceImpl<QuanBarTieMapper, QuanBar
                         .orderByDesc("created_at")
         );
     }
+
+    @Override
+    public List<QuanBarTie> selectByTieIds(List<Long> tieids) {
+        return this.baseMapper.selectList(new QueryWrapper<QuanBarTie>()
+                .in("id", tieids)
+                .eq("is_deleted", 0)
+                .eq("status", QuanEnum.TieStatusEnums.NORMAL.getCode()));
+    }
+
+
 }
