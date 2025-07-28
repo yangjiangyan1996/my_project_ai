@@ -116,7 +116,7 @@ public class UnauthProjectController {
                     userId = user.getId();
                 }
             }catch (Exception e) {
-                userId = null;
+                userId = -888L;
                 log.error("ProjectController#detail,error,projectId:{}", projectId, e);
             }
 

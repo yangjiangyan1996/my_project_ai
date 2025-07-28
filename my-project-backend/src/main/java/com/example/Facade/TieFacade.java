@@ -9,12 +9,11 @@ import com.example.entity.req.QuanTieListPageReq;
 import com.example.entity.resp.*;
 import com.example.enums.ProjectEnum;
 import com.example.enums.QuanEnum;
-import com.example.service.AccountService;
-import com.example.service.QuanBarTieService;
-import com.example.service.QuanTieCommentLikeService;
-import com.example.service.QuanTieCommentService;
+import com.example.enums.TieEnum;
+import com.example.service.*;
 import com.example.utils.DateUtils;
 import jakarta.annotation.Resource;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -29,6 +28,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class TieFacade {
+    @Resource
+    QuanTieWatchService quanTieWatchService;
     @Resource
     MessageFacade messageFacade;
     @Resource
@@ -111,7 +112,7 @@ public class TieFacade {
 
     public Page<QuanTieCommentResp> commentShow(QuanTieCommentPageReq req, Long currentUserId) {
         Page<QuanTieComment> firstLevelCommentPage = quanTieCommentService.getFirstLevelCommentPageOfBar(Page.of(req.getPage(), req.getSize()), req);
-        if (firstLevelCommentPage .getRecords().isEmpty()) {
+        if (firstLevelCommentPage.getRecords().isEmpty()) {
             return Page.of(req.getPage(), req.getSize());
         }
 
@@ -183,5 +184,38 @@ public class TieFacade {
         vo.setUsername(account.getNickname());
         vo.setAvatar(account.getAvatarUrl());
         return vo;
+    }
+
+    public Boolean commentLike(Long commentId, Long tieId, Long userId) {
+        QuanTieCommentLike l = quanTieCommentLikeService.selectByCommentIdAndUserId(commentId, tieId, userId);
+        if (l != null) {
+            throw new ValidationException("已点赞，无需重复操作！");
+        }
+        Boolean result = quanTieCommentLikeService.insert(commentId, tieId, userId);
+//        messageFacade.createMessageOfLike(tieId, commentId, userId, false); TODO yang
+        return result;
+    }
+
+    public Boolean commentDeleted(Long tieId, Long commentId, Long userId) {
+        //判断评论是不是自己的，如果不是，返回"不是自己评论的，无法删除！"
+        QuanTieComment pc = quanTieCommentService.selectByTieIdAndCommentId(tieId, commentId);
+        if (pc == null) {
+            throw new ValidationException("没有此评论！");
+        }
+        if (!pc.getUserId().equals(userId)) {
+            throw new ValidationException("不是自己评论的，无法删除！");
+        }
+        if (pc.getStatus().equals(ProjectEnum.ProjectCommentStatusEnum.hide.getCode())) {
+            throw new ValidationException("已删除，无需重复操作！");
+        }
+        //删除评论
+        return quanTieCommentService.updateStatus(commentId, userId, TieEnum.CommentStatusEnum.hide.getCode()) == 1;
+    }
+
+    public void addProjectWatch(Long tieId, Long finalUserId) {
+        if (null == tieId || null == finalUserId) {
+            return;
+        }
+        quanTieWatchService.insert(tieId, finalUserId);
     }
 }

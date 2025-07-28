@@ -396,7 +396,7 @@ const handleEditorCreated = (editor) => {
 const navigateToPost = (tieId) => {
   console.log("访问用户详情页",tieId)
   // router.push(`/index/user/${userId}`)
-  window.open(`/index/quan/QuanTieDetail/${tieId}`, '_blank');
+  window.open(`/index/quan/QuanTieDetail/${tieId}?barId=${barId}`, '_blank');
 };
 
 // const navigateToPost = (postId) => {

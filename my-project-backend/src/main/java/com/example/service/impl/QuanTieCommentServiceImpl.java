@@ -4,17 +4,15 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.example.entity.dto.ProjectComment;
-import com.example.entity.dto.QuanBarTie;
 import com.example.entity.dto.QuanTieComment;
 import com.example.entity.req.QuanTieCommentPageReq;
-import com.example.enums.QuanEnum;
 import com.example.enums.TieEnum;
 import com.example.mapper.QuanTieCommentMapper;
 import com.example.service.QuanTieCommentService;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,7 +24,7 @@ import java.util.stream.Collectors;
  * @Date 2025/7/25 17:28
  */
 @Service
-public class QuanTieCommentServiceImpl  extends ServiceImpl<QuanTieCommentMapper, QuanTieComment> implements QuanTieCommentService {
+public class QuanTieCommentServiceImpl extends ServiceImpl<QuanTieCommentMapper, QuanTieComment> implements QuanTieCommentService {
     @Override
     public Long comment(Long tieId, Long userId, String userName, String content, Long replyToId, Long firstLevelCommonId) {
         QuanTieComment replyToComment = null;
@@ -44,9 +42,9 @@ public class QuanTieCommentServiceImpl  extends ServiceImpl<QuanTieCommentMapper
         projectComment.setReplyToUsername(replyToComment != null ? replyToComment.getUsername() : null);
         projectComment.setLikes(0);
         boolean save = save(projectComment);
-        if (save){
+        if (save) {
             return projectComment.getId();
-        }else {
+        } else {
             return null;
         }
     }
@@ -58,9 +56,9 @@ public class QuanTieCommentServiceImpl  extends ServiceImpl<QuanTieCommentMapper
                 new QueryWrapper<QuanTieComment>()
                         .eq("tie_id", req.getTieId())
                         .eq("is_deleted", 0)
-                        .eq( req.getFirstCommenId() != null, "first_level_common_id", req.getFirstCommenId())
-                        .eq( req.getFirstCommenId() == null, "first_level_common_id", -1)
-                        .eq("status", TieEnum.CommentStatusEnum.ok.getCode())
+                        .eq(req.getFirstCommenId() != null, "first_level_common_id", req.getFirstCommenId())
+                        .eq(req.getFirstCommenId() == null, "first_level_common_id", -1)
+//                        .eq("status", TieEnum.CommentStatusEnum.ok.getCode())
                         .orderByAsc("created_at")
         );
     }
@@ -79,8 +77,26 @@ public class QuanTieCommentServiceImpl  extends ServiceImpl<QuanTieCommentMapper
     public Long getReplyCount(Long commenId) {
         return this.baseMapper.selectCount(new QueryWrapper<QuanTieComment>()
                 .eq("first_level_common_id", commenId)
-                .eq("status",TieEnum.CommentStatusEnum.ok.getCode())
+                .eq("status", TieEnum.CommentStatusEnum.ok.getCode())
                 .eq("is_deleted", 0));
 
+    }
+
+    @Override
+    public QuanTieComment selectByTieIdAndCommentId(Long tieId, Long commentId) {
+        return this.baseMapper.selectOne(new QueryWrapper<QuanTieComment>()
+                .eq("tie_id", tieId)
+                .eq("id", commentId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public int updateStatus(Long commentId, Long userId, Integer code) {
+        QuanTieComment q = new QuanTieComment();
+        q.setStatus(code);
+        q.setModifiedAt(new Date());
+        q.setModifiedBy(userId);
+        return this.baseMapper.update(q,
+                new QueryWrapper<QuanTieComment>().eq("id", commentId));
     }
 }

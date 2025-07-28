@@ -4,12 +4,15 @@ import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.QuanFacade;
 import com.example.Facade.TieFacade;
+import com.example.config.AsyncTaskUtil;
 import com.example.entity.base.RespBean;
+import com.example.entity.base.UserInfo;
 import com.example.entity.req.QuanTieListPageReq;
 import com.example.entity.resp.BarsInfoResp;
 import com.example.entity.resp.MyMemberGroupsResp;
 import com.example.entity.resp.QuanTieBaseInfoResp;
 import com.example.entity.resp.QuanTieListPageResp;
+import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +40,25 @@ public class UnauthQuanController {
     @GetMapping("/getTieBaseInfo")
     public RespBean<QuanTieBaseInfoResp> getTieBaseInfo(@RequestParam("tieId") Long tieId) {
         try {
+            Long userId = null;
+            try{
+                UserInfo user = UserUtil.getCurrentUser();
+                if (user.getRole().equals("ADMIN")) {
+                    userId = null;
+                } else {
+                    userId = user.getId();
+                }
+            }catch (Exception e) {
+                userId = -888L;
+                log.error("UnauthQuanController#getTieBaseInfo,error,projectId:{}", tieId, e);
+            }
+
             QuanTieBaseInfoResp result = tieFacade.getTieBaseInfo(tieId);
+
+            Long finalUserId = userId;
+            AsyncTaskUtil.execute(() -> {
+                tieFacade.addProjectWatch(tieId, finalUserId);
+            });
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("UnauthQuanController#getTieBaseInfo,req:{}",tieId, e);

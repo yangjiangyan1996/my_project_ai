@@ -2,6 +2,7 @@ package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.entity.dto.ProjectCommentLike;
 import com.example.entity.dto.QuanTieCommentLike;
 import com.example.mapper.QuanTieCommentLikeMapper;
 import com.example.service.QuanTieCommentLikeService;
@@ -20,5 +21,20 @@ public class QuanTieCommentLikeServiceImpl  extends ServiceImpl<QuanTieCommentLi
     @Override
     public List<QuanTieCommentLike> selectByTieId(Long tieId) {
         return baseMapper.selectList(new QueryWrapper<QuanTieCommentLike>().eq("tie_id", tieId).eq("is_deleted", 0));
+    }
+
+    @Override
+    public QuanTieCommentLike selectByCommentIdAndUserId(Long commentId, Long tieId, Long userId) {
+        return baseMapper.selectOne(new QueryWrapper<QuanTieCommentLike>()
+                .eq("comment_id", commentId)
+                .eq("tie_id", tieId).eq("user_id", userId)
+                .eq("user_id", userId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public Boolean insert(Long commentId, Long tieId, Long userId) {
+        return save(new QuanTieCommentLike(null, commentId, userId,tieId));
+
     }
 }

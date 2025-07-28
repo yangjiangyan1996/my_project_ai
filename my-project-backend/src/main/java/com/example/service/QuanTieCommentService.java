@@ -21,4 +21,8 @@ public interface QuanTieCommentService {
     Map<Long, List<QuanTieComment>> getPreviewRepliesForComments(List<Long> commentIds, int previewCount);
 
     Long getReplyCount(Long commenId);
+
+    QuanTieComment selectByTieIdAndCommentId(Long tieId, Long commentId);
+
+    int updateStatus(Long commentId, Long userId, Integer code);
 }

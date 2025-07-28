@@ -315,6 +315,7 @@ const dialogReplyContent = ref("");
 // Markdown解析器
 const mdParser = markdownIt().use(emoji);
 const tieId = route.params.id;
+const barId = route.query.barId;
 const emojis = inject('emojis');
 
 const userInitial = computed(() => {
@@ -618,7 +619,7 @@ function formatTime(timeString) {
 // 点赞评论
 async function likeComment(commentId) {
   try {
-    const res = await get(`/api/auth/quan/likeComment?tieId=${tieId}&commentId=${commentId}`);
+    const res = await get(`/api/auth/quan/commentLike?tieId=${tieId}&commentId=${commentId}`);
     if (res) {
       ElMessage.success('点赞成功');
       fetchComments(commentPage.value);
@@ -634,7 +635,7 @@ async function likeComment(commentId) {
 // 删除评论
 async function deleteComment(commentId) {
   try {
-    const res = await get(`/api/auth/quan/deleteComment?tieId=${tieId}&commentId=${commentId}`);
+    const res = await get(`/api/auth/quan/commentDeleted?tieId=${tieId}&commentId=${commentId}`);
     if (res) {
       ElMessage.success('删除成功');
       fetchComments(commentPage.value);
@@ -651,7 +652,8 @@ function renderMarkdown(text) {
 
 // 返回上一页
 const goBack = () => {
-  router.go(-1);
+    console.log("返回上一页",barId)
+  router.push('/index/quan/QuanDetail/' + barId);
 };
 </script>
 

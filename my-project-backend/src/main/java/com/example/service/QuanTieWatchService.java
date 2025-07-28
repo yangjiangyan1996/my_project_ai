@@ -7,4 +7,5 @@ package com.example.service;
  * @Date 2025/7/25 17:28
  */
 public interface QuanTieWatchService {
+    void insert(Long tieId, Long userId);
 }

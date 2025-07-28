@@ -12,10 +12,7 @@ import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @Author YangJian
@@ -34,6 +31,55 @@ public class QuanController {
     private QuanFacade quanFacade;
 
 
+    /**
+     * 评论删除
+     * @param projectId
+     * @param commentId
+     * @return
+     */
+    @GetMapping("/commentDeleted")
+    public RespBean<Boolean> commentDeleted(@RequestParam("tieId") Long tieId,
+                                            @RequestParam("commentId") Long commentId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = tieFacade.commentDeleted(tieId, commentId, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("QuanController#commentDeleted,req:{},{}", tieId,commentId, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#commentDeleted,req:{},{}", tieId,commentId, e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 评论点赞
+     * @param tieId
+     * @param commentId
+     * @return
+     */
+    @GetMapping("/commentLike")
+    public RespBean<Boolean> commentLike(@RequestParam("tieId") Long tieId,
+                                         @RequestParam("commentId") Long commentId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = tieFacade.commentLike(commentId, tieId, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("QuanController#commentLike,req:{},{}", tieId,commentId, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#commentLike,req:{},{}", tieId,commentId, e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 评论分页展示
+     * @param req
+     * @return
+     */
     @PostMapping("/commentShow")
     public RespBean<Page<QuanTieCommentResp>> commentShow(@RequestBody @Valid QuanTieCommentPageReq req) {
         try {
