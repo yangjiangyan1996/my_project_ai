@@ -41,7 +41,7 @@ public class UnauthQuanController {
      * 获取关联的
      * @return
      */
-    @GetMapping("/getRelationBar")
+    @PostMapping("/getRelationBar")
     public RespBean<Page<BarsInfoResp>> getRelationBar(@RequestBody BarRelationPageReq req){
         try {
             Page<BarsInfoResp> result = quanFacade.getRelationBar(req);

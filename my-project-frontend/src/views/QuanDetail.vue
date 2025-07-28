@@ -163,7 +163,7 @@
         <div class="sidebar-section">
           <div class="section-header">
             <h3>友情贴吧</h3>
-            <el-button type="text" size="small">更多</el-button>
+            <el-button type="text" size="small" @click="openFriendBarDialog">更多</el-button>
           </div>
           <div 
             class="friend-bar" 
@@ -263,6 +263,60 @@
       </template>
     </el-dialog>
   </div>
+
+
+  <!-- 友情贴吧弹窗 -->
+  <el-dialog 
+    v-model="friendBarDialogVisible" 
+    title="友情贴吧" 
+    width="60%"
+    top="5vh"
+  >
+    <div class="friend-bar-dialog-content">
+      <div 
+        class="friend-bar-item" 
+        v-for="bar in dialogFriendBars" 
+        :key="bar.id"
+        @click="navigateToBar(bar.name)"
+      >
+        <div class="friend-bar-avatar">
+          <el-avatar :size="48" :src="bar.avatar" shape="square" />
+        </div>
+        <div class="friend-bar-info">
+          <h4 class="friend-bar-name">{{ bar.name }}</h4>
+          <div class="friend-bar-stats">
+            <span class="stat-item">
+              <el-icon><User /></el-icon>
+              <span>{{ bar.followerCount | formatNumber }}</span>
+            </span>
+            <span class="stat-item">
+              <el-icon><Document /></el-icon>
+              <span>{{ bar.postCount | formatNumber }}</span>
+            </span>
+          </div>
+          <!-- <div class="friend-bar-desc">
+            {{ bar.description || '暂无描述' }}
+          </div>
+          <div class="friend-bar-category">
+            <el-tag size="small" effect="plain">{{ bar.firstCategoryName }}</el-tag>
+            <el-tag size="small" effect="plain" v-if="bar.secondCategoryName">
+              {{ bar.secondCategoryName }}
+            </el-tag>
+          </div> -->
+        </div>
+      </div>
+    </div>
+    
+    <el-pagination
+      small
+      layout="prev, pager, next"
+      :total="friendBarTotal"
+      :page-size="dialogFriendBarSize"
+      :current-page="dialogFriendBarPage"
+      @current-change="handleFriendBarPageChange"
+      class="dialog-pagination"
+    />
+  </el-dialog>
 </template>
 
 <script setup>
@@ -295,6 +349,23 @@ const pageSize = ref(10)
 const total = ref(0)
 // 提交状态
 const submitting = ref(false)
+
+// 友情贴吧
+// const friendBars = ref([
+//   { id: 1, name: '焕得醉夕霞', avatar: 'https://via.placeholder.com/24' },
+//   { id: 2, name: '新世界的...', avatar: 'https://via.placeholder.com/24' }
+// ]);
+// 友情贴吧数据
+const friendBars = ref([]);
+const friendBarPage = ref(1);
+const friendBarSize = ref(5);
+const friendBarTotal = ref(0);
+
+// 友情贴吧弹窗相关
+const friendBarDialogVisible = ref(false);
+const dialogFriendBars = ref([]);
+const dialogFriendBarPage = ref(1);
+const dialogFriendBarSize = ref(10);
 
 // 贴吧信息
 const barInfo = ref({
@@ -331,6 +402,7 @@ const isFollowed = ref(false);
 
 
 onMounted(() => {
+  fetchFriendBars();
   if (!userInfo.data.id) {
     loadUserInfo().then(() => {
       console.log("当前用户", userInfo)
@@ -360,6 +432,61 @@ const postForm = ref({
   content: '',
   avatar: '' // 改为单个图片URL
 })
+
+// 获取友情贴吧
+const fetchFriendBars = async (page = 1, size = 5) => {
+  try {
+    const response = await post('/api/unauth/quan/getRelationBar', {
+      page: page,
+      size: size,
+      barId: barId
+    });
+    
+    if (response && response.records) {
+      if (size === 5) {
+        // 主列表数据
+        friendBars.value = response.records.map(bar => ({
+          id: bar.id,
+          name: bar.name,
+          avatar: bar.avatar,
+          followerCount: bar.followerCount,
+          postCount: bar.postCount,
+          description: bar.description,
+          firstCategoryName: bar.firstCategoryName,
+          secondCategoryName: bar.secondCategoryName
+        }));
+        friendBarTotal.value = response.total || 0;
+      } else {
+        // 弹窗数据
+        dialogFriendBars.value = response.records.map(bar => ({
+          id: bar.id,
+          name: bar.name,
+          avatar: bar.avatar,
+          followerCount: bar.followerCount,
+          postCount: bar.postCount,
+          description: bar.description,
+          firstCategoryName: bar.firstCategoryName,
+          secondCategoryName: bar.secondCategoryName
+        }));
+        friendBarTotal.value = response.total || 0;
+      }
+    }
+  } catch (error) {
+    console.error('获取友情贴吧失败:', error);
+  }
+};
+
+// 打开友情贴吧弹窗
+const openFriendBarDialog = () => {
+  friendBarDialogVisible.value = true;
+  fetchFriendBars(1, dialogFriendBarSize.value);
+};
+
+// 弹窗分页切换
+const handleFriendBarPageChange = (page) => {
+  dialogFriendBarPage.value = page;
+  fetchFriendBars(page, dialogFriendBarSize.value);
+};
 
 // 图片上传成功处理
 const handleImageSuccess = (response) => {
@@ -527,12 +654,6 @@ const navItems = ref([
 //   '首页', '精华', '热门', '视频', '图片', '吧务', '活动'
 ]);
 
-
-// 友情贴吧
-const friendBars = ref([
-  { id: 1, name: '焕得醉夕霞', avatar: 'https://via.placeholder.com/24' },
-  { id: 2, name: '新世界的...', avatar: 'https://via.placeholder.com/24' }
-]);
 
 // 今日热议
 const hotTopics = ref([
@@ -1118,5 +1239,87 @@ follow-btn {
 .w-e-text-container {
   background-color: #fff !important;
   border: none !important;
+}
+.friend-bar-dialog-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.friend-bar-item {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background-color: #f0f7ff;
+    transform: translateX(5px);
+  }
+}
+
+.friend-bar-avatar {
+  flex-shrink: 0;
+  
+  :deep(.el-avatar) {
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.friend-bar-info {
+  flex: 1;
+}
+
+.friend-bar-name {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.friend-bar-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  
+  .stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #666;
+    
+    .el-icon {
+      font-size: 14px;
+    }
+  }
+}
+
+.friend-bar-desc {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.friend-bar-category {
+  display: flex;
+  gap: 8px;
+  
+  .el-tag {
+    background-color: rgba(0, 0, 0, 0.05);
+    border: none;
+    color: #666;
+  }
+}
+
+.dialog-pagination {
+  margin-top: 16px;
+  justify-content: center;
 }
 </style>
