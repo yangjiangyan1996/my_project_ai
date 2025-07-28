@@ -21,4 +21,6 @@ public class QuanTieCommentResp {
     private Long firstLevelCommonId;
     private Date createdAt;          // 评论时间
     private List<QuanTieCommentResp> replies; // 子评论列表
+    private Long replyCount; // 子评论列表
+
 }

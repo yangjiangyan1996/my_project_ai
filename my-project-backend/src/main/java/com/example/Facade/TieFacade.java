@@ -115,10 +115,7 @@ public class TieFacade {
             return Page.of(req.getPage(), req.getSize());
         }
 
-
-
         List<QuanTieCommentLike> likes = quanTieCommentLikeService.selectByTieId(req.getTieId());
-
 
         List<Long> userIds = firstLevelCommentPage.getRecords().stream().map(v -> v.getUserId()).distinct().collect(Collectors.toList());
         List<Account> userInfoList = accountService.selectByIds(userIds);
@@ -127,49 +124,42 @@ public class TieFacade {
         // 1. 映射全部评论
         Map<Long, List<QuanTieCommentLike>> commentId2LikeListMap = likes.stream().collect(Collectors.groupingBy(QuanTieCommentLike::getCommentId));
 
-        // 构建第一层评论（replyTo=0）
-        Map<Long, QuanTieCommentResp> firstLevelMap = firstLevelCommentPage.getRecords().stream()
-                .filter(c -> c.getReplyTo() < 0)
-                .collect(Collectors.toMap(
-                        QuanTieComment::getId,
-                        c -> convertToVO(c, currentUserId, commentId2LikeListMap, userId2UserInfoMap)
-                ));
-
-        // 构建第二层评论（first_level_common_id对应第一层ID）
-        Map<Long, List<QuanTieCommentResp>> secondLevelMap = firstLevelCommentPage.getRecords().stream()
-                .filter(c -> c.getReplyTo() > 0)
-                .collect(Collectors.groupingBy(
-                        QuanTieComment::getFirstLevelCommonId,
-                        Collectors.mapping(
-                                c -> convertToVO(c, currentUserId, commentId2LikeListMap, userId2UserInfoMap),
-                                Collectors.toList()
-                        )
-                ));
-
         // 组装评论树
         List<QuanTieCommentResp> result = new ArrayList<>();
-        for (Long firstCommentId : firstLevelMap.keySet()) {
-            QuanTieCommentResp firstLevel = firstLevelMap.get(firstCommentId);
-            if (secondLevelMap.containsKey(firstCommentId)) {
-                List<QuanTieCommentResp> secondList = secondLevelMap.get(firstCommentId);
-                if (secondList != null) {
-                    List<QuanTieCommentResp> collect = secondList.stream()
-                            .sorted(Comparator.comparing(QuanTieCommentResp::getCreatedAt))
-                            .collect(Collectors.toList());
-                    firstLevel.setReplies(collect);
-                }
+
+        for (QuanTieComment record : firstLevelCommentPage.getRecords()) {
+            QuanTieCommentResp r = convertToVO(record, currentUserId, commentId2LikeListMap, userId2UserInfoMap);
+            if (req.getWithPreviewReplies() != null && req.getWithPreviewReplies()) {
+                int previewCount = req.getPreviewReplyCount() != null ? req.getPreviewReplyCount() : 2;
+
+                // 批量获取所有一级评论的预览回复
+                List<Long> commentIds = firstLevelCommentPage.getRecords().stream().map(comment -> comment.getId()).collect(Collectors.toList());
+                Map<Long, List<QuanTieComment>> previewRepliesMap = quanTieCommentService
+                        .getPreviewRepliesForComments(commentIds, previewCount);
+
+                // 获取回复相关的用户信息
+                List<Long> replyUserIds = previewRepliesMap.values().stream()
+                        .flatMap(List::stream)
+                        .map(QuanTieComment::getUserId)
+                        .distinct()
+                        .collect(Collectors.toList());
+                Map<Long, Account> replyUserMap = accountService.selectByIds(replyUserIds).stream()
+                        .collect(Collectors.toMap(Account::getId, v -> v));
+
+                // 转换回复为VO并设置到主评论
+                List<QuanTieComment> previewReplies = previewRepliesMap.getOrDefault(r.getId(), Collections.emptyList());
+                List<QuanTieCommentResp> replyVOs = previewReplies.stream()
+                        .map(s -> convertToVO(s, currentUserId, commentId2LikeListMap, replyUserMap))
+                        .collect(Collectors.toList());
+                r.setReplies(replyVOs);
+                r.setReplyCount(quanTieCommentService.getReplyCount(r.getId()));
             }
-            result.add(firstLevel);
+            result.add(r);
         }
 
-        List<QuanTieCommentResp> r = result.stream()
-                .sorted(Comparator.comparing(QuanTieCommentResp::getCreatedAt))
-                .collect(Collectors.toList());
-
-
-        Page<QuanTieCommentResp> pageResult = Page.of(req.getPage() - 1, req.getSize());
+        Page<QuanTieCommentResp> pageResult = Page.of(req.getPage(), req.getSize());
         pageResult.setTotal(firstLevelCommentPage.getTotal());
-        pageResult.setRecords(r);
+        pageResult.setRecords(result);
         return pageResult;
     }
 

@@ -16,5 +16,9 @@ public class QuanTieCommentPageReq extends PageReq {
     private Long tieId;
 
     //第一层的评论ID （二级评论分页）
-    private Long firstCommentId;
+    private Long firstCommenId;
+    //预览2条回复
+    private Integer previewReplyCount;
+    //要求返回预览回复
+    private Boolean withPreviewReplies;
 }
