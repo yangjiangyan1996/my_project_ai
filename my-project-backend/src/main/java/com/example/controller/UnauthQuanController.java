@@ -7,6 +7,7 @@ import com.example.Facade.TieFacade;
 import com.example.config.AsyncTaskUtil;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
+import com.example.entity.req.BarRelationPageReq;
 import com.example.entity.req.QuanTieListPageReq;
 import com.example.entity.resp.BarsInfoResp;
 import com.example.entity.resp.MyMemberGroupsResp;
@@ -36,7 +37,29 @@ public class UnauthQuanController {
     @Resource
     QuanFacade quanFacade;
 
+    /**
+     * 获取关联的
+     * @return
+     */
+    @GetMapping("/getRelationBar")
+    public RespBean<Page<BarsInfoResp>> getRelationBar(@RequestBody BarRelationPageReq req){
+        try {
+            Page<BarsInfoResp> result = quanFacade.getRelationBar(req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("UnauthQuanController#getRelationBar,req:{}",JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("UnauthQuanController#getRelationBar,req:{}", JSON.toJSONString(req),e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
+    /**
+     * 获取帖子基本信息
+     * @param tieId
+     * @return
+     */
     @GetMapping("/getTieBaseInfo")
     public RespBean<QuanTieBaseInfoResp> getTieBaseInfo(@RequestParam("tieId") Long tieId) {
         try {
@@ -75,7 +98,7 @@ public class UnauthQuanController {
      * @return
      */
     @GetMapping("/getBarsByCategory")
-    public RespBean<List<BarsInfoResp>> getBarsByCategory(@RequestParam("categoryCode") Long categoryCode) {
+    public RespBean<List<BarsInfoResp>> getBarsByCategory(@RequestParam("categoryCode") Integer categoryCode) {
         try {
             List<BarsInfoResp> result = quanFacade.getBarsByCategory(categoryCode);
             return RespBean.success(result);

@@ -31,6 +31,23 @@ public class QuanController {
     private QuanFacade quanFacade;
 
 
+
+    @GetMapping("/favoriteTie")
+    public RespBean<Boolean> favoriteTie(@RequestParam("tieId") Long tieId,
+                                             @RequestParam("favorited") Boolean favorited) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = tieFacade.favoriteTie(tieId, user.getId(), favorited);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("QuanController#favoriteTie,req:{},{}", tieId,favorited, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#favoriteTie,req:{},{}", tieId,favorited, e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     /**
      * 评论删除
      * @param projectId

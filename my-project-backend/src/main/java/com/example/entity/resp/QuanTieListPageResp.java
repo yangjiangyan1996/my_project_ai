@@ -15,4 +15,7 @@ public class QuanTieListPageResp {
     private String avatar;
     private String createdName;
     private String createdTime;
+    private Integer views;
+    private Integer comments;
+    private Integer likes;
 }

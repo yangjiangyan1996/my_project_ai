@@ -35,6 +35,8 @@ public class TieFacade {
     @Resource
     QuanTieCommentLikeService quanTieCommentLikeService;
     @Resource
+    QuanTieFavoriteService quanTieFavoriteService;
+    @Resource
     QuanTieCommentService quanTieCommentService;
     @Resource
     AccountService accountService;
@@ -65,6 +67,17 @@ public class TieFacade {
         List<Account> userInfoList = accountService.selectByIds(userIds);
         Map<Long, Account> userId2UserInfoMap = userInfoList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
 
+        List<Long> tieIds = page.getRecords().stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
+
+        List<QuanTieWatch> quanTieWatches = quanTieWatchService.selectByTieIds(tieIds);
+        Map<Long, List<QuanTieWatch>> tieId2WatchListMap = quanTieWatches.stream().collect(Collectors.groupingBy(v -> v.getTieId()));
+
+        List<QuanTieFavorite> quanTieFavoriteList = quanTieFavoriteService.selectByTieIds(tieIds);
+        Map<Long, List<QuanTieFavorite>> tieId2FavoriteListMap = quanTieFavoriteList.stream().collect(Collectors.groupingBy(v -> v.getTieId()));
+
+        List<QuanTieComment> quanTieComments = quanTieCommentService.selectByTieIds(tieIds);
+        Map<Long, List<QuanTieComment>> tieId2CommentListMap = quanTieComments.stream().collect(Collectors.groupingBy(v -> v.getTieId()));
+
         List<QuanTieListPageResp> collect = page.getRecords().stream().map(v -> {
             QuanTieListPageResp r = new QuanTieListPageResp();
             r.setId(v.getId());
@@ -72,6 +85,16 @@ public class TieFacade {
             r.setAvatar(v.getAvatar());
             r.setCreatedName(userId2UserInfoMap.get(v.getCreatedBy()).getNickname());
             r.setCreatedTime(DateUtils.date2Str(v.getCreatedAt()));
+
+            if (tieId2WatchListMap != null && tieId2WatchListMap.containsKey(v.getId())) {
+                r.setViews(tieId2WatchListMap.get(v.getId()).size());
+            }
+            if (tieId2CommentListMap != null && tieId2CommentListMap.containsKey(v.getId())) {
+                r.setComments(tieId2CommentListMap.get(v.getId()).size());
+            }
+            if (tieId2FavoriteListMap != null && tieId2FavoriteListMap.containsKey(v.getId())) {
+                r.setLikes(tieId2FavoriteListMap.get(v.getId()).size());
+            }
             return r;
         }).collect(Collectors.toList());
 
@@ -86,6 +109,14 @@ public class TieFacade {
         if (e == null) {
             return null;
         }
+
+        List<QuanTieWatch> quanTieWatches = quanTieWatchService.selectByTieId(tieId);
+
+        List<QuanTieFavorite> quanTieFavoriteList = quanTieFavoriteService.selectByTieId(tieId);
+
+        List<QuanTieComment> quanTieComments = quanTieCommentService.selectByTieId(tieId);
+
+
         Account account = accountService.selectById(e.getCreatedBy());
         QuanTieBaseInfoResp r = new QuanTieBaseInfoResp();
         r.setId(e.getId());
@@ -94,6 +125,15 @@ public class TieFacade {
         r.setContent(e.getContent());
         if (account != null) {
             r.setCreatedName(account.getNickname());
+        }
+        if (!CollectionUtils.isEmpty(quanTieComments)) {
+            r.setComments(quanTieComments.size());
+        }
+        if (!CollectionUtils.isEmpty(quanTieFavoriteList)){
+            r.setLikes(quanTieFavoriteList.size());
+        }
+        if (!CollectionUtils.isEmpty(quanTieWatches)) {
+            r.setViews(quanTieWatches.size());
         }
         r.setCreatedTime(DateUtils.date2Str(e.getCreatedAt()));
         return r;
@@ -217,5 +257,21 @@ public class TieFacade {
             return;
         }
         quanTieWatchService.insert(tieId, finalUserId);
+    }
+
+    public Boolean favoriteTie(Long tieId, Long userId, Boolean favorited) {
+        boolean exists = quanTieFavoriteService.selectByTieIdAndUserId(tieId, userId);
+        if (Boolean.TRUE.equals(favorited)) {
+            //先判断数据库是否存在数据，有的话直接返回true
+            if (exists) {
+                return true;
+            }
+            return quanTieFavoriteService.insertOne(new QuanTieFavorite(null, userId, tieId));
+        } else {
+            if (!exists) {
+                return true;
+            }
+            return quanTieFavoriteService.removeOne(tieId, userId);
+        }
     }
 }

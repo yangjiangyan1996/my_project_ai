@@ -1,5 +1,9 @@
 package com.example.service;
 
+import com.example.entity.dto.QuanTieWatch;
+
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -8,4 +12,7 @@ package com.example.service;
  */
 public interface QuanTieWatchService {
     void insert(Long tieId, Long userId);
+
+    List<QuanTieWatch> selectByTieIds(List<Long> tieIds);
+    List<QuanTieWatch> selectByTieId(Long tieId);
 }

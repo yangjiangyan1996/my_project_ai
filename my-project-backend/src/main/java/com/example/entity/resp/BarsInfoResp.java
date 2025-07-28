@@ -16,5 +16,7 @@ public class BarsInfoResp {
     private Long followerCount;
     private Long postCount;
     private String description;
+    private String firstCategoryName;
+    private String secondCategoryName;
 
 }

@@ -28,7 +28,7 @@
             <span>{{ tieDetail.comments || 0 }}</span>
           </div>
           <div class="action-btn" @click="handleLike">
-            <el-icon :color="liked ? '#f56c6c' : ''"><Star /></el-icon>
+            <el-icon :color="favorited ? '#f56c6c' : ''"><Star /></el-icon>
             <span>{{ tieDetail.likes || 0 }}</span>
           </div>
           <div class="action-btn">
@@ -300,7 +300,7 @@ const replyPageSize = ref(10); // 每页回复数量
 const previewReplyCount = 2; // 预览回复数量
 
 // 点赞状态
-const liked = ref(false);
+const favorited = ref(false);
 
 // 弹窗相关数据
 const replyDialogVisible = ref(false);
@@ -338,7 +338,7 @@ const fetchTieDetail = async () => {
         username: res.createdName,
         createdTime: res.createdTime
       };
-      liked.value = res.myLike || false;
+      favorited.value = res.myLike || false;
     }
   } catch (error) {
     ElMessage.error('加载帖子详情失败');
@@ -581,11 +581,11 @@ function findCommentInReplies(replies, commentId) {
 // 点赞帖子
 const handleLike = async () => {
   try {
-    const targetState = !liked.value;
-    const result = await get(`/api/auth/quan/likeTie?tieId=${tieId}&liked=${targetState}`);
+    const targetState = !favorited.value;
+    const result = await get(`/api/auth/quan/favoriteTie?tieId=${tieId}&favorited=${targetState}`);
     
     if (result) {
-      liked.value = targetState;
+      favorited.value = targetState;
       tieDetail.value.likes += targetState ? 1 : -1;
       ElMessage.success(targetState ? '点赞成功' : '已取消点赞');
     }

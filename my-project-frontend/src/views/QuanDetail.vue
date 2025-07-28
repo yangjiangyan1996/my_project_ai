@@ -137,23 +137,27 @@
         <div class="sidebar-section">
           <div class="section-header">
             <h3>本吧信息</h3>
-            <el-button type="text" size="small">更多</el-button>
+            <!-- <el-button type="text" size="small">更多</el-button> -->
           </div>
           <div class="info-item">
             <el-icon><UserFilled /></el-icon>
-            <span>小吧主共46人</span>
+            <span>{{ barInfo.name }}圈共{{ barInfo.followerCount }}人</span>
           </div>
           <div class="info-item">
             <el-icon><Medal /></el-icon>
-            <span>会员</span>
+            <span>{{ barInfo.firstCategoryName }}</span>
           </div>
           <div class="info-item">
+            <el-icon><Medal /></el-icon>
+            <span>{{ barInfo.secondCategoryName }}</span>
+          </div>
+          <!-- <div class="info-item">
             <el-icon><Folder /></el-icon>
             <span>游戏主播及平台</span>
-          </div>
-          <el-button type="primary" size="small" class="apply-btn" round>
+          </div> -->
+          <!-- <el-button type="primary" size="small" class="apply-btn" round>
             申请吧主
-          </el-button>
+          </el-button> -->
         </div>
 
         <div class="sidebar-section">
@@ -299,7 +303,9 @@ const barInfo = ref({
   avatar: '',
   followerCount: 0,
   postCount: 0,
-  description: ''
+  description: '',
+  firstCategoryName: '',
+  secondCategoryName: '',
 });
 // 富文本编辑器相关
 const editorRef = shallowRef()
@@ -423,9 +429,9 @@ const fetchPosts = async (page = 1) => {
         userAvatar: item.avatar ,
         username: item.createdName,
         time: item.createdTime,
-        views: '0', // 接口未返回，可以留空或后续添加
-        comments: '0', // 接口未返回，可以留空或后续添加
-        likes: 0 // 接口未返回，可以留空或后续添加
+        views: item.views || 0, // 接口未返回，可以留空或后续添加
+        comments: item.comments || 0, // 接口未返回，可以留空或后续添加
+        likes: item.likes || 0 // 接口未返回，可以留空或后续添加
       }))
       total.value = response.total || 0
       currentPage.value = page
@@ -464,7 +470,9 @@ const fetchBarInfo = async () => {
         avatar: response.avatar,
         followerCount: response.followerCount,
         postCount: response.postCount,
-        description: response.description
+        description: response.description,
+        firstCategoryName: response.firstCategoryName,
+        secondCategoryName: response.secondCategoryName,
       };
     }
   } catch (error) {

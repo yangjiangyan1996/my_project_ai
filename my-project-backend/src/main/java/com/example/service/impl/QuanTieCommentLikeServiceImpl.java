@@ -33,8 +33,14 @@ public class QuanTieCommentLikeServiceImpl  extends ServiceImpl<QuanTieCommentLi
     }
 
     @Override
+    public List<QuanTieCommentLike> selectByTieIds(List<Long> tieIds) {
+        return this.baseMapper.selectList(new QueryWrapper<QuanTieCommentLike>()
+                .in("tie_id", tieIds)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
     public Boolean insert(Long commentId, Long tieId, Long userId) {
         return save(new QuanTieCommentLike(null, commentId, userId,tieId));
-
     }
 }

@@ -17,4 +17,6 @@ public interface QuanTieCommentLikeService {
     QuanTieCommentLike selectByCommentIdAndUserId(Long commentId, Long tieId, Long userId);
 
     Boolean insert(Long commentId, Long tieId, Long userId);
+
+    List<QuanTieCommentLike> selectByTieIds(List<Long> tieIds);
 }

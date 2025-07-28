@@ -25,4 +25,8 @@ public interface QuanTieCommentService {
     QuanTieComment selectByTieIdAndCommentId(Long tieId, Long commentId);
 
     int updateStatus(Long commentId, Long userId, Integer code);
+
+    List<QuanTieComment> selectByTieIds(List<Long> tieIds);
+
+    List<QuanTieComment> selectByTieId(Long tieId);
 }

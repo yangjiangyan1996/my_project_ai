@@ -1,23 +1,23 @@
 package com.example.Facade;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.config.AsyncTaskUtil;
 import com.example.entity.dto.QuanBars;
 import com.example.entity.dto.QuanUserBarFollows;
+import com.example.entity.req.BarRelationPageReq;
 import com.example.entity.req.QuanBarCreateReq;
 import com.example.entity.resp.BarsInfoResp;
+import com.example.entity.resp.QuanTieListPageResp;
+import com.example.enums.CommonEnum;
 import com.example.enums.QuanEnum;
-import com.example.service.QuanBarsService;
-import com.example.service.QuanUserBarFollowsService;
+import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -31,6 +31,12 @@ public class QuanFacade {
 
     @Resource
     QuanUserBarFollowsService quanUserBarFollowsService;
+    @Resource
+    QuanTieWatchService quanTieWatchService;
+    @Resource
+    QuanTieFavoriteService quanTieFavoriteService;
+    @Resource
+    QuanTieCommentService quanTieCommentService;
     @Resource
     QuanBarsService quanBarsService;
 
@@ -56,7 +62,7 @@ public class QuanFacade {
         return quanBarsService.save(e);
     }
 
-    public List<BarsInfoResp> getBarsByCategory(Long categoryId) {
+    public List<BarsInfoResp> getBarsByCategory(Integer categoryId) {
         if (categoryId == null) {
             return new ArrayList<>(1);
         }
@@ -84,6 +90,7 @@ public class QuanFacade {
         if (v == null) {
             return null;
         }
+
         BarsInfoResp barsByCategoryResp = new BarsInfoResp();
         barsByCategoryResp.setId(v.getId());
         barsByCategoryResp.setName(v.getName());
@@ -91,6 +98,8 @@ public class QuanFacade {
         barsByCategoryResp.setFollowerCount(v.getFollowerCount());
         barsByCategoryResp.setPostCount(v.getPostCount());
         barsByCategoryResp.setDescription(v.getDescription());
+        barsByCategoryResp.setFirstCategoryName(CommonEnum.IndustryCategory.getNameByCode(v.getFirstCategory()));
+        barsByCategoryResp.setSecondCategoryName(CommonEnum.IndustryCategory.getNameByCode(v.getSecondCategory()));
         return barsByCategoryResp;
     }
 
@@ -135,5 +144,101 @@ public class QuanFacade {
     public Boolean isFollowBar(Long userId, Long barId) {
         QuanUserBarFollows f = quanUserBarFollowsService.selectByBarIdAndUserId(barId, userId);
         return f != null;
+    }
+
+    public Page<BarsInfoResp> getRelationBar(BarRelationPageReq req) {
+        Page<BarsInfoResp> p = Page.of(req.getPage() - 1, req.getSize());
+        List<BarsInfoResp> result = new ArrayList<>();
+        Set<Long> barIds = new HashSet<>();
+        QuanBars bar = quanBarsService.selectById(req.getBarId());
+        if (bar != null) {
+            Integer secondCategory = bar.getSecondCategory();
+            Page<QuanBars> bars = quanBarsService.selectBySecondCategory(Page.of(req.getPage(), req.getSize()), secondCategory);
+
+            //根据二级类目先获取
+            if (!CollectionUtils.isEmpty(bars.getRecords())) {
+                for (QuanBars b : bars.getRecords()) {
+                    BarsInfoResp barsInfoResp = new BarsInfoResp();
+                    barsInfoResp.setId(b.getId());
+                    barsInfoResp.setName(b.getName());
+                    barsInfoResp.setAvatar(b.getAvatar());
+                    barsInfoResp.setFollowerCount(b.getFollowerCount());
+                    barsInfoResp.setPostCount(b.getPostCount());
+                    barsInfoResp.setDescription(b.getDescription());
+                    if (result.size() < 5) {
+                        if (barIds.add(b.getId())) {
+                            result.add(barsInfoResp);
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                if (result.size() > 5) {
+                    p.setTotal(bars.getTotal());
+                    p.setRecords(result);
+                    return p;
+                }
+            }
+
+            if (result.size() < 5) {
+                //根据第一分类获取
+                Integer firstCategory = bar.getFirstCategory();
+                Page<QuanBars> barByFirstCategory = quanBarsService.selectPageByFirstCategory(Page.of(req.getPage(), req.getSize()), firstCategory);
+                p.setTotal(bars.getTotal());
+                if (!CollectionUtils.isEmpty(barByFirstCategory.getRecords())) {
+                    for (QuanBars b : barByFirstCategory.getRecords()) {
+                        BarsInfoResp barsInfoResp = new BarsInfoResp();
+                        barsInfoResp.setId(b.getId());
+                        barsInfoResp.setName(b.getName());
+                        barsInfoResp.setAvatar(b.getAvatar());
+                        barsInfoResp.setFollowerCount(b.getFollowerCount());
+                        barsInfoResp.setPostCount(b.getPostCount());
+                        barsInfoResp.setDescription(b.getDescription());
+                        if (result.size() < 5) {
+                            if (barIds.add(b.getId())) {
+                                result.add(barsInfoResp);
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                    if (result.size() > 5) {
+                        p.setTotal(bars.getTotal());
+                        p.setRecords(result);
+                        return p;
+                    }
+                }
+            }
+        }
+
+        if (result.size() < 5) {
+            Page<QuanBars> suijiBars = quanBarsService.selectFollowBars(Page.of(req.getPage(), req.getSize()));
+            p.setTotal(suijiBars.getTotal());
+            if (!CollectionUtils.isEmpty(suijiBars.getRecords())) {
+                for (QuanBars b : suijiBars.getRecords()) {
+                    BarsInfoResp barsInfoResp = new BarsInfoResp();
+                    barsInfoResp.setId(b.getId());
+                    barsInfoResp.setName(b.getName());
+                    barsInfoResp.setAvatar(b.getAvatar());
+                    barsInfoResp.setFollowerCount(b.getFollowerCount());
+                    barsInfoResp.setPostCount(b.getPostCount());
+                    barsInfoResp.setDescription(b.getDescription());
+                    if (result.size() < 5) {
+                        if (barIds.add(b.getId())) {
+                            result.add(barsInfoResp);
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                if (result.size() > 5) {
+                    p.setTotal(suijiBars.getTotal());
+                    p.setRecords(result);
+                    return p;
+                }
+            }
+        }
+        p.setRecords(result);
+        return p;
     }
 }

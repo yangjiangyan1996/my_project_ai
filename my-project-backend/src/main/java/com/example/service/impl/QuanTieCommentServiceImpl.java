@@ -91,6 +91,20 @@ public class QuanTieCommentServiceImpl extends ServiceImpl<QuanTieCommentMapper,
     }
 
     @Override
+    public List<QuanTieComment> selectByTieIds(List<Long> tieIds) {
+        return this.baseMapper.selectList(new QueryWrapper<QuanTieComment>()
+                .in("tie_id", tieIds)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public List<QuanTieComment> selectByTieId(Long tieId) {
+        return this.baseMapper.selectList(new QueryWrapper<QuanTieComment>()
+                .eq("tie_id", tieId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
     public int updateStatus(Long commentId, Long userId, Integer code) {
         QuanTieComment q = new QuanTieComment();
         q.setStatus(code);
