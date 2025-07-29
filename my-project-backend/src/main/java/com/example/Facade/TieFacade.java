@@ -1,5 +1,6 @@
 package com.example.Facade;
 
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.*;
 import com.example.entity.req.QuanTieCommentPageReq;
@@ -16,6 +17,7 @@ import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -47,7 +49,9 @@ public class TieFacade {
         QuanBarTie e = new QuanBarTie();
         e.setTitle(req.getTitle());
         e.setContent(req.getContent());
-        e.setAvatar(req.getAvatar());
+        if (!CollectionUtils.isEmpty(req.getImages())) {
+            e.setAvatar(JSON.toJSONString(req.getImages()));
+        }
         e.setStatus(QuanEnum.TieStatusEnums.NORMAL.getCode());
         e.setBarId(req.getBarId());
         e.setCreatedAt(new Date());
@@ -121,7 +125,9 @@ public class TieFacade {
         QuanTieBaseInfoResp r = new QuanTieBaseInfoResp();
         r.setId(e.getId());
         r.setTitle(e.getTitle());
-        r.setAvatar(e.getAvatar());
+        if (!StringUtils.isEmpty(e.getAvatar())) {
+            r.setAvatar(JSON.parseArray(e.getAvatar(),String.class));
+        }
         r.setContent(e.getContent());
         if (account != null) {
             r.setCreatedName(account.getNickname());

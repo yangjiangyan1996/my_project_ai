@@ -245,18 +245,30 @@
         </div>
       </el-form-item>
        
-        <el-form-item label="图片" prop="images">
+     <el-form-item label="图片" prop="images">
         <el-upload
-            class="cover-uploader"
-            action="http://localhost:8080/api/unauth/common/upload"
-            :show-file-list="false"
-            :on-success="handleImageSuccess"
-            :before-upload="beforeImageUpload"
+          class="cover-uploader"
+          action="http://localhost:8080/api/unauth/common/upload"
+          list-type="picture-card"
+          :on-success="handleImageSuccess"
+          :before-upload="beforeImageUpload"
+          :on-remove="handleRemoveImage"
+          :limit="9"
+          :on-exceed="handleExceed"
+          :file-list="postForm.images"
+          multiple
         >
-            <img v-if="postForm.avatar" :src="postForm.avatar" class="cover-image">
-            <el-icon v-else class="cover-uploader-icon"><Plus /></el-icon>
+          <el-icon class="cover-uploader-icon"><Plus /></el-icon>
+          <template #file="{ file }">
+            <div class="image-preview">
+              <img :src="file.url" class="cover-image" />
+            </div>
+          </template>
+          <template #tip>
+            <div class="el-upload__tip">最多上传9张图片，单张不超过2MB</div>
+          </template>
         </el-upload>
-        </el-form-item>
+      </el-form-item>
 
       </el-form>
       <template #footer>
@@ -433,7 +445,7 @@ onBeforeUnmount(() => {
 const postForm = ref({
   title: '',
   content: '',
-  avatar: '' // 改为单个图片URL
+  images: [] // 改为数组形式存储多图
 })
 
 
@@ -534,38 +546,61 @@ const handleFriendBarPageChange = (page) => {
 };
 
 // 图片上传成功处理
-const handleImageSuccess = (response) => {
-  postForm.value.avatar = response.data;
-  ElMessage.success('上传成功');
-};
-
-// 图片上传前校验
-const beforeImageUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png';
-  const isLt2M = file.size / 1024 / 1024 < 2;
-  const isSizeValid = new Promise((resolve) => {
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    img.onload = () => {
-      const valid = img.width <= 2000 && img.height <= 2000;
-      if (!valid) {
-        ElMessage.error('图片尺寸不能超过2000x2000像素');
+const handleImageSuccess = (response, file, fileList) => {
+  if (response && response.data) {
+    // 更新fileList中的url，确保预览能显示
+    const updatedFileList = fileList.map(item => {
+      if (item.uid === file.uid) {
+        return {
+          ...item,
+          url: response.data
+        }
       }
-      resolve(valid);
-    };
-  });
+      return item
+    })
+    
+    postForm.value.images = updatedFileList
+    ElMessage.success('上传成功')
+  }
+}
+
+// 图片上传前校验 (保持原有逻辑不变)
+const beforeImageUpload = (file) => {
+  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
+  const isLt2M = file.size / 1024 / 1024 < 2
+  const isSizeValid = new Promise((resolve) => {
+    const img = new Image()
+    img.src = URL.createObjectURL(file)
+    img.onload = () => {
+      const valid = img.width <= 2000 && img.height <= 2000
+      if (!valid) {
+        ElMessage.error('图片尺寸不能超过2000x2000像素')
+      }
+      resolve(valid)
+    }
+  })
 
   if (!isJPG) {
-    ElMessage.error('图片只能是 JPG/PNG 格式!');
-    return false;
+    ElMessage.error('图片只能是 JPG/PNG 格式!')
+    return false
   }
   if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB!');
-    return false;
+    ElMessage.error('图片大小不能超过 2MB!')
+    return false
   }
   
-  return isJPG && isLt2M && isSizeValid;
-};
+  return isJPG && isLt2M && isSizeValid
+}
+
+// 新增方法：移除图片
+const handleRemoveImage = (file, fileList) => {
+  postForm.value.images = fileList
+}
+
+// 新增方法：超出限制提示
+const handleExceed = () => {
+  ElMessage.warning('最多只能上传9张图片')
+}
 
 const handleEditorCreated = (editor) => {
   editorRef.value = editor
@@ -704,13 +739,7 @@ const showPostMenu = (postId) => {
 };
 
 
-// const handleSearch = () => {
-//   console.log('搜索:', searchQuery.value);
-//   currentPage.value = 1; // 重置为第一页
-//   fetchPosts(); // 重新获取帖子列表
-// };
-
-// 提交帖子
+// 提交帖子方法 (只需修改images部分的处理)
 const submitPost = async () => {
   if (!postForm.value.title.trim()) {
     ElMessage.error('请输入标题')
@@ -725,11 +754,15 @@ const submitPost = async () => {
   submitting.value = true
   
   try {
-    // 调用API
+    // 准备图片URL数组
+    const imageUrls = postForm.value.images.map(img => img.url || img.response?.data)
+    
+    // 调用API (保持原有接口不变)
     const response = await post('/api/auth/quan/createTie', {
       title: postForm.value.title,
       content: postForm.value.content,
-      avatar: postForm.value.avatar,
+      avatar: imageUrls[0] || '', // 保持原有avatar字段，取第一张图
+      images: imageUrls,          // 新增images字段传递所有图片
       barId: barId
     })
 
@@ -744,17 +777,18 @@ const submitPost = async () => {
   }
 }
 
-// 重置发帖表单
+// 重置表单方法 (保持原有逻辑，只需修改images部分)
 const resetPostForm = () => {
   postForm.value = {
     title: '',
     content: '',
-    avatar: ''
+    images: []
   }
   if (editorRef.value) {
     editorRef.value.clear()
   }
 }
+
 </script>
 
 <style scoped lang="scss">
@@ -1348,5 +1382,56 @@ follow-btn {
 .dialog-pagination {
   margin-top: 16px;
   justify-content: center;
+}
+.cover-uploader {
+  :deep(.el-upload) {
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: var(--el-transition-duration-fast);
+    width: 100px;
+    height: 100px;
+    
+    &:hover {
+      border-color: var(--el-color-primary);
+    }
+  }
+  
+  :deep(.el-upload-list--picture-card .el-upload-list__item) {
+    width: 100px;
+    height: 100px;
+    margin-right: 10px;
+  }
+}
+
+.cover-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 100px;
+  height: 100px;
+  line-height: 100px;
+  text-align: center;
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.el-upload__tip {
+  margin-top: 7px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 </style>

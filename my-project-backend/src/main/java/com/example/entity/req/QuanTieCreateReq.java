@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -16,7 +18,7 @@ public class QuanTieCreateReq {
     String title;
     @NotBlank(message = "内容不能为空")
     String content;
-    String avatar;
+    List<String> images;
     @NotNull(message = "barsId不能为空")
     Long barId;
 }

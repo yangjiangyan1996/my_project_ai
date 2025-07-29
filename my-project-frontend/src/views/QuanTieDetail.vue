@@ -6,12 +6,35 @@
     <el-card class="tie-detail-card">
       <!-- 帖子头部部分保持不变 -->
       <div class="tie-header">
-        <div class="tie-meta">
-          <el-avatar :size="48" :src="tieDetail.avatar" class="user-avatar"></el-avatar>
+
+         <!-- <el-avatar :size="48" :src="tieDetail.avatar" class="user-avatar"></el-avatar> -->
           <div class="user-info">
             <span class="username">{{ tieDetail.username || '匿名用户' }}</span>
             <span class="post-time">{{ formatTime(tieDetail.createdTime) }}</span>
           </div>
+
+
+        <div class="tie-meta">
+          
+          
+            <div class="image-gallery" v-if="tieDetail.avatar && tieDetail.avatar.length">
+  <el-image 
+    v-for="(img, index) in tieDetail.avatar" 
+    :key="index" 
+    :src="img" 
+    :preview-src-list="tieDetail.avatar"
+    :initial-index="index"
+    fit="cover"
+    class="gallery-image"
+    :style="{ width: calculateImageWidth(tieDetail.avatar.length) }"
+    :zoom-rate="1.2"
+    :max-scale="7"
+    :min-scale="0.2"
+    preview-teleported
+    hide-on-click-modal
+  />
+</div>
+         
         </div>
         
         <h1 class="tie-title">{{ tieDetail.title }}</h1>
@@ -265,6 +288,7 @@ import { View, ChatDotRound, Star, Share, ArrowRight } from '@element-plus/icons
 import markdownIt from 'markdown-it';
 import emoji from 'markdown-it-emoji';
 import useUserInfo from '@/hooks/useUserInfo';
+import 'element-plus/dist/index.css'
 
 const route = useRoute();
 const router = useRouter();
@@ -275,7 +299,7 @@ const tieDetail = ref({
   id: 0,
   title: '',
   content: '',
-  avatar: '',
+  avatar:  [],
   bar_id: 0,
   username: '',
   createdTime: '',
@@ -336,7 +360,8 @@ const fetchTieDetail = async () => {
       tieDetail.value = {
         ...res,
         username: res.createdName,
-        createdTime: res.createdTime
+        createdTime: res.createdTime,
+         avatar: Array.isArray(res.avatar) ? res.avatar : []
       };
       favorited.value = res.myLike || false;
     }
@@ -385,6 +410,16 @@ const toggleReplyBox = (commentId, username) => {
       editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   });
+};
+
+
+// 计算图片宽度，根据图片数量决定
+const calculateImageWidth = (count) => {
+  if (count === 1) return '100%';
+  if (count === 2) return '49%';
+  if (count === 3) return '32%';
+  if (count === 4) return '49%'; // 4张图时两行两列
+  return '32%'; // 默认3列布局
 };
 
 // 取消回复
@@ -1204,6 +1239,71 @@ const goBack = () => {
   
   &:hover {
     background: rgba(0, 0, 0, 0.2);
+  }
+}
+.image-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+  
+  .gallery-image {
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    aspect-ratio: 16/9;
+    background-color: #f5f5f5;
+    
+    &:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    :deep(.el-image__inner) {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    
+    :deep(.el-image__error) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f5f5f5;
+      color: #999;
+      font-size: 14px;
+    }
+    
+    :deep(.el-image__placeholder) {
+      background-color: #f5f5f5;
+    }
+  }
+  
+  // 单张图片特殊处理
+  .gallery-image:only-child {
+    max-height: 400px;
+    width: 100% !important;
+  }
+  
+  // 两张图片特殊处理
+  .gallery-image:nth-child(1):nth-last-child(2),
+  .gallery-image:nth-child(2):nth-last-child(1) {
+    flex: 1 1 calc(50% - 8px);
+  }
+  
+  // 三张图片特殊处理
+  .gallery-image:nth-child(1):nth-last-child(3),
+  .gallery-image:nth-child(2):nth-last-child(2),
+  .gallery-image:nth-child(3):nth-last-child(1) {
+    flex: 1 1 calc(33.333% - 8px);
+  }
+  
+  // 四张及以上图片特殊处理
+  .gallery-image:nth-child(n+4) {
+    flex: 1 1 calc(25% - 8px);
   }
 }
 </style>

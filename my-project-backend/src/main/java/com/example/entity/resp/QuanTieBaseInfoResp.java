@@ -2,6 +2,8 @@ package com.example.entity.resp;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -12,7 +14,7 @@ import lombok.Data;
 public class QuanTieBaseInfoResp {
     private Long id;
     private String title;
-    private String avatar;
+    private List<String> avatar;
     private String content;
     private String createdName;
     private String createdTime;
