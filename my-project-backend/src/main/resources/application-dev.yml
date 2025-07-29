@@ -56,16 +56,14 @@ spring:
       period: 3
       limit: 50
       block: 30
-    cors:
-      origin: '*'
-      credentials: false
-      methods: '*'
 
 logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     com.example.mapper: DEBUG
+# application.yml 示例
+
 
 
 
