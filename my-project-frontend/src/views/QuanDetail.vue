@@ -83,6 +83,21 @@
           </div>
           <h3 class="post-title">{{ post.title }}</h3>
           <p class="post-content">{{ post.content }}</p>
+          <!-- 新增图片展示区域 -->
+ 
+          <div class="post-images" v-if="post.avatar && post.avatar.length > 0">
+          <div 
+            class="post-image-item" 
+            v-for="(image, index) in post.avatar.slice(0, 9)" 
+            :key="index"
+          >
+            <img :src="image" alt="帖子图片" />
+          </div>
+          <div class="image-more" v-if="post.avatar.length > 9">
+            +{{ post.avatar.length - 9 }}
+          </div>
+        </div>
+
           <div class="post-footer">
             <div class="action-btn">
               <el-icon><View /></el-icon>
@@ -634,7 +649,8 @@ const fetchPosts = async (page = 1) => {
         time: item.createdTime,
         views: item.views || 0, // 接口未返回，可以留空或后续添加
         comments: item.comments || 0, // 接口未返回，可以留空或后续添加
-        likes: item.likes || 0 // 接口未返回，可以留空或后续添加
+        likes: item.likes || 0, // 接口未返回，可以留空或后续添加
+        avatar: item.avatar || [] // 帖子图片数组
       }))
       total.value = response.total || 0
       currentPage.value = page
@@ -1434,4 +1450,39 @@ follow-btn {
   color: var(--el-text-color-secondary);
   font-size: 12px;
 }
+.post-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+  
+  .post-image-item {
+    width: 80px;
+    height: 80px;
+    overflow: hidden;
+    border-radius: 4px;
+    background-color: #f5f5f5;
+    position: relative;
+    
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+  
+  .image-more {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 12px;
+    border-radius: 4px;
+  }
+}
+  
+ 
 </style>

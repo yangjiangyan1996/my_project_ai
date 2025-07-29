@@ -86,7 +86,9 @@ public class TieFacade {
             QuanTieListPageResp r = new QuanTieListPageResp();
             r.setId(v.getId());
             r.setTitle(v.getTitle());
-            r.setAvatar(v.getAvatar());
+            if (!StringUtils.isEmpty(v.getAvatar())) {
+                r.setAvatar(JSON.parseArray(v.getAvatar(),String.class));
+            }
             r.setCreatedName(userId2UserInfoMap.get(v.getCreatedBy()).getNickname());
             r.setCreatedTime(DateUtils.date2Str(v.getCreatedAt()));
 
