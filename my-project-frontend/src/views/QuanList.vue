@@ -56,7 +56,6 @@
         </div>
       </div>
       
-      
       <div class="my-bars">
         <h4>我关注的</h4>
         <div v-if="followedBars.length > 0" class="followed-list">
@@ -67,16 +66,35 @@
             @click="navigateToBar(bar.id)"
           >
             <el-avatar :size="32" :src="bar.avatar" />
-            <span class="bar-name">{{ bar.name }}</span>
+            <div class="bar-info">
+              <span class="bar-name">{{ bar.name }}</span>
+              <div class="bar-stats">
+                <span><el-icon><User /></el-icon> {{ bar.followerCount }}</span>
+                <span><el-icon><Document /></el-icon> {{ bar.postCount }}</span>
+              </div>
+            </div>
             <el-badge :value="bar.unread" :max="99" class="unread-count" />
           </div>
         </div>
         <el-empty v-else description="暂无关注圈" :image-size="80" />
+
+        <el-button 
+          v-if="followedBars.length < followedTotal"
+          type="text" 
+          size="small" 
+          @click="loadMoreFollowed"
+          class="load-more-btn"
+        >
+          加载更多
+        </el-button>
       </div>
+    
+
+
     </div>
     
     <!-- 中间帖子列表 -->
-    <div class="main-content">
+    <div class="main-content" style="width: 800px;">
       <div class="content-header">
         <h3>{{ currentCategory || '全部圈' }}</h3>
         <el-input
@@ -111,6 +129,7 @@
           class="post-card"
           shadow="hover"
           @click="navigateToPost(post.id)"
+          
         >
           <div class="post-header">
             <el-avatar :size="40" :src="post.userAvatar" />
@@ -125,23 +144,23 @@
             <h4>{{ post.title }}</h4>
             <p class="content">{{ post.content }}</p>
             
-            <div v-if="post.images && post.images.length > 0" class="post-images">
+            <div v-if="post.avatar && post.avatar.length > 0" class="post-avatar">
               <el-image
-                v-for="(img, index) in post.images.slice(0, 3)"
+                v-for="(img, index) in post.avatar.slice(0, 3)"
                 :key="index"
                 :src="img"
-                :preview-src-list="post.images"
+                :preview-src-list="post.avatar"
                 fit="cover"
                 class="post-image"
-                :class="{ 'last-image-more': index === 2 && post.images.length > 3 }"
+                :class="{ 'last-image-more': index === 2 && post.avatar.length > 3 }"
               >
                 <template #error>
                   <div class="image-error">
                     <el-icon><Picture /></el-icon>
                   </div>
                 </template>
-                <div v-if="index === 2 && post.images.length > 3" class="image-more">
-                  +{{ post.images.length - 3 }}
+                <div v-if="index === 2 && post.avatar.length > 3" class="avatar-more">
+                  +{{ post.avatar.length - 3 }}
                 </div>
               </el-image>
             </div>
@@ -369,102 +388,49 @@ import { logout, post, get } from '@/net';
 
 const router = useRouter()
 
-// 左侧分类数据
-const categoryGroups = ref([
-  {
-    title: '娱乐明星',
-    tags: ['导演', '时尚人物', '明星', '粉丝组织', '网络红人', '选秀选手', 'CP'],
-    expanded: true
-  },
-  {
-    title: '体育',
-    tags: ['足球', '篮球', 'NBA', 'CBA', '乒乓球', '网球', '舞蹈', '健身'],
-    expanded: true
-  },
-  {
-    title: '小说',
-    tags: ['奇幻', '首饰', '男导', '穿越', '连载', '修真', '历史', '架空文'],
-    expanded: false
-  },
-  {
-    title: '生活家',
-    tags: ['小而美', 'DIY', '美食', '摄影', '旅行', '变美', '留学移民', '文玩'],
-    expanded: false
-  },
-  {
-    title: '闲·趣',
-    tags: ['萌宠', '萝莉', '重口味', '吐槽', '恐怖', '星座', '爆料', '喵星人'],
-    expanded: false
-  },
-  {
-    title: '游戏',
-    tags: ['游戏主播及平台', '游戏交易及功能', '游戏角色', '电子竞技及选手'],
-    expanded: false
-  },
-  {
-    title: '动漫宅',
-    tags: ['日本动漫', '国产动漫', '欧美动漫', '搞笑漫画', '热血动漫', '推理', '声优'],
-    expanded: false
-  },
-  {
-    title: '地区',
-    tags: ['国内地区', '海外地区'],
-    expanded: false
-  }
-])
 
-// 右侧热门数据
-const hotBars = ref([
-  {
-    id: 1,
-    name: '抗压背锅',
-    followers: '858.1W',
-    posts: '17257.7W',
-    avatar: 'https://via.placeholder.com/60?text=抗压背锅',
-    rank: 1,
-    followed: false
-  },
-  {
-    id: 2,
-    name: 'bilibili',
-    followers: '458.2W',
-    posts: '14367.2W',
-    avatar: 'https://via.placeholder.com/60?text=bilibili',
-    rank: 2,
-    followed: true
-  },
-  {
-    id: 3,
-    name: '崩坏星穹铁...',
-    followers: '36.1W',
-    posts: '1764.8W',
-    avatar: 'https://via.placeholder.com/60?text=崩坏星穹铁',
-    rank: 3,
-    followed: false
-  },
-  {
-    id: 4,
-    name: '孙笑川',
-    followers: '708.2W',
-    posts: '20683.4W',
-    avatar: 'https://via.placeholder.com/60?text=孙笑川',
-    rank: 4,
-    followed: false
-  },
-  {
-    id: 5,
-    name: '第五人格交易',
-    followers: '155.7W',
-    posts: '14492.8W',
-    avatar: 'https://via.placeholder.com/60?text=第五人格交易',
-    rank: 5,
-    followed: false
+
+// 获取我关注的圈子
+const fetchFollowedBars = async (page = 1, size = 5) => {
+  try {
+    const response = await post('/api/auth/quan/myFavoriteBar', {
+      page: page,
+      size: size
+    });
+    
+    if (response && response.records) {
+      followedBars.value = response.records.map(bar => ({
+        id: bar.id,
+        name: bar.name,
+        avatar: bar.avatar,
+        followerCount: bar.followerCount,
+        postCount: bar.postCount,
+        unread: 0 // 初始未读消息数为0
+      }));
+    }
+  } catch (error) {
+    console.error('获取关注的圈子失败:', error);
+    ElMessage.error('获取关注的圈子失败，请稍后重试');
   }
-])
+};
+
+
 
 // 热议榜数据
  const hotTopics = ref([])
+// 分页相关状态
+const followedPage = ref(1);
+const followedPageSize = ref(5);
+const followedTotal = ref(0);
 
+
+
+// 加载更多
+const loadMoreFollowed = () => {
+  if (followedBars.value.length < followedTotal.value) {
+    fetchFollowedBars(followedPage.value + 1, followedPageSize.value);
+  }
+};
 
 // 我关注的
 const followedBars = ref([
@@ -488,76 +454,6 @@ const followedBars = ref([
   }
 ])
 
-// 帖子数据
-const posts = ref([
-  {
-    id: 1,
-    title: '大一遇到的奇葩舍友',
-    content: '深夜宿舍小动作，舍友都看出来他丫丫一下跪倒个女号逗他',
-    userAvatar: 'https://via.placeholder.com/40?text=用户',
-    username: '孙笑川',
-    time: '2分钟之前',
-    views: '2289',
-    comments: '124',
-    likes: '56',
-    liked: false,
-    barName: '孙笑川',
-    images: [
-      'https://via.placeholder.com/300x200?text=图片1',
-      'https://via.placeholder.com/300x200?text=图片2',
-      'https://via.placeholder.com/300x200?text=图片3',
-      'https://via.placeholder.com/300x200?text=图片4'
-    ]
-  },
-  {
-    id: 2,
-    title: '山上看的人生居然是这样的啊',
-    content: '父亲是寒门出身，考上京都大学，成了高材生，后面当了建筑工程师，娶了社长千金并生下了三个孩子。他是老二，他有一个哥哥，一个妹妹但是由于门第差距加上工作压力，父亲承受不住，自杀了当时他母亲还怀着他妹妹...',
-    userAvatar: 'https://via.placeholder.com/40?text=用户',
-    username: '2ch',
-    time: '1小时前',
-    views: '1895',
-    comments: '256',
-    likes: '189',
-    liked: true,
-    barName: '2ch',
-    images: []
-  },
-  {
-    id: 3,
-    title: '游戏开发经验分享：状态机模式的应用',
-    content: '在游戏开发中，状态机模式是管理游戏角色行为非常有效的方式。它可以将复杂的行为逻辑分解为多个独立的状态，每个状态处理特定的行为逻辑...',
-    userAvatar: 'https://via.placeholder.com/40?text=用户',
-    username: '游戏开发者',
-    time: '3小时前',
-    views: '1562',
-    comments: '89',
-    likes: '342',
-    liked: false,
-    barName: '游戏开发',
-    images: [
-      'https://via.placeholder.com/300x200?text=状态机图',
-      'https://via.placeholder.com/300x200?text=代码示例'
-    ]
-  },
-  {
-    id: 4,
-    title: '前端框架性能对比：Vue vs React vs Angular',
-    content: '最近做了一个全面的前端框架性能测试，对比了Vue3、React18和Angular15在不同场景下的表现。测试包括首次加载时间、运行时性能、内存占用等多个维度...',
-    userAvatar: 'https://via.placeholder.com/40?text=用户',
-    username: '前端工程师',
-    time: '5小时前',
-    views: '2897',
-    comments: '156',
-    likes: '421',
-    liked: false,
-    barName: '前端技术',
-    images: [
-      'https://via.placeholder.com/300x200?text=性能图表'
-    ]
-  }
-])
-
 // 状态管理
 const activeTag = ref(null)
 const currentCategory = ref(null)
@@ -566,7 +462,13 @@ const searchQuery = ref('')
 const loadingPosts = ref(false)
 const hasMorePosts = ref(true)
 const page = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(5)
+
+// 帖子相关状态
+const posts = ref([])
+const total = ref(0)
+const currentPage = ref(1)
+const barId = ref(null) // null表示全部圈
 
 // 创建圈相关状态
 const createDialogVisible = ref(false)
@@ -622,6 +524,77 @@ const categoryProps = ref({
   label: 'desc',
   children: 'subs'
 })
+
+
+// 获取帖子列表
+const fetchPosts = async (page = 1) => {
+  loadingPosts.value = true
+  try {
+    const response = await post('/api/unauth/quan/getTiePageOfBar', {
+      page: page,
+      size: pageSize.value,
+      barId: barId.value,
+      keyword: searchQuery.value || undefined
+    })
+    
+    if (response && response.records) {
+      // 如果是第一页，直接替换；否则追加
+      const newPosts = response.records.map(item => ({
+        id: item.id,
+        title: item.title,
+        content: item.content || '', // 使用接口返回的内容或空字符串
+        userAvatar: item.avatar || 'https://via.placeholder.com/40?text=用户',
+        username: item.createdName || '匿名用户',
+        time: formatTime(item.createdTime),
+        views: item.views || 0,
+        comments: item.comments || 0,
+        likes: item.likes || 0,
+        liked: false, // 初始未点赞
+        barName: item.barName || '未知圈子',
+        avatar: item.avatar || [] // 假设接口返回图片数组
+      }))
+      
+      if (page === 1) {
+        posts.value = newPosts
+      } else {
+        posts.value = [...posts.value, ...newPosts]
+      }
+      
+      total.value = response.total || 0
+      currentPage.value = page
+      hasMorePosts.value = posts.value.length < total.value
+    }
+  } catch (error) {
+    console.error('获取帖子列表失败:', error)
+    ElMessage.error('获取帖子失败，请稍后重试')
+  } finally {
+    loadingPosts.value = false
+  }
+}
+
+// 时间格式化函数
+const formatTime = (timeStr) => {
+  if (!timeStr) return '未知时间'
+  const date = new Date(timeStr)
+  const now = new Date()
+  const diff = now - date
+  
+  const minute = 60 * 1000
+  const hour = 60 * minute
+  const day = 24 * hour
+  
+  if (diff < minute) {
+    return '刚刚'
+  } else if (diff < hour) {
+    return `${Math.floor(diff / minute)}分钟前`
+  } else if (diff < day) {
+    return `${Math.floor(diff / hour)}小时前`
+  } else if (diff < 7 * day) {
+    return `${Math.floor(diff / day)}天前`
+  } else {
+    return date.toLocaleDateString()
+  }
+}
 
 const goToUserProfile = (barId) => {
   console.log("访问帖子详情页",barId)
@@ -962,10 +935,13 @@ const handleTagClick = (tag) => {
   fetchPosts()
 }
 
+
 const handleTabChange = () => {
-  resetPosts()
+  currentPage.value = 1
   fetchPosts()
 }
+
+
 
 
 const toggleLike = (post) => {
@@ -983,22 +959,11 @@ const refreshHotBars = () => {
 }
 
 
-const fetchPosts = () => {
-  // 模拟API请求
-  loadingPosts.value = true
-  setTimeout(() => {
-    loadingPosts.value = false
-    // 这里应该有判断是否还有更多数据的逻辑
-    hasMorePosts.value = page.value < 3 // 假设只有3页数据
-  }, 800)
-}
 
 const loadMorePosts = () => {
   if (loadingPosts.value || !hasMorePosts.value) return
-  page.value += 1
-  fetchPosts()
+  fetchPosts(currentPage.value + 1)
 }
-
 const resetPosts = () => {
   page.value = 1
   hasMorePosts.value = true
@@ -1019,7 +984,7 @@ onMounted(() => {
   fetchFriendBars()
   fetchPosts()
     fetchHotTopics()
-
+fetchFollowedBars();
 })
 </script>
 
@@ -1251,7 +1216,7 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.post-images {
+.post-avatar {
   display: flex;
   gap: 8px;
   margin-top: 12px;
@@ -1536,7 +1501,7 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
   
-  .post-images {
+  .post-avatar {
     flex-wrap: wrap;
   }
   
@@ -1697,5 +1662,48 @@ onMounted(() => {
 
 .hot-topics {
   animation: fadeIn 0.5s ease-in-out;
+}
+
+.followed-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  gap: 10px;
+}
+
+.followed-bar:hover {
+  background-color: #f5f7fa;
+}
+
+.bar-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bar-name {
+  display: block;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.bar-stats .el-icon {
+  margin-right: 2px;
+  font-size: 12px;
+}
+
+.unread-count {
+  margin-left: auto;
 }
 </style>

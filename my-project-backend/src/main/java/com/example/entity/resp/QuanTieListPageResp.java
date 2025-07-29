@@ -20,4 +20,6 @@ public class QuanTieListPageResp {
     private Integer views;
     private Integer comments;
     private Integer likes;
+    private String barName;
+    Boolean liked;
 }

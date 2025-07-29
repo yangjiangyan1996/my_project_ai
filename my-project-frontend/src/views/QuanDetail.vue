@@ -375,7 +375,7 @@ const barId = route.params.id;
 // 帖子数据和分页相关
 const posts = ref([])
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(5)
 const total = ref(0)
 // 提交状态
 const submitting = ref(false)
@@ -773,8 +773,8 @@ const submitPost = async () => {
     // 准备图片URL数组
     const imageUrls = postForm.value.images.map(img => img.url || img.response?.data)
     
-    // 调用API (保持原有接口不变)
-    const response = await post('/api/auth/quan/createTie', {
+    // 调用API
+    await post('/api/auth/quan/createTie', {
       title: postForm.value.title,
       content: postForm.value.content,
       avatar: imageUrls[0] || '', // 保持原有avatar字段，取第一张图
@@ -782,9 +782,22 @@ const submitPost = async () => {
       barId: barId
     })
 
-    ElMessage.success('发帖成功')
+    // 1. 关闭弹窗
     showPostDialog.value = false
+    
+    // 2. 重置表单
     resetPostForm()
+    
+    // 3. 提示成功
+    ElMessage.success('发帖成功')
+    
+    // 4. 刷新列表数据
+    await fetchPosts(currentPage.value) // 保持当前页码
+    
+    // 如果需要回到第一页，可以用下面这行代替
+    // currentPage.value = 1
+    // await fetchPosts()
+    
   } catch (error) {
     console.error('发帖失败:', error)
     ElMessage.error(error.message || '发帖失败')

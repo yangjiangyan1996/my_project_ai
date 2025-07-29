@@ -1,7 +1,7 @@
 <template>
   <div class="tie-detail-container">
     <!-- 返回按钮 -->
-    <el-button @click="goBack" class="back-button">返回</el-button>
+    <!-- <el-button @click="goBack" class="back-button">返回</el-button> -->
     
     <el-card class="tie-detail-card">
       <!-- 帖子头部部分保持不变 -->

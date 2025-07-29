@@ -1,8 +1,10 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.QuanUserBarFollows;
+import com.example.entity.req.BarMyFavoriteReq;
 import com.example.mapper.QuanUserBarFollowsMapper;
 import com.example.service.QuanUserBarFollowsService;
 import org.springframework.stereotype.Service;
@@ -43,5 +45,15 @@ public class QuanUserBarFollowsServiceImpl extends ServiceImpl<QuanUserBarFollow
         return this.baseMapper.selectCount(new QueryWrapper<QuanUserBarFollows>()
                 .eq("bar_id", barId)
                 .eq("is_deleted", 0));
+    }
+
+    @Override
+    public Page<QuanUserBarFollows> getMyFavoriteBar(Page<QuanUserBarFollows> of, BarMyFavoriteReq req) {
+        return this.baseMapper.selectPage(of,
+                new QueryWrapper<QuanUserBarFollows>()
+                        .eq("user_id", req.getUserId())
+                        .eq("is_deleted", 0)
+                        .orderByDesc("created_at")
+        );
     }
 }

@@ -1,7 +1,9 @@
 package com.example.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.QuanUserBarFollows;
+import com.example.entity.req.BarMyFavoriteReq;
 
 /**
  * @Author YangJian
@@ -15,4 +17,6 @@ public interface QuanUserBarFollowsService extends IService<QuanUserBarFollows> 
     Boolean insert(Long barId, Long userId);
 
     Long selectCountByBarId(Long barId);
+
+    Page<QuanUserBarFollows> getMyFavoriteBar(Page<QuanUserBarFollows> of, BarMyFavoriteReq req);
 }

@@ -2,15 +2,14 @@ package com.example.Facade;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.config.AsyncTaskUtil;
 import com.example.entity.dto.*;
-import com.example.entity.req.QuanTieCommentPageReq;
-import com.example.entity.req.QuanTieCommentReq;
-import com.example.entity.req.QuanTieCreateReq;
-import com.example.entity.req.QuanTieListPageReq;
+import com.example.entity.req.*;
 import com.example.entity.resp.*;
 import com.example.enums.ProjectEnum;
 import com.example.enums.QuanEnum;
 import com.example.enums.TieEnum;
+import com.example.mapper.QuanBarsMapper;
 import com.example.service.*;
 import com.example.utils.DateUtils;
 import jakarta.annotation.Resource;
@@ -41,7 +40,11 @@ public class TieFacade {
     @Resource
     QuanTieCommentService quanTieCommentService;
     @Resource
+    QuanUserBarFollowsService quanUserBarFollowsService;
+    @Resource
     AccountService accountService;
+    @Resource
+    QuanBarsService quanBarsService;
     @Resource
     private QuanBarTieService quanBarTieService;
 
@@ -51,6 +54,8 @@ public class TieFacade {
         e.setContent(req.getContent());
         if (!CollectionUtils.isEmpty(req.getImages())) {
             e.setAvatar(JSON.toJSONString(req.getImages()));
+        }else {
+            e.setAvatar("");
         }
         e.setStatus(QuanEnum.TieStatusEnums.NORMAL.getCode());
         e.setBarId(req.getBarId());
@@ -58,7 +63,19 @@ public class TieFacade {
         e.setCreatedBy(userId);
         e.setModifiedAt(new Date());
         e.setModifiedBy(userId);
-        return quanBarTieService.save(e);
+        boolean save = quanBarTieService.save(e);
+        AsyncTaskUtil.execute(() -> updateBarFollowCount(req.getBarId()));
+        return save;
+    }
+
+    public void updateBarFollowCount(Long barId) {
+        QuanBars bar = quanBarsService.getById(barId);
+        if (bar == null) {
+            return;
+        }
+        Long tieCount = quanBarTieService.selectTieCountByBarId(barId);
+        bar.setPostCount(tieCount);
+        quanBarsService.updateById(bar);
     }
 
     public Page<QuanTieListPageResp> getTiePageOfBar(QuanTieListPageReq req) {
@@ -72,6 +89,7 @@ public class TieFacade {
         Map<Long, Account> userId2UserInfoMap = userInfoList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
 
         List<Long> tieIds = page.getRecords().stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
+        List<Long> barIds = page.getRecords().stream().map(v -> v.getBarId()).distinct().collect(Collectors.toList());
 
         List<QuanTieWatch> quanTieWatches = quanTieWatchService.selectByTieIds(tieIds);
         Map<Long, List<QuanTieWatch>> tieId2WatchListMap = quanTieWatches.stream().collect(Collectors.groupingBy(v -> v.getTieId()));
@@ -81,6 +99,9 @@ public class TieFacade {
 
         List<QuanTieComment> quanTieComments = quanTieCommentService.selectByTieIds(tieIds);
         Map<Long, List<QuanTieComment>> tieId2CommentListMap = quanTieComments.stream().collect(Collectors.groupingBy(v -> v.getTieId()));
+
+        List<QuanBars> quanBars = quanBarsService.selectByTieIds(barIds);
+        Map<Long, QuanBars> barId2BarInfoMap = quanBars.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
 
         List<QuanTieListPageResp> collect = page.getRecords().stream().map(v -> {
             QuanTieListPageResp r = new QuanTieListPageResp();
@@ -100,6 +121,9 @@ public class TieFacade {
             }
             if (tieId2FavoriteListMap != null && tieId2FavoriteListMap.containsKey(v.getId())) {
                 r.setLikes(tieId2FavoriteListMap.get(v.getId()).size());
+            }
+            if (barId2BarInfoMap != null && barId2BarInfoMap.containsKey(v.getBarId())) {
+                r.setBarName(barId2BarInfoMap.get(v.getBarId()).getName());
             }
             return r;
         }).collect(Collectors.toList());
@@ -303,6 +327,32 @@ public class TieFacade {
             r.setViews(tieId2WatchListMap.get(q.getTieId()).size());
             result.add(r);
         }
+        return result;
+    }
+
+    public Page<BarsInfoResp> myFavoriteBar(BarMyFavoriteReq req) {
+        Page<QuanUserBarFollows> page = quanUserBarFollowsService.getMyFavoriteBar(Page.of(req.getPage(), req.getSize()), req);
+        if (CollectionUtils.isEmpty(page.getRecords())) {
+            return Page.of(req.getPage(), req.getSize());
+        }
+
+        List<Long> barIds = page.getRecords().stream().map(v -> v.getBarId()).collect(Collectors.toList());
+        List<QuanBars> quanBars = quanBarsService.selectByIds(barIds);
+        List<BarsInfoResp> list = quanBars.stream().map(v -> {
+            BarsInfoResp r = new BarsInfoResp();
+            r.setId(v.getId());
+            r.setName(v.getName());
+            r.setAvatar(v.getAvatar());
+            r.setFollowerCount(v.getFollowerCount());
+            r.setPostCount(v.getPostCount());
+            r.setDescription(v.getDescription());
+            return r;
+        }).collect(Collectors.toList());
+
+
+        Page<BarsInfoResp> result = Page.of(req.getPage() - 1, req.getSize());
+        result.setTotal(page.getTotal());
+        result.setRecords(list);
         return result;
     }
 }

@@ -17,4 +17,6 @@ public interface QuanBarTieService extends IService<QuanBarTie> {
     Page<QuanBarTie> getTiePageOfBar(Page<QuanBarTie> of, QuanTieListPageReq req);
 
     List<QuanBarTie> selectByTieIds(List<Long> tieids);
+
+    Long selectTieCountByBarId(Long barId);
 }

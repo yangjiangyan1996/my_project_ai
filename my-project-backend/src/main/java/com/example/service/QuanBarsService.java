@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.QuanBarTie;
 import com.example.entity.dto.QuanBars;
+import com.example.entity.req.BarMyFavoriteReq;
 
 import java.util.List;
 
@@ -19,4 +20,8 @@ public interface QuanBarsService extends IService<QuanBars> {
     Page<QuanBars> selectPageByFirstCategory(Page<QuanBars> page, Integer firstCategory);
 
     Page<QuanBars> selectFollowBars(Page<QuanBars> of);
+
+    List<QuanBars> selectByTieIds(List<Long> barIds);
+
+    List<QuanBars> selectByIds(List<Long> barIds);
 }

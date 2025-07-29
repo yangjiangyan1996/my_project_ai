@@ -6,6 +6,7 @@ import com.example.Facade.TieFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.req.*;
+import com.example.entity.resp.BarsInfoResp;
 import com.example.entity.resp.QuanTieCommentResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
@@ -13,6 +14,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -30,6 +33,24 @@ public class QuanController {
     @Resource
     private QuanFacade quanFacade;
 
+    @PostMapping("/myFavoriteBar")
+    public RespBean<Page<BarsInfoResp>> myFavoriteBar(@RequestBody BarMyFavoriteReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            if (user == null) {
+                return new RespBean<>();
+            }
+            req.setUserId(user.getId());
+            Page<BarsInfoResp> result = tieFacade.myFavoriteBar(req);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("QuanController#myFavoriteBar,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#myFavoriteBar,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
 
     @GetMapping("/favoriteTie")

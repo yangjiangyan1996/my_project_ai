@@ -106,7 +106,7 @@ public class QuanTieCommentServiceImpl extends ServiceImpl<QuanTieCommentMapper,
                             "GROUP BY tie_id ORDER BY COUNT(*) DESC LIMIT 10) t " +
                             "ON c.tie_id = t.tie_id " +
                             "GROUP BY c.tie_id")
-                    .orderByDesc("created_at")
+                    .orderByAsc("created_at")
             );
     }
 

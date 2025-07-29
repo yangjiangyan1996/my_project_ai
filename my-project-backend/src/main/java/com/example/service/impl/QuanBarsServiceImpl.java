@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ProjectMembers;
 import com.example.entity.dto.QuanBars;
+import com.example.entity.req.BarMyFavoriteReq;
 import com.example.enums.QuanEnum;
 import com.example.enums.TieEnum;
 import com.example.mapper.QuanBarsMapper;
@@ -20,6 +21,27 @@ public class QuanBarsServiceImpl extends ServiceImpl<QuanBarsMapper,QuanBars > i
         return this.baseMapper.selectList(
                 new QueryWrapper<QuanBars>()
                         .eq(name!=null, "name", name)
+                        .eq("status", QuanEnum.BarStatusEnums.AUDIT_PASS.getCode())
+                        .eq("is_deleted", 0)
+        );
+    }
+
+
+    @Override
+    public List<QuanBars> selectByIds(List<Long> barIds) {
+        return this.baseMapper.selectList(
+                new QueryWrapper<QuanBars>()
+                        .in("id", barIds)
+                        .eq("status", QuanEnum.BarStatusEnums.AUDIT_PASS.getCode())
+                        .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
+    public List<QuanBars> selectByTieIds(List<Long> barIds) {
+        return this.baseMapper.selectList(
+                new QueryWrapper<QuanBars>()
+                        .in("id", barIds)
                         .eq("status", QuanEnum.BarStatusEnums.AUDIT_PASS.getCode())
                         .eq("is_deleted", 0)
         );
