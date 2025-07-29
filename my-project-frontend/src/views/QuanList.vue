@@ -189,41 +189,43 @@
         </el-button>
       </div>
 
-      <div class="sidebar-section">
-        <div class="section-header">
-          <h4>热门</h4>
-          <el-button type="text" @click="refreshHotBars">
-            <el-icon><Refresh /></el-icon>
-            换一换
-          </el-button>
-        </div>
-        
-        <div class="hot-bar-list">
-          <div 
-            v-for="bar in hotBars"
-            :key="bar.id"
-            class="hot-bar-item"
-            @click="navigateToBar(bar.id)"
-          >
-            <div class="bar-rank" :class="getRankClass(bar.rank)">
-              {{ bar.rank }}
-            </div>
-            <el-avatar :size="40" :src="bar.avatar" />
-            <div class="bar-info">
-              <span class="bar-name">{{ bar.name }}</span>
-              <span class="bar-stats">{{ bar.followers }}关注 · {{ bar.posts }}帖子</span>
-            </div>
-            <el-button 
-              type="text" 
-              size="small" 
-              @click.stop="toggleFollowBar(bar)"
-              :icon="bar.followed ? CircleCheckFilled : Plus"
-            >
-              {{ bar.followed ? '已关注' : '关注' }}
+      <!-- 右侧边栏 - 热门部分修改为友情贴吧 -->
+        <div class="sidebar-section">
+          <div class="section-header">
+            <h4>热门</h4>
+            <el-button type="text" @click="refreshFriendBars">
+              <el-icon><Refresh /></el-icon>
+              换一换
             </el-button>
           </div>
+          
+          <div class="hot-bar-list">
+            <div 
+              v-for="bar in friendBars"
+              :key="bar.id"
+              class="hot-bar-item"
+              @click="goToUserProfile(bar.id)"
+            >
+              <el-avatar :size="40" :src="bar.avatar" />
+              <div class="bar-info">
+                <span class="bar-name">{{ bar.name }}</span>
+                <span class="bar-stats">{{ bar.followerCount }}关注 · {{ bar.postCount }}帖子</span>
+              </div>
+              <el-button 
+                type="text" 
+                size="small" 
+                @click.stop="toggleFollowBar(bar)"
+                :icon="bar.followed ? CircleCheckFilled : Plus"
+              >
+                {{ bar.followed ? '已关注' : '关注' }}
+              </el-button>
+            </div>
+          </div>
+          
+          <div class="pagination-info">
+            第 {{ friendBarCurrentPage }} 页 / 共 {{ friendBarTotalPages }} 页
+          </div>
         </div>
-      </div>
       
       <div class="sidebar-section">
         <div class="section-header">
@@ -634,6 +636,12 @@ const createRules = ref({
 const categoryOptions = ref([])
 const secondCategoryOptions = ref([])
 
+// 热门相关状态
+const friendBars = ref([])
+const friendBarCurrentPage = ref(1)
+const friendBarPageSize = ref(5)
+const friendBarTotal = ref(0)
+
 const categoryProps = ref({
   value: 'code',
   label: 'desc',
@@ -691,6 +699,79 @@ const fetchBarsByCategory = async (categoryCode) => {
     loadingBars.value[categoryCode] = false;
   }
 };
+
+
+// 计算总页数
+const friendBarTotalPages = computed(() => {
+  return Math.ceil(friendBarTotal.value / friendBarPageSize.value)
+})
+
+
+// 获取友情贴吧
+const fetchFriendBars = async (page = 1) => {
+  try {
+    const response = await post('/api/unauth/quan/getRelationBar', {
+      page: page,
+      size: friendBarPageSize.value,
+      barId: null // 这里可以根据需要传入特定的barId
+    })
+    
+    if (response && response.records) {
+      friendBars.value = response.records.map(bar => ({
+        id: bar.id,
+        name: bar.name,
+        avatar: bar.avatar,
+        followerCount: bar.followerCount,
+        postCount: bar.postCount,
+        description: bar.description,
+        followed: false // 初始化为未关注
+      }))
+      friendBarTotal.value = response.total || 0
+      friendBarCurrentPage.value = page
+    }
+  } catch (error) {
+    console.error('获取友情贴吧失败:', error)
+    ElMessage.error('获取友情贴吧失败，请稍后重试')
+  }
+}
+
+// 换一换功能 - 翻页
+const refreshFriendBars = () => {
+  const nextPage = friendBarCurrentPage.value < friendBarTotalPages.value 
+    ? friendBarCurrentPage.value + 1 
+    : 1
+  fetchFriendBars(nextPage)
+}
+
+
+// 关注/取消关注贴吧
+const toggleFollowBar = (bar) => {
+  bar.followed = !bar.followed
+  const action = bar.followed ? '关注' : '取消关注'
+  
+  post('/api/auth/quan/followBar', {
+    barId: bar.id,
+    follow: bar.followed
+  }).then(() => {
+    ElMessage.success(`${action}成功`)
+    if (bar.followed) {
+      // 添加到已关注列表
+      followedBars.value.unshift({
+        id: bar.id,
+        name: bar.name,
+        avatar: bar.avatar,
+        unread: 0
+      })
+    } else {
+      // 从已关注列表移除
+      followedBars.value = followedBars.value.filter(b => b.id !== bar.id)
+    }
+  }).catch(error => {
+    console.error(`${action}失败:`, error)
+    bar.followed = !bar.followed // 回滚状态
+    ElMessage.error(`${action}失败，请稍后重试`)
+  })
+}
 
 // 点击圈子标签
 // const handleBarClick = (bar) => {
@@ -886,19 +967,6 @@ const toggleLike = (post) => {
   post.likes = post.liked ? (parseInt(post.likes) + 1 + '') : (parseInt(post.likes) - 1 + '')
 }
 
-const toggleFollowBar = (bar) => {
-  bar.followed = !bar.followed
-  if (bar.followed) {
-    followedBars.value.unshift({
-      id: bar.id,
-      name: bar.name,
-      avatar: bar.avatar,
-      unread: 0
-    })
-  } else {
-    followedBars.value = followedBars.value.filter(b => b.id !== bar.id)
-  }
-}
 
 const refreshHotBars = () => {
   // 模拟刷新热门
@@ -950,7 +1018,7 @@ const getRankClass = (rank) => {
 // 初始化
 onMounted(() => {
     fetchFirstLevelCategories()
-
+  fetchFriendBars()
   fetchPosts()
 })
 </script>
@@ -1066,7 +1134,12 @@ onMounted(() => {
   flex-direction: column;
   gap: 10px;
 }
-
+.pagination-info {
+  font-size: 12px;
+  color: #909399;
+  text-align: center;
+  margin-top: 10px;
+}
 .followed-bar {
   display: flex;
   align-items: center;

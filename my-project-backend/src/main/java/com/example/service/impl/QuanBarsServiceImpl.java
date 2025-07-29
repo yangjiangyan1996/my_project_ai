@@ -70,6 +70,9 @@ public class QuanBarsServiceImpl extends ServiceImpl<QuanBarsMapper,QuanBars > i
 
     @Override
     public QuanBars selectById(Long barId) {
+        if (barId == null) {
+            return null;
+        }
         return this.baseMapper.selectById(barId);
     }
 }
