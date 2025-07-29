@@ -27,7 +27,7 @@ public class QuanBarTieServiceImpl extends ServiceImpl<QuanBarTieMapper, QuanBar
         return baseMapper.selectPage(
                 page,
                 new QueryWrapper<QuanBarTie>()
-                        .eq("bar_id", req.getBarId())
+                        .eq(req.getBarId() != null, "bar_id", req.getBarId())
                         .eq("is_deleted", 0)
                         .like(req.getKeyword() != null, "title", req.getKeyword())
                         .eq("status", QuanEnum.TieStatusEnums.NORMAL.getCode())

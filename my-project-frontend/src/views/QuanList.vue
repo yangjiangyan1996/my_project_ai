@@ -230,17 +230,21 @@
       <div class="sidebar-section">
         <div class="section-header">
           <h4>圈热议榜</h4>
+          <!-- <el-button type="text" @click="refreshHotTopics">
+            <el-icon><Refresh /></el-icon>
+            换一换
+          </el-button> -->
         </div>
         
         <div class="hot-topics">
           <div 
-            v-for="(topic, index) in hotTopics"
+            v-for="topic in hotTopics"
             :key="topic.id"
             class="topic-item"
-            @click="navigateToTopic(topic.id)"
+            @click="navigateToPost(topic.id)"
           >
-            <div class="topic-rank" :class="getRankClass(index + 1)">
-              {{ index + 1 }}
+            <div class="topic-rank" :class="getRankClass(topic.rank)">
+              {{ topic.rank }}
             </div>
             <div class="topic-content">
               <p class="topic-title">{{ topic.title }}</p>
@@ -249,6 +253,7 @@
           </div>
         </div>
       </div>
+      
     </div>
   </div>
 
@@ -458,38 +463,8 @@ const hotBars = ref([
 ])
 
 // 热议榜数据
-const hotTopics = ref([
-  {
-    id: 1,
-    title: '6名大学生参观矿企室遇难',
-    views: '2113980',
-    comments: '52345'
-  },
-  {
-    id: 2,
-    title: 'T1道歉是在酷舔苗斯吗',
-    views: '2078455',
-    comments: '48762'
-  },
-  {
-    id: 3,
-    title: '坚决不走！石破龙舌...',
-    views: '1646655',
-    comments: '35678'
-  },
-  {
-    id: 4,
-    title: '游戏开发中的设计模式应用',
-    views: '1456723',
-    comments: '28765'
-  },
-  {
-    id: 5,
-    title: '如何看待最新动漫剧情走向',
-    views: '1324567',
-    comments: '25678'
-  }
-])
+ const hotTopics = ref([])
+
 
 // 我关注的
 const followedBars = ref([
@@ -699,6 +674,37 @@ const fetchBarsByCategory = async (categoryCode) => {
     loadingBars.value[categoryCode] = false;
   }
 };
+
+const navigateToPost = (tieId) => {
+  console.log("访问帖子详情页",tieId)
+  // router.push(`/index/user/${userId}`)
+  window.open(`/index/quan/QuanTieDetail/${tieId}`, '_blank');
+};
+
+// 获取今日热议
+const fetchHotTopics = async () => {
+  try {
+    const response = await get('/api/unauth/quan/getTodayHotTie')
+    
+    if (response) {
+      hotTopics.value = response.map((topic, index) => ({
+        id: topic.id,
+        rank: index + 1,
+        title: topic.title,
+        views: topic.views,
+        comments: topic.comments
+      }))
+    }
+  } catch (error) {
+    console.error('获取今日热议失败:', error)
+    ElMessage.error('获取热议话题失败，请稍后重试')
+  }
+}
+
+// 刷新热议榜
+const refreshHotTopics = () => {
+  fetchHotTopics()
+}
 
 
 // 计算总页数
@@ -1002,14 +1008,6 @@ const navigateToBar = (id) => {
   router.push({ name: 'bar', params: { id } })
 }
 
-const navigateToPost = (id) => {
-  router.push({ name: 'post', params: { id } })
-}
-
-const navigateToTopic = (id) => {
-  console.log('查看话题:', id)
-}
-
 const getRankClass = (rank) => {
   if (rank <= 3) return `rank-${rank}`
   return ''
@@ -1020,6 +1018,8 @@ onMounted(() => {
     fetchFirstLevelCategories()
   fetchFriendBars()
   fetchPosts()
+    fetchHotTopics()
+
 })
 </script>
 
@@ -1689,5 +1689,13 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   padding: 10px;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.hot-topics {
+  animation: fadeIn 0.5s ease-in-out;
 }
 </style>
