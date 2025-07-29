@@ -8,10 +8,6 @@ spring:
     multipart:
       max-file-size: 5MB
       max-request-size: 10MB
-#  mail:
-#    host: smtp.163.com
-#    username: javastudy111@163.com
-#    password: ettlpogcfemwcjfi
   mail:
     host: smtp.qq.com                  # QQ邮箱SMTP服务器地址
     port: 587                           # 端口号(587或465)
@@ -56,13 +52,16 @@ spring:
       period: 3
       limit: 50
       block: 30
+    cors:
+      origin: '*'
+      credentials: false
+      methods: '*'
 
 logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     com.example.mapper: DEBUG
-# application.yml 示例
 
 
 
