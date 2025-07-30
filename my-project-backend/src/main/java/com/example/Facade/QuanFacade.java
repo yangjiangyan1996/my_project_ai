@@ -7,7 +7,6 @@ import com.example.entity.dto.QuanUserBarFollows;
 import com.example.entity.req.BarRelationPageReq;
 import com.example.entity.req.QuanBarCreateReq;
 import com.example.entity.resp.BarsInfoResp;
-import com.example.entity.resp.QuanTieListPageResp;
 import com.example.enums.CommonEnum;
 import com.example.enums.QuanEnum;
 import com.example.service.*;
@@ -149,12 +148,13 @@ public class QuanFacade {
     public Page<BarsInfoResp> getRelationBar(BarRelationPageReq req) {
         Page<BarsInfoResp> p = Page.of(req.getPage() - 1, req.getSize());
         List<BarsInfoResp> result = new ArrayList<>();
+        Long total = 0L;
         Set<Long> barIds = new HashSet<>();
         QuanBars bar = quanBarsService.selectById(req.getBarId());
         if (bar != null) {
             Integer secondCategory = bar.getSecondCategory();
             Page<QuanBars> bars = quanBarsService.selectBySecondCategory(Page.of(req.getPage(), req.getSize()), secondCategory);
-
+            total = bars.getTotal();
             //根据二级类目先获取
             if (!CollectionUtils.isEmpty(bars.getRecords())) {
                 for (QuanBars b : bars.getRecords()) {
@@ -173,18 +173,13 @@ public class QuanFacade {
                         break;
                     }
                 }
-                if (result.size() > 5) {
-                    p.setTotal(bars.getTotal());
-                    p.setRecords(result);
-                    return p;
-                }
             }
 
             if (result.size() < 5) {
                 //根据第一分类获取
                 Integer firstCategory = bar.getFirstCategory();
                 Page<QuanBars> barByFirstCategory = quanBarsService.selectPageByFirstCategory(Page.of(req.getPage(), req.getSize()), firstCategory);
-                p.setTotal(bars.getTotal());
+                total = bars.getTotal();
                 if (!CollectionUtils.isEmpty(barByFirstCategory.getRecords())) {
                     for (QuanBars b : barByFirstCategory.getRecords()) {
                         BarsInfoResp barsInfoResp = new BarsInfoResp();
@@ -202,18 +197,11 @@ public class QuanFacade {
                             break;
                         }
                     }
-                    if (result.size() > 5) {
-                        p.setTotal(bars.getTotal());
-                        p.setRecords(result);
-                        return p;
-                    }
                 }
             }
-        }
-
-        if (result.size() < 5) {
+        } else {
             Page<QuanBars> suijiBars = quanBarsService.selectFollowBars(Page.of(req.getPage(), req.getSize()));
-            p.setTotal(suijiBars.getTotal());
+            total = suijiBars.getTotal();
             if (!CollectionUtils.isEmpty(suijiBars.getRecords())) {
                 for (QuanBars b : suijiBars.getRecords()) {
                     BarsInfoResp barsInfoResp = new BarsInfoResp();
@@ -231,13 +219,21 @@ public class QuanFacade {
                         break;
                     }
                 }
-                if (result.size() > 5) {
-                    p.setTotal(suijiBars.getTotal());
-                    p.setRecords(result);
-                    return p;
-                }
             }
         }
+
+        if (req.getUserId() != null && !CollectionUtils.isEmpty(result)) {
+            List<Long> barList = result.stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
+            List<QuanUserBarFollows> followsList = quanUserBarFollowsService.selectByBarIdsAndUserId(barList, req.getUserId());
+            List<Long> barsOfFollow = followsList.stream().map(v -> v.getBarId()).distinct().collect(Collectors.toList());
+            result.forEach(v -> {
+                if (barsOfFollow.contains(v.getId())) {
+                    v.setFollowed(true);
+                }
+            });
+        }
+
+        p.setTotal(total);
         p.setRecords(result);
         return p;
     }

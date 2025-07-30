@@ -10,6 +10,7 @@ import com.example.service.QuanUserBarFollowsService;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -44,6 +45,14 @@ public class QuanUserBarFollowsServiceImpl extends ServiceImpl<QuanUserBarFollow
     public Long selectCountByBarId(Long barId) {
         return this.baseMapper.selectCount(new QueryWrapper<QuanUserBarFollows>()
                 .eq("bar_id", barId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public List<QuanUserBarFollows> selectByBarIdsAndUserId(List<Long> barList, Long userId) {
+        return this.baseMapper.selectList(new QueryWrapper<QuanUserBarFollows>()
+                .in("bar_id", barList)
+                .eq("user_id", userId)
                 .eq("is_deleted", 0));
     }
 

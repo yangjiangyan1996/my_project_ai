@@ -12,4 +12,5 @@ import lombok.Data;
 @Data
 public class BarRelationPageReq extends PageReq {
     Long barId;
+    Long userId;
 }

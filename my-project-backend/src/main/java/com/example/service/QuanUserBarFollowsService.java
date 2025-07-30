@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.QuanUserBarFollows;
 import com.example.entity.req.BarMyFavoriteReq;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -19,4 +21,6 @@ public interface QuanUserBarFollowsService extends IService<QuanUserBarFollows> 
     Long selectCountByBarId(Long barId);
 
     Page<QuanUserBarFollows> getMyFavoriteBar(Page<QuanUserBarFollows> of, BarMyFavoriteReq req);
+
+    List<QuanUserBarFollows> selectByBarIdsAndUserId(List<Long> barList, Long userId);
 }

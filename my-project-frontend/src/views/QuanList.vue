@@ -588,6 +588,43 @@ const fetchPosts = async (page = 1) => {
 }
 
 
+
+
+// 获取友情贴吧
+const fetchFriendBars = async (page = 1) => {
+  try {
+    const params = {
+      page: page,
+      size: friendBarPageSize.value,
+      barId: null
+    }
+
+    if (userInfo?.data?.id) {
+      params.userId = userInfo.data.id
+    }
+
+    const response = await post('/api/unauth/quan/getRelationBar',params)
+    
+    if (response && response.records) {
+      friendBars.value = response.records.map(bar => ({
+        id: bar.id,
+        name: bar.name,
+        avatar: bar.avatar,
+        followerCount: bar.followerCount,
+        postCount: bar.postCount,
+        description: bar.description,
+        followed: bar.followed // 初始化为未关注
+      }))
+      friendBarTotal.value = response.total || 0
+      friendBarCurrentPage.value = page
+    }
+  } catch (error) {
+    console.error('获取友情贴吧失败:', error)
+    ElMessage.error('获取友情贴吧失败，请稍后重试')
+  }
+}
+
+
 // 时间格式化函数
 const formatTime = (timeStr) => {
   if (!timeStr) return '未知时间'
@@ -702,34 +739,6 @@ const friendBarTotalPages = computed(() => {
 })
 
 
-// 获取友情贴吧
-const fetchFriendBars = async (page = 1) => {
-  try {
-    const response = await post('/api/unauth/quan/getRelationBar', {
-      page: page,
-      size: friendBarPageSize.value,
-      barId: null // 这里可以根据需要传入特定的barId
-    })
-    
-    if (response && response.records) {
-      friendBars.value = response.records.map(bar => ({
-        id: bar.id,
-        name: bar.name,
-        avatar: bar.avatar,
-        followerCount: bar.followerCount,
-        postCount: bar.postCount,
-        description: bar.description,
-        followed: false // 初始化为未关注
-      }))
-      friendBarTotal.value = response.total || 0
-      friendBarCurrentPage.value = page
-    }
-  } catch (error) {
-    console.error('获取友情贴吧失败:', error)
-    ElMessage.error('获取友情贴吧失败，请稍后重试')
-  }
-}
-
 // 换一换功能 - 翻页
 const refreshFriendBars = () => {
   const nextPage = friendBarCurrentPage.value < friendBarTotalPages.value 
@@ -738,35 +747,54 @@ const refreshFriendBars = () => {
   fetchFriendBars(nextPage)
 }
 
-
 // 关注/取消关注贴吧
-const toggleFollowBar = (bar) => {
-  bar.followed = !bar.followed
-  const action = bar.followed ? '关注' : '取消关注'
-  
-  post('/api/auth/quan/followBar', {
-    barId: bar.id,
-    follow: bar.followed
-  }).then(() => {
-    ElMessage.success(`${action}成功`)
+const toggleFollowBar = async (bar) => {
+  console.log("关注/取消关注贴吧", bar);
+  try {
+    if (!userInfo?.data?.id) {
+      // 未登录处理，可以跳转到登录页
+      router.push('/login');
+      return;
+    }
+
+    console.log("关注/取消关注贴吧222", bar.followed);
+
     if (bar.followed) {
+      // 调用取消关注API
+      await post('/api/auth/quan/unFollowBar', { 
+        barId: bar.id, 
+        userId: userInfo.data.id 
+      });
+      // 从已关注列表移除
+      followedBars.value = followedBars.value.filter(b => b.id !== bar.id);
+      bar.followerCount--;
+    } else {
+      // 调用关注API
+      await post('/api/auth/quan/followBar', { 
+        barId: bar.id, 
+        userId: userInfo.data.id 
+      });
       // 添加到已关注列表
       followedBars.value.unshift({
         id: bar.id,
         name: bar.name,
         avatar: bar.avatar,
+        followerCount: bar.followerCount + 1,
+        postCount: bar.postCount,
         unread: 0
-      })
-    } else {
-      // 从已关注列表移除
-      followedBars.value = followedBars.value.filter(b => b.id !== bar.id)
+      });
+      bar.followerCount++;
     }
-  }).catch(error => {
-    console.error(`${action}失败:`, error)
-    bar.followed = !bar.followed // 回滚状态
-    ElMessage.error(`${action}失败，请稍后重试`)
-  })
-}
+    
+    // 更新关注状态
+    bar.followed = !bar.followed;
+    
+    ElMessage.success(bar.followed ? '关注成功' : '已取消关注');
+  } catch (error) {
+    console.error('操作失败:', error);
+    ElMessage.error(bar.followed ? '关注失败' : '取消关注失败');
+  }
+};
 
 // 点击圈子标签
 // const handleBarClick = (bar) => {

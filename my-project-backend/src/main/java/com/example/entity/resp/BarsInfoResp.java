@@ -18,5 +18,6 @@ public class BarsInfoResp {
     private String description;
     private String firstCategoryName;
     private String secondCategoryName;
+    private Boolean followed;
 
 }

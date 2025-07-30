@@ -33,6 +33,11 @@ public class QuanController {
     @Resource
     private QuanFacade quanFacade;
 
+    /**
+     * 获取用户收藏的圈
+     * @param req
+     * @return
+     */
     @PostMapping("/myFavoriteBar")
     public RespBean<Page<BarsInfoResp>> myFavoriteBar(@RequestBody BarMyFavoriteReq req) {
         try {
@@ -53,6 +58,12 @@ public class QuanController {
     }
 
 
+    /**
+     * 帖子收藏
+     * @param tieId
+     * @param favorited
+     * @return
+     */
     @GetMapping("/favoriteTie")
     public RespBean<Boolean> favoriteTie(@RequestParam("tieId") Long tieId,
                                              @RequestParam("favorited") Boolean favorited) {
@@ -137,6 +148,11 @@ public class QuanController {
         }
     }
 
+    /**
+     * 帖子评论
+     * @param req
+     * @return
+     */
     @PostMapping("/comment")
     public RespBean<Boolean> comment(@RequestBody @Valid QuanTieCommentReq req) {
         try {
@@ -152,6 +168,11 @@ public class QuanController {
         }
     }
 
+    /**
+     * 创建帖子
+     * @param req
+     * @return
+     */
     @PostMapping("/createTie")
     public RespBean<Boolean> createTie(@RequestBody @Valid QuanTieCreateReq req) {
         try {
@@ -189,7 +210,7 @@ public class QuanController {
     }
 
     /**
-     * 关注圈子成员
+     * 关注圈子
      *
      * @param req
      * @return
