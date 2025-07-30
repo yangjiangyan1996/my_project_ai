@@ -119,9 +119,6 @@
       
       <div 
         class="post-list"
-        v-infinite-scroll="loadMorePosts"
-        :infinite-scroll-disabled="loadingPosts"
-        :infinite-scroll-distance="100"
       >
         <el-card
           v-for="post in filteredPosts"
@@ -183,14 +180,16 @@
             </el-button>
           </div>
         </el-card>
-        
-        <div v-if="loadingPosts" class="loading-more">
-          <el-icon class="is-loading"><Loading /></el-icon>
-          <span>加载中...</span>
-        </div>
-        <div v-if="!hasMorePosts" class="no-more">
-          没有更多帖子了
-        </div>
+      </div>
+
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="currentPage"
+          :page-size="pageSize"
+          :total="total"
+          layout="prev, pager, next"
+          @current-change="handlePageChange"
+        />
       </div>
     </div>
     
@@ -463,7 +462,6 @@ const currentCategory = ref(null)
 const activePostTab = ref('latest')
 const searchQuery = ref('')
 const loadingPosts = ref(false)
-const hasMorePosts = ref(true)
 const page = ref(1)
 const pageSize = ref(5)
 
@@ -531,30 +529,22 @@ const categoryProps = ref({
 
 // 获取帖子列表
 const fetchPosts = async (page = 1) => {
-  loadingPosts.value = true
-
+  loadingPosts.value = true;
   try {
-    // 构造基础请求参数
     const params = {
       page,
       size: pageSize.value,
       barId: barId.value
-    }
+    };
 
-    // 只有有搜索词时才传 keyword
-    if (searchQuery.value) {
-      params.keyword = searchQuery.value
-    }
+    if (searchQuery.value) params.keyword = searchQuery.value;
+    if (userInfo?.data?.id) params.userId = userInfo.data.id;
 
-    // 只有在 userInfo.data.id 存在时才加 userId 参数
-    if (userInfo?.data?.id) {
-      params.userId = userInfo.data.id
-    }
+    const response = await post('/api/unauth/quan/getTiePageOfBar', params);
 
-    const response = await post('/api/unauth/quan/getTiePageOfBar', params)
-
-    if (response && response.records) {
-      const newPosts = response.records.map(item => ({
+    if (response?.records) {
+      // 直接替换数据，不再区分第一页和其他页
+      posts.value = response.records.map(item => ({
         id: item.id,
         title: item.title,
         content: item.content || '',
@@ -567,25 +557,23 @@ const fetchPosts = async (page = 1) => {
         liked: item.liked || false,
         barName: item.barName || '未知圈子',
         avatar: item.avatar || []
-      }))
-
-      if (page === 1) {
-        posts.value = newPosts
-      } else {
-        posts.value = [...posts.value, ...newPosts]
-      }
-
-      total.value = response.total || 0
-      currentPage.value = page
-      hasMorePosts.value = posts.value.length < total.value
+      }));
+      
+      total.value = response.total || 0;
+      currentPage.value = page; // 确保当前页码同步
     }
   } catch (error) {
-    console.error('获取帖子列表失败:', error)
-    ElMessage.error('获取帖子失败，请稍后重试')
+    console.error('获取帖子列表失败:', error);
+    ElMessage.error('获取帖子失败，请稍后重试');
   } finally {
-    loadingPosts.value = false
+    loadingPosts.value = false;
   }
-}
+};
+
+// 新增分页切换方法
+const handlePageChange = (newPage) => {
+  fetchPosts(newPage);
+};
 
 
 
@@ -975,7 +963,6 @@ const toggleGroup = (group) => {
 const handleTagClick = (tag) => {
   activeTag.value = activeTag.value === tag ? null : tag
   currentCategory.value = activeTag.value
-  resetPosts()
   fetchPosts()
 }
 
@@ -1011,15 +998,6 @@ const refreshHotBars = () => {
 }
 
 
-
-const loadMorePosts = () => {
-  if (loadingPosts.value || !hasMorePosts.value) return
-  fetchPosts(currentPage.value + 1)
-}
-const resetPosts = () => {
-  page.value = 1
-  hasMorePosts.value = true
-}
 
 const navigateToBar = (id) => {
   router.push({ name: 'bar', params: { id } })
@@ -1250,6 +1228,13 @@ fetchFollowedBars();
   margin-bottom: 12px;
 }
 
+/* 添加分页样式 */
+.pagination-wrapper {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
 .post-content h4 {
   margin: 0 0 8px 0;
   font-size: 16px;
@@ -1338,12 +1323,6 @@ fetchFollowedBars();
 
 .liked {
   color: #f56c6c;
-}
-
-.loading-more, .no-more {
-  text-align: center;
-  padding: 15px;
-  color: #909399;
 }
 
 .loading-more .el-icon {
