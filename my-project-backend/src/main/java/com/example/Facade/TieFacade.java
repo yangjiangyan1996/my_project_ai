@@ -103,6 +103,13 @@ public class TieFacade {
         List<QuanBars> quanBars = quanBarsService.selectByTieIds(barIds);
         Map<Long, QuanBars> barId2BarInfoMap = quanBars.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
 
+        Map<Long, QuanTieFavorite> tieId2FavoriteMap = new HashMap<>();
+        if (req.getUserId() != null ) {
+            List<QuanTieFavorite> tieFavoriteList = quanTieFavoriteService.selectByTieIdsAndUserId(tieIds, req.getUserId());
+            tieId2FavoriteMap = tieFavoriteList.stream().collect(Collectors.toMap(v -> v.getTieId(), v -> v));
+        }
+
+        Map<Long, QuanTieFavorite> finalTieId2FavoriteMap = tieId2FavoriteMap;
         List<QuanTieListPageResp> collect = page.getRecords().stream().map(v -> {
             QuanTieListPageResp r = new QuanTieListPageResp();
             r.setId(v.getId());
@@ -124,6 +131,9 @@ public class TieFacade {
             }
             if (barId2BarInfoMap != null && barId2BarInfoMap.containsKey(v.getBarId())) {
                 r.setBarName(barId2BarInfoMap.get(v.getBarId()).getName());
+            }
+            if (finalTieId2FavoriteMap != null && finalTieId2FavoriteMap.containsKey(v.getId())) {
+                r.setLiked(finalTieId2FavoriteMap.containsKey(v.getId()));
             }
             return r;
         }).collect(Collectors.toList());

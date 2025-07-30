@@ -384,9 +384,12 @@ import {
   Loading, User, Document
 } from '@element-plus/icons-vue'
 import { logout, post, get } from '@/net';
+import useUserInfo from '@/hooks/useUserInfo';
+
 
 
 const router = useRouter()
+const { state: userInfo, loadUserInfo } = useUserInfo();
 
 
 
@@ -529,37 +532,49 @@ const categoryProps = ref({
 // 获取帖子列表
 const fetchPosts = async (page = 1) => {
   loadingPosts.value = true
+
   try {
-    const response = await post('/api/unauth/quan/getTiePageOfBar', {
-      page: page,
+    // 构造基础请求参数
+    const params = {
+      page,
       size: pageSize.value,
-      barId: barId.value,
-      keyword: searchQuery.value || undefined
-    })
-    
+      barId: barId.value
+    }
+
+    // 只有有搜索词时才传 keyword
+    if (searchQuery.value) {
+      params.keyword = searchQuery.value
+    }
+
+    // 只有在 userInfo.data.id 存在时才加 userId 参数
+    if (userInfo?.data?.id) {
+      params.userId = userInfo.data.id
+    }
+
+    const response = await post('/api/unauth/quan/getTiePageOfBar', params)
+
     if (response && response.records) {
-      // 如果是第一页，直接替换；否则追加
       const newPosts = response.records.map(item => ({
         id: item.id,
         title: item.title,
-        content: item.content || '', // 使用接口返回的内容或空字符串
+        content: item.content || '',
         userAvatar: item.avatar || 'https://via.placeholder.com/40?text=用户',
         username: item.createdName || '匿名用户',
         time: formatTime(item.createdTime),
         views: item.views || 0,
         comments: item.comments || 0,
         likes: item.likes || 0,
-        liked: false, // 初始未点赞
+        liked: item.liked || false,
         barName: item.barName || '未知圈子',
-        avatar: item.avatar || [] // 假设接口返回图片数组
+        avatar: item.avatar || []
       }))
-      
+
       if (page === 1) {
         posts.value = newPosts
       } else {
         posts.value = [...posts.value, ...newPosts]
       }
-      
+
       total.value = response.total || 0
       currentPage.value = page
       hasMorePosts.value = posts.value.length < total.value
@@ -571,6 +586,7 @@ const fetchPosts = async (page = 1) => {
     loadingPosts.value = false
   }
 }
+
 
 // 时间格式化函数
 const formatTime = (timeStr) => {
@@ -944,9 +960,17 @@ const handleTabChange = () => {
 
 
 
-const toggleLike = (post) => {
-  post.liked = !post.liked
+const toggleLike = async (post) => {
+  console.log("post:", post)
+   const targetState = !post.liked;
+    const result = await get(`/api/auth/quan/favoriteTie?tieId=${post.id}&favorited=${targetState}`);
+    if(result) {
+      ElMessage.success('操作成功')
+      post.liked = !post.liked
   post.likes = post.liked ? (parseInt(post.likes) + 1 + '') : (parseInt(post.likes) - 1 + '')
+    }
+    
+  
 }
 
 

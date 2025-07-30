@@ -20,4 +20,6 @@ public interface QuanTieFavoriteService {
 
     List<QuanTieFavorite> selectByTieIds(List<Long> tieIds);
     List<QuanTieFavorite> selectByTieId(Long tieId);
+
+    List<QuanTieFavorite> selectByTieIdsAndUserId(List<Long> tieIds, Long userId);
 }

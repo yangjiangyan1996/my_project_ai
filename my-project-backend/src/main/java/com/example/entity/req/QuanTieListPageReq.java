@@ -13,4 +13,5 @@ import lombok.Data;
 public class QuanTieListPageReq  extends PageReq {
     private Long barId;
     private String keyword;
+    private Long userId;
 }

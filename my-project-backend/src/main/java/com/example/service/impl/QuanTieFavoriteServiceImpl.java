@@ -37,6 +37,14 @@ public class QuanTieFavoriteServiceImpl extends ServiceImpl<QuanTieFavoriteMappe
     }
 
     @Override
+    public List<QuanTieFavorite> selectByTieIdsAndUserId(List<Long> tieIds, Long userId) {
+        return this.baseMapper.selectList(new QueryWrapper<QuanTieFavorite>()
+                .in("tie_id", tieIds)
+                .eq("user_id", userId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
     public List<QuanTieFavorite> selectByTieId(Long tieId) {
         return this.baseMapper.selectList(new QueryWrapper<QuanTieFavorite>()
                 .eq("tie_id", tieId)
