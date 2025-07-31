@@ -395,10 +395,17 @@
               <div class="sidebar-count">{{ followeeCount }}</div>
             </div>
           </div>
-          <div class="sidebar-section" @click="openFollowedBarsDrawer" style="cursor: pointer;">
-            <h3 class="sidebar-title">我关注的圈子</h3>
-            <div class="sidebar-count">{{ followedBars.length }}</div>
+          <div class="sidebar-follow-row">
+             <div class="sidebar-section" @click="openFollowedBarsDrawer" style="cursor: pointer;">
+                <h3 class="sidebar-title">我关注的圈子</h3>
+                <div class="sidebar-count">{{ followedBars.length }}</div>
+              </div>
+              <div class="sidebar-section"  style="cursor: pointer;">
+                <h3 class="sidebar-title">待定</h3>
+                <div class="sidebar-count">{{ followedBars.length }}</div>
+              </div>
           </div>
+         
         </div>
 
       </div>
