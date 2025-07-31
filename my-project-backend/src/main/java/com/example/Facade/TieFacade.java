@@ -167,6 +167,7 @@ public class TieFacade {
         r.setContent(e.getContent());
         if (account != null) {
             r.setCreatedName(account.getNickname());
+            r.setCreatedAvatar(account.getAvatarUrl());
         }
         if (!CollectionUtils.isEmpty(quanTieComments)) {
             r.setComments(quanTieComments.size());
@@ -198,41 +199,39 @@ public class TieFacade {
             return Page.of(req.getPage(), req.getSize());
         }
 
-        List<QuanTieCommentLike> likes = quanTieCommentLikeService.selectByTieId(req.getTieId());
+        QuanBarTie tie = quanBarTieService.selectByTieId(req.getTieId());
 
         List<Long> userIds = firstLevelCommentPage.getRecords().stream().map(v -> v.getUserId()).distinct().collect(Collectors.toList());
         List<Account> userInfoList = accountService.selectByIds(userIds);
         Map<Long, Account> userId2UserInfoMap = userInfoList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
 
-        // 1. 映射全部评论
+        List<QuanTieCommentLike> likes = quanTieCommentLikeService.selectByTieId(req.getTieId());
         Map<Long, List<QuanTieCommentLike>> commentId2LikeListMap = likes.stream().collect(Collectors.groupingBy(QuanTieCommentLike::getCommentId));
+
+        int previewCount = req.getPreviewReplyCount() != null ? req.getPreviewReplyCount() : 2;
+        List<Long> commentIds = firstLevelCommentPage.getRecords().stream().map(comment -> comment.getId()).collect(Collectors.toList());
+        Map<Long, List<QuanTieComment>> previewRepliesMap = quanTieCommentService.getPreviewRepliesForComments(commentIds, previewCount);
+
+
+        // 获取回复相关的用户信息
+        List<Long> replyUserIds = previewRepliesMap.values().stream()
+                .flatMap(List::stream)
+                .map(QuanTieComment::getUserId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, Account> replyUserMap = accountService.selectByIds(replyUserIds).stream()
+                .collect(Collectors.toMap(Account::getId, v -> v));
 
         // 组装评论树
         List<QuanTieCommentResp> result = new ArrayList<>();
 
         for (QuanTieComment record : firstLevelCommentPage.getRecords()) {
-            QuanTieCommentResp r = convertToVO(record, currentUserId, commentId2LikeListMap, userId2UserInfoMap);
+            QuanTieCommentResp r = convertToVO(record, currentUserId, commentId2LikeListMap, userId2UserInfoMap,tie);
             if (req.getWithPreviewReplies() != null && req.getWithPreviewReplies()) {
-                int previewCount = req.getPreviewReplyCount() != null ? req.getPreviewReplyCount() : 2;
-
-                // 批量获取所有一级评论的预览回复
-                List<Long> commentIds = firstLevelCommentPage.getRecords().stream().map(comment -> comment.getId()).collect(Collectors.toList());
-                Map<Long, List<QuanTieComment>> previewRepliesMap = quanTieCommentService
-                        .getPreviewRepliesForComments(commentIds, previewCount);
-
-                // 获取回复相关的用户信息
-                List<Long> replyUserIds = previewRepliesMap.values().stream()
-                        .flatMap(List::stream)
-                        .map(QuanTieComment::getUserId)
-                        .distinct()
-                        .collect(Collectors.toList());
-                Map<Long, Account> replyUserMap = accountService.selectByIds(replyUserIds).stream()
-                        .collect(Collectors.toMap(Account::getId, v -> v));
-
                 // 转换回复为VO并设置到主评论
                 List<QuanTieComment> previewReplies = previewRepliesMap.getOrDefault(r.getId(), Collections.emptyList());
                 List<QuanTieCommentResp> replyVOs = previewReplies.stream()
-                        .map(s -> convertToVO(s, currentUserId, commentId2LikeListMap, replyUserMap))
+                        .map(s -> convertToVO(s, currentUserId, commentId2LikeListMap, replyUserMap, tie))
                         .collect(Collectors.toList());
                 r.setReplies(replyVOs);
                 r.setReplyCount(quanTieCommentService.getReplyCount(r.getId()));
@@ -247,7 +246,7 @@ public class TieFacade {
     }
 
 
-    private QuanTieCommentResp convertToVO(QuanTieComment comment, Long currentUserId, Map<Long, List<QuanTieCommentLike>> commentId2LikeListMap, Map<Long, Account> userId2UserInfoMap) {
+    private QuanTieCommentResp convertToVO(QuanTieComment comment, Long currentUserId, Map<Long, List<QuanTieCommentLike>> commentId2LikeListMap, Map<Long, Account> userId2UserInfoMap,QuanBarTie tie) {
         QuanTieCommentResp vo = new QuanTieCommentResp();
         vo.setId(comment.getId());
         vo.setTieId(comment.getTieId());
@@ -265,6 +264,7 @@ public class TieFacade {
         Account account = accountService.selectById(comment.getUserId());
         vo.setUsername(account.getNickname());
         vo.setAvatar(account.getAvatarUrl());
+        vo.setIsAuth(tie.getCreatedBy().equals(comment.getUserId()));
         return vo;
     }
 

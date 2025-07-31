@@ -18,6 +18,7 @@ public class QuanTieBaseInfoResp {
     private String content;
     private String createdName;
     private String createdTime;
+    private String createdAvatar;
     private Integer views;
     private Integer comments;
     private Integer likes;

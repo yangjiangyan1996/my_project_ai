@@ -15,6 +15,7 @@ public class QuanTieCommentResp {
     private String content;          // 评论内容
     private Boolean deleted;         // 是否已删除
     private Boolean isMine;          // 是否为当前用户评论
+    private Boolean isAuth;          // 是否为作者
     private Integer likes;           // 点赞数
     private Long replyTo;            // 回复的评论ID（如为 null 表示主评论）
     private String replyToName;      // 被回复用户昵称（仅回复评论时有值）

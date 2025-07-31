@@ -19,4 +19,6 @@ public interface QuanBarTieService extends IService<QuanBarTie> {
     List<QuanBarTie> selectByTieIds(List<Long> tieids);
 
     Long selectTieCountByBarId(Long barId);
+
+    QuanBarTie selectByTieId(Long tieId);
 }

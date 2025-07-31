@@ -8,10 +8,12 @@ import com.example.config.AsyncTaskUtil;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.req.BarRelationPageReq;
+import com.example.entity.req.QuanTieCommentPageReq;
 import com.example.entity.req.QuanTieListPageReq;
 import com.example.entity.resp.*;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +35,32 @@ public class UnauthQuanController {
     TieFacade tieFacade;
     @Resource
     QuanFacade quanFacade;
+
+
+
+    /**
+     * 评论分页展示
+     * @param req
+     * @return
+     */
+    @PostMapping("/commentShow")
+    public RespBean<Page<QuanTieCommentResp>> commentShow(@RequestBody @Valid QuanTieCommentPageReq req) {
+        try {
+            Long userId = null;
+            UserInfo user = UserUtil.getCurrentUser();
+            if(user != null) {
+                userId = user.getId();
+            }
+            Page<QuanTieCommentResp> result = tieFacade.commentShow(req, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("QuanController#commentShow,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("QuanController#commentShow,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
 
     /**

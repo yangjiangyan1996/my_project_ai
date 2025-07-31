@@ -36,6 +36,14 @@ public class QuanBarTieServiceImpl extends ServiceImpl<QuanBarTieMapper, QuanBar
     }
 
     @Override
+    public QuanBarTie selectByTieId(Long tieId) {
+        return baseMapper.selectOne(new QueryWrapper<QuanBarTie>()
+                .eq("id", tieId)
+                .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
     public Long selectTieCountByBarId(Long barId) {
         return baseMapper.selectCount(new QueryWrapper<QuanBarTie>()
                 .eq("bar_id", barId)

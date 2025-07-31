@@ -6,9 +6,8 @@
     <el-card class="tie-detail-card">
       <!-- 帖子头部部分保持不变 -->
       <div class="tie-header">
-
-         <!-- <el-avatar :size="48" :src="tieDetail.avatar" class="user-avatar"></el-avatar> -->
           <div class="user-info">
+             <el-avatar :size="48" :src="tieDetail.createdAvatar" class="user-avatar"></el-avatar>
             <span class="username">{{ tieDetail.username || '匿名用户' }}</span>
             <span class="post-time">{{ formatTime(tieDetail.createdTime) }}</span>
           </div>
@@ -18,22 +17,22 @@
           
           
             <div class="image-gallery" v-if="tieDetail.avatar && tieDetail.avatar.length">
-  <el-image 
-    v-for="(img, index) in tieDetail.avatar" 
-    :key="index" 
-    :src="img" 
-    :preview-src-list="tieDetail.avatar"
-    :initial-index="index"
-    fit="cover"
-    class="gallery-image"
-    :style="{ width: calculateImageWidth(tieDetail.avatar.length) }"
-    :zoom-rate="1.2"
-    :max-scale="7"
-    :min-scale="0.2"
-    preview-teleported
-    hide-on-click-modal
-  />
-</div>
+              <el-image 
+                v-for="(img, index) in tieDetail.avatar" 
+                :key="index" 
+                :src="img" 
+                :preview-src-list="tieDetail.avatar"
+                :initial-index="index"
+                fit="cover"
+                class="gallery-image"
+                :style="{ width: calculateImageWidth(tieDetail.avatar.length) }"
+                :zoom-rate="1.2"
+                :max-scale="7"
+                :min-scale="0.2"
+                preview-teleported
+                hide-on-click-modal
+              />
+            </div>
          
         </div>
         
@@ -96,6 +95,7 @@
             <div class="comment-user">
               <el-avatar :src="comment.avatar" size="small" class="user-avatar">{{ comment.username.charAt(0) }}</el-avatar>
               <strong class="username">{{ comment.username }}</strong>
+              <span v-if="comment.isAuth" class="author-tag">作者</span>
               <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
             </div>
             <span v-if="comment.deleted" class="deleted">该评论已被删除</span>
@@ -153,6 +153,8 @@
               <div class="comment-user">
                 <el-avatar :src="reply.avatar" size="small">{{ reply.username.charAt(0) }}</el-avatar>
                 <strong class="username">{{ reply.username }}</strong>
+                <!-- 添加作者标签 -->
+                <span v-if="reply.isAuth" class="author-tag">作者</span>
                 <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
               </div>
               <span v-if="reply.deleted" class="deleted">该回复已被删除</span>
@@ -222,6 +224,8 @@
           <div class="comment-user">
             <el-avatar :src="reply.avatar" size="small">{{ reply.username.charAt(0) }}</el-avatar>
             <strong class="username">{{ reply.username }}</strong>
+            <!-- 添加作者标签 -->
+            <span v-if="reply.isAuth" class="author-tag">作者</span>
             <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
           </div>
           <span v-if="reply.deleted" class="deleted">该回复已被删除</span>
@@ -305,7 +309,8 @@ const tieDetail = ref({
   createdTime: '',
   views: 0,
   comments: 0,
-  likes: 0
+  likes: 0,
+  createdAvatar: '',
 });
 
 // 评论相关数据
@@ -361,6 +366,7 @@ const fetchTieDetail = async () => {
         ...res,
         username: res.createdName,
         createdTime: res.createdTime,
+        createdAvatar: res.createdAvatar,
          avatar: Array.isArray(res.avatar) ? res.avatar : []
       };
       favorited.value = res.myLike || false;
@@ -373,7 +379,7 @@ const fetchTieDetail = async () => {
 // 获取评论列表
 const fetchComments = async (page = 1) => {
   try {
-    const res = await post(`/api/auth/quan/commentShow`, {
+    const res = await post(`/api/unauth/quan/commentShow`, {
       tieId: tieId,
       page: page,
       size: commentPageSize.value,
@@ -491,7 +497,7 @@ const showReplyDialog = async (comment) => {
 // 获取弹窗回复数据
 const fetchDialogReplies = async (commentId, page = 1) => {
   try {
-    const res = await post(`/api/auth/quan/commentShow`, {
+    const res = await post(`/api/unauth/quan/commentShow`, {
       tieId: tieId,
       page: page,
       size: replyPageSize.value,
@@ -928,6 +934,20 @@ const goBack = () => {
   margin-top: 10px;
   display: flex;
   justify-content: center;
+}
+
+
+.author-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  margin-left: 8px;
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(to right, #ff9500, #ff5e3a);
+  border-radius: 10px;
+  transform: scale(0.9);
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(255, 94, 58, 0.3);
 }
 
 .view-all-replies-btn {
