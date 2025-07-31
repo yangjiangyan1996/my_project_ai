@@ -7,7 +7,7 @@
       <!-- 帖子头部部分保持不变 -->
       <div class="tie-header">
           <div class="user-info">
-             <el-avatar :size="48" :src="tieDetail.createdAvatar" class="user-avatar"></el-avatar>
+            <el-avatar :size="48" :src="tieDetail.createdAvatar" class="user-avatar"></el-avatar>
             <span class="username">{{ tieDetail.username || '匿名用户' }}</span>
             <span class="post-time">{{ formatTime(tieDetail.createdTime) }}</span>
           </div>
@@ -518,6 +518,13 @@ const copyLink = async () => {
     ElMessage.error('复制失败，请手动复制');
   }
 };
+
+const goToUserProfile = (userId) => {
+  console.log("访问用户详情页",userId)
+  // router.push(`/index/user/${userId}`)
+  window.open(`/index/user/${userId}`, '_blank');
+}
+
 
 // 分享到微信
 const shareToWechat = () => {

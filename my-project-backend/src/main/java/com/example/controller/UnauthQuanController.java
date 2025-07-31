@@ -51,7 +51,7 @@ public class UnauthQuanController {
             if(user != null) {
                 userId = user.getId();
             }
-            Page<QuanTieCommentResp> result = tieFacade.commentShow(req, user.getId());
+            Page<QuanTieCommentResp> result = tieFacade.commentShow(req, userId);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("QuanController#commentShow,req:{}", JSON.toJSONString(req), e);

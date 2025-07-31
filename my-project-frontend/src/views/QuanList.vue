@@ -207,7 +207,7 @@
         </el-button>
       </div>
 
-      <!-- 右侧边栏 - 热门部分修改为友情贴吧 -->
+      <!-- 右侧边栏 - 热门部分修改为相关圈子 -->
         <div class="sidebar-section">
           <div class="section-header">
             <h4>热门</h4>
@@ -395,6 +395,10 @@ const { state: userInfo, loadUserInfo } = useUserInfo();
 // 获取我关注的圈子
 const fetchFollowedBars = async (page = 1, size = 5) => {
   try {
+     if(!userInfo.data.id) {
+         console.log("未登录，不获取我关注的圈子")
+         return;
+     }
     const response = await post('/api/auth/quan/myFavoriteBar', {
       page: page,
       size: size
@@ -578,7 +582,7 @@ const handlePageChange = (newPage) => {
 
 
 
-// 获取友情贴吧
+// 获取相关圈子
 const fetchFriendBars = async (page = 1) => {
   try {
     const params = {
@@ -607,8 +611,8 @@ const fetchFriendBars = async (page = 1) => {
       friendBarCurrentPage.value = page
     }
   } catch (error) {
-    console.error('获取友情贴吧失败:', error)
-    ElMessage.error('获取友情贴吧失败，请稍后重试')
+    console.error('获取相关圈子失败:', error)
+    ElMessage.error('获取相关圈子失败，请稍后重试')
   }
 }
 
@@ -735,17 +739,16 @@ const refreshFriendBars = () => {
   fetchFriendBars(nextPage)
 }
 
-// 关注/取消关注贴吧
+// 关注/取消关注圈子
 const toggleFollowBar = async (bar) => {
-  console.log("关注/取消关注贴吧", bar);
+  console.log("关注/取消关注圈子", bar);
   try {
-    if (!userInfo?.data?.id) {
-      // 未登录处理，可以跳转到登录页
-      router.push('/login');
-      return;
-    }
+    // if (!userInfo?.data?.id) {
+    //   // 未登录处理，可以跳转到登录页
+    //   router.push('/login');
+    //   return;
+    // }
 
-    console.log("关注/取消关注贴吧222", bar.followed);
 
     if (bar.followed) {
       // 调用取消关注API

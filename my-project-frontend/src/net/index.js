@@ -186,7 +186,7 @@ function unauthorized() {
 // 添加全局 token 检查
 router.beforeEach((to, from, next) => {
     // 定义不需要认证的路由名称
-    const unauthRoutes = ['welcome-login', 'welcome-register', 'welcome-forget'];
+    const unauthRoutes = ['welcome-login', 'welcome-register', 'welcome-forget','quanDetail','quanTieDetail'];
     
     // 如果当前路由不需要认证，直接放行
     if (unauthRoutes.includes(to.name)) {

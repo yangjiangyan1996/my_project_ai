@@ -1,6 +1,6 @@
 <template>
   <div class="tieba-container">
-    <!-- 顶部贴吧信息栏 -->
+    <!-- 顶部信息栏 -->
 <div class="bar-header">
       <div class="bar-info">
         <div class="bar-avatar">
@@ -179,7 +179,7 @@
 
         <div class="sidebar-section">
           <div class="section-header">
-            <h3>友情贴吧</h3>
+            <h3>相关圈子</h3>
             <el-button type="text" size="small" @click="openFriendBarDialog">更多</el-button>
           </div>
           <div 
@@ -294,10 +294,10 @@
   </div>
 
 
-  <!-- 友情贴吧弹窗 -->
+  <!-- x相关圈子弹窗 -->
   <el-dialog 
     v-model="friendBarDialogVisible" 
-    title="友情贴吧" 
+    title="相关圈子" 
     width="60%"
     top="5vh"
   >
@@ -383,19 +383,19 @@ const submitting = ref(false)
 // 今日热议数据
 const hotTopics = ref([]);
 
-// 友情贴吧数据
+// 相关圈子数据
 const friendBars = ref([]);
 const friendBarPage = ref(1);
 const friendBarSize = ref(5);
 const friendBarTotal = ref(0);
 
-// 友情贴吧弹窗相关
+// 相关圈子弹窗相关
 const friendBarDialogVisible = ref(false);
 const dialogFriendBars = ref([]);
 const dialogFriendBarPage = ref(1);
 const dialogFriendBarSize = ref(10);
 
-// 贴吧信息
+// 圈子信息
 const barInfo = ref({
   id: 0,
   name: '',
@@ -483,7 +483,7 @@ const fetchHotTopics = async () => {
   }
 };
 
-// 获取友情贴吧
+// 获取相关圈子
 const fetchFriendBars = async (page = 1, size = 5) => {
   try {
     const response = await post('/api/unauth/quan/getRelationBar', {
@@ -522,7 +522,7 @@ const fetchFriendBars = async (page = 1, size = 5) => {
       }
     }
   } catch (error) {
-    console.error('获取友情贴吧失败:', error);
+    console.error('获取相关圈子失败:', error);
   }
 };
 
@@ -548,7 +548,7 @@ const formatNumber = (value) => {
   return value;
 };
 
-// 打开友情贴吧弹窗
+// 打开相关圈子弹窗
 const openFriendBarDialog = () => {
   friendBarDialogVisible.value = true;
   fetchFriendBars(1, dialogFriendBarSize.value);
@@ -660,7 +660,7 @@ const fetchPosts = async (page = 1) => {
   }
 }
 
-// 检查用户是否已关注该贴吧
+// 检查用户是否已关注该圈子
 const checkFollowStatus = async () => {
   try {
     if (!userInfo.data.id) return; // 未登录不检查
@@ -677,7 +677,7 @@ const checkFollowStatus = async () => {
   }
 };
 
-// 获取贴吧信息
+// 获圈子信息
 const fetchBarInfo = async () => {
   try {
     const response = await get(`/api/unauth/quan/getBarInfo?barId=${barId}`);
@@ -695,7 +695,7 @@ const fetchBarInfo = async () => {
       };
     }
   } catch (error) {
-    console.error('获取贴吧信息失败:', error);
+    console.error('获取圈子信息失败:', error);
   }
 };
 
@@ -744,7 +744,7 @@ const isMobile = computed(() => window.innerWidth < 768);
 
 // 方法
 const navigateToBar = (barId) => {
-  console.log('跳转到贴吧:', barId);
+  console.log('跳转圈子:', barId);
    window.open(`/index/quan/QuanDetail/${barId}`, '_blank');
 };
 
