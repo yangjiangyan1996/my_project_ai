@@ -111,9 +111,9 @@
               <el-icon><Star /></el-icon>
               <span>{{ post.likes || 0 }}</span>
             </div>
-            <div class="action-btn">
+            <!-- <div class="action-btn">
               <el-icon><Share /></el-icon>
-            </div>
+            </div> -->
           </div>
         </div>
         

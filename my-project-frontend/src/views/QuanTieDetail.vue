@@ -53,9 +53,41 @@
             <el-icon :color="favorited ? '#f56c6c' : ''"><Star /></el-icon>
             <span>{{ tieDetail.likes || 0 }}</span>
           </div>
-          <div class="action-btn">
+         
+          <div class="action-btn" @click="handleShare">
             <el-icon><Share /></el-icon>
+            <span>分享</span>
+            <!-- 分享菜单 -->
+            <el-popover
+              v-model:visible="shareMenuVisible"
+              placement="bottom"
+              trigger="click"
+              :width="200"
+            >
+              <template #reference>
+                <span></span>
+              </template>
+              <div class="share-menu">
+                <div class="share-item" @click="copyLink">
+                  <el-icon><DocumentCopy /></el-icon>
+                  <span>复制链接</span>
+                </div>
+                <div class="share-item" @click="shareToWechat">
+                  <el-icon><ChatLineRound /></el-icon>
+                  <span>分享到微信</span>
+                </div>
+                <div class="share-item" @click="shareToWeibo">
+                  <el-icon><Promotion /></el-icon>
+                  <span>分享到微博</span>
+                </div>
+                <div class="share-item" @click="shareToQQ">
+                  <el-icon><ChatLineSquare /></el-icon>
+                  <span>分享到QQ</span>
+                </div>
+              </div>
+            </el-popover>
           </div>
+
         </div>
       </div>
       
@@ -293,6 +325,8 @@ import markdownIt from 'markdown-it';
 import emoji from 'markdown-it-emoji';
 import useUserInfo from '@/hooks/useUserInfo';
 import 'element-plus/dist/index.css'
+// 导入需要的图标
+import { DocumentCopy, ChatLineRound, Promotion, ChatLineSquare } from '@element-plus/icons-vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -457,6 +491,61 @@ const submitComment = async () => {
     ElMessage.error('评论失败');
   }
 };
+
+
+// 分享相关状态
+const shareMenuVisible = ref(false);
+
+// 处理分享按钮点击
+const handleShare = () => {
+  shareMenuVisible.value = true;
+};
+
+// 生成分享链接
+const generateShareLink = () => {
+  console.log("生成分享链接",tieId,barId)
+  return `${window.location.origin}/index/quan/QuanTieDetail/${tieId}?barId=${barId}`;
+};
+
+// 复制链接
+const copyLink = async () => {
+  try {
+    const shareLink = generateShareLink();
+    await navigator.clipboard.writeText(shareLink);
+    ElMessage.success('链接已复制到剪贴板');
+    shareMenuVisible.value = false;
+  } catch (err) {
+    ElMessage.error('复制失败，请手动复制');
+  }
+};
+
+// 分享到微信
+const shareToWechat = () => {
+  const shareLink = generateShareLink();
+  // 这里可以使用微信JS-SDK或生成二维码
+  ElMessage.warning('请手动打开微信分享');
+  shareMenuVisible.value = false;
+  // 实际项目中可以集成微信分享SDK
+};
+
+// 分享到微博
+const shareToWeibo = () => {
+  const shareLink = generateShareLink();
+  const title = tieDetail.value.title || '有趣的帖子';
+  const url = `http://service.weibo.com/share/share.php?url=${encodeURIComponent(shareLink)}&title=${encodeURIComponent(title)}`;
+  window.open(url, '_blank', 'width=550,height=400');
+  shareMenuVisible.value = false;
+};
+
+// 分享到QQ
+const shareToQQ = () => {
+  const shareLink = generateShareLink();
+  const title = tieDetail.value.title || '有趣的帖子';
+  const url = `https://connect.qq.com/widget/shareqq/index.html?url=${encodeURIComponent(shareLink)}&title=${encodeURIComponent(title)}`;
+  window.open(url, '_blank', 'width=550,height=400');
+  shareMenuVisible.value = false;
+};
+
 
 // 提交回复
 const submitReply = async (commentId) => {
@@ -1042,6 +1131,47 @@ const goBack = () => {
   align-items: center;
   margin-top: 16px;
 }
+
+
+.share-menu {
+  padding: 8px 0;
+  
+  .share-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background-color: #f5f7fa;
+      color: var(--el-color-primary);
+    }
+    
+    .el-icon {
+      margin-right: 8px;
+      font-size: 16px;
+    }
+    
+    span {
+      font-size: 14px;
+    }
+  }
+}
+
+.action-btn {
+  position: relative;
+  
+  .el-popover__reference {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+  }
+}
+
 
 .submit-button {
   background: linear-gradient(to right, #409EFF, #64b5ff);

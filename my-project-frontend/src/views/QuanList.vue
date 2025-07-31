@@ -63,7 +63,7 @@
             v-for="bar in followedBars"
             :key="bar.id"
             class="followed-bar"
-            @click="navigateToBar(bar.id)"
+             @click="goToUserProfile(bar.id)"
           >
             <el-avatar :size="32" :src="bar.avatar" />
             <div class="bar-info">
