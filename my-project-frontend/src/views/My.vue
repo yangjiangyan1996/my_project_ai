@@ -402,7 +402,7 @@
               </div>
               <div class="sidebar-section"  style="cursor: pointer;">
                 <h3 class="sidebar-title">待定</h3>
-                <div class="sidebar-count">{{ followedBars.length }}</div>
+                <div class="sidebar-count"></div>
               </div>
           </div>
          
