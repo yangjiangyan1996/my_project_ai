@@ -1,6 +1,7 @@
 package com.example.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.alibaba.fastjson2.JSON;
+import com.example.Facade.CommonFacade;
 import com.example.Facade.QuanFacade;
 import com.example.Facade.TieFacade;
 import com.example.entity.base.RespBean;
@@ -29,6 +30,8 @@ import java.util.List;
 public class QuanController {
 
     @Resource
+    CommonFacade commonFacade;
+    @Resource
     TieFacade tieFacade;
     @Resource
     private QuanFacade quanFacade;
@@ -41,11 +44,16 @@ public class QuanController {
     @PostMapping("/myFavoriteBar")
     public RespBean<Page<BarsInfoResp>> myFavoriteBar(@RequestBody BarMyFavoriteReq req) {
         try {
-            UserInfo user = UserUtil.getCurrentUser();
-            if (user == null) {
+            Long userId;
+            if (req.getSecrecyId() != null) {
+                userId = commonFacade.getUserIdBySecrecyId(req.getSecrecyId());
+            } else {
+                userId = UserUtil.getCurrentUser().getId();
+            }
+            if (userId == null) {
                 return new RespBean<>();
             }
-            req.setUserId(user.getId());
+            req.setUserId(userId);
             Page<BarsInfoResp> result = tieFacade.myFavoriteBar(req);
             return RespBean.success(result);
         }catch (ValidationException e) {

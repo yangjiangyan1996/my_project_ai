@@ -12,4 +12,5 @@ import lombok.Data;
 @Data
 public class BarMyFavoriteReq extends PageReq {
     Long userId;
+    Long secrecyId;
 }

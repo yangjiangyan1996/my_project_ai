@@ -395,10 +395,11 @@
               <div class="sidebar-count">{{ followeeCount }}</div>
             </div>
           </div>
+
           <div class="sidebar-follow-row">
              <div class="sidebar-section" @click="openFollowedBarsDrawer" style="cursor: pointer;">
                 <h3 class="sidebar-title">我关注的圈子</h3>
-                <div class="sidebar-count">{{ followedBars.length }}</div>
+                <div class="sidebar-count">{{ followedBarsTotalCount }}</div>
               </div>
               <div class="sidebar-section"  style="cursor: pointer;">
                 <h3 class="sidebar-title">待定</h3>
@@ -654,6 +655,8 @@ const followedBarsPage = ref(1)
 const followedBarsSize = ref(10)
 const followedBarsTotal = ref(0)
 const followedBarsLoading = ref(false)
+const followedBarsTotalCount = ref(0)
+
 
 onMounted(() => {
   fetchSkillCategories().then(() =>{
@@ -739,6 +742,8 @@ const fetchFollowedBars = async (page = 1, size = 5) => {
         }))
         followedBarsTotal.value = response.total || 0
       }
+      // 更新总数
+      followedBarsTotalCount.value = response?.total || response?.records?.length || 0
     }
   } catch (error) {
     console.error('获取关注的圈子失败:', error)
