@@ -425,11 +425,11 @@
         <div class="followed-bar-name">{{ bar.name }}</div>
         <div class="followed-bar-stats">
           <span class="stat-item">
-            <el-icon><User /></el-icon>
+             <i class="stat-icon">👥</i>
             <span>{{ bar.followerCount | formatNumber }}</span>
           </span>
           <span class="stat-item">
-            <el-icon><Document /></el-icon>
+            <i class="stat-icon">📝</i>
             <span>{{ bar.postCount | formatNumber }}</span>
           </span>
         </div>
