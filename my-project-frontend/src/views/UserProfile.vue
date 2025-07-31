@@ -616,6 +616,10 @@ const handleFollowedBarsPageChange = (page) => {
   fetchFollowedBars(page, followedBarsSize.value)
 }
 
+const navigateToBar = (barId) => {
+  window.open(`/index/quan/QuanDetail/${barId}`, '_blank')
+}
+
 // 打开我关注的用户抽屉
 const openFolloweeDrawer = () => {
   followeeListVisible.value = true
