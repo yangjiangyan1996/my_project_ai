@@ -395,14 +395,68 @@
               <div class="sidebar-count">{{ followeeCount }}</div>
             </div>
           </div>
-          <div class="sidebar-section">
-            <h3 class="sidebar-title">赞助的 Live</h3>
-            <div class="empty-placeholder">暂无内容</div>
+          <div class="sidebar-section" @click="openFollowedBarsDrawer" style="cursor: pointer;">
+            <h3 class="sidebar-title">我关注的圈子</h3>
+            <div class="sidebar-count">{{ followedBars.length }}</div>
           </div>
         </div>
 
       </div>
   </div>
+
+  <!-- 我关注的圈子 drawer -->
+<el-drawer
+  v-model="followedBarsDrawerVisible"
+  title="我关注的圈子"
+  size="480px"
+  direction="rtl"
+  :with-header="true"
+  class="custom-drawer"
+>
+  <el-scrollbar height="600px">
+    <div
+      class="followed-bar-card"
+      v-for="bar in followedBarsList"
+      :key="bar.id"
+      @click="navigateToBar(bar.id)"
+    >
+      <el-avatar :src="bar.avatar" :size="48" shape="square" />
+      <div class="followed-bar-info">
+        <div class="followed-bar-name">{{ bar.name }}</div>
+        <div class="followed-bar-stats">
+          <span class="stat-item">
+            <el-icon><User /></el-icon>
+            <span>{{ bar.followerCount | formatNumber }}</span>
+          </span>
+          <span class="stat-item">
+            <el-icon><Document /></el-icon>
+            <span>{{ bar.postCount | formatNumber }}</span>
+          </span>
+        </div>
+        <div class="followed-bar-unread" v-if="bar.unread > 0">
+          <el-badge :value="bar.unread" />
+        </div>
+      </div>
+    </div>
+    <div v-if="followedBarsLoading" class="followed-bar-loading">加载中...</div>
+    <div v-if="!followedBarsLoading && followedBarsList.length === 0" class="no-more">
+      暂无关注的圈子
+    </div>
+  </el-scrollbar>
+  
+  <!-- 分页控件 -->
+  <div class="pagination-container">
+    <el-pagination
+      small
+      layout="prev, pager, next"
+      :total="followedBarsTotal"
+      :page-size="followedBarsSize"
+      v-model:current-page="followedBarsPage"
+      @current-change="handleFollowedBarsPageChange"
+      class="custom-pagination"
+    />
+  </div>
+</el-drawer>
 
   <el-drawer
     v-model="followeeListVisible"
@@ -585,6 +639,15 @@ const skillCategories = ref([])
 const tagsOptions = ref([])
 const userTypes = ref([])
 
+// 我关注的圈子相关状态
+const followedBars = ref([])
+const followedBarsDrawerVisible = ref(false)
+const followedBarsList = ref([])
+const followedBarsPage = ref(1)
+const followedBarsSize = ref(10)
+const followedBarsTotal = ref(0)
+const followedBarsLoading = ref(false)
+
 onMounted(() => {
   fetchSkillCategories().then(() =>{
     if (!userInfo.data.id) {
@@ -594,6 +657,7 @@ onMounted(() => {
         fetchMyCount()
         loadIntentData()
         fetchUserTypes()
+          fetchFollowedBars()
       });
     } else {
       fetchPublishData()
@@ -601,6 +665,7 @@ onMounted(() => {
       fetchMyCount()
       loadIntentData()
       fetchUserTypes()
+        fetchFollowedBars()
     }
   })
   
@@ -629,6 +694,65 @@ const getStatusTagType = (status) => {
   return typeMap[status] || ''
 }
 
+
+// 获取我关注的圈子
+const fetchFollowedBars = async (page = 1, size = 5) => {
+  try {
+    if(!userInfo.data.id) {
+      console.log("未登录，不获取我关注的圈子")
+      return
+    }
+    
+    followedBarsLoading.value = true
+    const response = await post('/api/auth/quan/myFavoriteBar', {
+      page: page,
+      size: size
+    })
+    
+    if (response && response.records) {
+      if (size === 5) {
+        // 主列表数据
+        followedBars.value = response.records.map(bar => ({
+          id: bar.id,
+          name: bar.name,
+          avatar: bar.avatar,
+          followerCount: bar.followerCount,
+          postCount: bar.postCount,
+          unread: 0 // 初始未读消息数为0
+        }))
+      } else {
+        // 弹窗数据
+        followedBarsList.value = response.records.map(bar => ({
+          id: bar.id,
+          name: bar.name,
+          avatar: bar.avatar,
+          followerCount: bar.followerCount,
+          postCount: bar.postCount,
+          unread: 0 // 初始未读消息数为0
+        }))
+        followedBarsTotal.value = response.total || 0
+      }
+    }
+  } catch (error) {
+    console.error('获取关注的圈子失败:', error)
+    ElMessage.error('获取关注的圈子失败，请稍后重试')
+  } finally {
+    followedBarsLoading.value = false
+  }
+}
+
+// 打开我关注的圈子抽屉
+const openFollowedBarsDrawer = () => {
+  followedBarsDrawerVisible.value = true
+  followedBarsPage.value = 1
+  fetchFollowedBars(1, followedBarsSize.value)
+}
+
+// 分页变化
+const handleFollowedBarsPageChange = (page) => {
+  followedBarsPage.value = page
+  fetchFollowedBars(page, followedBarsSize.value)
+}
 
 // 添加获取技能分类的方法
 const fetchSkillCategories = async () => {
@@ -783,6 +907,10 @@ const loadFollowerList = async () => {
   } finally {
     followerLoading.value = false
   }
+}
+
+const navigateToBar = (barId) => {
+  window.open(`/index/quan/QuanDetail/${barId}`, '_blank')
 }
 
 // 加载我关注的用户列表
@@ -1973,5 +2101,76 @@ const handleTabChange = (tab) => {
   .custom-drawer {
     width: 100% !important;
   }
+}
+
+/* 我关注的圈子卡片样式 */
+.followed-bar-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+.followed-bar-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.followed-bar-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1e293b;
+}
+
+.followed-bar-stats {
+  display: flex;
+  gap: 12px;
+  
+  .stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #64748b;
+    
+    .el-icon {
+      font-size: 14px;
+    }
+  }
+}
+
+.followed-bar-unread {
+  position: absolute;
+  right: 16px;
+  
+  .el-badge {
+    :deep(.el-badge__content) {
+      transform: scale(0.8);
+      transform-origin: 100% 0;
+    }
+  }
+}
+
+.followed-bar-loading {
+  text-align: center;
+  padding: 20px;
+  font-size: 14px;
+  color: #64748b;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  margin: 12px;
 }
 </style>
