@@ -6,11 +6,16 @@
     <el-card class="tie-detail-card">
       <!-- 帖子头部部分保持不变 -->
       <div class="tie-header">
-          <div class="user-info">
-            <el-avatar :size="48" :src="tieDetail.createdAvatar" class="user-avatar"></el-avatar>
+          <div class="user-meta" @click="goToUserProfile(tieDetail.secrecyId)">
+        <el-avatar :size="48" :src="tieDetail.createdAvatar" class="user-avatar"></el-avatar>
+        <div class="user-info">
+          <div class="username-line">
             <span class="username">{{ tieDetail.username || '匿名用户' }}</span>
             <span class="post-time">{{ formatTime(tieDetail.createdTime) }}</span>
           </div>
+          <div class="user-badge" v-if="tieDetail.isAuth">作者</div>
+        </div>
+      </div>
 
 
         <div class="tie-meta">
@@ -124,7 +129,7 @@
       <div class="comment-list">
         <div v-for="comment in comments" :key="comment.id" class="comment-item">
           <div class="comment-header">
-            <div class="comment-user">
+            <div class="comment-user" @click="goToUserProfile(comment.secrecyId)">
               <el-avatar :src="comment.avatar" size="small" class="user-avatar">{{ comment.username.charAt(0) }}</el-avatar>
               <strong class="username">{{ comment.username }}</strong>
               <span v-if="comment.isAuth" class="author-tag">作者</span>
@@ -1398,6 +1403,24 @@ const goBack = () => {
     background: rgba(0, 0, 0, 0.2);
   }
 }
+
+.user-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    .username {
+      color: var(--el-color-primary);
+    }
+    .user-avatar {
+      transform: scale(1.05);
+    }
+  }
+}
+
 .image-gallery {
   display: flex;
   flex-wrap: wrap;

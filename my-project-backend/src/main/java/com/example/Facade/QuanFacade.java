@@ -2,6 +2,7 @@ package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.config.AsyncTaskUtil;
+import com.example.entity.dto.Account;
 import com.example.entity.dto.QuanBars;
 import com.example.entity.dto.QuanUserBarFollows;
 import com.example.entity.req.BarRelationPageReq;
@@ -10,6 +11,7 @@ import com.example.entity.resp.BarsInfoResp;
 import com.example.enums.CommonEnum;
 import com.example.enums.QuanEnum;
 import com.example.service.*;
+import com.example.utils.DateUtils;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,8 @@ public class QuanFacade {
     QuanTieFavoriteService quanTieFavoriteService;
     @Resource
     QuanTieCommentService quanTieCommentService;
+    @Resource
+    AccountService accountService;
     @Resource
     QuanBarsService quanBarsService;
 
@@ -90,6 +94,8 @@ public class QuanFacade {
             return null;
         }
 
+        Account account = accountService.selectById(v.getCreatedBy());
+
         BarsInfoResp barsByCategoryResp = new BarsInfoResp();
         barsByCategoryResp.setId(v.getId());
         barsByCategoryResp.setName(v.getName());
@@ -99,6 +105,12 @@ public class QuanFacade {
         barsByCategoryResp.setDescription(v.getDescription());
         barsByCategoryResp.setFirstCategoryName(CommonEnum.IndustryCategory.getNameByCode(v.getFirstCategory()));
         barsByCategoryResp.setSecondCategoryName(CommonEnum.IndustryCategory.getNameByCode(v.getSecondCategory()));
+        if (account != null) {
+            barsByCategoryResp.setCreatedName(account.getNickname());
+            barsByCategoryResp.setCreatedAvatar(account.getAvatarUrl());
+            barsByCategoryResp.setCreatedTime(DateUtils.date2Str(v.getCreatedAt()));
+            barsByCategoryResp.setSecrecyId(account.getSecrecyId());
+        }
         return barsByCategoryResp;
     }
 

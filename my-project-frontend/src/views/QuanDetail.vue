@@ -1,13 +1,13 @@
 <template>
   <div class="tieba-container">
     <!-- 顶部信息栏 -->
-<div class="bar-header">
+    <div class="bar-header">
       <div class="bar-info">
         <div class="bar-avatar">
           <el-avatar :size="60" :src="barInfo.avatar" shape="square" />
         </div>
         <div class="bar-meta">
-          <h1 class="bar-name" @click="navigateToBar(barInfo.name)">{{ barInfo.name }}</h1>
+          <h1 class="bar-name" >{{ barInfo.name }}</h1>
           <div class="bar-stats">
             <span class="stat-item">
               <el-icon><User /></el-icon>
@@ -19,20 +19,20 @@
             </span>
           </div>
           <div class="bar-category">
-              <el-tag size="small" effect="plain">{{ barInfo.description || '暂无描述' }}</el-tag>
+            <el-tag size="small" effect="plain">{{ barInfo.description || '暂无描述' }}</el-tag>
           </div>
         </div>
         <el-button 
-            :type="isFollowed ? 'success' : 'primary'"
-            :class="['follow-btn', { 'followed': isFollowed }]"
-            size="small" 
-            round
-            @click="toggleFollow"
+          :type="isFollowed ? 'success' : 'primary'"
+          :class="['follow-btn', { 'followed': isFollowed }]"
+          size="small" 
+          round
+          @click="toggleFollow"
         >
-            <el-icon>
+          <el-icon>
             <component :is="isFollowed ? 'CircleCheckFilled' : 'Plus'" />
-            </el-icon>
-            <span>{{ isFollowed ? '已关注' : '关注' }}</span>
+          </el-icon>
+          <span>{{ isFollowed ? '已关注' : '关注' }}</span>
         </el-button>
       </div>
     </div>
@@ -153,9 +153,17 @@
 
         <div class="sidebar-section">
           <div class="section-header">
-            <h3>本吧信息</h3>
+            <h3>本圈信息</h3>
             <!-- <el-button type="text" size="small">更多</el-button> -->
           </div>
+
+          <!-- 新增创建者信息 -->
+          <div class="creator-info" @click="goToUserProfile(barInfo.secrecyId)">
+            <el-avatar :size="24" :src="barInfo.createdAvatar" />
+            <span class="creator-name">{{ barInfo.createdName }}</span>
+            <span class="create-time">创建于 {{ formatTime(barInfo.createdTime) }}</span>
+          </div>
+
           <div class="info-item">
             <el-icon><UserFilled /></el-icon>
             <span>{{ barInfo.name }}圈共{{ barInfo.followerCount }}人</span>
@@ -456,6 +464,12 @@ onBeforeUnmount(() => {
   editor.destroy()
 })
 
+const formatTime = (timeString) => {
+  if (!timeString) return '';
+  const date = new Date(timeString);
+  return date.toLocaleString();
+};
+
 // 发帖表单数据
 const postForm = ref({
   title: '',
@@ -677,6 +691,11 @@ const checkFollowStatus = async () => {
   }
 };
 
+const goToUserProfile = (userId) => {
+  console.log("访问用户详情页", userId);
+  window.open(`/index/user/${userId}`, '_blank');
+};
+
 // 获圈子信息
 const fetchBarInfo = async () => {
   try {
@@ -692,6 +711,10 @@ const fetchBarInfo = async () => {
         description: response.description,
         firstCategoryName: response.firstCategoryName,
         secondCategoryName: response.secondCategoryName,
+        createdName: response.createdName,
+        createdTime: response.createdTime,
+        createdAvatar: response.createdAvatar,
+        secrecyId: response.secrecyId
       };
     }
   } catch (error) {
@@ -1497,5 +1520,34 @@ follow-btn {
   }
 }
   
- 
+ .creator-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    .creator-name {
+      color: var(--el-color-primary);
+    }
+  }
+  
+  .el-avatar {
+    flex-shrink: 0;
+  }
+  
+  .creator-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    transition: color 0.2s;
+  }
+  
+  .create-time {
+    font-size: 12px;
+    color: #999;
+  }
+}
 </style>

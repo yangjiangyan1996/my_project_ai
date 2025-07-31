@@ -19,5 +19,9 @@ public class BarsInfoResp {
     private String firstCategoryName;
     private String secondCategoryName;
     private Boolean followed;
+    private String createdName;
+    private String createdTime;
+    private String createdAvatar;
+    private Long secrecyId;
 
 }

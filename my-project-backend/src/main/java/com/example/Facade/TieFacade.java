@@ -168,6 +168,7 @@ public class TieFacade {
         if (account != null) {
             r.setCreatedName(account.getNickname());
             r.setCreatedAvatar(account.getAvatarUrl());
+            r.setSecrecyId(account.getSecrecyId());
         }
         if (!CollectionUtils.isEmpty(quanTieComments)) {
             r.setComments(quanTieComments.size());
