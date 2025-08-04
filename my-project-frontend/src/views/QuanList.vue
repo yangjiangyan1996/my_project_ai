@@ -112,8 +112,8 @@
       <div class="post-tabs">
         <el-tabs v-model="activePostTab" @tab-click="handleTabChange">
           <el-tab-pane label="最新" name="latest"></el-tab-pane>
-          <el-tab-pane label="热门" name="hot"></el-tab-pane>
-          <el-tab-pane label="精华" name="featured"></el-tab-pane>
+          <!-- <el-tab-pane label="热门" name="hot"></el-tab-pane>
+          <el-tab-pane label="精华" name="featured"></el-tab-pane> -->
         </el-tabs>
       </div>
       
@@ -439,26 +439,7 @@ const loadMoreFollowed = () => {
 };
 
 // 我关注的
-const followedBars = ref([
-  {
-    id: 2,
-    name: 'bilibili',
-    avatar: 'https://via.placeholder.com/60?text=bilibili',
-    unread: 5
-  },
-  {
-    id: 6,
-    name: '游戏开发',
-    avatar: 'https://via.placeholder.com/60?text=游戏开发',
-    unread: 0
-  },
-  {
-    id: 7,
-    name: '前端技术',
-    avatar: 'https://via.placeholder.com/60?text=前端',
-    unread: 2
-  }
-])
+const followedBars = ref([])
 
 // 状态管理
 const activeTag = ref(null)

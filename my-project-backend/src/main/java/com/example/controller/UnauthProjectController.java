@@ -50,7 +50,6 @@ public class UnauthProjectController {
     @PostMapping("/projectShowList")
     public RespBean<Page<ProjectOfMyShowGetResp>> projectShowList(@RequestBody ProjectShowListReq req) {
         try {
-            UserInfo user = UserUtil.getCurrentUser();
             Page<ProjectOfMyShowGetResp> result = projectFacade.projectShowList(Page.of(req.getPage() - 1, req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {

@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 public class ProjectOfMyShowGetResp {
     private Long id;
     private Long userId;
+    private Long secrecyId;
     private String userName;
     private Long audience;
     private String audienceName;

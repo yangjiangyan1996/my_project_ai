@@ -460,6 +460,7 @@ public class ProjectFacade {
             projectsResp.setUserId(v.getUserId());
             if (userId2UserInfoMap.containsKey(v.getUserId())) {
                 projectsResp.setUserName(userId2UserInfoMap.get(v.getUserId()).getNickname());
+                projectsResp.setSecrecyId(userId2UserInfoMap.get(v.getUserId()).getSecrecyId());
             }
 
             projectsResp.setAudienceName(CommonEnum.UserTypeEnum.getByCode(v.getAudience()));

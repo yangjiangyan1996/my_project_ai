@@ -324,7 +324,7 @@
       <el-sub-menu index="2">
         <template #title><i class="el-icon-chat-dot-round"></i>社区互动</template>
         <el-menu-item index="forum" @click="changeDisplayMode('quanList')">圈子论坛</el-menu-item>
-        <el-menu-item index="qa" @click="router.push({ name: 'qa' })">问答专区</el-menu-item>
+        <!-- <el-menu-item index="qa" @click="router.push({ name: 'qa' })">问答专区</el-menu-item> -->
       </el-sub-menu>
 
       <el-sub-menu index="3">

@@ -7,7 +7,7 @@
           :key="skill.id"
           :xs="24" :sm="12" :md="8" :lg="6"
         >
-          <el-card class="skill-card" shadow="hover">
+          <el-card class="skill-card" shadow="hover" @click="goToUserProfile(skill.secrecyId)">
             <div class="skill-header">
               <span>用户名称: {{ skill.userName }}</span>
               <el-tag :type="skill.status === '公开' ? 'success' : 'info'">{{ skill.status }}</el-tag>
@@ -83,7 +83,8 @@ const fetchSkillMatchData = async () => {
         skills: item.skills ? item.skills.split(',') : [],
         skillNames: item.skillNames ? item.skillNames.split(',') : [],
         resources: item.resources ? item.resources.split(',') : [],
-        status: item.status === 1 ? '公开' : '未公开'
+        status: item.status === 1 ? '公开' : '未公开',
+        secrecyId: item.secrecyId,
       }));
 
       console.log("newData",newData)
@@ -112,6 +113,13 @@ onMounted(async () => {
   await nextTick(); // 确保DOM已渲染
   fetchSkillMatchData();
 });
+
+const goToUserProfile = (userId) => {
+  console.log("访问用户详情页",userId)
+  // router.push(`/index/user/${userId}`)
+  window.open(`/index/user/${userId}`, '_blank');
+}
+
 </script>
 
 <style scoped>
