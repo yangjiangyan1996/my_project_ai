@@ -57,15 +57,20 @@ public class TaskFacade {
                     AchievementMyPageResp p = new AchievementMyPageResp();
                     p.setTaskId(v.getId());
                     p.setName(v.getName());
-                    p.setTypeName(AchievementEnums.TaskType.getByCode(v.getType()).getName());
-                    p.setCategoryName(AchievementEnums.Category.getByCode(v.getCategory()).getName());
+                    p.setTypeName(AchievementEnums.TaskType.getByCode(v.getType()));
+                    p.setCategory(v.getCategory());
+                    AchievementEnums.Category en = AchievementEnums.Category.getByCode(v.getCategory());
+                    if (en != null) {
+                        p.setCategoryName(en.getName());
+                        p.setIcon(en.getIcon());
+                        p.setColor(en.getColor());
+                    }
                     p.setDescription(v.getDescription());
                     p.setTargetValue(v.getTargetValue());
-                    p.setRewardTypeName(AchievementEnums.RewardType.getByCode(v.getRewardType()).getName());
+                    p.setRewardTypeName(AchievementEnums.RewardType.getByCode(v.getRewardType()));
                     p.setRewardValue(v.getRewardValue());
                     p.setStartTime(v.getStartTime());
                     p.setEndTime(v.getEndTime());
-                    p.setIcon(v.getIcon());
                     p.setSortOrder(v.getSortOrder());
                     if (taskId2TaskInfoMap.containsKey(v.getId())) {
                         TaskUserProgress t = taskId2TaskInfoMap.get(v.getId());

@@ -451,7 +451,7 @@
       <el-button type="primary" plain @click="showPointsHistory">查看积分记录</el-button>
       <el-button type="success" plain @click="showPointsShop">积分兑换</el-button>
     </div>
-    
+
     <!-- 积分规则 -->
     <div class="points-rules">
       <h3 class="rules-title">积分规则</h3>
@@ -474,7 +474,7 @@
           :key="task.id"
         >
           <div class="task-icon" :style="{ backgroundColor: task.color }">
-            <el-icon :size="20"><component :is="task.icon" /></el-icon>
+            <el-icon :size="20"><component :is="getIconComponent(task.icon)" /></el-icon>
           </div>
           <div class="task-content">
             <div class="task-header">
@@ -502,24 +502,24 @@
           </div>
         </div>
       </div>
+
+       <!-- 分页控件 -->
+      <div class="pagination-container">
+        <el-pagination
+          small
+          layout="prev, pager, next"
+          :total="pointsTotal"
+          :page-size="pointsSize"
+          v-model:current-page="pointsPage"
+          @current-change="handlePointsTaskPageChange"
+          class="custom-pagination"
+        />
+      </div>
+      
     </div>
-    
-    
-    <div v-if="pointsLoading" class="points-loading">加载中...</div>
   </el-scrollbar>
   
-  <!-- 分页控件 -->
-  <div class="pagination-container">
-    <el-pagination
-      small
-      layout="prev, pager, next"
-      :total="pointsTotal"
-      :page-size="pointsSize"
-      v-model:current-page="pointsPage"
-      @current-change="handlePointsPageChange"
-      class="custom-pagination"
-    />
-  </div>
+ 
 </el-drawer>
 
   <!-- 我关注的圈子 drawer -->
@@ -695,11 +695,25 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Suitcase, SuccessFilled } from '@element-plus/icons-vue'
+import * as icons from '@element-plus/icons-vue'
+import { Suitcase, SuccessFilled, Edit,
+  Calendar,
+  Star,
+  ChatDotRound,
+  UserFilled,
+  Notebook,
+ChromeFilled,  
+ User,
+  Clock,
+  Trophy,
+  QuestionFilled } from '@element-plus/icons-vue'
 import { post, get } from '@/net'
 import { ElMessage } from 'element-plus'
 import useUserInfo from '@/hooks/useUserInfo';
 const { state: userInfo, loadUserInfo } = useUserInfo();
+
+
+
 const availableHours = ref([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
 
 
@@ -781,53 +795,140 @@ const todayPoints = ref(0)
 const monthPoints = ref(0)
 const historyPoints = ref(0)
 
-// 积分任务数据
-const pointsTasks = ref([
-  {
-    id: 1,
-    name: '每日签到',
-    description: '每日登录并签到获取积分',
-    points: 10,
-    progress: 1,
-    target: 1,
-    completed: true,
-    color: '#409EFF',
-    icon: 'Calendar'
-  },
-  {
-    id: 2,
-    name: '发布内容',
-    description: '发布优质内容可获得积分',
-    points: 20,
-    progress: 3,
-    target: 5,
-    completed: false,
-    color: '#67C23A',
-    icon: 'Edit'
-  },
-  {
-    id: 3,
-    name: '点赞互动',
-    description: '点赞他人内容可获得积分',
-    points: 5,
-    progress: 8,
-    target: 10,
-    completed: false,
-    color: '#E6A23C',
-    icon: 'Star'
-  },
-  {
-    id: 4,
-    name: '评论交流',
-    description: '发表有意义的评论可获得积分',
-    points: 15,
-    progress: 2,
-    target: 5,
-    completed: false,
-    color: '#F56C6C',
-    icon: 'ChatDotRound'
+// 积分任务相关状态
+const pointsTasks = ref([])
+const pointsTaskPage = ref(1)
+const pointsTaskSize = ref(5)
+const pointsTaskTotal = ref(0)
+const pointsTaskLoading = ref(false)
+
+
+
+// 获取积分任务数据
+const fetchPointsTasks = async () => {
+  try {
+    pointsTaskLoading.value = true
+    const res = await post('/api/auth/achievement/myAchievementPageList', {
+      page: pointsTaskPage.value,
+      size: pointsTaskSize.value
+    })
+    
+    if (res && res.records) {
+      pointsTasks.value = res.records.map(task => ({
+        id: task.taskId,
+        name: task.name,
+        description: task.description,
+        points: task.rewardValue || 0,
+        progress: task.myTargetValue || 0,
+        target: task.targetValue || 1,
+        completed: (task.myTargetValue || 0) >= (task.targetValue || 1),
+        color: task.color,
+        icon: task.icon ,
+        type: task.typeName,
+        category: task.categoryName,
+        rewardType: task.rewardTypeName,
+        startTime: task.startTime,
+        endTime: task.endTime,
+        sortOrder: task.sortOrder || 0
+      }))
+      
+      // 按照sortOrder排序
+      pointsTasks.value.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+      
+      pointsTaskTotal.value = res.total || 0
+      console.log("pointsTasks.value",pointsTasks.value)
+    }
+  } catch (error) {
+    console.error('获取积分任务失败:', error)
+    ElMessage.error('获取积分任务失败')
+  } finally {
+    pointsTaskLoading.value = false
   }
-])
+}
+
+
+// 添加这个方法
+const getIconComponent = (iconName) => {
+  const iconMap = {
+    'Notebook': Notebook,
+    'Calendar': Calendar,
+    'Star': Star,
+    'ChatDotRound': ChatDotRound,
+    'UserFilled': UserFilled,
+    'ChromeFilled': ChromeFilled,
+    'User': User,
+    'Clock': Clock,
+    'Trophy': Trophy,
+    'QuestionFilled': QuestionFilled,
+    'Edit': Edit
+    // 添加其他图标映射
+  }
+  return iconMap[iconName] || QuestionFilled // 默认图标
+}
+
+// // 根据任务类型获取颜色
+// const getTaskColor = (category) => {
+//   const colorMap = {
+//     'login': '#409EFF', // 蓝色 - 登录
+//     'like': '#E6A23C',  // 橙色 - 点赞
+//     'comment': '#F56C6C', // 红色 - 评论
+//     'publish': '#67C23A', // 绿色 - 发布
+//     'share': '#8E44AD',  // 紫色 - 分享
+//     'daily': '#3498DB',  // 日常任务
+//     'weekly': '#16A085', // 周常任务
+//     'one-time': '#E74C3C' // 一次性任务
+//   }
+//   return colorMap[category] || '#909399' // 默认灰色
+// }
+
+// // 根据任务类型获取默认图标
+// const getDefaultIcon = (category) => {
+//   const iconMap = {
+//     'login': 'Calendar',
+//     'like': 'Star',
+//     'comment': 'ChatDotRound',
+//     'publish': 'Edit',
+//     'share': 'Share',
+//     'daily': 'Clock',
+//     'weekly': 'Calendar',
+//     'one-time': 'Trophy'
+//   }
+//   return iconMap[category] || 'QuestionFilled'
+// }
+
+// 完成任务
+const completeTask = async (task) => {
+  try {
+    if (task.completed) return
+    
+    // 调用完成任务API
+    const res = await post('/api/auth/achievement/completeTask', {
+      taskId: task.id
+    })
+    
+    if (res) {
+      task.progress++
+      if (task.progress >= task.target) {
+        task.completed = true
+      }
+      ElMessage.success(`完成任务，获得${task.points}积分`)
+      
+      // 更新积分总数
+      totalPoints.value += task.points
+    }
+  } catch (error) {
+    console.error('完成任务失败:', error)
+    ElMessage.error('完成任务失败')
+  }
+}
+
+// 分页变化
+const handlePointsTaskPageChange = (page) => {
+  pointsTaskPage.value = page
+  fetchPointsTasks()
+}
+
+//////
 
 // 积分规则
 const pointsRules = ref([
@@ -843,54 +944,13 @@ const pointsRules = ref([
 const openPointsDrawer = () => {
   pointsDrawerVisible.value = true
   pointsPage.value = 1
-  fetchPointsData()
+  fetchPointsTasks()
 }
 
-// 获取积分数据
-const fetchPointsData = async () => {
-  try {
-    pointsLoading.value = true
-    // 这里替换为实际的API调用
-    const res = await get('/api/auth/points/myPoints')
-    totalPoints.value = res.totalPoints || 0
-    todayPoints.value = res.todayPoints || 0
-    monthPoints.value = res.monthPoints || 0
-    historyPoints.value = res.historyPoints || 0
-    
-    // 获取积分任务
-    const tasksRes = await get('/api/auth/points/tasks')
-    pointsTasks.value = tasksRes.tasks || []
-    pointsTotal.value = tasksRes.total || 0
-  } catch (error) {
-    console.error('获取积分数据失败:', error)
-    ElMessage.error('获取积分数据失败')
-  } finally {
-    pointsLoading.value = false
-  }
-}
 
 // 计算任务进度
 const calculateTaskProgress = (task) => {
   return Math.min(100, (task.progress / task.target) * 100)
-}
-
-// 完成任务
-const completeTask = (task) => {
-  if (task.completed) return
-  
-  // 这里添加完成任务逻辑
-  task.progress++
-  if (task.progress >= task.target) {
-    task.completed = true
-    totalPoints.value += task.points
-    ElMessage.success(`完成任务，获得${task.points}积分`)
-  }
-}
-
-// 分页变化
-const handlePointsPageChange = (page) => {
-  pointsPage.value = page
-  fetchPointsData()
 }
 
 // 查看积分历史
@@ -905,6 +965,8 @@ const showPointsShop = () => {
 
 
 onMounted(() => {
+  console.log(Object.keys(icons)) // 查看所有可用图标名称
+
   fetchSkillCategories().then(() =>{
     if (!userInfo.data.id) {
       loadUserInfo().then(() => {
