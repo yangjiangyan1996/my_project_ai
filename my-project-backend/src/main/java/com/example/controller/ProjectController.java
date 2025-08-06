@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CommonFacade;
 import com.example.Facade.ProjectFacade;
+import com.example.aop.task.TaskProgress;
 import com.example.config.AsyncTaskUtil;
 import com.example.config.QqMailService;
 import com.example.config.UserNotLoggedInException;
@@ -368,6 +369,7 @@ public class ProjectController {
     }
 
     @GetMapping("/commentLike")
+    @TaskProgress(category = "like", increment = 1)
     public RespBean<Boolean> commentLike(@RequestParam("projectId") Long projectId,
                                          @RequestParam("commentId") Long commentId) {
         try {

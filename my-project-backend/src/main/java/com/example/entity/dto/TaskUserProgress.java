@@ -20,7 +20,9 @@ public class TaskUserProgress extends BaseModel {
     private Long id; // 主键ID
     private Long userId; // 用户ID
     private Long taskId; // 任务ID
-    private Long currentValue; // 当前进度数值
+    private Integer currentValue; // 当前进度数值
     private Integer status; // 状态 0=未开始，1=进行中  2=已完成
     private Integer rewardClaimed; // 是否领取奖励  0=未领取 1=已领取
+    private Date lastProgressTime;
+    private Date completedTime;
 }

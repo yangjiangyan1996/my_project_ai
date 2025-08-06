@@ -159,6 +159,9 @@ public class QuanFacade {
 
     public Page<BarsInfoResp> getRelationBar(BarRelationPageReq req) {
         Page<BarsInfoResp> p = Page.of(req.getPage() - 1, req.getSize());
+        if (p.getRecords() == null) {
+            return p;
+        }
         List<BarsInfoResp> result = new ArrayList<>();
         Long total = 0L;
         Set<Long> barIds = new HashSet<>();

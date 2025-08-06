@@ -401,9 +401,9 @@
                 <h3 class="sidebar-title">我关注的圈子</h3>
                 <div class="sidebar-count">{{ followedBarsTotalCount }}</div>
               </div>
-              <div class="sidebar-section"  style="cursor: pointer;">
-                <h3 class="sidebar-title">待定</h3>
-                <div class="sidebar-count"></div>
+              <div class="sidebar-section" @click="openPointsDrawer" style="cursor: pointer;">
+                <h3 class="sidebar-title">我的积分</h3>
+                <div class="sidebar-count">{{ totalPoints }}</div>
               </div>
           </div>
          
@@ -411,6 +411,116 @@
 
       </div>
   </div>
+
+  <!-- 我的积分 drawer -->
+<el-drawer
+  v-model="pointsDrawerVisible"
+  title="我的积分"
+  size="480px"
+  direction="rtl"
+  :with-header="true"
+  class="custom-drawer"
+>
+  <el-scrollbar height="600px">
+    <!-- 积分概览 -->
+    <div class="points-overview">
+      <div class="points-total">
+        <span class="points-value">{{ totalPoints }}</span>
+        <span class="points-label">当前积分</span>
+      </div>
+      
+      <div class="points-stats">
+        <div class="points-stat-item">
+          <span class="stat-label">今日获得</span>
+          <span class="stat-value">{{ todayPoints }}</span>
+        </div>
+        <div class="points-stat-item">
+          <span class="stat-label">本月获得</span>
+          <span class="stat-value">{{ monthPoints }}</span>
+        </div>
+        <div class="points-stat-item">
+          <span class="stat-label">历史累计</span>
+          <span class="stat-value">{{ historyPoints }}</span>
+        </div>
+      </div>
+    </div>
+
+
+        
+    <div class="points-actions">
+      <el-button type="primary" plain @click="showPointsHistory">查看积分记录</el-button>
+      <el-button type="success" plain @click="showPointsShop">积分兑换</el-button>
+    </div>
+    
+    <!-- 积分规则 -->
+    <div class="points-rules">
+      <h3 class="rules-title">积分规则</h3>
+      <ul class="rules-list">
+        <li v-for="rule in pointsRules" :key="rule.id">
+          <span class="rule-name">{{ rule.name }}</span>
+          <span class="rule-points">+{{ rule.points }}积分</span>
+        </li>
+      </ul>
+    </div>
+
+        <!-- 积分任务 -->
+    <div class="points-tasks">
+      <h3 class="tasks-title">积分任务</h3>
+      
+      <div class="task-list">
+        <div 
+          class="task-item" 
+          v-for="task in pointsTasks" 
+          :key="task.id"
+        >
+          <div class="task-icon" :style="{ backgroundColor: task.color }">
+            <el-icon :size="20"><component :is="task.icon" /></el-icon>
+          </div>
+          <div class="task-content">
+            <div class="task-header">
+              <h4 class="task-name">{{ task.name }}</h4>
+              <span class="task-points">+{{ task.points }}积分</span>
+            </div>
+            <p class="task-desc">{{ task.description }}</p>
+            <el-progress 
+              :percentage="calculateTaskProgress(task)" 
+              :stroke-width="8"
+              :color="task.color"
+              :show-text="false"
+            />
+            <div class="task-meta">
+              <span>{{ task.progress }}/{{ task.target }}</span>
+              <el-button 
+                type="primary" 
+                size="small" 
+                :disabled="task.completed"
+                @click="completeTask(task)"
+              >
+                {{ task.completed ? '已完成' : '去完成' }}
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    
+    <div v-if="pointsLoading" class="points-loading">加载中...</div>
+  </el-scrollbar>
+  
+  <!-- 分页控件 -->
+  <div class="pagination-container">
+    <el-pagination
+      small
+      layout="prev, pager, next"
+      :total="pointsTotal"
+      :page-size="pointsSize"
+      v-model:current-page="pointsPage"
+      @current-change="handlePointsPageChange"
+      class="custom-pagination"
+    />
+  </div>
+</el-drawer>
 
   <!-- 我关注的圈子 drawer -->
 <el-drawer
@@ -656,6 +766,142 @@ const followedBarsSize = ref(10)
 const followedBarsTotal = ref(0)
 const followedBarsLoading = ref(false)
 const followedBarsTotalCount = ref(0)
+
+
+// 积分相关状态
+const pointsDrawerVisible = ref(false)
+const pointsLoading = ref(false)
+const pointsPage = ref(1)
+const pointsSize = ref(10)
+const pointsTotal = ref(0)
+
+// 积分数据
+const totalPoints = ref(0)
+const todayPoints = ref(0)
+const monthPoints = ref(0)
+const historyPoints = ref(0)
+
+// 积分任务数据
+const pointsTasks = ref([
+  {
+    id: 1,
+    name: '每日签到',
+    description: '每日登录并签到获取积分',
+    points: 10,
+    progress: 1,
+    target: 1,
+    completed: true,
+    color: '#409EFF',
+    icon: 'Calendar'
+  },
+  {
+    id: 2,
+    name: '发布内容',
+    description: '发布优质内容可获得积分',
+    points: 20,
+    progress: 3,
+    target: 5,
+    completed: false,
+    color: '#67C23A',
+    icon: 'Edit'
+  },
+  {
+    id: 3,
+    name: '点赞互动',
+    description: '点赞他人内容可获得积分',
+    points: 5,
+    progress: 8,
+    target: 10,
+    completed: false,
+    color: '#E6A23C',
+    icon: 'Star'
+  },
+  {
+    id: 4,
+    name: '评论交流',
+    description: '发表有意义的评论可获得积分',
+    points: 15,
+    progress: 2,
+    target: 5,
+    completed: false,
+    color: '#F56C6C',
+    icon: 'ChatDotRound'
+  }
+])
+
+// 积分规则
+const pointsRules = ref([
+  { id: 1, name: '每日签到', points: 10 },
+  { id: 2, name: '发布内容', points: 20 },
+  { id: 3, name: '点赞内容', points: 5 },
+  { id: 4, name: '发表评论', points: 15 },
+  { id: 5, name: '内容被收藏', points: 10 },
+  { id: 6, name: '完成成就', points: '50-200' }
+])
+
+// 打开积分抽屉
+const openPointsDrawer = () => {
+  pointsDrawerVisible.value = true
+  pointsPage.value = 1
+  fetchPointsData()
+}
+
+// 获取积分数据
+const fetchPointsData = async () => {
+  try {
+    pointsLoading.value = true
+    // 这里替换为实际的API调用
+    const res = await get('/api/auth/points/myPoints')
+    totalPoints.value = res.totalPoints || 0
+    todayPoints.value = res.todayPoints || 0
+    monthPoints.value = res.monthPoints || 0
+    historyPoints.value = res.historyPoints || 0
+    
+    // 获取积分任务
+    const tasksRes = await get('/api/auth/points/tasks')
+    pointsTasks.value = tasksRes.tasks || []
+    pointsTotal.value = tasksRes.total || 0
+  } catch (error) {
+    console.error('获取积分数据失败:', error)
+    ElMessage.error('获取积分数据失败')
+  } finally {
+    pointsLoading.value = false
+  }
+}
+
+// 计算任务进度
+const calculateTaskProgress = (task) => {
+  return Math.min(100, (task.progress / task.target) * 100)
+}
+
+// 完成任务
+const completeTask = (task) => {
+  if (task.completed) return
+  
+  // 这里添加完成任务逻辑
+  task.progress++
+  if (task.progress >= task.target) {
+    task.completed = true
+    totalPoints.value += task.points
+    ElMessage.success(`完成任务，获得${task.points}积分`)
+  }
+}
+
+// 分页变化
+const handlePointsPageChange = (page) => {
+  pointsPage.value = page
+  fetchPointsData()
+}
+
+// 查看积分历史
+const showPointsHistory = () => {
+  router.push('/points/history')
+}
+
+// 查看积分商城
+const showPointsShop = () => {
+  router.push('/points/shop')
+}
 
 
 onMounted(() => {
@@ -2184,5 +2430,190 @@ const handleTabChange = (tab) => {
   background-color: #f8fafc;
   border-radius: 8px;
   margin: 12px;
+}
+
+/* 积分抽屉样式 */
+.points-overview {
+  background: linear-gradient(135deg, #409EFF, #79BBFF);
+  border-radius: 12px;
+  padding: 20px;
+  color: white;
+  margin-bottom: 20px;
+}
+
+.points-total {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.points-value {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  display: block;
+}
+
+.points-label {
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+.points-stats {
+  display: flex;
+  justify-content: space-around;
+}
+
+.points-stat-item {
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 14px;
+  opacity: 0.8;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  display: block;
+}
+
+/* 积分任务样式 */
+.points-tasks {
+  margin-bottom: 20px;
+}
+
+.tasks-title {
+  font-size: 16px;
+  color: #303133;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f2f7;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.task-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.task-content {
+  flex: 1;
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.task-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.task-points {
+  color: #E6A23C;
+  font-weight: 600;
+}
+
+.task-desc {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #606266;
+}
+
+.task-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #909399;
+}
+
+/* 积分规则样式 */
+.points-rules {
+  margin-bottom: 20px;
+}
+
+.rules-title {
+  font-size: 16px;
+  color: #303133;
+  margin-bottom: 12px;
+}
+
+.rules-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.rules-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed #eaeaea;
+}
+
+.rule-name {
+  color: #606266;
+}
+
+.rule-points {
+  color: #E6A23C;
+  font-weight: 500;
+}
+
+/* 积分操作按钮 */
+.points-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.points-loading {
+  text-align: center;
+  padding: 20px;
+  color: #909399;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .points-stats {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .points-actions {
+    flex-direction: column;
+  }
+  
+  .points-actions .el-button {
+    width: 100%;
+  }
 }
 </style>
