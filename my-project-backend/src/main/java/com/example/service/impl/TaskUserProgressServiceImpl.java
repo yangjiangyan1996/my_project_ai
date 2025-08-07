@@ -27,12 +27,13 @@ public class TaskUserProgressServiceImpl extends ServiceImpl<TaskUserProgressMap
     }
 
     @Override
-    public List<TaskUserProgress> selectByUserId(Long userId) {
+    public List<TaskUserProgress> selectByUserId(Long userId, Integer status) {
         if (userId == null) {
             return new ArrayList<>();
         }
         return this.baseMapper.selectList(new QueryWrapper<TaskUserProgress>()
                 .eq("user_id", userId)
+                .eq(status != null, "status", status)
                 .eq("is_deleted", 0));
     }
 }

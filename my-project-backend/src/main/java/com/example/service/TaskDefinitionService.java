@@ -17,4 +17,6 @@ public interface TaskDefinitionService  {
     List<TaskDefinition> findByCategoryAndStatus(String category, int status);
 
     Page<TaskDefinition> myAchievementPageList(Page<TaskDefinition> page, AchievementMyPageReq req);
+
+    List<TaskDefinition> selectByIds(List<Long> taskIds);
 }

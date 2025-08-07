@@ -6,11 +6,11 @@ public class TaskCompletedEvent extends ApplicationEvent {
     private final Long userId;
     private final Long taskId;
     private final Integer rewardType;
-    private final Long rewardValue;
+    private final String rewardValue;
 
     // 使用Object作为事件源
     public TaskCompletedEvent(Object source, Long userId, Long taskId,
-                              Integer rewardType, Long rewardValue) {
+                              Integer rewardType, String rewardValue) {
         super(source);  // 必须调用父类构造函数
         this.userId = userId;
         this.taskId = taskId;
@@ -31,7 +31,7 @@ public class TaskCompletedEvent extends ApplicationEvent {
         return rewardType;
     }
 
-    public Long getRewardValue() {
+    public String getRewardValue() {
         return rewardValue;
     }
 }

@@ -9,6 +9,7 @@ import com.example.Facade.TieFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.req.*;
+import com.example.entity.resp.AchievementBaseInfoResp;
 import com.example.entity.resp.AchievementMyPageResp;
 import com.example.entity.resp.BarsInfoResp;
 import com.example.filter.UserUtil;
@@ -56,10 +57,27 @@ public class AchievementController {
             Page<AchievementMyPageResp> result = taskFacade.myAchievementPageList(req);
             return RespBean.success(result);
         }catch (ValidationException e) {
-            log.error("QuanController#myFavoriteBar,req:{}", JSON.toJSONString(req), e);
+            log.error("AchievementController#myAchievementPageList,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("QuanController#myFavoriteBar,req:{}", JSON.toJSONString(req), e);
+            log.error("AchievementController#myAchievementPageList,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+
+    @GetMapping("/getMyAchievementBaseInfo")
+    public RespBean<AchievementBaseInfoResp> getMyAchievementBaseInfo() {
+        try {
+            Long userId = UserUtil.getCurrentUser().getId();
+            AchievementBaseInfoResp result = taskFacade.getMyAchievementBaseInfo(userId);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("AchievementController#getMyAchievementBaseInfo", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("AchievementController#getMyAchievementBaseInfo", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

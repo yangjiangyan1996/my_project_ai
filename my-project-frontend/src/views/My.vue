@@ -438,22 +438,35 @@
           <span class="stat-label">本月获得</span>
           <span class="stat-value">{{ monthPoints }}</span>
         </div>
-        <div class="points-stat-item">
-          <span class="stat-label">历史累计</span>
-          <span class="stat-value">{{ historyPoints }}</span>
+        <!-- Add badges display -->
+        <div class="points-stat-item" v-if="badges.length > 0">
+          <span class="stat-label">我的勋章</span>
+          <div class="badges-container">
+            <el-tag 
+              v-for="(badge, index) in badges" 
+              :key="index"
+              type="warning"
+              size="small"
+              class="badge-tag"
+            >
+              {{ badge }}
+            </el-tag>
+          </div>
+        </div>
+        <div class="points-stat-item" v-else>
+          <span class="stat-label">我的勋章</span>
+          <span class="stat-value">暂无勋章</span>
         </div>
       </div>
     </div>
 
-
-        
     <div class="points-actions">
       <el-button type="primary" plain @click="showPointsHistory">查看积分记录</el-button>
       <el-button type="success" plain @click="showPointsShop">积分兑换</el-button>
     </div>
 
     <!-- 积分规则 -->
-    <div class="points-rules">
+    <!-- <div class="points-rules">
       <h3 class="rules-title">积分规则</h3>
       <ul class="rules-list">
         <li v-for="rule in pointsRules" :key="rule.id">
@@ -461,7 +474,7 @@
           <span class="rule-points">+{{ rule.points }}积分</span>
         </li>
       </ul>
-    </div>
+    </div> -->
 
         <!-- 积分任务 -->
     <div class="points-tasks">
@@ -505,13 +518,14 @@
 
        <!-- 分页控件 -->
       <div class="pagination-container">
-        <el-pagination
+       <el-pagination
           small
           layout="prev, pager, next"
-          :total="pointsTotal"
-          :page-size="pointsSize"
-          v-model:current-page="pointsPage"
+          :total="pointsTaskTotal"
+          :page-size="pointsTaskSize"
+          :current-page="pointsTaskPage"
           @current-change="handlePointsTaskPageChange"
+          :disabled="pointsTaskLoading"
           class="custom-pagination"
         />
       </div>
@@ -801,7 +815,24 @@ const pointsTaskPage = ref(1)
 const pointsTaskSize = ref(5)
 const pointsTaskTotal = ref(0)
 const pointsTaskLoading = ref(false)
+const badges = ref([])
 
+
+
+const fetchPointsInfo = async () => {
+  try {
+    const res = await get('/api/auth/achievement/getMyAchievementBaseInfo')
+    if (res) {
+      totalPoints.value = res.points || 0
+      todayPoints.value = res.todayPoints || 0
+      monthPoints.value = res.monthPoints || 0
+      // Set badges if available
+      badges.value = res.badges || []
+    }
+  } catch (error) {
+    console.error('获取积分信息失败:', error)
+  }
+}
 
 
 // 获取积分任务数据
@@ -835,8 +866,9 @@ const fetchPointsTasks = async () => {
       // 按照sortOrder排序
       pointsTasks.value.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
       
-      pointsTaskTotal.value = res.total || 0
-      console.log("pointsTasks.value",pointsTasks.value)
+       // 确保 total 是数字类型
+      pointsTaskTotal.value = Number(res.total) || 0
+      console.log("Total tasks:", pointsTaskTotal.value, "Current page:", pointsTaskPage.value)
     }
   } catch (error) {
     console.error('获取积分任务失败:', error)
@@ -944,6 +976,7 @@ const pointsRules = ref([
 const openPointsDrawer = () => {
   pointsDrawerVisible.value = true
   pointsPage.value = 1
+   fetchPointsInfo() // Replace fetchPointsTasks() with this
   fetchPointsTasks()
 }
 
@@ -2677,5 +2710,41 @@ const handleTabChange = (tab) => {
   .points-actions .el-button {
     width: 100%;
   }
+}
+
+.badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.badge-tag {
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+/* Adjust points stats layout */
+.points-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.points-stat-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 18px;
+}
+
+/* For the badges item specifically */
+.points-stat-item:last-child {
+  grid-column: span 2;
+  text-align: center;
 }
 </style>

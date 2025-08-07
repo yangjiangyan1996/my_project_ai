@@ -15,5 +15,5 @@ import java.util.Optional;
 public interface TaskUserProgressService  extends IService<TaskUserProgress> {
     Optional<TaskUserProgress> findByUserIdAndTaskId(Long userId, Long taskId);
 
-    List<TaskUserProgress> selectByUserId(Long userId);
+    List<TaskUserProgress> selectByUserId(Long userId, Integer status);
 }

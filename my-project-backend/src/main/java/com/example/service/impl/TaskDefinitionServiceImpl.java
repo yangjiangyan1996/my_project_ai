@@ -30,6 +30,15 @@ public class TaskDefinitionServiceImpl extends ServiceImpl<TaskDefinitionMapper,
     }
 
     @Override
+    public List<TaskDefinition> selectByIds(List<Long> taskIds) {
+        return this.baseMapper.selectList(
+                new QueryWrapper<TaskDefinition>()
+                        .in("id", taskIds)
+                        .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
     public Page<TaskDefinition> myAchievementPageList(Page<TaskDefinition> page, AchievementMyPageReq req) {
         return this.baseMapper.selectPage(
                 page,

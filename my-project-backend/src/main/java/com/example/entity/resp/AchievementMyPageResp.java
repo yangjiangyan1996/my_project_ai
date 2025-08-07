@@ -20,7 +20,7 @@ public class AchievementMyPageResp {
     private String description; // 任务描述
     private Integer targetValue; // 目标数值（如5次评论）
     private String rewardTypeName; // 积分 / 勋章 / 经验值
-    private Long rewardValue; // 奖励值
+    private String rewardValue; // 奖励值
     private Date startTime; // 任务开始时间
     private Date endTime; // 任务结束时间
     private String icon;//图标

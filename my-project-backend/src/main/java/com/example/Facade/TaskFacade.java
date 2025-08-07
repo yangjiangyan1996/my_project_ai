@@ -1,19 +1,19 @@
 package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.example.entity.dto.AccountShow;
-import com.example.entity.dto.Messages;
 import com.example.entity.dto.TaskDefinition;
 import com.example.entity.dto.TaskUserProgress;
 import com.example.entity.req.AchievementMyPageReq;
+import com.example.entity.resp.AchievementBaseInfoResp;
 import com.example.entity.resp.AchievementMyPageResp;
-import com.example.entity.resp.MsgOfFollowerResp;
 import com.example.enums.AchievementEnums;
 import com.example.service.TaskDefinitionService;
 import com.example.service.TaskUserProgressService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,15 +33,15 @@ public class TaskFacade {
     TaskDefinitionService taskDefinitionService;
 
 
-    public void addPoints(Long userId, Long rewardValue) {
-        
+    public void addPoints(Long userId, String rewardValue) {
+
     }
 
     public void awardBadge(Long userId, Long taskId) {
-        
+
     }
 
-    public void addExperience(Long userId, Long rewardValue) {
+    public void addExperience(Long userId, String rewardValue) {
     }
 
     public Page<AchievementMyPageResp> myAchievementPageList(AchievementMyPageReq req) {
@@ -50,7 +50,7 @@ public class TaskFacade {
             return Page.of(req.getPage() - 1, req.getSize());
         }
 
-        List<TaskUserProgress> myTaskList = taskUserProgressService.selectByUserId(req.getUserId());
+        List<TaskUserProgress> myTaskList = taskUserProgressService.selectByUserId(req.getUserId(), null);
         Map<Long, TaskUserProgress> taskId2TaskInfoMap = myTaskList.stream().collect(Collectors.toMap(v -> v.getTaskId(), v -> v));
 
         List<AchievementMyPageResp> collect = list.getRecords().stream().map(v -> {
@@ -84,5 +84,54 @@ public class TaskFacade {
         result.setTotal(list.getTotal());
         result.setRecords(collect);
         return result;
+    }
+
+    public AchievementBaseInfoResp getMyAchievementBaseInfo(Long userId) {
+        long points = 0L;
+        long todayPoints = 0L;
+        long monthPoints = 0L;
+        List<String> medals = new ArrayList<>();
+        /**
+         * 获取用户积分
+         */
+        List<TaskUserProgress> taskOfUserCompleted = taskUserProgressService.selectByUserId(userId, AchievementEnums.ProgressStatus.COMPLETED.getCode());
+        if (!CollectionUtils.isEmpty(taskOfUserCompleted)) {
+            List<Long> taskIds = taskOfUserCompleted.stream().map(v -> v.getTaskId()).distinct().collect(Collectors.toList());
+            List<TaskDefinition> task = taskDefinitionService.selectByIds(taskIds);
+            Map<Long, TaskDefinition> taskId2TaskInfoMap = task.stream().filter(v -> v.getRewardType().equals(AchievementEnums.RewardType.POINTS.getCode()))
+                    .collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+            //计算积分
+            if (!CollectionUtils.isEmpty(taskId2TaskInfoMap)) {
+                //计算总积分
+                points = taskId2TaskInfoMap.values().stream().mapToLong(v -> Integer.valueOf(v.getRewardValue())).sum();
+
+                //计算今日积分
+                todayPoints = taskOfUserCompleted.stream()
+                        .filter(v -> taskId2TaskInfoMap.containsKey(v.getTaskId()))
+                        .filter(v -> v.getLastProgressTime() != null && v.getLastProgressTime().getTime() > System.currentTimeMillis() - 24 * 60 * 60 * 1000)
+                        .mapToLong(v -> v.getCurrentValue()).sum();
+
+                //计算本月积分
+                monthPoints = taskOfUserCompleted.stream()
+                        .filter(v -> taskId2TaskInfoMap.containsKey(v.getTaskId()))
+                        .filter(v -> v.getLastProgressTime() != null && v.getLastProgressTime().getTime() > System.currentTimeMillis() - 24 * 60 * 60 * 1000 * 30)
+                        .mapToLong(v -> v.getCurrentValue()).sum();
+            }
+
+            //计算勋章
+            medals = task.stream()
+                    .filter(v -> v.getRewardType().equals(AchievementEnums.RewardType.MEDAL.getCode()))
+                    .map(v -> v.getRewardValue())
+                    .collect(Collectors.toList());
+
+        }
+
+        AchievementBaseInfoResp resp = new AchievementBaseInfoResp();
+        resp.setPoints(points);
+        resp.setTodayPoints(todayPoints);
+        resp.setMonthPoints(monthPoints);
+        resp.setBadges(medals);
+        return resp;
     }
 }
