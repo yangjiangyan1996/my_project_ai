@@ -19,6 +19,7 @@ public class AchievementMyPageResp {
     private String categoryName; // 分类，login / like / comment 等
     private String description; // 任务描述
     private Integer targetValue; // 目标数值（如5次评论）
+    private Integer rewardType; // 积分 / 勋章 / 经验值
     private String rewardTypeName; // 积分 / 勋章 / 经验值
     private String rewardValue; // 奖励值
     private Date startTime; // 任务开始时间
@@ -27,4 +28,6 @@ public class AchievementMyPageResp {
     private String color;
     private Integer sortOrder;//排序顺序
     private Integer myTargetValue;// 我完成的目标数值（如5次评论）
+    private Integer statusOfUserTask;
+    private Integer rewardClaimed;
 }

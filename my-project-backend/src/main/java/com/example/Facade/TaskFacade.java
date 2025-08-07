@@ -67,14 +67,23 @@ public class TaskFacade {
                     }
                     p.setDescription(v.getDescription());
                     p.setTargetValue(v.getTargetValue());
+                    p.setRewardType(v.getRewardType());
                     p.setRewardTypeName(AchievementEnums.RewardType.getByCode(v.getRewardType()));
-                    p.setRewardValue(v.getRewardValue());
+                    if (v.getRewardType().equals(AchievementEnums.RewardType.POINTS.getCode())) {
+                        p.setRewardValue( "+" + v.getRewardValue() + "积分");
+                    } else if (v.getRewardType().equals(AchievementEnums.RewardType.MEDAL.getCode())) {
+                        p.setRewardValue("获得" + v.getRewardValue() + "勋章");
+                    } else {
+                        p.setRewardValue("+" + v.getRewardValue() + "经验值");
+                    }
                     p.setStartTime(v.getStartTime());
                     p.setEndTime(v.getEndTime());
                     p.setSortOrder(v.getSortOrder());
                     if (taskId2TaskInfoMap.containsKey(v.getId())) {
                         TaskUserProgress t = taskId2TaskInfoMap.get(v.getId());
                         p.setMyTargetValue(t.getCurrentValue());
+                        p.setStatusOfUserTask(t.getStatus());
+                        p.setRewardClaimed(t.getRewardClaimed());
                     }
                     return p;
                 }).sorted((o1, o2) -> o2.getSortOrder() - o1.getSortOrder())

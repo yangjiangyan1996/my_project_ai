@@ -499,17 +499,22 @@
               :color="task.color || '#409EFF'"
               :show-text="false"
             />
+            
+
             <div class="task-meta">
               <span>{{ task.progress }}/{{ task.target }}</span>
               <el-button 
                 type="primary" 
                 size="small" 
-                :disabled="task.completed"
-                @click="completeTask(task)"
+                :disabled="task.statusOfUserTask === 0 || task.statusOfUserTask === 1"
+                @click="handleTaskReward(task)"
+                :loading="task.loading"
               >
-                {{ task.completed ? '已完成' : '去完成' }}
+                {{ getTaskButtonText(task) }}
               </el-button>
             </div>
+
+
           </div>
         </div>
       </transition-group>
@@ -830,6 +835,18 @@ const fetchPointsInfo = async () => {
 }
 
 
+const getTaskButtonText = (task) => {
+  if (task.statusOfUserTask === 0 || task.statusOfUserTask === 1) {
+    return '进行中'
+  } else if (task.statusOfUserTask === 2 && task.rewardClaimed === 0) {
+    return '领取'
+  } else if (task.statusOfUserTask === 2 && task.rewardClaimed === 1) {
+    return '已完成'
+  }
+  return '去完成'
+}
+
+
 // 获取积分任务数据
 // 获取积分任务数据（带平滑滚动效果）
 const fetchPointsTasks = async () => {
@@ -856,9 +873,11 @@ const fetchPointsTasks = async () => {
         type: task.typeName,
         category: task.categoryName,
         rewardType: task.rewardTypeName,
-        startTime: task.startTime,
-        endTime: task.endTime,
-        sortOrder: task.sortOrder || 0
+        startTime: task.startTime  || '',
+        endTime: task.endTime  || '',
+        sortOrder: task.sortOrder || 0,
+        statusOfUserTask: task.statusOfUserTask,
+        rewardClaimed: task.rewardClaimed,
       }))
       
       pointsTaskTotal.value = Number(res.total) || 0
