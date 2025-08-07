@@ -1,8 +1,11 @@
 package com.example.aop.task;
 
+import com.example.Facade.TaskFacade;
 import com.example.annotations.TaskProgress;
+import com.example.config.AsyncTaskUtil;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -15,7 +18,8 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class TaskProgressAspect {
-    private final TaskProgressService taskProgressService;
+    @Resource
+    TaskFacade taskFacade;
     
     // 拦截所有带有@TaskProgress注解的方法
     @Around("@annotation(taskProgress)")
@@ -37,20 +41,13 @@ public class TaskProgressAspect {
         }
         
         // 4. 异步更新任务进度
-//        AsyncTaskUtil.execute(() -> {
-//            taskProgressService.updateProgressAsync(
-//                    userId,
-//                    taskProgress.category(),
-//                    taskProgress.increment()
-//            );
-//        });
-        taskProgressService.updateProgressAsync(
-                userId,
-                taskProgress.category(),
-                taskProgress.increment()
-        );
-
-        
+        AsyncTaskUtil.execute(() -> {
+            taskFacade.updateProgressAsync(
+                    userId,
+                    taskProgress.category(),
+                    taskProgress.increment()
+            );
+        });
         return result;
     }
     
