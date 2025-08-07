@@ -2,16 +2,14 @@ package com.example.Facade;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.example.entity.dto.TaskDefinition;
-import com.example.entity.dto.TaskUserProgress;
+import com.example.entity.dto.*;
 import com.example.entity.query.TaskProgressQuery;
 import com.example.entity.req.AchievementMyPageReq;
 import com.example.entity.resp.AchievementBaseInfoResp;
 import com.example.entity.resp.AchievementMyPageResp;
 import com.example.entity.vo.TaskCompletedEvent;
 import com.example.enums.AchievementEnums;
-import com.example.service.TaskDefinitionService;
-import com.example.service.TaskUserProgressService;
+import com.example.service.*;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +36,12 @@ public class TaskFacade {
     TaskUserProgressService taskUserProgressService;
     @Resource
     TaskDefinitionService taskDefinitionService;
+    @Resource
+    TaskUserBadgeService taskUserBadgeService;
+    @Resource
+    TaskBadgeService taskBadgeService;
+    @Resource
+    TaskUserPointService taskUserPointService;
     @Resource
     ApplicationEventPublisher eventPublisher;
 
@@ -75,7 +79,7 @@ public class TaskFacade {
                 progress.setStatus(AchievementEnums.ProgressStatus.COMPLETED.getCode()); // 2=已完成
                 progress.setCompletedTime(new Date());
 
-                // 发布任务完成事件  TODO yang 后续在看需要完成什么内容
+                // 发布任务完成事件  TODO yang  搜【后续在看需要完成什么内容】
                 eventPublisher.publishEvent(new TaskCompletedEvent(this,
                         userId,
                         task.getId(),
@@ -109,18 +113,6 @@ public class TaskFacade {
         progress.setRewardClaimed(AchievementEnums.RewardStatus.NOT_CLAIMED.getCode());
         progress.setLastProgressTime(new Date());
         return progress;
-    }
-
-
-    public void addPoints(Long userId, String rewardValue) {
-
-    }
-
-    public void awardBadge(Long userId, Long taskId) {
-
-    }
-
-    public void addExperience(Long userId, String rewardValue) {
     }
 
     public Page<AchievementMyPageResp> myAchievementPageList(AchievementMyPageReq req) {
@@ -234,6 +226,59 @@ public class TaskFacade {
         query.setTaskId(taskId);
         TaskUserProgress taskUser = taskUserProgressService.selectByQuery(query);
         taskUser.setRewardClaimed(AchievementEnums.RewardStatus.CLAIMED.getCode());
-        return taskUserProgressService.updateById(taskUser);
+        boolean result = taskUserProgressService.updateById(taskUser);
+        if ( result) {
+            switch (task.getRewardType()) {
+                case 1: // 积分
+                    log.info("用户 {} 获得积分 {}", userId, task.getId());
+                    addPoints(userId, Integer.valueOf(task.getRewardValue()));
+                    break;
+                case 2: // 勋章
+                    log.info("用户 {} 获得勋章 {}", userId, task.getId());
+                    TaskBadge taskBadge = taskBadgeService.selectByTaskId(task.getId());
+                    awardBadge(userId, taskBadge.getId());
+                    break;
+                case 3: // 经验值
+                    log.info("用户 {} 获得经验值 {}", userId, task.getId());
+                    addExperience(userId, task.getId());
+                    break;
+            }
+        }
+        return true;
+    }
+
+
+    public void addPoints(Long userId, Integer rewardValue) {
+        TaskUserPoint e = taskUserPointService.selectByUserId(userId);
+        if (e == null) {
+            e = new TaskUserPoint();
+            e.setUserId(userId);
+            e.setPoints(rewardValue);
+            e.setCreatedAt(new Date());
+            e.setCreatedBy(userId);
+            e.setModifiedAt(new Date());
+            e.setModifiedBy(userId);
+            e.setIsDeleted(0);
+            taskUserPointService.save(e);
+        } else {
+            e.setPoints(e.getPoints() + rewardValue);
+            taskUserPointService.updateById(e);
+        }
+    }
+
+    public Boolean awardBadge(Long userId, Long badgeId) {
+        TaskUserBadge e = new TaskUserBadge();
+        e.setUserId(userId);
+        e.setBadgeId(badgeId);
+        e.setAchievedAt(new Date());
+        e.setCreatedAt(new Date());
+        e.setCreatedBy(userId);
+        e.setModifiedAt(new Date());
+        e.setModifiedBy(userId);
+        e.setIsDeleted(0);
+        return taskUserBadgeService.save(e);
+    }
+
+    public void addExperience(Long userId, Long taskId) {
     }
 }

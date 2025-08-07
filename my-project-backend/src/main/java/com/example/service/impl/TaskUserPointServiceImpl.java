@@ -1,5 +1,6 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.TaskUserPoint;
 import com.example.mapper.TaskUserPointMapper;
@@ -14,4 +15,10 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class TaskUserPointServiceImpl extends ServiceImpl<TaskUserPointMapper, TaskUserPoint> implements TaskUserPointService {
+    @Override
+    public TaskUserPoint selectByUserId(Long userId) {
+        return this.baseMapper.selectOne(new QueryWrapper<TaskUserPoint>()
+                .eq("user_id", userId)
+                .eq("is_deleted", 0));
+    }
 }

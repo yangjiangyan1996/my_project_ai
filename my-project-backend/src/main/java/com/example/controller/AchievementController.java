@@ -37,7 +37,7 @@ public class AchievementController {
 
 
     /**
-     * 获取用户收藏的圈
+     * 获取我的任务列表
      * @param req
      * @return
      */
@@ -66,7 +66,10 @@ public class AchievementController {
     }
 
 
-
+    /**
+     * 获取我的积分，勋章
+     * @return
+     */
     @GetMapping("/getMyAchievementBaseInfo")
     public RespBean<AchievementBaseInfoResp> getMyAchievementBaseInfo() {
         try {
@@ -83,6 +86,11 @@ public class AchievementController {
     }
 
 
+    /**
+     * 领取任务奖励
+     * @param taskId
+     * @return
+     */
     @GetMapping("/receiverTaskReward")
     public RespBean<Boolean> receiverTaskReward(@RequestParam("taskId") Long taskId) {
         try {
