@@ -3,6 +3,7 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.dto.TaskDefinition;
 import com.example.entity.dto.TaskUserProgress;
+import com.example.entity.query.TaskProgressQuery;
 import com.example.entity.req.AchievementMyPageReq;
 import com.example.entity.resp.AchievementBaseInfoResp;
 import com.example.entity.resp.AchievementMyPageResp;
@@ -10,6 +11,7 @@ import com.example.enums.AchievementEnums;
 import com.example.service.TaskDefinitionService;
 import com.example.service.TaskUserProgressService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
  * @Date 2025/8/6 10:00
  */
 @Service
+@Slf4j
 public class TaskFacade {
 
     @Resource
@@ -142,5 +145,19 @@ public class TaskFacade {
         resp.setMonthPoints(monthPoints);
         resp.setBadges(medals);
         return resp;
+    }
+
+    public Boolean receiverTaskReward(Long userId, Long taskId) {
+        TaskDefinition task = taskDefinitionService.selectById(taskId);
+        if (task == null) {
+            log.error("AchievementController#receiverTaskReward,taskId:{}不存在", taskId);
+            return false;
+        }
+        TaskProgressQuery query = new TaskProgressQuery(task);
+        query.setUserId(userId);
+        query.setTaskId(taskId);
+        TaskUserProgress taskUser = taskUserProgressService.selectByQuery(query);
+        taskUser.setRewardClaimed(AchievementEnums.RewardStatus.CLAIMED.getCode());
+        return taskUserProgressService.updateById(taskUser);
     }
 }

@@ -1,4 +1,6 @@
-package com.example.aop.task;
+package com.example.annotations;
+
+import com.example.enums.AchievementEnums;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -10,8 +12,9 @@ import java.lang.annotation.Target;
 public @interface TaskProgress {
     /**
      * 任务分类标识（对应task_definition表中的category字段）
+     * @return
      */
-    String category();
+    AchievementEnums.Category[] category();
     
     /**
      * 进度增加值（默认加1）

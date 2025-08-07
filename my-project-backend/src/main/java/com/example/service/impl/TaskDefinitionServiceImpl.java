@@ -25,8 +25,18 @@ import java.util.List;
 @Service
 public class TaskDefinitionServiceImpl extends ServiceImpl<TaskDefinitionMapper, TaskDefinition> implements TaskDefinitionService {
     @Override
-    public List<TaskDefinition> findByCategoryAndStatus(String category, int status) {
-        return null;
+    public List<TaskDefinition> findByCategoryAndStatus(List<String> category, int status) {
+        return this.baseMapper.selectList(
+                new QueryWrapper<TaskDefinition>()
+                        .in("category", category)
+                        .eq("status", status)
+                        .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
+    public TaskDefinition selectById(Long taskId) {
+        return this.baseMapper.selectById(taskId);
     }
 
     @Override

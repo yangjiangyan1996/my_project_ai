@@ -1,16 +1,14 @@
 package com.example.aop.task;
 
-import com.example.config.AsyncTaskUtil;
+import com.example.annotations.TaskProgress;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 @Aspect

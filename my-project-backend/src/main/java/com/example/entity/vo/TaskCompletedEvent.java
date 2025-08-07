@@ -1,4 +1,4 @@
-package com.example.aop.task;
+package com.example.entity.vo;
 
 import org.springframework.context.ApplicationEvent;
 

@@ -4,30 +4,21 @@ import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CommonFacade;
 import com.example.Facade.ProjectFacade;
-import com.example.aop.task.TaskProgress;
-import com.example.config.AsyncTaskUtil;
+import com.example.annotations.TaskProgress;
 import com.example.config.QqMailService;
 import com.example.config.UserNotLoggedInException;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
-import com.example.entity.dto.Projects;
 import com.example.entity.req.*;
 import com.example.entity.resp.*;
-import com.example.enums.CommonEnum;
-import com.example.enums.ProjectEnum;
+import com.example.enums.AchievementEnums;
 import com.example.filter.UserUtil;
 import com.example.service.ProjectService;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
-import org.springframework.util.CollectionUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @Slf4j
@@ -369,7 +360,7 @@ public class ProjectController {
     }
 
     @GetMapping("/commentLike")
-    @TaskProgress(category = "like", increment = 1)
+    @TaskProgress(category = {AchievementEnums.Category.CONTENT_LIKE}, increment = 1)
     public RespBean<Boolean> commentLike(@RequestParam("projectId") Long projectId,
                                          @RequestParam("commentId") Long commentId) {
         try {

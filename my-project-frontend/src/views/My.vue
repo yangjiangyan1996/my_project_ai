@@ -490,7 +490,7 @@
           <div class="task-content">
             <div class="task-header">
               <h4 class="task-name">{{ task.name }}</h4>
-              <span class="task-points">+{{ task.points }}积分</span>
+              <span class="task-points">{{ task.points }}</span>
             </div>
             <p class="task-desc">{{ task.description }}</p>
             <el-progress 

@@ -82,4 +82,20 @@ public class AchievementController {
         }
     }
 
+
+    @GetMapping("/receiverTaskReward")
+    public RespBean<Boolean> receiverTaskReward(@RequestParam("taskId") Long taskId) {
+        try {
+            Long userId = UserUtil.getCurrentUser().getId();
+            Boolean result = taskFacade.receiverTaskReward(userId, taskId);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("AchievementController#receiverTaskReward,taskId:{}",taskId, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("AchievementController#receiverTaskReward,taskId:{}",taskId, e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
 }

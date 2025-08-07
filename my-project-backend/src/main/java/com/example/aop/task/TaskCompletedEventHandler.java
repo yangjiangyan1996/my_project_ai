@@ -1,9 +1,9 @@
 package com.example.aop.task;
 
 import com.example.Facade.TaskFacade;
+import com.example.entity.vo.TaskCompletedEvent;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
