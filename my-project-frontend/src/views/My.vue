@@ -504,9 +504,9 @@
             <div class="task-meta">
               <span>{{ task.progress }}/{{ task.target }}</span>
               <el-button 
-                type="primary" 
+                :type="getTaskButtonType(task)"
                 size="small" 
-                :disabled="task.statusOfUserTask === 0 || task.statusOfUserTask === 1"
+                :disabled="task.statusOfUserTask === 0 || task.statusOfUserTask === 1 || task.rewardClaimed === 1"
                 @click="handleTaskReward(task)"
                 :loading="task.loading"
               >
@@ -837,15 +837,53 @@ const fetchPointsInfo = async () => {
 
 const getTaskButtonText = (task) => {
   if (task.statusOfUserTask === 0 || task.statusOfUserTask === 1) {
-    return '进行中'
-  } else if (task.statusOfUserTask === 2 && task.rewardClaimed === 0) {
-    return '领取'
-  } else if (task.statusOfUserTask === 2 && task.rewardClaimed === 1) {
-    return '已完成'
+    return '进行中';
+  } else if (task.statusOfUserTask === 2) {
+    return task.rewardClaimed === 0 ? '领取' : '已完成';
   }
-  return '去完成'
-}
+  return '去完成';
+};
 
+const handleTaskReward = async (task) => {
+  try {
+    if (task.statusOfUserTask !== 2 || task.rewardClaimed !== 0) return;
+    
+    task.loading = true;
+    const res = await get(`/api/auth/achievement/receiverTaskReward?taskId=${task.id}`);
+    console.log("task",task)
+    if (res) {
+      // 更新任务状态
+      task.rewardClaimed = 1;
+      ElMessage.success(
+        `成功领取 ${task.points} ` 
+      );
+      
+      // 如果是积分奖励，更新总积分
+      if (task.rewardType === 1) {
+        totalPoints.value += Number(task.rewardValue) || 0;
+      }
+      
+      // 如果是勋章奖励，更新勋章列表
+      if (task.rewardType === 2) {
+        badges.value = [...badges.value, task.rewardValue];
+      }
+    }
+  } catch (error) {
+    console.error('领取奖励失败:', error);
+    ElMessage.error('领取奖励失败');
+  } finally {
+    task.loading = false;
+  }
+};
+
+const getTaskButtonType = (task) => {
+  if (task.statusOfUserTask === 2 && task.rewardClaimed === 0) {
+    return 'success'; // 可领取状态显示绿色
+  } else if (task.rewardClaimed === 1) {
+    return 'info';    // 已完成状态显示蓝色
+  }
+  return 'primary';   // 默认状态
+};
 
 // 获取积分任务数据
 // 获取积分任务数据（带平滑滚动效果）
@@ -878,6 +916,7 @@ const fetchPointsTasks = async () => {
         sortOrder: task.sortOrder || 0,
         statusOfUserTask: task.statusOfUserTask,
         rewardClaimed: task.rewardClaimed,
+        rewardTypeName: task.rewardTypeName,
       }))
       
       pointsTaskTotal.value = Number(res.total) || 0
@@ -2807,5 +2846,30 @@ const handleTabChange = (tab) => {
   .task-icon {
     margin-bottom: 10px;
   }
+}
+
+/* 在style部分添加 */
+.task-points {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.task-meta .el-button {
+  min-width: 80px;
+  transition: all 0.3s ease;
+}
+
+/* 已完成按钮样式 */
+.el-button--info.is-disabled {
+  opacity: 1;
+  background-color: #f0f9ff;
+  border-color: #c6e2ff;
+  color: #409eff;
+}
+
+/* 可领取按钮悬停效果 */
+.el-button--success:not(.is-disabled):hover {
+  background-color: #67c23a;
+  border-color: #67c23a;
 }
 </style>
