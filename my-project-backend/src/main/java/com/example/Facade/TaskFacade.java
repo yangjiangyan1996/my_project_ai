@@ -45,9 +45,9 @@ public class TaskFacade {
     }
 
     public Page<AchievementMyPageResp> myAchievementPageList(AchievementMyPageReq req) {
-        Page<TaskDefinition> list = taskDefinitionService.myAchievementPageList(Page.of(req.getPage() - 1, req.getSize()), req);
+        Page<TaskDefinition> list = taskDefinitionService.myAchievementPageList(Page.of(req.getPage(), req.getSize()), req);
         if (list.getRecords().isEmpty()) {
-            return Page.of(req.getPage() - 1, req.getSize());
+            return Page.of(req.getPage(), req.getSize());
         }
 
         List<TaskUserProgress> myTaskList = taskUserProgressService.selectByUserId(req.getUserId(), null);
@@ -80,7 +80,7 @@ public class TaskFacade {
                 }).sorted((o1, o2) -> o2.getSortOrder() - o1.getSortOrder())
                 .collect(Collectors.toList());
 
-        Page<AchievementMyPageResp> result = Page.of(req.getPage() - 1, req.getSize());
+        Page<AchievementMyPageResp> result = Page.of(req.getPage(), req.getSize());
         result.setTotal(list.getTotal());
         result.setRecords(collect);
         return result;

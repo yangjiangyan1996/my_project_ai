@@ -412,7 +412,7 @@
       </div>
   </div>
 
-  <!-- 我的积分 drawer -->
+<!-- 我的积分 drawer -->
 <el-drawer
   v-model="pointsDrawerVisible"
   title="我的积分"
@@ -422,7 +422,7 @@
   class="custom-drawer"
 >
   <el-scrollbar height="600px">
-    <!-- 积分概览 -->
+    <!-- 积分概览 - 固定不动 -->
     <div class="points-overview">
       <div class="points-total">
         <span class="points-value">{{ totalPoints }}</span>
@@ -438,7 +438,6 @@
           <span class="stat-label">本月获得</span>
           <span class="stat-value">{{ monthPoints }}</span>
         </div>
-        <!-- Add badges display -->
         <div class="points-stat-item" v-if="badges.length > 0">
           <span class="stat-label">我的勋章</span>
           <div class="badges-container">
@@ -465,22 +464,21 @@
       <el-button type="success" plain @click="showPointsShop">积分兑换</el-button>
     </div>
 
-    <!-- 积分规则 -->
-    <!-- <div class="points-rules">
-      <h3 class="rules-title">积分规则</h3>
-      <ul class="rules-list">
-        <li v-for="rule in pointsRules" :key="rule.id">
-          <span class="rule-name">{{ rule.name }}</span>
-          <span class="rule-points">+{{ rule.points }}积分</span>
-        </li>
-      </ul>
-    </div> -->
-
-        <!-- 积分任务 -->
+    <!-- 积分任务 - 可滚动区域 -->
     <div class="points-tasks">
       <h3 class="tasks-title">积分任务</h3>
       
-      <div class="task-list">
+      <!-- 添加加载动画 -->
+      <div v-if="pointsTaskLoading" class="task-loading">
+        <el-skeleton :rows="3" animated />
+      </div>
+      
+      <transition-group 
+        name="task-list" 
+        tag="div" 
+        class="task-list"
+        v-if="!pointsTaskLoading"
+      >
         <div 
           class="task-item" 
           v-for="task in pointsTasks" 
@@ -498,7 +496,7 @@
             <el-progress 
               :percentage="calculateTaskProgress(task)" 
               :stroke-width="8"
-              :color="task.color"
+              :color="task.color || '#409EFF'"
               :show-text="false"
             />
             <div class="task-meta">
@@ -514,11 +512,11 @@
             </div>
           </div>
         </div>
-      </div>
+      </transition-group>
 
-       <!-- 分页控件 -->
+      <!-- 分页控件 -->
       <div class="pagination-container">
-       <el-pagination
+        <el-pagination
           small
           layout="prev, pager, next"
           :total="pointsTaskTotal"
@@ -529,11 +527,8 @@
           class="custom-pagination"
         />
       </div>
-      
     </div>
   </el-scrollbar>
-  
- 
 </el-drawer>
 
   <!-- 我关注的圈子 drawer -->
@@ -707,7 +702,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted ,nextTick} from 'vue'
 import { useRouter } from 'vue-router'
 import * as icons from '@element-plus/icons-vue'
 import { Suitcase, SuccessFilled, Edit,
@@ -836,15 +831,18 @@ const fetchPointsInfo = async () => {
 
 
 // 获取积分任务数据
+// 获取积分任务数据（带平滑滚动效果）
 const fetchPointsTasks = async () => {
   try {
     pointsTaskLoading.value = true
+    
     const res = await post('/api/auth/achievement/myAchievementPageList', {
       page: pointsTaskPage.value,
       size: pointsTaskSize.value
     })
     
     if (res && res.records) {
+      // 清空当前数据，加载新页数据
       pointsTasks.value = res.records.map(task => ({
         id: task.taskId,
         name: task.name,
@@ -853,8 +851,8 @@ const fetchPointsTasks = async () => {
         progress: task.myTargetValue || 0,
         target: task.targetValue || 1,
         completed: (task.myTargetValue || 0) >= (task.targetValue || 1),
-        color: task.color,
-        icon: task.icon ,
+        color: task.color || '#409EFF', // 添加默认颜色
+        icon: task.icon,
         type: task.typeName,
         category: task.categoryName,
         rewardType: task.rewardTypeName,
@@ -863,12 +861,7 @@ const fetchPointsTasks = async () => {
         sortOrder: task.sortOrder || 0
       }))
       
-      // 按照sortOrder排序
-      pointsTasks.value.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-      
-       // 确保 total 是数字类型
       pointsTaskTotal.value = Number(res.total) || 0
-      console.log("Total tasks:", pointsTaskTotal.value, "Current page:", pointsTaskPage.value)
     }
   } catch (error) {
     console.error('获取积分任务失败:', error)
@@ -898,36 +891,6 @@ const getIconComponent = (iconName) => {
   return iconMap[iconName] || QuestionFilled // 默认图标
 }
 
-// // 根据任务类型获取颜色
-// const getTaskColor = (category) => {
-//   const colorMap = {
-//     'login': '#409EFF', // 蓝色 - 登录
-//     'like': '#E6A23C',  // 橙色 - 点赞
-//     'comment': '#F56C6C', // 红色 - 评论
-//     'publish': '#67C23A', // 绿色 - 发布
-//     'share': '#8E44AD',  // 紫色 - 分享
-//     'daily': '#3498DB',  // 日常任务
-//     'weekly': '#16A085', // 周常任务
-//     'one-time': '#E74C3C' // 一次性任务
-//   }
-//   return colorMap[category] || '#909399' // 默认灰色
-// }
-
-// // 根据任务类型获取默认图标
-// const getDefaultIcon = (category) => {
-//   const iconMap = {
-//     'login': 'Calendar',
-//     'like': 'Star',
-//     'comment': 'ChatDotRound',
-//     'publish': 'Edit',
-//     'share': 'Share',
-//     'daily': 'Clock',
-//     'weekly': 'Calendar',
-//     'one-time': 'Trophy'
-//   }
-//   return iconMap[category] || 'QuestionFilled'
-// }
-
 // 完成任务
 const completeTask = async (task) => {
   try {
@@ -955,11 +918,23 @@ const completeTask = async (task) => {
 }
 
 // 分页变化
-const handlePointsTaskPageChange = (page) => {
+// 分页变化处理（带平滑滚动）
+// 分页变化处理
+const handlePointsTaskPageChange = async (page) => {
   pointsTaskPage.value = page
-  fetchPointsTasks()
+  await fetchPointsTasks()
+  
+  // 如果需要滚动回顶部，可以这样实现：
+  nextTick(() => {
+    const scrollContainer = document.querySelector('.el-scrollbar__wrap')
+    if (scrollContainer) {
+      scrollContainer.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      })
+    }
+  })
 }
-
 //////
 
 // 积分规则
@@ -2746,5 +2721,72 @@ const handleTabChange = (tab) => {
 .points-stat-item:last-child {
   grid-column: span 2;
   text-align: center;
+}
+
+/* 积分任务加载动画 */
+.task-loading {
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+/* 任务列表过渡动画 */
+.task-list-move, /* 对移动的元素应用过渡 */
+.task-list-enter-active,
+.task-list-leave-active {
+  transition: all 0.5s ease;
+}
+
+.task-list-enter-from,
+.task-list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.task-list-leave-active {
+  position: absolute;
+}
+
+/* 分页容器样式优化 */
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 任务项悬停效果增强 */
+.task-item {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.task-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* 按钮加载效果 */
+.el-button--primary.is-disabled {
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .points-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .task-item {
+    flex-direction: column;
+  }
+  
+  .task-icon {
+    margin-bottom: 10px;
+  }
 }
 </style>
