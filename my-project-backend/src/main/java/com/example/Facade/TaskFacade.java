@@ -211,7 +211,26 @@ public class TaskFacade {
                         b.setDescription(v.getDescription());
                         b.setColorCode(v.getColorCode());
                         b.setSortOrder(v.getSortOrder());
-                        b.setIconUrl(v.getIconUrl());
+                        
+                        // 根据徽章关联的任务类型设置图标URL
+                        TaskBadge taskBadge = taskBadgeService.getById(v.getId());
+                        if (taskBadge != null) {
+                            TaskDefinition taskDefinition = taskDefinitionService.getById(taskBadge.getTaskId());
+                            if (taskDefinition != null) {
+                                String taskType = "";
+                                if (taskDefinition.getType().equals(AchievementEnums.TaskType.DAILY.getCode())) {
+                                    taskType = "DAILY";
+                                } else if (taskDefinition.getType().equals(AchievementEnums.TaskType.WEEKLY.getCode())) {
+                                    taskType = "WEEKLY";
+                                } else if (taskDefinition.getType().equals(AchievementEnums.TaskType.ONETIME.getCode())) {
+                                    taskType = "ONETIME";
+                                }
+                                // 假设徽章图片名称与徽章名称相关，可以根据实际情况调整
+                                String iconUrl = "/imgs/" + taskType + "/" + v.getIconUrl();
+                                b.setIconUrl(iconUrl);
+                            }
+                        }
+                        
                         return b;
                     })
                     .sorted((o1, o2) -> o2.getSortOrder() - o1.getSortOrder())
