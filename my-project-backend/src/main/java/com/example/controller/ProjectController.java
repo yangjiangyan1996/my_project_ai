@@ -392,6 +392,7 @@ public class ProjectController {
 
 
     @PostMapping("/comment")
+    @TaskProgress(category = {AchievementEnums.Category.First_FEATURED}, increment = 1)
     public RespBean<Boolean> comment(@RequestBody UserCommentProjectReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();

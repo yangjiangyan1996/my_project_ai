@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.TaskBadge;
 import com.example.entity.dto.TaskDefinition;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -12,4 +14,6 @@ import com.example.entity.dto.TaskDefinition;
  */
 public interface TaskBadgeService extends IService<TaskBadge> {
     TaskBadge selectByTaskId(Long taskId);
+
+    List<TaskBadge> selectByIds(List<Long> badgeIds);
 }

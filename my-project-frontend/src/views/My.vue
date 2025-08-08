@@ -438,18 +438,25 @@
           <span class="stat-label">本月获得</span>
           <span class="stat-value">{{ monthPoints }}</span>
         </div>
+        <!-- 修改积分概览中的徽章展示部分 -->
         <div class="points-stat-item" v-if="badges.length > 0">
           <span class="stat-label">我的勋章</span>
           <div class="badges-container">
-            <el-tag 
+            <div 
               v-for="(badge, index) in badges" 
               :key="index"
-              type="warning"
-              size="small"
-              class="badge-tag"
+              class="badge-item"
+              :style="{ backgroundColor: badge.colorCode || '#FFD700' }"
             >
-              {{ badge }}
-            </el-tag>
+              <div class="badge-icon">
+                <img v-if="badge.iconUrl" :src="badge.iconUrl" :alt="badge.name" />
+                <el-icon v-else><Trophy /></el-icon>
+              </div>
+              <div class="badge-info">
+                <div class="badge-name">{{ badge.name }}</div>
+                <div class="badge-desc">{{ badge.description }}</div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="points-stat-item" v-else>
@@ -2871,5 +2878,82 @@ const handleTabChange = (tab) => {
 .el-button--success:not(.is-disabled):hover {
   background-color: #67c23a;
   border-color: #67c23a;
+}
+
+/* 徽章容器样式 */
+.badges-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+/* 单个徽章样式 */
+.badge-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* 徽章图标样式 */
+.badge-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.badge-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.badge-icon .el-icon {
+  font-size: 20px;
+  color: white;
+}
+
+/* 徽章信息样式 */
+.badge-info {
+  flex: 1;
+}
+
+.badge-name {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.badge-desc {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .badges-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .badge-item {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .badge-icon {
+    margin-bottom: 8px;
+  }
 }
 </style>

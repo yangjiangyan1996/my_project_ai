@@ -19,5 +19,5 @@ public class AchievementBaseInfoResp {
     //本月获得积分
     private Long monthPoints;
     //勋章
-    private List<String> badges;
+    private List<TaskBadgeResp> badges;
 }

@@ -42,7 +42,7 @@ public class AchievementEnums {
         DAILY(1, "日常"),
         WEEKLY(2, "每周"),
         ONETIME(3, "一次性"),
-        ACHIEVEMENT(4, "成就");
+        ;
         private final Integer code;
         private final String name;
 
@@ -89,7 +89,9 @@ public class AchievementEnums {
         EXP_FEATURED("exp_featured", "内容被评为精华", "#E74C3C", "QuestionFilled"),//
         EXP_TEAM("exp_team", "创建团队获得经验", "#16A085", "User"),//
         COMBO_DAILY("combo_daily", "连续完成所有日常任务", "#3498DB", "Clock"),
-        ACHIEVEMENT_SET("achievement_set", "集齐创作类勋章", "#E74C3C", "Trophy");
+        ACHIEVEMENT_SET("achievement_set", "集齐创作类勋章", "#E74C3C", "Trophy"),
+        First_FEATURED("firt_featured", "首次发布内容", "#E74C3C", "Edit"),
+        ;
         private final String code;
         private final String name;
         private final String color;

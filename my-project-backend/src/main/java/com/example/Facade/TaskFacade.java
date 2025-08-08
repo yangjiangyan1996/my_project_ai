@@ -7,6 +7,7 @@ import com.example.entity.query.TaskProgressQuery;
 import com.example.entity.req.AchievementMyPageReq;
 import com.example.entity.resp.AchievementBaseInfoResp;
 import com.example.entity.resp.AchievementMyPageResp;
+import com.example.entity.resp.TaskBadgeResp;
 import com.example.entity.vo.TaskCompletedEvent;
 import com.example.enums.AchievementEnums;
 import com.example.service.*;
@@ -141,7 +142,7 @@ public class TaskFacade {
                     p.setRewardType(v.getRewardType());
                     p.setRewardTypeName(AchievementEnums.RewardType.getByCode(v.getRewardType()));
                     if (v.getRewardType().equals(AchievementEnums.RewardType.POINTS.getCode())) {
-                        p.setRewardValue( "+" + v.getRewardValue() + "积分");
+                        p.setRewardValue("+" + v.getRewardValue() + "积分");
                     } else if (v.getRewardType().equals(AchievementEnums.RewardType.MEDAL.getCode())) {
                         p.setRewardValue("获得" + v.getRewardValue() + "勋章");
                     } else {
@@ -170,7 +171,6 @@ public class TaskFacade {
         long points = 0L;
         long todayPoints = 0L;
         long monthPoints = 0L;
-        List<String> medals = new ArrayList<>();
         /**
          * 获取用户积分
          */
@@ -198,20 +198,31 @@ public class TaskFacade {
                         .filter(v -> v.getLastProgressTime() != null && v.getLastProgressTime().getTime() > System.currentTimeMillis() - 24 * 60 * 60 * 1000 * 30)
                         .mapToLong(v -> v.getCurrentValue()).sum();
             }
+        }
 
-            //计算勋章
-            medals = task.stream()
-                    .filter(v -> v.getRewardType().equals(AchievementEnums.RewardType.MEDAL.getCode()))
-                    .map(v -> v.getRewardValue())
+        List<TaskBadgeResp> badgeResps = new ArrayList<>();
+        List<TaskUserBadge> badges = taskUserBadgeService.selectByUserId(userId);
+        if (!CollectionUtils.isEmpty(badges)) {
+            List<Long> badgeIds = badges.stream().map(v -> v.getBadgeId()).collect(Collectors.toList());
+            List<TaskBadge> bList = taskBadgeService.selectByIds(badgeIds);
+            badgeResps = bList.stream().map(v -> {
+                        TaskBadgeResp b = new TaskBadgeResp();
+                        b.setName(v.getName());
+                        b.setDescription(v.getDescription());
+                        b.setColorCode(v.getColorCode());
+                        b.setSortOrder(v.getSortOrder());
+                        b.setIconUrl(v.getIconUrl());
+                        return b;
+                    })
+                    .sorted((o1, o2) -> o2.getSortOrder() - o1.getSortOrder())
                     .collect(Collectors.toList());
-
         }
 
         AchievementBaseInfoResp resp = new AchievementBaseInfoResp();
         resp.setPoints(points);
         resp.setTodayPoints(todayPoints);
         resp.setMonthPoints(monthPoints);
-        resp.setBadges(medals);
+        resp.setBadges(badgeResps);
         return resp;
     }
 
@@ -227,7 +238,7 @@ public class TaskFacade {
         TaskUserProgress taskUser = taskUserProgressService.selectByQuery(query);
         taskUser.setRewardClaimed(AchievementEnums.RewardStatus.CLAIMED.getCode());
         boolean result = taskUserProgressService.updateById(taskUser);
-        if ( result) {
+        if (result) {
             switch (task.getRewardType()) {
                 case 1: // 积分
                     log.info("用户 {} 获得积分 {}", userId, task.getId());

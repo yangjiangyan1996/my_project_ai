@@ -2,8 +2,9 @@ package com.example.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.TaskUserBadge;
-import com.example.entity.dto.TaskUserPoint;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -12,5 +13,6 @@ import org.springframework.stereotype.Service;
  * @Date 2025/8/7 20:06
  */
 @Service
-public interface TaskUserBadgeService  extends IService<TaskUserBadge> {
+public interface TaskUserBadgeService extends IService<TaskUserBadge> {
+    List<TaskUserBadge> selectByUserId(Long userId);
 }
