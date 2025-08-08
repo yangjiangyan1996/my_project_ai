@@ -443,7 +443,7 @@
         <span class="stat-label">我的勋章</span>
         <div class="badges-container">
           <div 
-            v-for="(badge, index) in badges.slice(0, 8)" 
+            v-for="(badge, index) in badges.slice(0, 4)" 
             :key="index"
             class="badge-item"
             :style="{ '--badge-color': badge.colorCode || '#FFD700' }"
@@ -464,7 +464,7 @@
           </div>
         </div>
         <el-button 
-          v-if="badges.length > 8" 
+          v-if="badges.length > 4" 
           type="text" 
           class="view-all-badges-btn"
           @click="showAllBadgesModal"
@@ -755,7 +755,7 @@
             <div class="badge-info">
               <div class="badge-name">{{ badge.name }}</div>
               <div class="badge-desc">{{ badge.description }}</div>
-              <div class="badge-date" v-if="badge.obtainedAt">获得于 {{ formatDate(badge.obtainedAt) }}</div>
+              <div class="badge-date" v-if="badge.achievedAt">获得于 {{ formatDate(badge.achievedAt) }}</div>
             </div>
           </div>
         </div>
@@ -925,7 +925,7 @@ const getTaskButtonText = (task) => {
   } else if (task.statusOfUserTask === 2) {
     return task.rewardClaimed === 0 ? '领取' : '已完成';
   }
-  return '去完成';
+  return '进行中';
 };
 
 const handleTaskReward = async (task) => {
@@ -2401,7 +2401,6 @@ const handleTabChange = (tab) => {
   font-size: 14px;
 }
 
-/*1111111  */
 /* Drawer 容器样式 */
 .custom-drawer {
   --el-drawer-bg-color: #f8fafc; /* 更柔和的背景色 */
@@ -3135,14 +3134,20 @@ const handleTabChange = (tab) => {
 .view-all-badges-btn {
   display: block;
   margin: 12px auto 0;
-  color: #409EFF;
+  color: white; /* 改为白色文字 */
   font-size: 13px;
   transition: all 0.3s ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* 添加文字阴影 */
+  background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.1)); /* 金色渐变背景 */
+  padding: 4px 12px;
+  border-radius: 16px;
 }
 
 .view-all-badges-btn:hover {
-  color: #79BBFF;
+  color: white;
   transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(255,215,0,0.4), rgba(255,215,0,0.3)); /* 悬停时加深金色 */
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3); /* 金色阴影 */
 }
 
 /* 勋章模态框样式 */

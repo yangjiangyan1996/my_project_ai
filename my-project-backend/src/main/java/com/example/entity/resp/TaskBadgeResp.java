@@ -2,9 +2,9 @@ package com.example.entity.resp;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
 import lombok.Data;
+
+import java.util.Date;
 
 /**
  * @Author YangJian
@@ -13,7 +13,7 @@ import lombok.Data;
  * @Date 2025/8/7 19:27
  */
 @Data
-public class TaskBadgeResp{
+public class TaskBadgeResp {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String name;
@@ -21,4 +21,5 @@ public class TaskBadgeResp{
     private String iconUrl;
     private String colorCode;
     private Integer sortOrder;
+    private Date achievedAt;
 }

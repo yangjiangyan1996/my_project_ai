@@ -12,6 +12,7 @@ import com.example.entity.vo.TaskCompletedEvent;
 import com.example.enums.AchievementEnums;
 import com.example.enums.CommonConstant;
 import com.example.service.*;
+import io.lettuce.core.internal.LettuceLists;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -204,15 +205,16 @@ public class TaskFacade {
         List<TaskBadgeResp> badgeResps = new ArrayList<>();
         List<TaskUserBadge> badges = taskUserBadgeService.selectByUserId(userId);
         if (!CollectionUtils.isEmpty(badges)) {
-            List<Long> badgeIds = badges.stream().map(v -> v.getBadgeId()).collect(Collectors.toList());
-            List<TaskBadge> bList = taskBadgeService.selectByIds(badgeIds);
+            Map<Long, TaskUserBadge> badgeId2UserBadgeInfoMap = badges.stream().collect(Collectors.toMap(v -> v.getBadgeId(), v -> v));
+            List<TaskBadge> bList = taskBadgeService.selectByIds(LettuceLists.newList(badgeId2UserBadgeInfoMap.keySet()));
             badgeResps = bList.stream().map(v -> {
                         TaskBadgeResp b = new TaskBadgeResp();
                         b.setName(v.getName());
                         b.setDescription(v.getDescription());
                         b.setColorCode(v.getColorCode());
                         b.setSortOrder(v.getSortOrder());
-                        
+                        b.setAchievedAt(badgeId2UserBadgeInfoMap.get(v.getId()).getAchievedAt());
+
                         // 根据徽章关联的任务类型设置图标URL
                         TaskBadge taskBadge = taskBadgeService.getById(v.getId());
                         if (taskBadge != null) {
@@ -231,7 +233,7 @@ public class TaskFacade {
                                 b.setIconUrl(iconUrl);
                             }
                         }
-                        
+
                         return b;
                     })
                     .sorted((o1, o2) -> o2.getSortOrder() - o1.getSortOrder())
