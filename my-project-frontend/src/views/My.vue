@@ -439,31 +439,39 @@
           <span class="stat-value">{{ monthPoints }}</span>
         </div>
         <!-- 修改积分概览中的徽章展示部分 -->
-        <div class="points-stat-item" v-if="badges.length > 0">
-          <span class="stat-label">我的勋章</span>
-          <div class="badges-container">
-            <div 
-              v-for="(badge, index) in badges" 
-              :key="index"
-              class="badge-item"
-              :style="{ '--badge-color': badge.colorCode || '#FFD700' }"
-            >
-              <div class="badge-icon">
-                <img 
-                  v-if="badge.iconUrl" 
-                  :src="badge.iconUrl" 
-                  :alt="badge.name"
-                  class="badge-image"
-                />
-                <el-icon v-else><Trophy /></el-icon>
-              </div>
-              <div class="badge-tooltip">
-                <div class="tooltip-name">{{ badge.name }}</div>
-                <div class="tooltip-desc">{{ badge.description }}</div>
-              </div>
+      <div class="points-stat-item" v-if="badges.length > 0">
+        <span class="stat-label">我的勋章</span>
+        <div class="badges-container">
+          <div 
+            v-for="(badge, index) in badges.slice(0, 8)" 
+            :key="index"
+            class="badge-item"
+            :style="{ '--badge-color': badge.colorCode || '#FFD700' }"
+          >
+            <div class="badge-icon">
+              <img 
+                v-if="badge.iconUrl" 
+                :src="badge.iconUrl" 
+                :alt="badge.name"
+                class="badge-image"
+              />
+              <el-icon v-else><Trophy /></el-icon>
+            </div>
+            <div class="badge-tooltip">
+              <div class="tooltip-name">{{ badge.name }}</div>
+              <div class="tooltip-desc">{{ badge.description }}</div>
             </div>
           </div>
         </div>
+        <el-button 
+          v-if="badges.length > 8" 
+          type="text" 
+          class="view-all-badges-btn"
+          @click="showAllBadgesModal"
+        >
+          查看全部勋章 ({{ badges.length }})
+        </el-button>
+      </div>
 
         <div class="points-stat-item" v-else>
           <span class="stat-label">我的勋章</span>
@@ -717,6 +725,52 @@
       />
     </div>
   </el-drawer>
+
+  <!-- 全部勋章模态框 -->
+    <el-dialog
+      v-model="allBadgesModalVisible"
+      title="我的全部勋章"
+      width="80%"
+      top="5vh"
+      custom-class="badges-modal"
+      :show-close="false"
+    >
+      <div class="modal-content">
+        <div class="all-badges-container">
+          <div 
+            v-for="(badge, index) in badges" 
+            :key="index"
+            class="badge-item modal-badge"
+            :style="{ '--badge-color': badge.colorCode || '#FFD700' }"
+          >
+            <div class="badge-icon">
+              <img 
+                v-if="badge.iconUrl" 
+                :src="badge.iconUrl" 
+                :alt="badge.name"
+                class="badge-image"
+              />
+              <el-icon v-else><Trophy /></el-icon>
+            </div>
+            <div class="badge-info">
+              <div class="badge-name">{{ badge.name }}</div>
+              <div class="badge-desc">{{ badge.description }}</div>
+              <div class="badge-date" v-if="badge.obtainedAt">获得于 {{ formatDate(badge.obtainedAt) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <template #footer>
+        <el-button 
+          type="primary" 
+          @click="allBadgesModalVisible = false"
+          class="close-modal-btn"
+        >
+          关闭
+        </el-button>
+      </template>
+    </el-dialog>
 </template>
 
 <script setup>
@@ -831,6 +885,23 @@ const pointsTaskLoading = ref(false)
 const badges = ref([])
 
 
+// 勋章弹窗
+// 添加状态
+const allBadgesModalVisible = ref(false)
+// 添加方法
+const showAllBadgesModal = () => {
+  allBadgesModalVisible.value = true
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
 
 const fetchPointsInfo = async () => {
   try {
@@ -3057,6 +3128,151 @@ const handleTabChange = (tab) => {
   
   .tooltip-desc {
     font-size: 12px;
+  }
+}
+
+/* 查看全部按钮样式 */
+.view-all-badges-btn {
+  display: block;
+  margin: 12px auto 0;
+  color: #409EFF;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.view-all-badges-btn:hover {
+  color: #79BBFF;
+  transform: translateY(-1px);
+}
+
+/* 勋章模态框样式 */
+.badges-modal {
+  border-radius: 16px;
+  overflow: hidden;
+  --el-dialog-padding-primary: 0;
+}
+
+.badges-modal .el-dialog__header {
+  padding: 20px;
+  background: linear-gradient(135deg, #409EFF, #79BBFF);
+  margin: 0;
+}
+
+.badges-modal .el-dialog__title {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-content {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.all-badges-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 10px;
+}
+
+.modal-badge {
+  width: 100%;
+  height: auto;
+  min-height: 100px;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-badge:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.modal-badge .badge-icon {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.modal-badge .badge-info {
+  flex: 1;
+}
+
+.modal-badge .badge-name {
+  font-weight: 700;
+  font-size: 16px;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+}
+
+.modal-badge .badge-desc {
+  font-size: 14px;
+  color: #4a4a4a;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.modal-badge .badge-date {
+  font-size: 12px;
+  color: #8590a6;
+  margin-top: 8px;
+}
+
+.close-modal-btn {
+  margin: 20px auto;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+/* 模态框进入动画 */
+.badges-modal-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.badges-modal-leave-active {
+  transition: all 0.2s ease-in;
+}
+
+.badges-modal-enter-from,
+.badges-modal-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* 响应式调整 */
+@media (max-width: 992px) {
+  .all-badges-container {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+  
+  .modal-badge {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .modal-badge .badge-icon {
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .badges-modal {
+    width: 90% !important;
+  }
+  
+  .all-badges-container {
+    grid-template-columns: 1fr;
   }
 }
 </style>
