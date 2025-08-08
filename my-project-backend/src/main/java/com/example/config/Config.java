@@ -21,6 +21,8 @@ public class Config {
 
             "/api/unauth/project/**",
             "/api/auth/common/**",
+            "/imgs/**",
+            "/static/imgs/**"
 
     };
 }

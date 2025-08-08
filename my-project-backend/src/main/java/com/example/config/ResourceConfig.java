@@ -15,6 +15,6 @@ public class ResourceConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // 配置图片资源的访问路径
         registry.addResourceHandler("/imgs/**")
-                .addResourceLocations("classpath:/resources/imgs/");
+                .addResourceLocations("classpath:/static/imgs/");
     }
 }

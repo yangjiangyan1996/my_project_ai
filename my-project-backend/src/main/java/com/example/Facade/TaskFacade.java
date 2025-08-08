@@ -10,6 +10,7 @@ import com.example.entity.resp.AchievementMyPageResp;
 import com.example.entity.resp.TaskBadgeResp;
 import com.example.entity.vo.TaskCompletedEvent;
 import com.example.enums.AchievementEnums;
+import com.example.enums.CommonConstant;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
@@ -226,7 +227,7 @@ public class TaskFacade {
                                     taskType = "ONETIME";
                                 }
                                 // 假设徽章图片名称与徽章名称相关，可以根据实际情况调整
-                                String iconUrl = "/imgs/" + taskType + "/" + v.getIconUrl();
+                                String iconUrl = CommonConstant.PROJECT_URL + "/imgs/" + taskType + "/" + v.getIconUrl();
                                 b.setIconUrl(iconUrl);
                             }
                         }
