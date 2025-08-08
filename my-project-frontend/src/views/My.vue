@@ -2889,201 +2889,174 @@ const handleTabChange = (tab) => {
 /* 徽章容器样式 */
 .badges-container {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 8px;
-  width: 100%;
-}
-
-/* 单个徽章样式 */
-.badge-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  color: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-/* 徽章图标样式 */
-.badge-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.badge-icon img {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-.badge-icon .el-icon {
-  font-size: 20px;
-  color: white;
-}
-
-/* 徽章信息样式 */
-.badge-info {
-  flex: 1;
-}
-
-.badge-name {
-  font-weight: 600;
-  font-size: 14px;
-  margin-bottom: 4px;
-}
-
-.badge-desc {
-  font-size: 12px;
-  opacity: 0.9;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .badges-container {
-    grid-template-columns: 1fr;
-  }
-  
-  .badge-item {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .badge-icon {
-    margin-bottom: 8px;
-  }
-}
-
-/* 徽章容器样式 */
-.badges-container {
-  display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 12px;
+  gap: 20px;
+  margin-top: 16px;
   justify-content: center;
+  perspective: 1000px; /* 为3D效果添加透视 */
 }
 
 /* 单个徽章样式 */
 .badge-item {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 80px;  /* 增大基础尺寸 */
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: radial-gradient(circle at center, var(--badge-color) 0%, darken(var(--badge-color), 15%) 100%);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background: radial-gradient(
+    circle at center, 
+    var(--badge-color) 0%, 
+    color-mix(in srgb, var(--badge-color), #000 20%) 100%
+  );
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   cursor: pointer;
   z-index: 1;
+  transform-style: preserve-3d; /* 启用3D变换 */
 }
 
 /* 徽章图标样式 */
 .badge-icon {
-  width: 80%;
-  height: 80%;
+  width: 70%;
+  height: 70%;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(2px);
-  transition: all 0.3s ease;
+  background-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(3px);
+  transition: all 0.4s ease;
+  overflow: hidden;
 }
 
 .badge-image {
-  width: 80%;
-  height: 80%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+  transform: scale(1);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .badge-icon .el-icon {
-  font-size: 28px;
+  font-size: 32px;
   color: white;
+  transition: all 0.3s ease;
 }
 
 /* 徽章悬停效果 */
 .badge-item:hover {
-  transform: translateY(-4px) scale(1.1);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-6px) scale(1.05);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
 }
 
-.badge-item:hover .badge-icon {
-  transform: scale(0.9);
+.badge-item:hover .badge-image {
+  transform: scale(1.2); /* 图片放大效果 */
 }
 
-/* 工具提示样式 */
+.badge-item:hover .el-icon {
+  transform: scale(1.2);
+}
+
+/* 工具提示样式 - 增强版 */
 .badge-tooltip {
   position: absolute;
-  bottom: calc(100% + 12px);
+  bottom: calc(100% + 16px);
   left: 50%;
-  transform: translateX(-50%) scale(0.9);
+  transform: translateX(-50%) translateY(10px) scale(0.95);
+  transform-origin: bottom center;
   opacity: 0;
-  width: 200px;
-  padding: 12px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 220px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
   text-align: center;
   pointer-events: none;
-  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   z-index: 10;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .badge-item:hover .badge-tooltip {
   opacity: 1;
-  transform: translateX(-50%) scale(1);
+  transform: translateX(-50%) translateY(0) scale(1);
 }
 
 .tooltip-name {
-  font-weight: 600;
-  font-size: 14px;
-  color: #303133;
-  margin-bottom: 4px;
+  font-weight: 700;
+  font-size: 15px;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
 }
 
 .tooltip-desc {
-  font-size: 12px;
-  color: #606266;
-  line-height: 1.4;
+  font-size: 13px;
+  color: #4a4a4a;
+  line-height: 1.5;
 }
 
-/* 工具提示箭头 */
+/* 工具提示箭头 - 增强版 */
 .badge-tooltip::after {
   content: '';
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-width: 8px;
+  border-width: 10px;
   border-style: solid;
-  border-color: white transparent transparent transparent;
+  border-color: rgba(255, 255, 255, 0.95) transparent transparent transparent;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
+}
+
+/* 添加徽章悬浮时的微光效果 */
+.badge-item::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at center, 
+    rgba(255, 255, 255, 0.4) 0%, 
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.badge-item:hover::before {
+  opacity: 1;
 }
 
 /* 响应式调整 */
 @media (max-width: 768px) {
   .badges-container {
-    gap: 12px;
+    gap: 16px;
   }
   
   .badge-item {
-    width: 56px;
-    height: 56px;
+    width: 68px;
+    height: 68px;
   }
   
   .badge-tooltip {
-    width: 160px;
+    width: 180px;
+    padding: 12px;
+  }
+  
+  .tooltip-name {
+    font-size: 14px;
+  }
+  
+  .tooltip-desc {
+    font-size: 12px;
   }
 }
 </style>
