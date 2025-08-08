@@ -446,19 +446,25 @@
               v-for="(badge, index) in badges" 
               :key="index"
               class="badge-item"
-              :style="{ backgroundColor: badge.colorCode || '#FFD700' }"
+              :style="{ '--badge-color': badge.colorCode || '#FFD700' }"
             >
               <div class="badge-icon">
-                <img v-if="badge.iconUrl" :src="badge.iconUrl" :alt="badge.name" />
+                <img 
+                  v-if="badge.iconUrl" 
+                  :src="badge.iconUrl" 
+                  :alt="badge.name"
+                  class="badge-image"
+                />
                 <el-icon v-else><Trophy /></el-icon>
               </div>
-              <div class="badge-info">
-                <div class="badge-name">{{ badge.name }}</div>
-                <div class="badge-desc">{{ badge.description }}</div>
+              <div class="badge-tooltip">
+                <div class="tooltip-name">{{ badge.name }}</div>
+                <div class="tooltip-desc">{{ badge.description }}</div>
               </div>
             </div>
           </div>
         </div>
+
         <div class="points-stat-item" v-else>
           <span class="stat-label">我的勋章</span>
           <span class="stat-value">暂无勋章</span>
@@ -2954,6 +2960,130 @@ const handleTabChange = (tab) => {
   
   .badge-icon {
     margin-bottom: 8px;
+  }
+}
+
+/* 徽章容器样式 */
+.badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+  justify-content: center;
+}
+
+/* 单个徽章样式 */
+.badge-item {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, var(--badge-color) 0%, darken(var(--badge-color), 15%) 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  cursor: pointer;
+  z-index: 1;
+}
+
+/* 徽章图标样式 */
+.badge-icon {
+  width: 80%;
+  height: 80%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(2px);
+  transition: all 0.3s ease;
+}
+
+.badge-image {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.badge-icon .el-icon {
+  font-size: 28px;
+  color: white;
+}
+
+/* 徽章悬停效果 */
+.badge-item:hover {
+  transform: translateY(-4px) scale(1.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.badge-item:hover .badge-icon {
+  transform: scale(0.9);
+}
+
+/* 工具提示样式 */
+.badge-tooltip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  opacity: 0;
+  width: 200px;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 10;
+}
+
+.badge-item:hover .badge-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.tooltip-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.tooltip-desc {
+  font-size: 12px;
+  color: #606266;
+  line-height: 1.4;
+}
+
+/* 工具提示箭头 */
+.badge-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 8px;
+  border-style: solid;
+  border-color: white transparent transparent transparent;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .badges-container {
+    gap: 12px;
+  }
+  
+  .badge-item {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .badge-tooltip {
+    width: 160px;
   }
 }
 </style>
