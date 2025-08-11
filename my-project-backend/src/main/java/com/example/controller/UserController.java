@@ -2,6 +2,7 @@ package com.example.controller;
 
 import com.example.Facade.CommonFacade;
 import com.example.Facade.UserFacade;
+import com.example.annotations.TaskProgress;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.req.SearchUserReq;
@@ -42,6 +43,7 @@ public class UserController {
     }
 
 
+    @TaskProgress(category = {"wanshanziliao"})
     @PostMapping("/updateUserInfo")
     public RespBean<Boolean> updateUserInfo(@RequestBody UpdateUserInfoReq req) {
         try {

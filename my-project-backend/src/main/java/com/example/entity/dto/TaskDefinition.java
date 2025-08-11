@@ -29,5 +29,6 @@ public class TaskDefinition extends BaseModel {
     private Date startTime; // 任务开始时间
     private Date endTime; // 任务结束时间
     private String icon;
+    private String color;
     private Integer sortOrder;
 }

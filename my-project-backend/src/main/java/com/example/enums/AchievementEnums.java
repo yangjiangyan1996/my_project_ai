@@ -75,7 +75,7 @@ public class AchievementEnums {
      * combo_daily 连续完成所有日常任务
      * achievement_set 集齐创作类勋章
      *
-     * icon地址 https://element-plus.org/zh-CN/component/icon.html
+     * icon地址 https://element-plus.org/zh-CN/component/icon.html TODO yang delete
      */
     @Getter
     public enum Category {

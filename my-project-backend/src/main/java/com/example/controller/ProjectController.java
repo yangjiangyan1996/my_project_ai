@@ -305,6 +305,7 @@ public class ProjectController {
     }
 
     @PostMapping("/createFindCollage")
+    @TaskProgress(category = {"qingtongzuozhe","baiyinzuozhe","huangjinzuozhe","zuanshizuozhe","wangzhezuozhe"})
     public RespBean<Boolean> createFindCollage(@RequestBody CreateFindCollageReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
@@ -326,6 +327,7 @@ public class ProjectController {
      * @return
      */
     @PostMapping("/concernPublisher")
+    @TaskProgress(category = {"shejiao"})
     public RespBean<Boolean> concernPublisher(@RequestBody @Validated ConcernPublisherReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
@@ -360,7 +362,7 @@ public class ProjectController {
     }
 
     @GetMapping("/commentLike")
-    @TaskProgress(category = {AchievementEnums.Category.CONTENT_LIKE}, increment = 1)
+
     public RespBean<Boolean> commentLike(@RequestParam("projectId") Long projectId,
                                          @RequestParam("commentId") Long commentId) {
         try {
@@ -392,7 +394,7 @@ public class ProjectController {
 
 
     @PostMapping("/comment")
-    @TaskProgress(category = {AchievementEnums.Category.First_FEATURED}, increment = 1)
+    @TaskProgress(category = {"pinglun"})
     public RespBean<Boolean> comment(@RequestBody UserCommentProjectReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
@@ -408,6 +410,7 @@ public class ProjectController {
 
 
     @GetMapping("/favoriteProject")
+    @TaskProgress(category = {"shoucang"})
     public RespBean<Boolean> favoriteProject(@RequestParam("projectId") Long projectId,
                                              @RequestParam("liked") Boolean liked) {
         try {
@@ -424,6 +427,7 @@ public class ProjectController {
 
 
     @GetMapping("/likeProject")
+    @TaskProgress(category = {"dianzan"})
     public RespBean<Boolean> likeProject(@RequestParam("projectId") Long projectId,
                                          @RequestParam("liked") Boolean liked) {
         try {

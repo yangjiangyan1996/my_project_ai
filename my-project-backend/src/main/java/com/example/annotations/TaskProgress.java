@@ -14,7 +14,7 @@ public @interface TaskProgress {
      * 任务分类标识（对应task_definition表中的category字段）
      * @return
      */
-    AchievementEnums.Category[] category();
+    String[] category();
     
     /**
      * 进度增加值（默认加1）

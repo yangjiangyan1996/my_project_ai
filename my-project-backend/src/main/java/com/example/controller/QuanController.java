@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.example.Facade.CommonFacade;
 import com.example.Facade.QuanFacade;
 import com.example.Facade.TieFacade;
+import com.example.annotations.TaskProgress;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.req.*;
@@ -158,6 +159,7 @@ public class QuanController {
      * @return
      */
     @PostMapping("/createTie")
+    @TaskProgress(category = {"huoyuechengyuan","shequgongxianzhe"})
     public RespBean<Boolean> createTie(@RequestBody @Valid QuanTieCreateReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
@@ -200,6 +202,8 @@ public class QuanController {
      * @return
      */
     @PostMapping("/followBar")
+    @TaskProgress(category = {"quanzixinren"})
+
     public RespBean<Boolean> followBar(@RequestBody @Valid BarFollowReq req) {
         try {
             Boolean result = quanFacade.followBar(req.getUserId(), req.getBarId());

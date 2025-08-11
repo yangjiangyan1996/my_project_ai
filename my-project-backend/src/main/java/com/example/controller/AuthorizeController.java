@@ -1,9 +1,11 @@
 package com.example.controller;
 
+import com.example.annotations.TaskProgress;
 import com.example.entity.RestBean;
 import com.example.entity.vo.request.ConfirmResetVO;
 import com.example.entity.vo.request.EmailRegisterVO;
 import com.example.entity.vo.request.EmailResetVO;
+import com.example.enums.AchievementEnums;
 import com.example.service.AccountService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,6 +54,7 @@ public class AuthorizeController {
      * @param vo 注册信息
      * @return 是否注册成功
      */
+    @TaskProgress(category = {"denglu"})
     @PostMapping("/register")
     @Operation(summary = "用户注册操作")
     public RestBean<Void> register(@RequestBody @Valid EmailRegisterVO vo) {

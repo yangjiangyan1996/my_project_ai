@@ -993,7 +993,7 @@ const fetchPointsTasks = async () => {
         color: task.color || '#409EFF', // 添加默认颜色
         icon: task.icon,
         type: task.typeName,
-        category: task.categoryName,
+        // category: task.categoryName,
         rewardType: task.rewardTypeName,
         startTime: task.startTime  || '',
         endTime: task.endTime  || '',

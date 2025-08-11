@@ -49,9 +49,9 @@ public class TaskFacade {
     ApplicationEventPublisher eventPublisher;
 
     @Async
-    public void updateProgressAsync(Long userId, AchievementEnums.Category[] category, int increment) {
+    public void updateProgressAsync(Long userId, String[] category, int increment) {
         // 1. 查询该分类下的所有活跃任务
-        List<String> categoryCodeList = Arrays.stream(category).map(AchievementEnums.Category::getCode).collect(Collectors.toList());
+        List<String> categoryCodeList = Arrays.stream(category).collect(Collectors.toList());
         List<TaskDefinition> tasks = taskDefinitionService.findByCategoryAndStatus(categoryCodeList, 1);
         if (CollectionUtils.isEmpty(tasks)) {
             return;
@@ -133,12 +133,14 @@ public class TaskFacade {
                     p.setName(v.getName());
                     p.setTypeName(AchievementEnums.TaskType.getByCode(v.getType()));
                     p.setCategory(v.getCategory());
-                    AchievementEnums.Category en = AchievementEnums.Category.getByCode(v.getCategory());
-                    if (en != null) {
-                        p.setCategoryName(en.getName());
-                        p.setIcon(en.getIcon());
-                        p.setColor(en.getColor());
-                    }
+                   // AchievementEnums.Category en = AchievementEnums.Category.getByCode(v.getCategory());
+//                    if (en != null) {
+//                        p.setCategoryName(en.getName());
+//                        p.setIcon(en.getIcon());
+//                        p.setColor(en.getColor());
+//                    }
+                    p.setIcon(v.getIcon());
+                    p.setColor(v.getColor());
                     p.setDescription(v.getDescription());
                     p.setTargetValue(v.getTargetValue());
                     p.setRewardType(v.getRewardType());
