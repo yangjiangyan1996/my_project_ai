@@ -13,7 +13,10 @@ import java.util.List;
  */
 @Data
 public class ChatHistoryPageReq extends PageReq {
+    //前端传
     private Long secrecyId;
+
+    //后端使用，不需要前端
     private Long targetUserId;
     private Long currentUserId;
 }
