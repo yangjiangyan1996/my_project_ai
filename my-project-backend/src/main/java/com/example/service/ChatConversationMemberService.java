@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.AccountShow;
 import com.example.entity.dto.ChatConversationMember;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -11,4 +13,5 @@ import com.example.entity.dto.ChatConversationMember;
  * @Date 2025/8/13 10:39
  */
 public interface ChatConversationMemberService extends IService<ChatConversationMember> {
+    List<ChatConversationMember> selectByUserId(Long targetUserId);
 }

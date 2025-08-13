@@ -1,10 +1,13 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ChatConversationMember;
 import com.example.mapper.ChatConversationMemberMapper;
 import com.example.service.ChatConversationMemberService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -14,4 +17,10 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ChatConversationMemberServiceImpl extends ServiceImpl<ChatConversationMemberMapper, ChatConversationMember> implements ChatConversationMemberService {
+    @Override
+    public List<ChatConversationMember> selectByUserId(Long userId) {
+        return this.baseMapper.selectList(new QueryWrapper<ChatConversationMember>()
+                .eq("user_id", userId)
+                .eq("is_deleted", 0));
+    }
 }

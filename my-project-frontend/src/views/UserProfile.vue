@@ -55,6 +55,20 @@
                 <el-icon><Plus /></el-icon>
                 <span>{{ isFollowing ? '已关注' : '关注他' }}</span>
               </el-button>
+
+               <el-button 
+                v-if="!isCurrentUser && userInfo.data?.id"
+                type="success"
+                size="small"
+                @click="openMessageDialog"
+                plain
+                round
+                class="message-btn"
+              >
+                <el-icon><Message /></el-icon>
+                <span>发私信</span>
+              </el-button>
+              
             </div>
           </div>
         </div>
@@ -299,6 +313,106 @@
       </div>
   </div>
 
+  <!-- 在模板底部，其他 drawer 组件之后添加 -->
+<el-dialog
+  v-model="messageDialogVisible"
+  title="发送私信"
+  width="500px"
+  :close-on-click-modal="false"
+  custom-class="message-dialog"
+>
+  <div class="message-dialog-content">
+    <el-input
+      v-model="messageContent"
+      type="textarea"
+      :rows="4"
+      placeholder="输入你想发送的消息..."
+      maxlength="500"
+      show-word-limit
+      resize="none"
+    ></el-input>
+    
+    <div class="message-preview" v-if="messageContent">
+      <div class="message-bubble">
+        {{ messageContent }}
+      </div>
+    </div>
+    
+    <div class="message-actions">
+      <el-button @click="messageDialogVisible = false">取消</el-button>
+      <el-button 
+        type="primary" 
+        @click="sendMessage"
+        :loading="sendingMessage"
+        :disabled="!messageContent.trim()"
+      >
+        发送
+      </el-button>
+    </div>
+  </div>
+</el-dialog>
+
+
+<el-drawer
+  v-model="messageHistoryVisible"
+  title="与TA的对话"
+  size="480px"
+  direction="rtl"
+  :with-header="true"
+  class="message-history-drawer"
+>
+  <el-scrollbar height="calc(100vh - 120px)">
+    <div class="message-history-container">
+      <div 
+        v-for="(msg, index) in messageHistory" 
+        :key="index"
+        class="message-item"
+        :class="{'message-sent': msg.senderId === currentUserInfo.data.id, 'message-received': msg.senderId !== currentUserInfo.data.id}"
+      >
+        <div class="message-avatar">
+          <el-avatar 
+            :size="36" 
+            :src="msg.senderId === currentUserInfo.data.id ? currentUserInfo.data.avatarUrl : userInfo.data.avatarUrl"
+          />
+        </div>
+        <div class="message-content">
+          <div class="message-text">{{ msg.content }}</div>
+          <div class="message-time">{{ formatMessageTime(msg.createdAt) }}</div>
+        </div>
+      </div>
+      
+      <div v-if="loadingMessages" class="message-loading">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        加载中...
+      </div>
+      
+      <div v-if="!loadingMessages && messageHistory.length === 0" class="no-messages">
+        暂无历史消息
+      </div>
+    </div>
+    
+    <div class="message-input-container">
+      <el-input
+        v-model="newMessage"
+        type="textarea"
+        :rows="2"
+        placeholder="输入新消息..."
+        resize="none"
+        @keyup.enter="sendNewMessage"
+      ></el-input>
+      <el-button 
+        type="primary" 
+        size="small" 
+        @click="sendNewMessage"
+        :disabled="!newMessage.trim()"
+        class="send-btn"
+      >
+        发送
+      </el-button>
+    </div>
+  </el-scrollbar>
+</el-drawer>
+
 
   <!-- 我关注的圈子 drawer -->
 <el-drawer
@@ -474,7 +588,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Suitcase, SuccessFilled, Plus } from '@element-plus/icons-vue'
+import { Suitcase, SuccessFilled, Plus ,Message, Loading} from '@element-plus/icons-vue'
 import { post, get } from '@/net'
 import { ElMessage } from 'element-plus'
 import useUserInfo from '@/hooks/useUserInfo';
@@ -537,6 +651,15 @@ const followedBarsTotal = ref(0)
 const followedBarsLoading = ref(false)
 const followedBarsTotalCount = ref(0)
 
+// 在 setup 中添加状态
+const messageDialogVisible = ref(false)
+const messageContent = ref('')
+const sendingMessage = ref(false)
+const messageHistoryVisible = ref(false)
+const messageHistory = ref([])
+const loadingMessages = ref(false)
+const newMessage = ref('')
+
 
 onMounted(() => {
   if (!currentUserInfo.data.id) {
@@ -557,6 +680,79 @@ onMounted(() => {
     fetchFollowedBars();
   }
 });
+
+// 添加方法
+const openMessageDialog = () => {
+   console.log('openMessageDialog called')
+  console.log('isCurrentUser:', isCurrentUser.value)
+  console.log('userInfo.data:', userInfo.value.data)
+  messageDialogVisible.value = true
+  messageContent.value = ''
+}
+
+const sendMessage = async () => {
+  if (!messageContent.value.trim()) return
+  
+  sendingMessage.value = true
+  try {
+    await post('/api/auth/message/send', {
+      receiverId: userInfo.value.data.id,
+      content: messageContent.value
+    })
+    ElMessage.success('消息发送成功')
+    messageDialogVisible.value = false
+    // 刷新消息历史
+    loadMessageHistory()
+  } catch (error) {
+    console.error('发送消息失败:', error)
+    ElMessage.error('发送消息失败')
+  } finally {
+    sendingMessage.value = false
+  }
+}
+
+const openMessageHistory = () => {
+  messageHistoryVisible.value = true
+  loadMessageHistory()
+}
+
+const loadMessageHistory = async () => {
+  if (!userInfo.value.data?.id) return
+  
+  loadingMessages.value = true
+  try {
+    const res = await get(`/api/auth/message/history?userId=${userInfo.value.data.id}`)
+    messageHistory.value = res.records || []
+  } catch (error) {
+    console.error('加载消息历史失败:', error)
+    ElMessage.error('加载消息历史失败')
+  } finally {
+    loadingMessages.value = false
+  }
+}
+
+const sendNewMessage = async () => {
+  if (!newMessage.value.trim()) return
+  
+  try {
+    await post('/api/auth/message/send', {
+      receiverId: userInfo.value.data.id,
+      content: newMessage.value
+    })
+    newMessage.value = ''
+    loadMessageHistory()
+  } catch (error) {
+    console.error('发送消息失败:', error)
+    ElMessage.error('发送消息失败')
+  }
+}
+
+const formatMessageTime = (timeString) => {
+  if (!timeString) return ''
+  const date = new Date(timeString)
+  return date.toLocaleString()
+}
+
 
 // 获取我关注的圈子
 const fetchFollowedBars = async (page = 1, size = 5) => {
@@ -1794,5 +1990,160 @@ const handleTabChange = (tab) => {
   background-color: #f8fafc;
   border-radius: 8px;
   margin: 12px;
+}
+
+/* 用户操作按钮组样式 */
+.user-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.message-btn {
+  transition: all 0.3s ease;
+}
+
+.message-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 私信对话框样式 */
+.message-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.message-dialog .el-dialog__header {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  margin-right: 0;
+}
+
+.message-dialog-content {
+  padding: 20px;
+}
+
+.message-preview {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.message-bubble {
+  max-width: 80%;
+  padding: 12px 16px;
+  background-color: #409EFF;
+  color: white;
+  border-radius: 18px 18px 0 18px;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.message-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 消息历史抽屉样式 */
+.message-history-drawer {
+  --el-drawer-bg-color: #f8fafc;
+}
+
+.message-history-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message-item {
+  display: flex;
+  gap: 12px;
+}
+
+.message-sent {
+  flex-direction: row-reverse;
+}
+
+.message-received {
+  flex-direction: row;
+}
+
+.message-content {
+  max-width: 70%;
+}
+
+.message-text {
+  padding: 12px 16px;
+  border-radius: 18px;
+  word-break: break-word;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.message-sent .message-text {
+  background-color: #409EFF;
+  color: white;
+  border-radius: 18px 18px 0 18px;
+}
+
+.message-received .message-text {
+  background-color: white;
+  color: #333;
+  border-radius: 18px 18px 18px 0;
+}
+
+.message-time {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.message-received .message-time {
+  text-align: left;
+}
+
+.message-loading {
+  text-align: center;
+  padding: 20px;
+  color: #94a3b8;
+}
+
+.no-messages {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+}
+
+.message-input-container {
+  position: sticky;
+  bottom: 0;
+  background-color: white;
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.send-btn {
+  margin-top: 10px;
+  width: 100%;
+}
+
+/* 动画效果 */
+.message-item {
+  animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

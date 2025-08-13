@@ -1,5 +1,7 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ChatMessage;
 import com.example.mapper.ChatMessageMapper;
@@ -14,4 +16,10 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessage> implements ChatMessageService {
+    @Override
+    public Page<ChatMessage> selectPageByConversationId(Page<ChatMessage> page, Long conversationId) {
+        return page(page, new QueryWrapper<ChatMessage>()
+                .eq("conversation_id", conversationId)
+                .eq("is_deleted", 0));
+    }
 }
