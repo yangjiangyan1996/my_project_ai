@@ -783,7 +783,7 @@ const openMessageDialog = async () => {
       page: chatPage.value,
       size: chatSize.value
     })
-    
+    console.log("获取聊天历史",res)
     if (res.records && res.records.length > 0) {
       chatHistory.value = res.records
       chatTotal.value = res.total
@@ -900,16 +900,17 @@ const loadMoreMessages = async () => {
   chatPage.value++
   try {
     chatLoading.value = true
-    const res =  post('/api/auth/chat/getChatHistory', {
+    const res = await post('/api/auth/chat/getChatHistory', {
       secrecyId: secrecyId.value,
       page: chatPage.value,
       size: chatSize.value
     })
-    
     if (res.records && res.records.length > 0) {
-      chatHistory.value = [...chatHistory.value, ...res.records]
+      // chatHistory.value = [...chatHistory.value, ...res.records]
+      chatHistory.value = [...res.records, ...chatHistory.value]
       formatChatHistory()
     }
+    console.log("加载更多消息2",chatHistory.value)
   } catch (error) {
     console.error('加载更多消息失败:', error)
     chatPage.value-- // 回退页码
