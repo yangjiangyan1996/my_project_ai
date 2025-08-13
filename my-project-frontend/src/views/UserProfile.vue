@@ -333,6 +333,7 @@
           :key="index"
           class="message-item"
           :class="{'message-sent': msg.isSelf, 'message-received': !msg.isSelf}"
+          :ref="index === 0 ? 'firstMessageRef' : null"
         >
           <!-- 接收的消息头像在左边 -->
           <div class="message-avatar" v-if="!msg.isSelf">
@@ -710,6 +711,8 @@ const chatTotal = ref(0)
 const chatLoading = ref(false)
 const chatConversationId = ref(null)
 const isNewConversation = ref(false)
+// 添加一个 ref 来记录第一条消息的 DOM 元素
+const firstMessageRef = ref(null)
 
 
 
@@ -814,6 +817,7 @@ const openMessageDialog = async () => {
   }
 }
 
+
 const formatChatHistory = () => {
   messageHistory.value = chatHistory.value.map(msg => ({
     ...msg,
@@ -900,23 +904,49 @@ const sendMessage = async () => {
   }
 }
 
+
 const loadMoreMessages = async () => {
   if (chatLoading.value || chatPage.value * chatSize.value >= chatTotal.value) return
   
-  chatPage.value++
   try {
     chatLoading.value = true
+    
+    // 记录当前第一条消息的位置
+    const scrollContainer = document.querySelector('.message-history-container .el-scrollbar__wrap')
+    const firstMessage = document.querySelector('.message-item:first-child')
+    const prevScrollHeight = scrollContainer.scrollHeight
+    const prevFirstMessageOffset = firstMessage ? firstMessage.offsetTop : 0
+    
+    chatPage.value++
     const res = await post('/api/auth/chat/getChatHistory', {
       secrecyId: secrecyId.value,
       page: chatPage.value,
       size: chatSize.value
     })
+    
     if (res.records && res.records.length > 0) {
-      // chatHistory.value = [...chatHistory.value, ...res.records]
-      chatHistory.value = [...res.records, ...chatHistory.value]
-      formatChatHistory()
+      // 将新数据插入到数组开头
+      const newRecords = res.records.map(msg => ({
+        ...msg,
+        senderId: msg.senderId,
+        content: msg.content,
+        createdAt: msg.createdTime,
+        isSelf: msg.senderId === currentUserInfo.data.id
+      }))
+      
+      // 使用展开运算符创建新数组，确保响应式更新
+      messageHistory.value = [...newRecords, ...messageHistory.value]
+      
+      // 等待 DOM 更新
+      nextTick(() => {
+        // 计算新内容增加的高度
+        const newScrollHeight = scrollContainer.scrollHeight
+        const heightDiff = newScrollHeight - prevScrollHeight
+        
+        // 保持用户之前的阅读位置
+        scrollContainer.scrollTop = heightDiff + (firstMessage ? firstMessage.offsetTop - prevFirstMessageOffset : 0)
+      })
     }
-    console.log("加载更多消息2",chatHistory.value)
   } catch (error) {
     console.error('加载更多消息失败:', error)
     chatPage.value-- // 回退页码
@@ -924,6 +954,7 @@ const loadMoreMessages = async () => {
     chatLoading.value = false
   }
 }
+
 
 const openMessageHistory = () => {
   messageHistoryVisible.value = true
@@ -2965,5 +2996,31 @@ const handleTabChange = (tab) => {
   order: -1;
   margin-right: 12px;
   margin-left: 0;
+}
+/* 添加平滑过渡效果 */
+.message-item {
+  transition: all 0.3s ease;
+}
+
+.message-history-container {
+  transition: height 0.3s ease;
+}
+
+/* 添加加载指示器 */
+.load-more-indicator {
+  text-align: center;
+  padding: 10px;
+  color: #999;
+  font-size: 14px;
+}
+
+.load-more-indicator .el-icon {
+  animation: spin 1s linear infinite;
+  margin-right: 5px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
