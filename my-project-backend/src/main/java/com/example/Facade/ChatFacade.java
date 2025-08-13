@@ -96,7 +96,7 @@ public class ChatFacade {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Boolean sendMessage(ChatCreateMessageReq req) {
+    public Long sendMessage(ChatCreateMessageReq req) {
         if (req.getChatConversationId() == null) {
             //第一次发起聊天，创建会话内容
             Long chatConversationId = initChatConversation(req);
@@ -113,7 +113,7 @@ public class ChatFacade {
         if (save) {
             AsyncTaskUtil.execute(() -> chatConversationService.updateLastActiveAtById(new Date(), req.getChatConversationId()));
         }
-        return save;
+        return req.getChatConversationId();
     }
 
     private Long initChatConversation(ChatCreateMessageReq req) {

@@ -28,11 +28,16 @@ public class ChatController {
     @Resource
     UserFacade userFacade;
 
+    /**
+     *  发送消息
+     * @param req
+     * @return 会话ID
+     */
     @PostMapping("/sendMessage")
-    public RespBean<Boolean> sendMessage(@Validated @RequestBody ChatCreateMessageReq req) {
+    public RespBean<Long> sendMessage(@Validated @RequestBody ChatCreateMessageReq req) {
         try {
             req.setCurrentUserId(UserUtil.getCurrentUser().getId());
-            Boolean result = chatFacade.sendMessage(req);
+            Long result = chatFacade.sendMessage(req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ChatController#sendMessage,req:{}", JSON.toJSONString(req), e);
@@ -44,6 +49,11 @@ public class ChatController {
     }
 
 
+    /**
+     * 获取聊天记录
+     * @param req
+     * @return
+     */
     @PostMapping("/getChatHistory")
     public RespBean<Page<ChatHistoryResp>> getChatHistory(@RequestBody ChatHistoryPageReq req) {
         try {

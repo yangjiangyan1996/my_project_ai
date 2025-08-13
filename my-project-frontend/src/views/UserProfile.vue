@@ -315,78 +315,58 @@
 
 
   <!-- 私信弹窗 -->
-  <el-dialog
+<!-- In the template section - update the message dialog part -->
+<el-dialog
   v-model="messageDialogVisible"
   title="私信对话"
   width="600px"
   :close-on-click-modal="false"
   custom-class="message-dialog"
-  @closed="messageContent = ''"
 >
   <div class="message-dialog-content">
     <!-- 消息历史区域 -->
-    <!-- <div class="message-history-container" v-loading="chatLoading">
+    <div class="message-history-container" v-loading="chatLoading">
       <el-scrollbar height="400px" @scroll="handleScroll">
+        <!-- 在template部分，修改消息项的结构 -->
         <div 
           v-for="(msg, index) in messageHistory" 
           :key="index"
           class="message-item"
           :class="{'message-sent': msg.isSelf, 'message-received': !msg.isSelf}"
         >
-          <div class="message-avatar">
+          <!-- 接收的消息头像在左边 -->
+          <div class="message-avatar" v-if="!msg.isSelf">
             <el-avatar 
               :size="40" 
               :src="msg.isSelf ? currentUserInfo.data.avatarUrl : userInfo.data.avatarUrl"
             />
           </div>
-          <div class="message-content">
+          
+          <!-- 消息内容 -->
+          <div class="message-content-wrapper">
             <div class="message-meta">
               <span class="message-sender">{{ msg.isSelf ? '你' : msg.senderName }}</span>
               <span class="message-time">{{ formatMessageTime(msg.createdAt) }}</span>
             </div>
-            <div class="message-text">{{ msg.content }}</div>
+            <div class="message-bubble">
+              {{ msg.content }}
+            </div>
+          </div>
+          
+          <!-- 发送的消息头像在右边 -->
+          <div class="message-avatar" v-if="msg.isSelf">
+            <el-avatar 
+              :size="40" 
+              :src="msg.isSelf ? currentUserInfo.data.avatarUrl : userInfo.data.avatarUrl"
+            />
           </div>
         </div>
         
         <div v-if="messageHistory.length === 0 && !chatLoading" class="no-messages">
           <el-empty description="暂无聊天记录" />
         </div>
-        
-        <div v-if="chatLoading" class="message-loading">
-          <el-icon class="is-loading"><Loading /></el-icon>
-          加载中...
-        </div>
       </el-scrollbar>
-    </div> -->
-    
-    <div class="message-history-container" v-loading="chatLoading">
-  <el-scrollbar height="400px" @scroll="handleScroll">
-    <div 
-      v-for="(msg, index) in messageHistory" 
-      :key="index"
-      class="message-item"
-      :class="{'message-sent': msg.isSelf, 'message-received': !msg.isSelf}"
-    >
-      <div class="message-avatar">
-        <el-avatar 
-          :size="40" 
-          :src="msg.isSelf ? currentUserInfo.data.avatarUrl : userInfo.data.avatarUrl"
-        />
-      </div>
-      <div class="message-content">
-        <div class="message-meta">
-          <span class="message-sender">{{ msg.isSelf ? '你' : msg.senderName }}</span>
-          <span class="message-time">{{ formatMessageTime(msg.createdAt) }}</span>
-        </div>
-        <div class="message-text">{{ msg.content }}</div>
-      </div>
     </div>
-    
-    <div v-if="messageHistory.length === 0 && !chatLoading" class="no-messages">
-      <el-empty description="暂无聊天记录" />
-    </div>
-  </el-scrollbar>
-</div>
 
     <!-- 消息输入区域 -->
     <div class="message-input-area">
@@ -415,7 +395,6 @@
     </div>
   </div>
 </el-dialog>
-   
 
 
 <el-drawer
@@ -651,7 +630,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch,nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Suitcase, SuccessFilled, Plus ,Message, Loading} from '@element-plus/icons-vue'
 import { post, get } from '@/net'
@@ -870,42 +849,43 @@ const sendMessage = async () => {
     const requestData = {
       receiverId: userInfo.value.data.id,
       content: messageContent.value,
-      chatType : 1//1:私聊
+      chatType: 1
     }
     
-    // 如果是已有会话，带上会话ID
+    // 如果已经有会话ID，添加到请求中
     if (chatConversationId.value) {
       requestData.chatConversationId = chatConversationId.value
     }
     
     const res = await post('/api/auth/chat/sendMessage', requestData)
-    
-    // 如果是新会话，保存返回的会话ID
-    if (isNewConversation.value && res.chatConversationId) {
-      chatConversationId.value = res.chatConversationId
-      isNewConversation.value = false
-    }
-    
-    ElMessage.success('消息发送成功')
-    messageDialogVisible.value = false
-    
-    // 添加到消息历史
-    const newMsg = {
-      chatMessageId: res.chatMessageId,
-      chatConversationId: chatConversationId.value,
-      senderId: currentUserInfo.data.id,
-      senderName: currentUserInfo.data.username,
-      senderAvatar: currentUserInfo.data.avatarUrl,
-      isSelf: true,
-      content: messageContent.value,
-      createdTime: new Date().toISOString(),
-      status: 1
-    }
-    
-    chatHistory.value.unshift(newMsg)
-    formatChatHistory()
-    
-    messageContent.value = ''
+    console.log("发送",res)
+    // 处理新的响应格式
+    // 如果是新会话，保存返回的chatConversationId
+      if (!chatConversationId.value && res) {
+        chatConversationId.value = res
+        isNewConversation.value = false
+      }
+      
+      ElMessage.success('消息发送成功')
+      
+      // 添加到消息历史
+      const newMsg = {
+        chatMessageId: Date.now(), // 临时ID，实际应该从响应获取
+        chatConversationId: chatConversationId.value,
+        senderId: currentUserInfo.data.id,
+        senderName: currentUserInfo.data.username,
+        senderAvatar: currentUserInfo.data.avatarUrl,
+        isSelf: true,
+        content: messageContent.value,
+        createdTime: new Date().toISOString(),
+        status: 1
+      }
+      
+      chatHistory.value.unshift(newMsg)
+      formatChatHistory()
+      
+      messageContent.value = ''
+      scrollToBottom()
   } catch (error) {
     console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败')
@@ -2516,5 +2496,467 @@ const handleTabChange = (tab) => {
   .message-content {
     max-width: 80%;
   }
+}
+
+/* 消息对话框高级样式 */
+.message-dialog {
+  --el-drawer-bg-color: #f8fafc;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.message-dialog .el-dialog__header {
+  padding: 16px 24px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  margin-right: 0;
+}
+
+.message-dialog .el-dialog__body {
+  padding: 0;
+}
+
+.message-dialog-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 消息历史容器 */
+.message-history-container {
+  flex: 1;
+  padding: 20px;
+  background-color: #f9f9f9;
+  overflow-y: auto;
+}
+
+/* 消息项基础样式 */
+.message-item {
+  display: flex;
+  margin-bottom: 20px;
+  max-width: 90%;
+  animation: fadeIn 0.3s ease;
+}
+
+/* 发送的消息样式（靠右） */
+.message-sent {
+  margin-left: auto;
+  flex-direction: row-reverse;
+}
+
+/* 接收的消息样式（靠左） */
+.message-received {
+  margin-right: auto;
+  flex-direction: row;
+}
+
+/* 消息头像样式 */
+.message-avatar {
+  flex-shrink: 0;
+  margin: 0 12px;
+  align-self: flex-end;
+}
+
+/* 消息内容容器 */
+.message-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+}
+
+/* 消息元信息（发送者和时间） */
+.message-meta {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.message-sent .message-meta {
+  justify-content: flex-end;
+}
+
+.message-received .message-meta {
+  justify-content: flex-start;
+}
+
+.message-sender {
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+/* 消息气泡样式 */
+.message-bubble {
+  padding: 12px 16px;
+  border-radius: 18px;
+  line-height: 1.5;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  position: relative;
+  animation: fadeInUp 0.3s ease;
+}
+
+/* 发送的消息气泡样式 */
+.message-sent .message-bubble {
+  background-color: #409EFF;
+  color: white;
+  border-radius: 18px 18px 0 18px;
+  margin-left: 40px;
+}
+
+/* 接收的消息气泡样式 */
+.message-received .message-bubble {
+  background-color: white;
+  color: #333;
+  border-radius: 18px 18px 18px 0;
+  margin-right: 40px;
+}
+
+/* 添加小三角指示器 */
+.message-bubble:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+}
+
+.message-sent .message-bubble:after {
+  right: -8px;
+  border-left-color: #409EFF;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.message-received .message-bubble:after {
+  left: -8px;
+  border-right-color: white;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+/* 消息输入区域 */
+.message-input-area {
+  padding: 16px;
+  border-top: 1px solid #e4e7ed;
+  background-color: white;
+}
+
+.message-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 无消息提示 */
+.no-messages {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .message-dialog {
+    width: 90% !important;
+  }
+  
+  .message-content-wrapper {
+    max-width: 75%;
+  }
+  
+  .message-bubble {
+    padding: 10px 14px;
+  }
+}
+
+/* In the style section - update the message styling */
+.message-dialog {
+  --el-drawer-bg-color: #f8fafc;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.message-dialog .el-dialog__header {
+  padding: 16px 24px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  margin-right: 0;
+}
+
+.message-dialog .el-dialog__body {
+  padding: 0;
+}
+
+.message-dialog-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.message-history-container {
+  flex: 1;
+  padding: 20px;
+  background-color: #f5f7fa;
+  overflow-y: auto;
+}
+
+.message-item {
+  display: flex;
+  margin-bottom: 20px;
+  max-width: 100%;
+  animation: fadeIn 0.3s ease;
+  align-items: flex-end;
+}
+
+.message-sent {
+  justify-content: flex-end;
+  padding-right: 1px;
+}
+
+.message-received {
+  justify-content: flex-start;
+  padding-left: 1px;
+}
+
+.message-avatar {
+  flex-shrink: 0;
+  margin: 0 0 0 12px;
+  align-self: flex-end;
+}
+
+.message-sent .message-avatar {
+  order: 1;
+  margin: 0 0 0 12px;
+}
+
+.message-received .message-avatar {
+  order: -1;
+  margin: 0 12px 0 0;
+}
+
+.message-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+}
+
+.message-meta {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.message-sent .message-meta {
+  justify-content: flex-end;
+}
+
+.message-received .message-meta {
+  justify-content: flex-start;
+}
+
+.message-sender {
+  font-weight: 500;
+  margin-right: 8px;
+  color: #333;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #999;
+}
+
+.message-bubble {
+  padding: 12px 16px;
+  border-radius: 18px;
+  line-height: 1.5;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  position: relative;
+  animation: fadeInUp 0.3s ease;
+}
+
+.message-sent .message-bubble {
+  background-color: #409EFF;
+  color: white;
+  border-radius: 18px 18px 0 18px;
+}
+
+.message-received .message-bubble {
+  background-color: white;
+  color: #333;
+  border-radius: 18px 18px 18px 0;
+  border: 1px solid #e4e7ed;
+}
+
+.message-bubble:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+}
+
+.message-sent .message-bubble:after {
+  right: -8px;
+  border-left-color: #409EFF;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.message-received .message-bubble:after {
+  left: -8px;
+  border-right-color: white;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.message-input-area {
+  padding: 16px;
+  border-top: 1px solid #e4e7ed;
+  background-color: white;
+}
+
+.message-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.no-messages {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 在style部分，更新消息样式 */
+.message-item {
+  display: flex;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.message-sent {
+  justify-content: flex-end;
+}
+
+.message-received {
+  justify-content: flex-start;
+}
+
+.message-content-wrapper {
+  max-width: 70%;
+}
+
+.message-sent .message-content-wrapper {
+  margin-left: auto;
+  align-items: flex-end;
+}
+
+.message-received .message-content-wrapper {
+  margin-right: auto;
+  align-items: flex-start;
+}
+
+.message-meta {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.message-sent .message-meta {
+  justify-content: flex-end;
+}
+
+.message-received .message-meta {
+  justify-content: flex-start;
+}
+
+.message-bubble {
+  padding: 12px 16px;
+  border-radius: 18px;
+  line-height: 1.5;
+  word-break: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.message-sent .message-bubble {
+  background-color: #409EFF;
+  color: white;
+  border-radius: 18px 18px 0 18px;
+}
+
+.message-received .message-bubble {
+  background-color: white;
+  color: #333;
+  border-radius: 18px 18px 18px 0;
+}
+
+.message-avatar {
+  flex-shrink: 0;
+  margin: 0 12px;
+  align-self: flex-end;
+}
+
+.message-sent .message-avatar {
+  order: -1;
+  margin-left: 12px;
+  margin-right: 0;
+}
+
+.message-received .message-avatar {
+  order: -1;
+  margin-right: 12px;
+  margin-left: 0;
 }
 </style>
