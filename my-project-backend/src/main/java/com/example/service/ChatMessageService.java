@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.ChatMessage;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -12,4 +14,6 @@ import com.example.entity.dto.ChatMessage;
  */
 public interface ChatMessageService extends IService<ChatMessage> {
     Page<ChatMessage> selectPageByConversationId(Page<ChatMessage> page, Long conversationId);
+
+
 }

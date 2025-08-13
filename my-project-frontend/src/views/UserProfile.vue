@@ -313,44 +313,109 @@
       </div>
   </div>
 
-  <!-- 在模板底部，其他 drawer 组件之后添加 -->
-<el-dialog
+
+  <!-- 私信弹窗 -->
+  <el-dialog
   v-model="messageDialogVisible"
-  title="发送私信"
-  width="500px"
+  title="私信对话"
+  width="600px"
   :close-on-click-modal="false"
   custom-class="message-dialog"
+  @closed="messageContent = ''"
 >
   <div class="message-dialog-content">
-    <el-input
-      v-model="messageContent"
-      type="textarea"
-      :rows="4"
-      placeholder="输入你想发送的消息..."
-      maxlength="500"
-      show-word-limit
-      resize="none"
-    ></el-input>
+    <!-- 消息历史区域 -->
+    <!-- <div class="message-history-container" v-loading="chatLoading">
+      <el-scrollbar height="400px" @scroll="handleScroll">
+        <div 
+          v-for="(msg, index) in messageHistory" 
+          :key="index"
+          class="message-item"
+          :class="{'message-sent': msg.isSelf, 'message-received': !msg.isSelf}"
+        >
+          <div class="message-avatar">
+            <el-avatar 
+              :size="40" 
+              :src="msg.isSelf ? currentUserInfo.data.avatarUrl : userInfo.data.avatarUrl"
+            />
+          </div>
+          <div class="message-content">
+            <div class="message-meta">
+              <span class="message-sender">{{ msg.isSelf ? '你' : msg.senderName }}</span>
+              <span class="message-time">{{ formatMessageTime(msg.createdAt) }}</span>
+            </div>
+            <div class="message-text">{{ msg.content }}</div>
+          </div>
+        </div>
+        
+        <div v-if="messageHistory.length === 0 && !chatLoading" class="no-messages">
+          <el-empty description="暂无聊天记录" />
+        </div>
+        
+        <div v-if="chatLoading" class="message-loading">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          加载中...
+        </div>
+      </el-scrollbar>
+    </div> -->
     
-    <div class="message-preview" v-if="messageContent">
-      <div class="message-bubble">
-        {{ messageContent }}
+    <div class="message-history-container" v-loading="chatLoading">
+  <el-scrollbar height="400px" @scroll="handleScroll">
+    <div 
+      v-for="(msg, index) in messageHistory" 
+      :key="index"
+      class="message-item"
+      :class="{'message-sent': msg.isSelf, 'message-received': !msg.isSelf}"
+    >
+      <div class="message-avatar">
+        <el-avatar 
+          :size="40" 
+          :src="msg.isSelf ? currentUserInfo.data.avatarUrl : userInfo.data.avatarUrl"
+        />
+      </div>
+      <div class="message-content">
+        <div class="message-meta">
+          <span class="message-sender">{{ msg.isSelf ? '你' : msg.senderName }}</span>
+          <span class="message-time">{{ formatMessageTime(msg.createdAt) }}</span>
+        </div>
+        <div class="message-text">{{ msg.content }}</div>
       </div>
     </div>
     
-    <div class="message-actions">
-      <el-button @click="messageDialogVisible = false">取消</el-button>
-      <el-button 
-        type="primary" 
-        @click="sendMessage"
-        :loading="sendingMessage"
-        :disabled="!messageContent.trim()"
-      >
-        发送
-      </el-button>
+    <div v-if="messageHistory.length === 0 && !chatLoading" class="no-messages">
+      <el-empty description="暂无聊天记录" />
+    </div>
+  </el-scrollbar>
+</div>
+
+    <!-- 消息输入区域 -->
+    <div class="message-input-area">
+      <el-input
+        v-model="messageContent"
+        type="textarea"
+        :rows="3"
+        placeholder="输入你想发送的消息..."
+        maxlength="500"
+        show-word-limit
+        resize="none"
+        @keyup.enter="sendMessage"
+      ></el-input>
+      
+      <div class="message-actions">
+        <el-button @click="messageDialogVisible = false">取消</el-button>
+        <el-button 
+          type="primary" 
+          @click="sendMessage"
+          :loading="sendingMessage"
+          :disabled="!messageContent.trim()"
+        >
+          发送
+        </el-button>
+      </div>
     </div>
   </div>
 </el-dialog>
+   
 
 
 <el-drawer
@@ -659,6 +724,14 @@ const messageHistoryVisible = ref(false)
 const messageHistory = ref([])
 const loadingMessages = ref(false)
 const newMessage = ref('')
+const chatHistory = ref([])
+const chatPage = ref(1)
+const chatSize = ref(10)
+const chatTotal = ref(0)
+const chatLoading = ref(false)
+const chatConversationId = ref(null)
+const isNewConversation = ref(false)
+
 
 
 onMounted(() => {
@@ -681,33 +754,187 @@ onMounted(() => {
   }
 });
 
+const formatMessageTime = (timeString) => {
+  if (!timeString) return ''
+  
+  const now = new Date()
+  const date = new Date(timeString)
+  const diffInMinutes = Math.floor((now - date) / (1000 * 60))
+  
+  if (diffInMinutes < 1) {
+    return '刚刚'
+  } else if (diffInMinutes < 60) {
+    return `${diffInMinutes}分钟前`
+  } else if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  } else if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
+  } else {
+    return date.toLocaleDateString()
+  }
+}
+
+const updateMessageStatus = async (messageIds, status) => {
+  try {
+    await post('/api/auth/chat/updateMessageStatus', {
+      messageIds,
+      status
+    })
+  } catch (error) {
+    console.error('更新消息状态失败:', error)
+  }
+}
+
 // 添加方法
-const openMessageDialog = () => {
-   console.log('openMessageDialog called')
-  console.log('isCurrentUser:', isCurrentUser.value)
-  console.log('userInfo.data:', userInfo.value.data)
+const openMessageDialog = async () => {
+  console.log('openMessageDialog called')
   messageDialogVisible.value = true
   messageContent.value = ''
+  
+  // Reset chat state
+  chatHistory.value = []
+  chatPage.value = 1
+  chatConversationId.value = null
+  isNewConversation.value = false
+  
+  try {
+    chatLoading.value = true
+    const res = await post('/api/auth/chat/getChatHistory', {
+      secrecyId: secrecyId.value,
+      page: chatPage.value,
+      size: chatSize.value
+    })
+    
+    if (res.records && res.records.length > 0) {
+      chatHistory.value = res.records
+      chatTotal.value = res.total
+      chatConversationId.value = res.records[0].chatConversationId
+      
+      // Format the chat history
+      messageHistory.value = chatHistory.value.map(msg => ({
+        ...msg,
+        senderId: msg.senderId,
+        content: msg.content,
+        createdAt: msg.createdTime,
+        isSelf: msg.senderId === currentUserInfo.data.id
+      }))
+    } else {
+      isNewConversation.value = true
+      ElMessage.info('这是你们第一次对话，开始聊天吧！')
+    }
+  } catch (error) {
+    console.error('获取聊天历史失败:', error)
+    ElMessage.error('获取聊天历史失败')
+  } finally {
+    chatLoading.value = false
+  }
 }
+
+const formatChatHistory = () => {
+  messageHistory.value = chatHistory.value.map(msg => ({
+    ...msg,
+    senderId: msg.senderId,
+    content: msg.content,
+    createdAt: msg.createdTime,
+    isSelf: msg.senderId === currentUserInfo.data.id
+  }))
+}
+
+
+const handleScroll = ({ scrollTop }) => {
+  const scrollContainer = document.querySelector('.message-history-container .el-scrollbar__wrap')
+  if (!scrollContainer) return
+  
+  // 如果滚动到顶部附近，加载更多消息
+  if (scrollTop < 100 && !chatLoading.value && chatPage.value * chatSize.value < chatTotal.value) {
+    loadMoreMessages()
+  }
+}
+
+// 自动滚动到底部
+const scrollToBottom = () => {
+  nextTick(() => {
+    const container = document.querySelector('.message-history-container .el-scrollbar__wrap')
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+  })
+}
+
 
 const sendMessage = async () => {
   if (!messageContent.value.trim()) return
   
   sendingMessage.value = true
   try {
-    await post('/api/auth/message/send', {
+    const requestData = {
       receiverId: userInfo.value.data.id,
-      content: messageContent.value
-    })
+      content: messageContent.value,
+      chatType : 1//1:私聊
+    }
+    
+    // 如果是已有会话，带上会话ID
+    if (chatConversationId.value) {
+      requestData.chatConversationId = chatConversationId.value
+    }
+    
+    const res = await post('/api/auth/chat/sendMessage', requestData)
+    
+    // 如果是新会话，保存返回的会话ID
+    if (isNewConversation.value && res.chatConversationId) {
+      chatConversationId.value = res.chatConversationId
+      isNewConversation.value = false
+    }
+    
     ElMessage.success('消息发送成功')
     messageDialogVisible.value = false
-    // 刷新消息历史
-    loadMessageHistory()
+    
+    // 添加到消息历史
+    const newMsg = {
+      chatMessageId: res.chatMessageId,
+      chatConversationId: chatConversationId.value,
+      senderId: currentUserInfo.data.id,
+      senderName: currentUserInfo.data.username,
+      senderAvatar: currentUserInfo.data.avatarUrl,
+      isSelf: true,
+      content: messageContent.value,
+      createdTime: new Date().toISOString(),
+      status: 1
+    }
+    
+    chatHistory.value.unshift(newMsg)
+    formatChatHistory()
+    
+    messageContent.value = ''
   } catch (error) {
     console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败')
   } finally {
     sendingMessage.value = false
+  }
+}
+
+const loadMoreMessages = async () => {
+  if (chatLoading.value || chatPage.value * chatSize.value >= chatTotal.value) return
+  
+  chatPage.value++
+  try {
+    chatLoading.value = true
+    const res =  post('/api/auth/chat/getChatHistory', {
+      secrecyId: secrecyId.value,
+      page: chatPage.value,
+      size: chatSize.value
+    })
+    
+    if (res.records && res.records.length > 0) {
+      chatHistory.value = [...chatHistory.value, ...res.records]
+      formatChatHistory()
+    }
+  } catch (error) {
+    console.error('加载更多消息失败:', error)
+    chatPage.value-- // 回退页码
+  } finally {
+    chatLoading.value = false
   }
 }
 
@@ -745,12 +972,6 @@ const sendNewMessage = async () => {
     console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败')
   }
-}
-
-const formatMessageTime = (timeString) => {
-  if (!timeString) return ''
-  const date = new Date(timeString)
-  return date.toLocaleString()
 }
 
 
@@ -2144,6 +2365,156 @@ const handleTabChange = (tab) => {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* 消息对话框样式 */
+.message-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.message-dialog .el-dialog__header {
+  padding: 16px 20px;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+  margin-right: 0;
+}
+
+.message-dialog .el-dialog__body {
+  padding: 0;
+}
+
+.message-dialog-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 消息历史容器 */
+.message-history-container {
+  flex: 1;
+  padding: 20px;
+  background-color: #f9f9f9;
+  overflow-y: auto;
+}
+
+/* 消息项样式 */
+.message-item {
+  display: flex;
+  margin-bottom: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+.message-sent {
+  justify-content: flex-end;
+}
+
+.message-received {
+  justify-content: flex-start;
+}
+
+.message-avatar {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.message-sent .message-avatar {
+  order: 1;
+  margin-right: 0;
+  margin-left: 12px;
+}
+
+.message-content {
+  max-width: 70%;
+}
+
+.message-meta {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.message-sent .message-meta {
+  text-align: right;
+}
+
+.message-received .message-meta {
+  text-align: left;
+}
+
+.message-sender {
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.message-text {
+  padding: 12px 16px;
+  border-radius: 18px;
+  line-height: 1.5;
+  word-break: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.message-sent .message-text {
+  background-color: #409EFF;
+  color: white;
+  border-radius: 18px 18px 0 18px;
+}
+
+.message-received .message-text {
+  background-color: white;
+  color: #333;
+  border-radius: 18px 18px 18px 0;
+}
+
+/* 消息输入区域 */
+.message-input-area {
+  padding: 16px;
+  border-top: 1px solid #e4e7ed;
+  background-color: white;
+}
+
+.message-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 加载中样式 */
+.message-loading {
+  text-align: center;
+  padding: 20px;
+  color: #909399;
+}
+
+.no-messages {
+  text-align: center;
+  padding: 40px 20px;
+  color: #909399;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .message-dialog {
+    width: 90% !important;
+  }
+  
+  .message-content {
+    max-width: 80%;
   }
 }
 </style>

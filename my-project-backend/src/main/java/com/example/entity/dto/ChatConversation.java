@@ -10,9 +10,9 @@ import lombok.Data;
 public class ChatConversation extends BaseModel {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private Integer type;
+    private Integer chatType;
+    private Long projectId;
     private String title;
     private String avatar;
-    private Long lastMessageId;
     private java.util.Date lastActiveAt;
 }

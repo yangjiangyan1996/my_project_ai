@@ -10,7 +10,7 @@ import com.example.entity.resp.AchievementMyPageResp;
 import com.example.entity.resp.TaskBadgeResp;
 import com.example.entity.vo.TaskCompletedEvent;
 import com.example.enums.AchievementEnums;
-import com.example.enums.CommonConstant;
+import com.example.constants.CommonConstant;
 import com.example.service.*;
 import io.lettuce.core.internal.LettuceLists;
 import jakarta.annotation.Resource;

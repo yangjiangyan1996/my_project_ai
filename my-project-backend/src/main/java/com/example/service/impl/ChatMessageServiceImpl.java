@@ -8,6 +8,8 @@ import com.example.mapper.ChatMessageMapper;
 import com.example.service.ChatMessageService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -22,4 +24,6 @@ public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatM
                 .eq("conversation_id", conversationId)
                 .eq("is_deleted", 0));
     }
+
+
 }

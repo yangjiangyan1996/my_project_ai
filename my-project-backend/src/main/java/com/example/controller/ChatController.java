@@ -6,12 +6,14 @@ import com.example.Facade.ChatFacade;
 import com.example.Facade.CommonFacade;
 import com.example.Facade.UserFacade;
 import com.example.entity.base.RespBean;
+import com.example.entity.req.ChatCreateMessageReq;
 import com.example.entity.req.ChatHistoryPageReq;
 import com.example.entity.resp.ChatHistoryResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,6 +27,22 @@ public class ChatController {
     CommonFacade commonFacade;
     @Resource
     UserFacade userFacade;
+
+    @PostMapping("/sendMessage")
+    public RespBean<Boolean> sendMessage(@Validated @RequestBody ChatCreateMessageReq req) {
+        try {
+            req.setCurrentUserId(UserUtil.getCurrentUser().getId());
+            Boolean result = chatFacade.sendMessage(req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ChatController#sendMessage,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ChatController#sendMessage,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
 
     @PostMapping("/getChatHistory")
     public RespBean<Page<ChatHistoryResp>> getChatHistory(@RequestBody ChatHistoryPageReq req) {
