@@ -797,6 +797,11 @@ const openMessageDialog = async () => {
         createdAt: msg.createdTime,
         isSelf: msg.senderId === currentUserInfo.data.id
       }))
+
+      // 确保DOM更新后滚动到底部
+      nextTick(() => {
+        scrollToBottom()
+      })
     } else {
       isNewConversation.value = true
       ElMessage.info('这是你们第一次对话，开始聊天吧！')
@@ -832,6 +837,7 @@ const handleScroll = ({ scrollTop }) => {
 
 // 自动滚动到底部
 const scrollToBottom = () => {
+  console.log("自动滚动到底部")
   nextTick(() => {
     const container = document.querySelector('.message-history-container .el-scrollbar__wrap')
     if (container) {
