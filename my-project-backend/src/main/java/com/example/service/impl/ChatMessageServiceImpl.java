@@ -22,7 +22,8 @@ public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatM
     public Page<ChatMessage> selectPageByConversationId(Page<ChatMessage> page, Long conversationId) {
         return page(page, new QueryWrapper<ChatMessage>()
                 .eq("conversation_id", conversationId)
-                .eq("is_deleted", 0));
+                .eq("is_deleted", 0)
+                .orderByDesc("created_at"));
     }
 
 

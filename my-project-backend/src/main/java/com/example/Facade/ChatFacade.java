@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +88,7 @@ public class ChatFacade {
             p.setSenderName(userId2UserInfoMap.getOrDefault(v.getSenderId(), new Account()).getNickname());
             p.setIsSelf(v.getSenderId().equals(req.getCurrentUserId()));
             return p;
-        }).collect(Collectors.toList());
+        }).sorted(Comparator.comparing(ChatHistoryResp::getCreatedTime)).collect(Collectors.toList());
 
         Page<ChatHistoryResp> result = Page.of(req.getPage(), req.getSize());
         result.setTotal(chatMessagePage.getTotal());

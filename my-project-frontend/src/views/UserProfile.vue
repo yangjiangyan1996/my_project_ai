@@ -881,7 +881,7 @@ const sendMessage = async () => {
         status: 1
       }
       
-      chatHistory.value.unshift(newMsg)
+      chatHistory.value.push(newMsg)
       formatChatHistory()
       
       messageContent.value = ''
