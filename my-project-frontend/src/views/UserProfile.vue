@@ -770,7 +770,6 @@ const updateMessageStatus = async (messageIds, status) => {
 }
 
 const openMessageDialog = async () => {
-  console.log('openMessageDialog called')
   messageDialogVisible.value = true
   messageContent.value = ''
   
@@ -794,7 +793,10 @@ const openMessageDialog = async () => {
       chatConversationId.value = res.records[0].chatConversationId
       
       formatChatHistory()
-      scrollToBottom()
+      // 确保DOM更新后滚动到底部
+      nextTick(() => {
+        scrollToBottom('auto') // 使用auto而不是smooth，确保立即滚动
+      })
     } else {
       isNewConversation.value = true
       ElMessage.info('这是你们第一次对话，开始聊天吧！')
@@ -815,7 +817,7 @@ const startPolling = () => {
   // 先清除已有定时器
   stopPolling()
   // 每5秒获取一次新消息
-  pollInterval.value = setInterval(fetchNewMessages, 5000)
+  pollInterval.value = setInterval(fetchNewMessages, 2000)
 }
 
 // 停止轮询
