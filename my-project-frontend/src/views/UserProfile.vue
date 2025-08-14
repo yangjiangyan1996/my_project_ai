@@ -631,7 +631,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch,nextTick } from 'vue'
+import { ref, computed, onMounted, watch,nextTick,onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Suitcase, SuccessFilled, Plus ,Message, Loading} from '@element-plus/icons-vue'
 import { post, get } from '@/net'
@@ -713,6 +713,8 @@ const chatConversationId = ref(null)
 const isNewConversation = ref(false)
 // 添加一个 ref 来记录第一条消息的 DOM 元素
 const firstMessageRef = ref(null)
+// 添加轮询定时器引用
+const pollInterval = ref(null)
 
 
 
@@ -767,13 +769,12 @@ const updateMessageStatus = async (messageIds, status) => {
   }
 }
 
-// 添加方法
 const openMessageDialog = async () => {
   console.log('openMessageDialog called')
   messageDialogVisible.value = true
   messageContent.value = ''
   
-  // Reset chat state
+  // 重置聊天状态
   chatHistory.value = []
   chatPage.value = 1
   chatConversationId.value = null
@@ -792,23 +793,15 @@ const openMessageDialog = async () => {
       chatTotal.value = res.total
       chatConversationId.value = res.records[0].chatConversationId
       
-      // Format the chat history
-      messageHistory.value = chatHistory.value.map(msg => ({
-        ...msg,
-        senderId: msg.senderId,
-        content: msg.content,
-        createdAt: msg.createdTime,
-        isSelf: msg.senderId === currentUserInfo.data.id
-      }))
-
-      // 确保DOM更新后滚动到底部
-      nextTick(() => {
-        scrollToBottom()
-      })
+      formatChatHistory()
+      scrollToBottom()
     } else {
       isNewConversation.value = true
       ElMessage.info('这是你们第一次对话，开始聊天吧！')
     }
+    
+    // 开启轮询获取新消息
+    startPolling()
   } catch (error) {
     console.error('获取聊天历史失败:', error)
     ElMessage.error('获取聊天历史失败')
@@ -816,6 +809,77 @@ const openMessageDialog = async () => {
     chatLoading.value = false
   }
 }
+
+// 开始轮询
+const startPolling = () => {
+  // 先清除已有定时器
+  stopPolling()
+  // 每5秒获取一次新消息
+  pollInterval.value = setInterval(fetchNewMessages, 5000)
+}
+
+// 停止轮询
+const stopPolling = () => {
+  if (pollInterval.value) {
+    clearInterval(pollInterval.value)
+    pollInterval.value = null
+  }
+}
+
+// 获取新消息
+const fetchNewMessages = async () => {
+  if (!chatConversationId.value || chatLoading.value) return
+  
+  console.log("chatHistory:",chatHistory.value)
+  try {
+    const res = await post('/api/auth/chat/getNewMessages', {
+      chatConversationId: chatConversationId.value,
+      lastMessageId: chatHistory.value.length > 0 
+        ? chatHistory.value[chatHistory.value.length - 1].chatMessageId 
+        : null
+    })
+    
+    if (res.records && res.records.length > 0) {
+      // 只添加新消息
+      const newMessages = res.records.filter(newMsg => 
+        !chatHistory.value.some(existingMsg => 
+          existingMsg.chatMessageId === newMsg.chatMessageId
+        )
+      )
+      
+      if (newMessages.length > 0) {
+        chatHistory.value.push(...newMessages)
+        formatChatHistory()
+        
+        // 平滑滚动到底部
+        nextTick(() => {
+          const container = document.querySelector('.message-history-container .el-scrollbar__wrap')
+          if (container) {
+            // 使用平滑滚动
+            container.scrollTo({
+              top: container.scrollHeight,
+              behavior: 'smooth'
+            })
+          }
+        })
+      }
+    }
+  } catch (error) {
+    console.error('获取新消息失败:', error)
+  }
+}
+
+// 在组件卸载时停止轮询
+onUnmounted(() => {
+  stopPolling()
+})
+
+// 关闭对话框时停止轮询
+watch(messageDialogVisible, (visible) => {
+  if (!visible) {
+    stopPolling()
+  }
+})
 
 
 const formatChatHistory = () => {
@@ -840,16 +904,17 @@ const handleScroll = ({ scrollTop }) => {
 }
 
 // 自动滚动到底部
-const scrollToBottom = () => {
-  console.log("自动滚动到底部")
+const scrollToBottom = (behavior = 'smooth') => {
   nextTick(() => {
     const container = document.querySelector('.message-history-container .el-scrollbar__wrap')
     if (container) {
-      container.scrollTop = container.scrollHeight
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: behavior
+      })
     }
   })
 }
-
 
 const sendMessage = async () => {
   if (!messageContent.value.trim()) return
@@ -862,40 +927,38 @@ const sendMessage = async () => {
       chatType: 1
     }
     
-    // 如果已经有会话ID，添加到请求中
     if (chatConversationId.value) {
       requestData.chatConversationId = chatConversationId.value
     }
     
     const res = await post('/api/auth/chat/sendMessage', requestData)
     console.log("发送",res)
-    // 处理新的响应格式
-    // 如果是新会话，保存返回的chatConversationId
-      if (!chatConversationId.value && res) {
-        chatConversationId.value = res
-        isNewConversation.value = false
-      }
-      
-      ElMessage.success('消息发送成功')
-      
-      // 添加到消息历史
-      const newMsg = {
-        chatMessageId: Date.now(), // 临时ID，实际应该从响应获取
-        chatConversationId: chatConversationId.value,
-        senderId: currentUserInfo.data.id,
-        senderName: currentUserInfo.data.username,
-        senderAvatar: currentUserInfo.data.avatarUrl,
-        isSelf: true,
-        content: messageContent.value,
-        createdTime: new Date().toISOString(),
-        status: 1
-      }
-      
-      chatHistory.value.push(newMsg)
-      formatChatHistory()
-      
-      messageContent.value = ''
-      scrollToBottom()
+    
+    if (!chatConversationId.value && res) {
+      chatConversationId.value = res
+      isNewConversation.value = false
+    }
+    
+    ElMessage.success('消息发送成功')
+    
+    const newMsg = {
+      chatMessageId: Date.now(), // 临时ID，实际应该从响应获取
+      chatConversationId: chatConversationId.value,
+      senderId: currentUserInfo.data.id,
+      senderName: currentUserInfo.data.username,
+      senderAvatar: currentUserInfo.data.avatarUrl,
+      isSelf: true,
+      content: messageContent.value,
+      createdTime: new Date().toISOString(),
+      status: 1
+    }
+    
+    chatHistory.value.push(newMsg)
+    formatChatHistory()
+    messageContent.value = ''
+    
+    // 使用平滑滚动
+    scrollToBottom('smooth')
   } catch (error) {
     console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败')
@@ -3022,5 +3085,35 @@ const handleTabChange = (tab) => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* 消息进入动画 */
+@keyframes messageIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-item {
+  animation: messageIn 0.3s ease-out forwards;
+}
+
+/* 新消息提示效果 */
+.new-message-indicator {
+  text-align: center;
+  padding: 8px;
+  font-size: 12px;
+  color: #999;
+  animation: fadeInOut 2s ease-in-out infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 </style>

@@ -8,6 +8,7 @@ import com.example.entity.dto.ChatConversationMember;
 import com.example.entity.dto.ChatMessage;
 import com.example.entity.req.ChatCreateMessageReq;
 import com.example.entity.req.ChatHistoryPageReq;
+import com.example.entity.req.ChatNewMessagesReq;
 import com.example.entity.resp.ChatHistoryResp;
 import com.example.enums.ChatEnums;
 import com.example.service.*;
@@ -59,13 +60,13 @@ public class ChatFacade {
                 )
                 .map(ChatConversationMember::getConversationId)
                 .collect(Collectors.toList());
-        List<ChatConversation> chatMessages = chatConversationService.selectByIds(conversationIds,req.getChatType());
+        List<ChatConversation> chatMessages = chatConversationService.selectByIds(conversationIds, req.getChatType());
         List<Long> twoUserConversionIds = chatMessages.stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
         //获取 targetUserChatList 和 currentUserChatList 的交集
         List<Long> currentConversionIds = currentUserChatList.stream().map(v -> v.getConversationId()).distinct().collect(Collectors.toList());
         ChatConversationMember ccm = targetUserChatList.stream()
                 .filter(c -> twoUserConversionIds.contains(c.getConversationId()))
-                .filter(c->currentConversionIds.contains(c.getConversationId()))
+                .filter(c -> currentConversionIds.contains(c.getConversationId()))
                 .collect(Collectors.toList()).stream().findFirst().orElse(null);
         if (ccm == null) {
             return Page.of(req.getPage(), req.getSize());
@@ -163,5 +164,29 @@ public class ChatFacade {
         }
 
         return chatConversationId;
+    }
+
+    public List<ChatHistoryResp> getNewMessages(ChatNewMessagesReq req) {
+        List<ChatMessage> list = chatMessageService.selectListByConversationIdAndIdGreaterThan(req.getChatConversationId(), req.getLastMessageId());
+
+        List<Long> userIds = list.stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+
+        return list.stream().map(v -> {
+            ChatHistoryResp p = new ChatHistoryResp();
+            p.setChatMessageId(v.getId());
+            p.setChatConversationId(req.getChatConversationId());
+            p.setContent(v.getContent());
+            p.setCreatedTime(v.getCreatedAt());
+            p.setMessageType(v.getMessageType());
+            p.setStatus(v.getStatus());
+            p.setSenderId(v.getSenderId());
+            p.setSenderAvatar(userId2UserInfoMap.getOrDefault(v.getSenderId(), new Account()).getAvatarUrl());
+            p.setSenderName(userId2UserInfoMap.getOrDefault(v.getSenderId(), new Account()).getNickname());
+            p.setIsSelf(v.getSenderId().equals(req.getCurrentUserId()));
+            return p;
+        }).sorted(Comparator.comparing(ChatHistoryResp::getCreatedTime)).collect(Collectors.toList());
     }
 }

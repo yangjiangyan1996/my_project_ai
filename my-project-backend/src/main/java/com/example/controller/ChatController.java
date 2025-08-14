@@ -8,6 +8,7 @@ import com.example.Facade.UserFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.req.ChatCreateMessageReq;
 import com.example.entity.req.ChatHistoryPageReq;
+import com.example.entity.req.ChatNewMessagesReq;
 import com.example.entity.resp.ChatHistoryResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
@@ -15,6 +16,8 @@ import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @Slf4j
@@ -73,6 +76,26 @@ public class ChatController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("ChatController#getChatHistory,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 获取最新消息
+     * @param req
+     * @return
+     */
+    @PostMapping("/getNewMessages")
+    public RespBean<List<ChatHistoryResp>> getNewMessages(@RequestBody ChatNewMessagesReq req) {
+        try {
+            req.setCurrentUserId(UserUtil.getCurrentUser().getId());
+            List<ChatHistoryResp> result = chatFacade.getNewMessages(req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ChatController#getNewMessages,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ChatController#getNewMessages,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

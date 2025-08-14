@@ -15,5 +15,5 @@ import java.util.List;
 public interface ChatMessageService extends IService<ChatMessage> {
     Page<ChatMessage> selectPageByConversationId(Page<ChatMessage> page, Long conversationId);
 
-
+    List<ChatMessage> selectListByConversationIdAndIdGreaterThan(Long chatConversationId, Long lastMessageId);
 }

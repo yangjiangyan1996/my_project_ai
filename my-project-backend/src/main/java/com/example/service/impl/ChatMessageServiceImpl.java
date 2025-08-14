@@ -26,5 +26,14 @@ public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatM
                 .orderByDesc("created_at"));
     }
 
+    @Override
+    public List<ChatMessage> selectListByConversationIdAndIdGreaterThan(Long chatConversationId, Long lastMessageId) {
+        return list(new QueryWrapper<ChatMessage>()
+                .eq("conversation_id", chatConversationId)
+                .gt("id", lastMessageId)
+                .eq("is_deleted", 0)
+                .orderByDesc("created_at"));
+    }
+
 
 }
