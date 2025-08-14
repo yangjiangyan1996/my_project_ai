@@ -87,7 +87,7 @@ public class ChatController {
      * @return
      */
     @PostMapping("/getNewMessages")
-    public RespBean<List<ChatHistoryResp>> getNewMessages(@RequestBody ChatNewMessagesReq req) {
+    public RespBean<List<ChatHistoryResp>> getNewMessages(@Validated @RequestBody ChatNewMessagesReq req) {
         try {
             req.setCurrentUserId(UserUtil.getCurrentUser().getId());
             List<ChatHistoryResp> result = chatFacade.getNewMessages(req);

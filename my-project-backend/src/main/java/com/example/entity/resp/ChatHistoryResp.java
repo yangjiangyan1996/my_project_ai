@@ -3,6 +3,7 @@ package com.example.entity.resp;
 import lombok.Data;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -22,4 +23,5 @@ public class ChatHistoryResp {
     private Integer messageType;
     private Date createdTime;
     private Integer status;
+    private List<String> readUserNames;
 }

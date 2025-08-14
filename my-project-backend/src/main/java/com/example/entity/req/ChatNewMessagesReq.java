@@ -1,5 +1,6 @@
 package com.example.entity.req;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
@@ -10,6 +11,7 @@ import lombok.Data;
  */
 @Data
 public class ChatNewMessagesReq {
+    @NotNull(message = "会话id不能为空")
     Long chatConversationId;
     Long lastMessageId;
     Long currentUserId;

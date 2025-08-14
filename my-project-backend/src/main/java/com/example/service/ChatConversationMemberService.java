@@ -14,4 +14,8 @@ import java.util.List;
  */
 public interface ChatConversationMemberService extends IService<ChatConversationMember> {
     List<ChatConversationMember> selectByUserId(Long targetUserId);
+
+    List<ChatConversationMember> selectByConversationId(Long conversationId);
+
+    ChatConversationMember selectByConversationIdAndUserId(Long conversationId, Long currentUserId);
 }

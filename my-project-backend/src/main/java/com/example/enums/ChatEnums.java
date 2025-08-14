@@ -10,6 +10,26 @@ import lombok.Getter;
  */
 public class ChatEnums {
 
+    //是否已读 0=未读 1=已读
+    @Getter
+    public enum IsReadEnum {
+        UNREAD(0, "未读"),
+        READ(1, "已读");
+        private Integer code;
+        private String name;
+        IsReadEnum(Integer code, String name) {
+            this.code = code;
+            this.name = name;
+        }
+        public static String getName(Integer code) {
+            for (IsReadEnum value : values()) {
+                if (value.code.equals(code)) {
+                    return value.name;
+                }
+            }
+            return null;
+        }
+    }
     //状态 0=正常 1=撤回
     @Getter
     public enum StatusEnum {

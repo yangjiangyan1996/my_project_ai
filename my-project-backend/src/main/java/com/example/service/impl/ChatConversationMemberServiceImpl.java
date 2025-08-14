@@ -18,6 +18,22 @@ import java.util.List;
 @Service
 public class ChatConversationMemberServiceImpl extends ServiceImpl<ChatConversationMemberMapper, ChatConversationMember> implements ChatConversationMemberService {
     @Override
+    public ChatConversationMember selectByConversationIdAndUserId(Long conversationId, Long currentUserId) {
+        return this.baseMapper.selectOne(new QueryWrapper<ChatConversationMember>()
+                .eq("conversation_id", conversationId)
+                .eq("user_id", currentUserId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public List<ChatConversationMember> selectByConversationId(Long conversationId) {
+        return this.baseMapper.selectList(
+                new QueryWrapper<ChatConversationMember>()
+                .eq("conversation_id", conversationId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
     public List<ChatConversationMember> selectByUserId(Long userId) {
         return this.baseMapper.selectList(new QueryWrapper<ChatConversationMember>()
                 .eq("user_id", userId)

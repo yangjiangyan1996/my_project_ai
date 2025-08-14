@@ -2,10 +2,7 @@ package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.config.AsyncTaskUtil;
-import com.example.entity.dto.Account;
-import com.example.entity.dto.ChatConversation;
-import com.example.entity.dto.ChatConversationMember;
-import com.example.entity.dto.ChatMessage;
+import com.example.entity.dto.*;
 import com.example.entity.req.ChatCreateMessageReq;
 import com.example.entity.req.ChatHistoryPageReq;
 import com.example.entity.req.ChatNewMessagesReq;
@@ -16,6 +13,7 @@ import com.example.service.*;
 import io.lettuce.core.internal.LettuceLists;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -31,6 +29,7 @@ import java.util.stream.Stream;
  * @Date 2025/8/13 10:48
  */
 @Service
+@Slf4j
 public class ChatFacade {
 
     @Resource
@@ -74,6 +73,12 @@ public class ChatFacade {
         Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
 
         Page<ChatMessage> chatMessagePage = chatMessageService.selectPageByConversationId(Page.of(req.getPage(), req.getSize()), ccm.getConversationId());
+
+        //获取消息是否已读
+        List<Long> messageIds = chatMessagePage.getRecords().stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
+        List<ChatMessageStatus> cmsList = chatMessageStatusService.selectByMessageIds(messageIds, ccm.getConversationId(), req.getCurrentUserId());
+        Map<Long, List<ChatMessageStatus>> messageId2CmsMap = cmsList.stream().collect(Collectors.groupingBy(v -> v.getMessageId()));
+
         List<ChatHistoryResp> list = chatMessagePage.getRecords().stream().map(v -> {
             ChatHistoryResp p = new ChatHistoryResp();
             p.setChatMessageId(v.getId());
@@ -86,13 +91,56 @@ public class ChatFacade {
             p.setSenderAvatar(userId2UserInfoMap.getOrDefault(v.getSenderId(), new Account()).getAvatarUrl());
             p.setSenderName(userId2UserInfoMap.getOrDefault(v.getSenderId(), new Account()).getNickname());
             p.setIsSelf(v.getSenderId().equals(req.getCurrentUserId()));
+            if (messageId2CmsMap.containsKey(v.getId())) {
+                List<ChatMessageStatus> cmsOfMessageList = messageId2CmsMap.get(v.getId());
+                List<String> unReadUserNikeName = cmsOfMessageList.stream().filter(cms -> cms.getCreatedBy().equals(req.getCurrentUserId()))
+                        .filter(cms -> ChatEnums.IsReadEnum.UNREAD.getCode().equals(cms.getIsRead()))
+                        .map(cms -> userId2UserInfoMap.get(cms.getUserId()).getNickname())
+                        .collect(Collectors.toList());
+                p.setReadUserNames(unReadUserNikeName);
+            }
             return p;
         }).sorted(Comparator.comparing(ChatHistoryResp::getCreatedTime)).collect(Collectors.toList());
+
+
+        //这里记录用户的已读
+        AsyncTaskUtil.execute(() -> {
+            try{
+                //获取list中最后一个ID
+                Long lastMessageId = list.get(list.size() - 1).getChatMessageId();
+                updateUserRead(ccm.getConversationId(), req.getCurrentUserId(), lastMessageId);
+            }catch (Exception e) {
+                log.error("ChatFacade#getChatHistory, 更新用户已读失败",e);
+            }
+        });
 
         Page<ChatHistoryResp> result = Page.of(req.getPage(), req.getSize());
         result.setTotal(chatMessagePage.getTotal());
         result.setRecords(list);
         return result;
+    }
+
+
+    /**
+     * 更新用户已读
+     *
+     * @param conversationId 会话id
+     * @param currentUserId  当前用户id
+     * @param lastMessageId  最后一条消息id
+     */
+    private void updateUserRead(Long conversationId, Long currentUserId, Long lastMessageId) {
+        ChatConversationMember ccm = chatConversationMemberService.selectByConversationIdAndUserId(conversationId, currentUserId);
+        if (ccm == null) {
+            log.warn("ChatFacade#updateUserRead, 用户未加入该会话，无法更新已读消息,conversationId;{} currentUserId:{}", conversationId, currentUserId);
+            return;
+        }
+        if (ccm.getLastReadMessageId() != null && ccm.getLastReadMessageId() >= lastMessageId) {
+            log.warn("ChatFacade#updateUserRead, 已读消息已更新，无需再次更新,conversationId;{} currentUserId:{}", conversationId, currentUserId);
+        } else {
+            ccm.setLastReadMessageId(lastMessageId);
+            chatConversationMemberService.updateById(ccm);
+            chatMessageStatusService.updateReadStatuByConversationIdAndUserId(conversationId, currentUserId, ChatEnums.IsReadEnum.UNREAD.getCode(), lastMessageId);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -101,6 +149,9 @@ public class ChatFacade {
             //第一次发起聊天，创建会话内容
             Long chatConversationId = initChatConversation(req);
             req.setChatConversationId(chatConversationId);
+        }
+        if (req.getChatConversationId() == null) {
+            throw new ValidationException("聊天会话ID不能为空");
         }
 
         ChatMessage cm = new ChatMessage();
@@ -111,12 +162,48 @@ public class ChatFacade {
         cm.setStatus(ChatEnums.StatusEnum.NORMAL.getCode());
         boolean save = chatMessageService.save(cm);
         if (save) {
-            AsyncTaskUtil.execute(() -> chatConversationService.updateLastActiveAtById(new Date(), req.getChatConversationId()));
+            AsyncTaskUtil.execute(() -> {
+                try{
+                    createMessageStatus(req.getChatConversationId(), cm.getId(), req.getCurrentUserId());
+                }catch (Exception e) {
+                    log.error("Chat#sendMessage,创建消息状态失败, ConversationId:{},messageId:{},userId:{}", req.getChatConversationId(), cm.getId(), req.getCurrentUserId(), e);
+                }
+
+                try{
+                    chatConversationService.updateLastActiveAtById(new Date(), req.getChatConversationId());
+                }catch (Exception e){
+                    log.error("Chat#sendMessage,更新会话最后活跃时间失败, ConversationId:{}", req.getChatConversationId(), e);
+                }
+            });
         }
         ChatCreateMessageResp r = new ChatCreateMessageResp();
         r.setChatMessageId(cm.getId());
         r.setConversationId(req.getChatConversationId());
         return r;
+    }
+
+    private Boolean createMessageStatus(Long conversationId, Long messageId, Long createById) {
+        List<ChatConversationMember> list = chatConversationMemberService.selectByConversationId(conversationId);
+        List<ChatMessageStatus> batchSaveList = new ArrayList<>();
+        for (ChatConversationMember member : list) {
+            ChatMessageStatus status = new ChatMessageStatus();
+            status.setConversationId(conversationId);
+            status.setMessageId(messageId);
+            status.setUserId(member.getUserId());
+            if (member.getUserId().equals(createById)) {
+                status.setIsRead(ChatEnums.IsReadEnum.READ.getCode());
+            } else {
+                status.setIsRead(ChatEnums.IsReadEnum.UNREAD.getCode());
+            }
+            status.setIsDeleted(0);
+            status.setCreatedBy(createById);
+            status.setCreatedAt(new Date());
+            status.setModifiedBy(createById);
+            status.setModifiedAt(new Date());
+            batchSaveList.add(status);
+        }
+        chatMessageStatusService.saveBatch(batchSaveList);
+        return true;
     }
 
     private Long initChatConversation(ChatCreateMessageReq req) {
@@ -169,7 +256,7 @@ public class ChatFacade {
 
     public List<ChatHistoryResp> getNewMessages(ChatNewMessagesReq req) {
         List<ChatMessage> list = chatMessageService.selectListByConversationIdAndIdGreaterThan(req.getChatConversationId(), req.getLastMessageId());
-        if(CollectionUtils.isEmpty( list)) {
+        if (CollectionUtils.isEmpty(list)) {
             return new ArrayList<>();
         }
 
@@ -178,7 +265,7 @@ public class ChatFacade {
         Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
 
 
-        return list.stream().map(v -> {
+        List<ChatHistoryResp> result = list.stream().map(v -> {
             ChatHistoryResp p = new ChatHistoryResp();
             p.setChatMessageId(v.getId());
             p.setChatConversationId(req.getChatConversationId());
@@ -192,5 +279,17 @@ public class ChatFacade {
             p.setIsSelf(v.getSenderId().equals(req.getCurrentUserId()));
             return p;
         }).sorted(Comparator.comparing(ChatHistoryResp::getCreatedTime)).collect(Collectors.toList());
+
+        AsyncTaskUtil.execute(() -> {
+            try{
+                //获取list中最后一个ID
+                Long lastMessageId = result.get(list.size() - 1).getChatMessageId();
+                updateUserRead(req.getChatConversationId(), req.getCurrentUserId(), lastMessageId);
+            }catch (Exception e) {
+                log.error("ChatFacade#getNewMessages, 更新用户已读失败",e);
+            }
+        });
+
+        return result;
     }
 }
