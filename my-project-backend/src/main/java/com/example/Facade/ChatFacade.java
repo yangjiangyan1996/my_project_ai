@@ -19,10 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -168,6 +165,9 @@ public class ChatFacade {
 
     public List<ChatHistoryResp> getNewMessages(ChatNewMessagesReq req) {
         List<ChatMessage> list = chatMessageService.selectListByConversationIdAndIdGreaterThan(req.getChatConversationId(), req.getLastMessageId());
+        if(CollectionUtils.isEmpty( list)) {
+            return new ArrayList<>();
+        }
 
         List<Long> userIds = list.stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
         List<Account> accounts = accountService.selectByIds(userIds);
