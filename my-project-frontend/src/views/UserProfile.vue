@@ -351,7 +351,7 @@
               <span class="message-time">{{ formatMessageTime(msg.createdAt) }}</span>
               <!-- 添加已读未读标签 (仅显示在自己发送的消息上) -->
               <span 
-                v-if="msg.isSelf && msg.readUserNames" 
+                v-if="msg.isSelf && Array.isArray(msg.readUserNames)" 
                 class="read-status"
                 :class="{'read': msg.readUserNames.length === 0, 'unread': msg.readUserNames.length > 0}"
               >
@@ -846,7 +846,7 @@ const startPolling = () => {
   // 每2秒获取一次新消息
   pollInterval.value = setInterval(fetchNewMessages, 2000)
     // 每3秒专门检查一次已读状态
-  checkReadStatusInterval.value = setInterval(checkReadStatus, 2000)
+  checkReadStatusInterval.value = setInterval(checkReadStatus, 3000)
 }
 
 // 停止轮询
@@ -870,15 +870,24 @@ const checkReadStatus = async () => {
       conversationId: chatConversationId.value,
       userId: currentUserInfo.data.id
     })
-    
-    if (res && res.readStatus) {
-      // 更新本地消息的已读状态
+
+    if (res && Array.isArray(res.readStatus)) {
+      // 使用新数组替换原数组，确保触发响应式更新
+      const newMessageHistory = [...messageHistory.value]
+      
       res.readStatus.forEach(status => {
-        const msg = chatHistory.value.find(m => m.chatMessageId === status.messageId)
-        if (msg && msg.isSelf) {
-          msg.readUserNames = status.unreadUsers || []
+        const msgIndex = newMessageHistory.findIndex(m => m.chatMessageId === status.messageId)
+        if (msgIndex !== -1 && newMessageHistory[msgIndex].isSelf) {
+          // 创建新对象而不是直接修改
+          newMessageHistory[msgIndex] = {
+            ...newMessageHistory[msgIndex],
+            readUserNames: Array.isArray(status.unreadUsers) ? [...status.unreadUsers] : []
+          }
         }
       })
+      
+      // 替换整个数组以触发响应式更新
+      messageHistory.value = newMessageHistory
     }
   } catch (error) {
     console.error('检查已读状态失败:', error)
@@ -961,7 +970,8 @@ const formatChatHistory = () => {
     senderId: msg.senderId,
     content: msg.content,
     createdAt: msg.createdTime,
-    isSelf: msg.senderId === currentUserInfo.data.id
+    isSelf: msg.senderId === currentUserInfo.data.id,
+    readUserNames: Array.isArray(msg.readUserNames) ? msg.readUserNames : []
   }))
 }
 
