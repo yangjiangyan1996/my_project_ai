@@ -839,9 +839,12 @@ const fetchNewMessages = async () => {
         : null
     })
     
-    if (res.records && res.records.length > 0) {
+    console.log("获取新消息0",res)
+
+    if (res && res.length > 0) {
+      console.log("获取新消息1",res)
       // 只添加新消息
-      const newMessages = res.records.filter(newMsg => 
+      const newMessages = res.filter(newMsg => 
         !chatHistory.value.some(existingMsg => 
           existingMsg.chatMessageId === newMsg.chatMessageId
         )
