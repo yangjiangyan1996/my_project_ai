@@ -296,6 +296,9 @@ public class ChatFacade {
                     .map(status -> userId2UserInfoMap.get(status.getUserId()).getNickname())
                     .collect(Collectors.toList());
 
+            if (CollectionUtils.isEmpty(unreadUsers)) {
+                continue;
+            }
             readStatus.setUnreadUsers(unreadUsers);
             readStatusList.add(readStatus);
         }

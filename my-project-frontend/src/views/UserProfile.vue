@@ -863,34 +863,54 @@ const stopPolling = () => {
 
 // 专门检查已读状态
 const checkReadStatus = async () => {
-  if (!chatConversationId.value) return
+  if (!chatConversationId.value || !userInfo.value.data?.id) return
   
   try {
+    console.log('开始检查已读状态...')
     const res = await post('/api/auth/chat/checkReadStatus', {
       conversationId: chatConversationId.value,
       userId: currentUserInfo.data.id
     })
 
     if (res && Array.isArray(res.readStatus)) {
-      // 使用新数组替换原数组，确保触发响应式更新
-      const newMessageHistory = [...messageHistory.value]
+      console.log('收到未读消息状态更新:', res.readStatus)
       
+      // 创建消息ID到未读用户列表的映射
+      const unreadStatusMap = new Map()
       res.readStatus.forEach(status => {
-        const msgIndex = newMessageHistory.findIndex(m => m.chatMessageId === status.messageId)
-        if (msgIndex !== -1 && newMessageHistory[msgIndex].isSelf) {
-          // 创建新对象而不是直接修改
-          newMessageHistory[msgIndex] = {
-            ...newMessageHistory[msgIndex],
-            readUserNames: Array.isArray(status.unreadUsers) ? [...status.unreadUsers] : []
-          }
-        }
+        unreadStatusMap.set(status.messageId, Array.isArray(status.unreadUsers) ? [...status.unreadUsers] : [])
       })
       
-      // 替换整个数组以触发响应式更新
-      messageHistory.value = newMessageHistory
+      let shouldUpdate = false
+      const newMessageHistory = messageHistory.value.map(msg => {
+        // 只处理自己发送的消息
+        if (msg.isSelf) {
+          const newReadUserNames = unreadStatusMap.has(msg.chatMessageId) 
+            ? unreadStatusMap.get(msg.chatMessageId)
+            : [] // 后端没返回的消息视为已读
+            
+          // 检查状态是否变化
+          if (JSON.stringify(msg.readUserNames) !== JSON.stringify(newReadUserNames)) {
+            shouldUpdate = true
+            return {
+              ...msg,
+              readUserNames: newReadUserNames
+            }
+          }
+        }
+        return msg
+      })
+      
+      if (shouldUpdate) {
+        console.log('检测到已读状态变化，更新消息列表')
+        messageHistory.value = newMessageHistory
+      } else {
+        console.log('已读状态无变化，跳过更新')
+      }
     }
   } catch (error) {
     console.error('检查已读状态失败:', error)
+    ElMessage.error('检查消息状态失败，请稍后重试')
   }
 }
 
@@ -1023,7 +1043,7 @@ const sendMessage = async () => {
         isNewConversation.value = false
       }
       
-      ElMessage.success('消息发送成功')
+      // ElMessage.success('消息发送成功')
       
       const newMsg = {
         chatMessageId: res.chatMessageId,
