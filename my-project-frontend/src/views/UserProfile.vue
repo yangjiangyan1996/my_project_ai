@@ -937,31 +937,37 @@ const sendMessage = async () => {
     const res = await post('/api/auth/chat/sendMessage', requestData)
     console.log("发送",res)
     
-    if (!chatConversationId.value && res) {
-      chatConversationId.value = res
-      isNewConversation.value = false
+    // 根据新的返回数据结构调整
+    if (res) {
+      
+      if (!chatConversationId.value && res) {
+        chatConversationId.value = res.conversationId
+        isNewConversation.value = false
+      }
+      
+      ElMessage.success('消息发送成功')
+      
+      const newMsg = {
+        chatMessageId: res.chatMessageId, // 临时ID，实际应该从响应获取
+        chatConversationId: chatConversationId.value,
+        senderId: currentUserInfo.data.id,
+        senderName: currentUserInfo.data.username,
+        senderAvatar: currentUserInfo.data.avatarUrl,
+        isSelf: true,
+        content: messageContent.value,
+        createdTime: new Date().toISOString(),
+        status: 1
+      }
+      
+      chatHistory.value.push(newMsg)
+      formatChatHistory()
+      messageContent.value = ''
+      
+      // 使用平滑滚动
+      scrollToBottom('smooth')
+
     }
     
-    ElMessage.success('消息发送成功')
-    
-    const newMsg = {
-      chatMessageId: Date.now(), // 临时ID，实际应该从响应获取
-      chatConversationId: chatConversationId.value,
-      senderId: currentUserInfo.data.id,
-      senderName: currentUserInfo.data.username,
-      senderAvatar: currentUserInfo.data.avatarUrl,
-      isSelf: true,
-      content: messageContent.value,
-      createdTime: new Date().toISOString(),
-      status: 1
-    }
-    
-    chatHistory.value.push(newMsg)
-    formatChatHistory()
-    messageContent.value = ''
-    
-    // 使用平滑滚动
-    scrollToBottom('smooth')
   } catch (error) {
     console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败')

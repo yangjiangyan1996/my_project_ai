@@ -9,6 +9,7 @@ import com.example.entity.base.RespBean;
 import com.example.entity.req.ChatCreateMessageReq;
 import com.example.entity.req.ChatHistoryPageReq;
 import com.example.entity.req.ChatNewMessagesReq;
+import com.example.entity.resp.ChatCreateMessageResp;
 import com.example.entity.resp.ChatHistoryResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
@@ -37,10 +38,10 @@ public class ChatController {
      * @return 会话ID
      */
     @PostMapping("/sendMessage")
-    public RespBean<Long> sendMessage(@Validated @RequestBody ChatCreateMessageReq req) {
+    public RespBean<ChatCreateMessageResp> sendMessage(@Validated @RequestBody ChatCreateMessageReq req) {
         try {
             req.setCurrentUserId(UserUtil.getCurrentUser().getId());
-            Long result = chatFacade.sendMessage(req);
+            ChatCreateMessageResp result = chatFacade.sendMessage(req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ChatController#sendMessage,req:{}", JSON.toJSONString(req), e);

@@ -9,6 +9,7 @@ import com.example.entity.dto.ChatMessage;
 import com.example.entity.req.ChatCreateMessageReq;
 import com.example.entity.req.ChatHistoryPageReq;
 import com.example.entity.req.ChatNewMessagesReq;
+import com.example.entity.resp.ChatCreateMessageResp;
 import com.example.entity.resp.ChatHistoryResp;
 import com.example.enums.ChatEnums;
 import com.example.service.*;
@@ -95,7 +96,7 @@ public class ChatFacade {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Long sendMessage(ChatCreateMessageReq req) {
+    public ChatCreateMessageResp sendMessage(ChatCreateMessageReq req) {
         if (req.getChatConversationId() == null) {
             //第一次发起聊天，创建会话内容
             Long chatConversationId = initChatConversation(req);
@@ -112,7 +113,10 @@ public class ChatFacade {
         if (save) {
             AsyncTaskUtil.execute(() -> chatConversationService.updateLastActiveAtById(new Date(), req.getChatConversationId()));
         }
-        return req.getChatConversationId();
+        ChatCreateMessageResp r = new ChatCreateMessageResp();
+        r.setChatMessageId(cm.getId());
+        r.setConversationId(req.getChatConversationId());
+        return r;
     }
 
     private Long initChatConversation(ChatCreateMessageReq req) {
