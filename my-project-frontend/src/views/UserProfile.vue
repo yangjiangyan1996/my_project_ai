@@ -19,6 +19,7 @@
             </el-avatar>
             
             <!-- 用户信息部分 -->
+            <!-- 用户信息部分 -->
             <div class="user-info-wrapper">
               <div class="user-info-main">
                 <h1 class="username">{{ userInfo.data?.username || '用户名' }}</h1>
@@ -42,33 +43,34 @@
                 </div>
               </div>
               
-              <!-- 添加关注按钮 -->
-              <el-button 
-                v-if="!isCurrentUser && userInfo.data?.id"
-                :type="isFollowing ? 'info' : 'primary'"
-                size="small"
-                @click="toggleFollow"
-                plain
-                round
-                :loading="followLoading"
-              >
-                <el-icon><Plus /></el-icon>
-                <span>{{ isFollowing ? '已关注' : '关注他' }}</span>
-              </el-button>
+              <!-- 添加关注按钮和私信按钮 -->
+              <div class="user-action-buttons">
+                <el-button 
+                  v-if="!isCurrentUser && userInfo.data?.id"
+                  :type="isFollowing ? 'info' : 'primary'"
+                  size="small"
+                  @click="toggleFollow"
+                  plain
+                  round
+                  :loading="followLoading"
+                >
+                  <el-icon><Plus /></el-icon>
+                  <span>{{ isFollowing ? '已关注' : '关注他' }}</span>
+                </el-button>
 
-               <el-button 
-                v-if="!isCurrentUser && userInfo.data?.id"
-                type="success"
-                size="small"
-                @click="openMessageDialog"
-                plain
-                round
-                class="message-btn"
-              >
-                <el-icon><Message /></el-icon>
-                <span>发私信</span>
-              </el-button>
-              
+                <el-button 
+                  v-if="!isCurrentUser && userInfo.data?.id"
+                  type="success"
+                  size="small"
+                  @click="openMessageDialog"
+                  plain
+                  round
+                  class="message-btn"
+                >
+                  <el-icon><Message /></el-icon>
+                  <span>发私信</span>
+                </el-button>
+              </div>
             </div>
           </div>
         </div>
@@ -3293,5 +3295,34 @@ const handleTabChange = (tab) => {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.user-info-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 8px;
+}
+
+.user-info-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-action-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .user-action-buttons {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .user-info-wrapper .el-button {
+    width: 100%;
+  }
 }
 </style>
