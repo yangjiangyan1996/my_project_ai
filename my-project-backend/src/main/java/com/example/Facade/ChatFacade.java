@@ -6,8 +6,10 @@ import com.example.entity.dto.*;
 import com.example.entity.req.ChatCreateMessageReq;
 import com.example.entity.req.ChatHistoryPageReq;
 import com.example.entity.req.ChatNewMessagesReq;
+import com.example.entity.req.ChatCheckReadStatusReq;
 import com.example.entity.resp.ChatCreateMessageResp;
 import com.example.entity.resp.ChatHistoryResp;
+import com.example.entity.resp.ChatCheckReadStatusResp;
 import com.example.enums.ChatEnums;
 import com.example.service.*;
 import io.lettuce.core.internal.LettuceLists;
@@ -93,7 +95,8 @@ public class ChatFacade {
             p.setIsSelf(v.getSenderId().equals(req.getCurrentUserId()));
             if (messageId2CmsMap.containsKey(v.getId())) {
                 List<ChatMessageStatus> cmsOfMessageList = messageId2CmsMap.get(v.getId());
-                List<String> unReadUserNikeName = cmsOfMessageList.stream().filter(cms -> cms.getCreatedBy().equals(req.getCurrentUserId()))
+                List<String> unReadUserNikeName = cmsOfMessageList.stream()
+                        .filter(cms -> cms.getCreatedBy().equals(req.getCurrentUserId()))
                         .filter(cms -> ChatEnums.IsReadEnum.UNREAD.getCode().equals(cms.getIsRead()))
                         .map(cms -> userId2UserInfoMap.get(cms.getUserId()).getNickname())
                         .collect(Collectors.toList());
@@ -134,7 +137,7 @@ public class ChatFacade {
             log.warn("ChatFacade#updateUserRead, 用户未加入该会话，无法更新已读消息,conversationId;{} currentUserId:{}", conversationId, currentUserId);
             return;
         }
-        if (ccm.getLastReadMessageId() != null && ccm.getLastReadMessageId() >= lastMessageId) {
+        if (ccm.getLastReadMessageId() != null && ccm.getLastReadMessageId() > lastMessageId) {
             log.warn("ChatFacade#updateUserRead, 已读消息已更新，无需再次更新,conversationId;{} currentUserId:{}", conversationId, currentUserId);
         } else {
             ccm.setLastReadMessageId(lastMessageId);
@@ -254,6 +257,53 @@ public class ChatFacade {
         return chatConversationId;
     }
 
+    public ChatCheckReadStatusResp checkReadStatus(ChatCheckReadStatusReq req) {
+        // 获取会话中的所有消息
+        List<ChatMessage> messages = chatMessageService.selectListByConversationId(req.getConversationId());
+        if (CollectionUtils.isEmpty(messages)) {
+            return new ChatCheckReadStatusResp();
+        }
+
+        // 获取消息ID列表
+        List<Long> messageIds = messages.stream().map(ChatMessage::getId).collect(Collectors.toList());
+        // 查询消息状态
+        List<ChatMessageStatus> cmsList = chatMessageStatusService.selectByMessageIds(messageIds, req.getConversationId(), req.getUserId());
+
+        // 获取用户信息
+        List<Long> userIds = cmsList.stream().map(ChatMessageStatus::getUserId).distinct().collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(Account::getId, account -> account));
+
+        // 构造响应
+        ChatCheckReadStatusResp resp = new ChatCheckReadStatusResp();
+        List<ChatCheckReadStatusResp.ReadStatus> readStatusList = new ArrayList<>();
+
+        // 按消息ID分组
+        Map<Long, List<ChatMessageStatus>> messageId2StatusMap = cmsList.stream()
+                .collect(Collectors.groupingBy(ChatMessageStatus::getMessageId));
+
+        // 遍历每条消息，构造已读状态
+        for (ChatMessage message : messages) {
+            ChatCheckReadStatusResp.ReadStatus readStatus = new ChatCheckReadStatusResp.ReadStatus();
+            readStatus.setMessageId(message.getId());
+
+            // 获取该消息的所有状态
+            List<ChatMessageStatus> statuses = messageId2StatusMap.getOrDefault(message.getId(), Collections.emptyList());
+
+            // 找出未读的用户
+            List<String> unreadUsers = statuses.stream()
+                    .filter(status -> ChatEnums.IsReadEnum.UNREAD.getCode().equals(status.getIsRead()))
+                    .map(status -> userId2UserInfoMap.get(status.getUserId()).getNickname())
+                    .collect(Collectors.toList());
+
+            readStatus.setUnreadUsers(unreadUsers);
+            readStatusList.add(readStatus);
+        }
+
+        resp.setReadStatus(readStatusList);
+        return resp;
+    }
+
     public List<ChatHistoryResp> getNewMessages(ChatNewMessagesReq req) {
         List<ChatMessage> list = chatMessageService.selectListByConversationIdAndIdGreaterThan(req.getChatConversationId(), req.getLastMessageId());
         if (CollectionUtils.isEmpty(list)) {
@@ -263,6 +313,11 @@ public class ChatFacade {
         List<Long> userIds = list.stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
         List<Account> accounts = accountService.selectByIds(userIds);
         Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+        //获取消息是否已读
+        List<Long> messageIds = list.stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
+        List<ChatMessageStatus> cmsList = chatMessageStatusService.selectByMessageIds(messageIds, req.getChatConversationId(), req.getCurrentUserId());
+        Map<Long, List<ChatMessageStatus>> messageId2CmsMap = cmsList.stream().collect(Collectors.groupingBy(v -> v.getMessageId()));
 
 
         List<ChatHistoryResp> result = list.stream().map(v -> {
@@ -277,6 +332,16 @@ public class ChatFacade {
             p.setSenderAvatar(userId2UserInfoMap.getOrDefault(v.getSenderId(), new Account()).getAvatarUrl());
             p.setSenderName(userId2UserInfoMap.getOrDefault(v.getSenderId(), new Account()).getNickname());
             p.setIsSelf(v.getSenderId().equals(req.getCurrentUserId()));
+
+            if (messageId2CmsMap.containsKey(v.getId())) {
+                List<ChatMessageStatus> cmsOfMessageList = messageId2CmsMap.get(v.getId());
+                List<String> unReadUserNikeName = cmsOfMessageList.stream()
+                        .filter(cms -> cms.getCreatedBy().equals(req.getCurrentUserId()))
+                        .filter(cms -> ChatEnums.IsReadEnum.UNREAD.getCode().equals(cms.getIsRead()))
+                        .map(cms -> userId2UserInfoMap.get(cms.getUserId()).getNickname())
+                        .collect(Collectors.toList());
+                p.setReadUserNames(unReadUserNikeName);
+            }
             return p;
         }).sorted(Comparator.comparing(ChatHistoryResp::getCreatedTime)).collect(Collectors.toList());
 

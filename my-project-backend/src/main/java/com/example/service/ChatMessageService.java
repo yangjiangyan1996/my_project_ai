@@ -16,4 +16,6 @@ public interface ChatMessageService extends IService<ChatMessage> {
     Page<ChatMessage> selectPageByConversationId(Page<ChatMessage> page, Long conversationId);
 
     List<ChatMessage> selectListByConversationIdAndIdGreaterThan(Long chatConversationId, Long lastMessageId);
+
+    List<ChatMessage> selectListByConversationId(Long conversationId);
 }

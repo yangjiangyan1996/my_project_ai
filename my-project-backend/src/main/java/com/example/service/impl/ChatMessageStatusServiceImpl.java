@@ -39,7 +39,8 @@ public class ChatMessageStatusServiceImpl extends ServiceImpl<ChatMessageStatusM
                 .eq("conversation_id", conversationId)
                 .eq("user_id", currentUserId)
                 .eq("is_read", code)
-                .lt("message_id", lastMessageId)
+                //小于等于messageId
+                .le("message_id", lastMessageId)
                 .eq("is_deleted", 0));
     }
 }

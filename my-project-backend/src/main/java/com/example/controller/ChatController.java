@@ -9,8 +9,10 @@ import com.example.entity.base.RespBean;
 import com.example.entity.req.ChatCreateMessageReq;
 import com.example.entity.req.ChatHistoryPageReq;
 import com.example.entity.req.ChatNewMessagesReq;
+import com.example.entity.req.ChatCheckReadStatusReq;
 import com.example.entity.resp.ChatCreateMessageResp;
 import com.example.entity.resp.ChatHistoryResp;
+import com.example.entity.resp.ChatCheckReadStatusResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -97,6 +99,25 @@ public class ChatController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("ChatController#getNewMessages,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+    
+    /**
+     * 检查消息已读状态
+     * @param req
+     * @return
+     */
+    @PostMapping("/checkReadStatus")
+    public RespBean<ChatCheckReadStatusResp> checkReadStatus(@Validated @RequestBody ChatCheckReadStatusReq req) {
+        try {
+            ChatCheckReadStatusResp result = chatFacade.checkReadStatus(req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ChatController#checkReadStatus,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ChatController#checkReadStatus,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

@@ -18,6 +18,11 @@ import java.util.List;
  */
 @Service
 public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessage> implements ChatMessageService {
+
+    @Override
+    public ChatMessageMapper getBaseMapper() {
+        return super.getBaseMapper();
+    }
     @Override
     public Page<ChatMessage> selectPageByConversationId(Page<ChatMessage> page, Long conversationId) {
         return page(page, new QueryWrapper<ChatMessage>()
@@ -31,6 +36,14 @@ public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatM
         return list(new QueryWrapper<ChatMessage>()
                 .eq("conversation_id", chatConversationId)
                 .gt("id", lastMessageId)
+                .eq("is_deleted", 0)
+                .orderByDesc("created_at"));
+    }
+
+    @Override
+    public List<ChatMessage> selectListByConversationId(Long conversationId) {
+        return list(new QueryWrapper<ChatMessage>()
+                .eq("conversation_id", conversationId)
                 .eq("is_deleted", 0)
                 .orderByDesc("created_at"));
     }

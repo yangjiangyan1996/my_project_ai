@@ -328,6 +328,7 @@
     <div class="message-history-container" v-loading="chatLoading">
       <el-scrollbar height="400px" @scroll="handleScroll">
         <!-- 在template部分，修改消息项的结构 -->
+        <!-- 修改消息项的模板部分 -->
         <div 
           v-for="(msg, index) in messageHistory" 
           :key="index"
@@ -348,6 +349,31 @@
             <div class="message-meta">
               <span class="message-sender">{{ msg.isSelf ? '你' : msg.senderName }}</span>
               <span class="message-time">{{ formatMessageTime(msg.createdAt) }}</span>
+              <!-- 添加已读未读标签 (仅显示在自己发送的消息上) -->
+              <span 
+                v-if="msg.isSelf && msg.readUserNames" 
+                class="read-status"
+                :class="{'read': msg.readUserNames.length === 0, 'unread': msg.readUserNames.length > 0}"
+              >
+                <el-tooltip 
+                  v-if="msg.readUserNames.length > 0"
+                  effect="light" 
+                  placement="top"
+                  :content="`未读: ${msg.readUserNames.join(', ')}`"
+                >
+                  <span class="status-dot"></span>
+                  <span class="status-text">未读</span>
+                </el-tooltip>
+                <el-tooltip 
+                  v-else
+                  effect="light" 
+                  placement="top"
+                  content="已读"
+                >
+                  <span class="status-dot"></span>
+                  <span class="status-text">已读</span>
+                </el-tooltip>
+              </span>
             </div>
             <div class="message-bubble">
               {{ msg.content }}
@@ -715,6 +741,7 @@ const isNewConversation = ref(false)
 const firstMessageRef = ref(null)
 // 添加轮询定时器引用
 const pollInterval = ref(null)
+const checkReadStatusInterval = ref(null)
 
 
 
@@ -816,8 +843,10 @@ const openMessageDialog = async () => {
 const startPolling = () => {
   // 先清除已有定时器
   stopPolling()
-  // 每5秒获取一次新消息
+  // 每2秒获取一次新消息
   pollInterval.value = setInterval(fetchNewMessages, 2000)
+    // 每3秒专门检查一次已读状态
+  checkReadStatusInterval.value = setInterval(checkReadStatus, 2000)
 }
 
 // 停止轮询
@@ -826,13 +855,40 @@ const stopPolling = () => {
     clearInterval(pollInterval.value)
     pollInterval.value = null
   }
+  if(checkReadStatusInterval.value) {
+    clearInterval(checkReadStatusInterval.value)
+    checkReadStatusInterval.value = null
+  }
+}
+
+// 专门检查已读状态
+const checkReadStatus = async () => {
+  if (!chatConversationId.value) return
+  
+  try {
+    const res = await post('/api/auth/chat/checkReadStatus', {
+      conversationId: chatConversationId.value,
+      userId: currentUserInfo.data.id
+    })
+    
+    if (res && res.readStatus) {
+      // 更新本地消息的已读状态
+      res.readStatus.forEach(status => {
+        const msg = chatHistory.value.find(m => m.chatMessageId === status.messageId)
+        if (msg && msg.isSelf) {
+          msg.readUserNames = status.unreadUsers || []
+        }
+      })
+    }
+  } catch (error) {
+    console.error('检查已读状态失败:', error)
+  }
 }
 
 // 获取新消息
 const fetchNewMessages = async () => {
   if (!chatConversationId.value || chatLoading.value) return
   
-  console.log("chatHistory:",chatHistory.value)
   try {
     const res = await post('/api/auth/chat/getNewMessages', {
       chatConversationId: chatConversationId.value,
@@ -841,10 +897,7 @@ const fetchNewMessages = async () => {
         : null
     })
     
-    console.log("获取新消息0",res)
-
     if (res && res.length > 0) {
-      console.log("获取新消息1",res)
       // 只添加新消息
       const newMessages = res.filter(newMsg => 
         !chatHistory.value.some(existingMsg => 
@@ -856,11 +909,13 @@ const fetchNewMessages = async () => {
         chatHistory.value.push(...newMessages)
         formatChatHistory()
         
+        // 如果是我发送的消息被对方阅读了，更新状态
+        updateReadStatusForMyMessages()
+        
         // 平滑滚动到底部
         nextTick(() => {
           const container = document.querySelector('.message-history-container .el-scrollbar__wrap')
           if (container) {
-            // 使用平滑滚动
             container.scrollTo({
               top: container.scrollHeight,
               behavior: 'smooth'
@@ -872,6 +927,19 @@ const fetchNewMessages = async () => {
   } catch (error) {
     console.error('获取新消息失败:', error)
   }
+}
+
+// 更新我发送的消息的已读状态
+const updateReadStatusForMyMessages = () => {
+  chatHistory.value.forEach(msg => {
+    if (msg.isSelf && msg.readUserNames) {
+      // 如果这条消息的未读用户列表中不包含当前用户，则标记为已读
+      const isRead = !msg.readUserNames.includes(userInfo.value.data?.username)
+      if (isRead) {
+        msg.readUserNames = []
+      }
+    }
+  })
 }
 
 // 在组件卸载时停止轮询
@@ -921,6 +989,7 @@ const scrollToBottom = (behavior = 'smooth') => {
   })
 }
 
+
 const sendMessage = async () => {
   if (!messageContent.value.trim()) return
   
@@ -937,11 +1006,8 @@ const sendMessage = async () => {
     }
     
     const res = await post('/api/auth/chat/sendMessage', requestData)
-    console.log("发送",res)
     
-    // 根据新的返回数据结构调整
     if (res) {
-      
       if (!chatConversationId.value && res) {
         chatConversationId.value = res.conversationId
         isNewConversation.value = false
@@ -950,7 +1016,7 @@ const sendMessage = async () => {
       ElMessage.success('消息发送成功')
       
       const newMsg = {
-        chatMessageId: res.chatMessageId, // 临时ID，实际应该从响应获取
+        chatMessageId: res.chatMessageId,
         chatConversationId: chatConversationId.value,
         senderId: currentUserInfo.data.id,
         senderName: currentUserInfo.data.username,
@@ -958,23 +1024,49 @@ const sendMessage = async () => {
         isSelf: true,
         content: messageContent.value,
         createdTime: new Date().toISOString(),
-        status: 1
+        status: 1,
+        readUserNames: [userInfo.value.data.username] // 初始状态为对方未读
       }
       
       chatHistory.value.push(newMsg)
       formatChatHistory()
       messageContent.value = ''
       
-      // 使用平滑滚动
+      // 发送消息时，将对方发送的所有消息标记为已读
+      markOtherMessagesAsRead()
+      
       scrollToBottom('smooth')
-
     }
-    
   } catch (error) {
     console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败')
   } finally {
     sendingMessage.value = false
+  }
+}
+
+// 将对方发送的消息标记为已读
+const markOtherMessagesAsRead = async () => {
+  const unreadMessages = chatHistory.value.filter(
+    msg => !msg.isSelf && msg.readUserNames?.includes(currentUserInfo.data.username)
+  )
+  
+  if (unreadMessages.length > 0) {
+    try {
+      await post('/api/auth/chat/markMessagesAsRead', {
+        messageIds: unreadMessages.map(msg => msg.chatMessageId),
+        readerId: currentUserInfo.data.id
+      })
+      
+      // 更新本地状态
+      unreadMessages.forEach(msg => {
+        msg.readUserNames = msg.readUserNames.filter(
+          name => name !== currentUserInfo.data.username
+        )
+      })
+    } catch (error) {
+      console.error('更新消息已读状态失败:', error)
+    }
   }
 }
 
@@ -3126,5 +3218,50 @@ const handleTabChange = (tab) => {
 @keyframes fadeInOut {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }
+}
+
+/* 已读未读状态样式 */
+.read-status {
+  margin-left: 8px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s ease;
+}
+
+.read-status .status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.read-status.read {
+  color: #67c23a;
+}
+
+.read-status.read .status-dot {
+  background-color: #67c23a;
+}
+
+.read-status.unread {
+  color: #e6a23c;
+}
+
+.read-status.unread .status-dot {
+  background-color: #e6a23c;
+}
+
+.status-text {
+  margin-left: 2px;
+}
+
+/* 消息元信息调整 */
+.message-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 </style>
