@@ -3,15 +3,32 @@
     <el-button @click="goBack" class="back-button">返回</el-button>
 
     <el-card class="member-group-card">
-      <div class="header">
-        <h2>{{ projectName }}</h2>
+      <div class="header-card">
+        <div class="header-content">
+          <h2 class="project-title">{{ projectName }}</h2>
+          <div class="meta-info">
+            <span class="member-count">
+              <el-icon><User /></el-icon> {{ memberList.length }} 位成员
+            </span>
+          </div>
+        </div>
         <div class="header-actions">
           <el-button 
             v-if="isAdmin"
             type="primary" 
             @click="showAddMemberDialog"
+            class="action-button"
           >
             <el-icon><Plus /></el-icon> 添加成员
+          </el-button>
+
+          <!-- 新增群聊按钮 -->
+          <el-button 
+            type="success" 
+            @click="showGroupChat"
+            class="action-button chat-button"
+          >
+            <el-icon><ChatDotRound /></el-icon> 群聊
           </el-button>
         </div>
       </div>
@@ -22,6 +39,8 @@
         :data="memberList" 
         v-loading="loading"
         style="width: 100%"
+        class="modern-table"
+        :row-class-name="tableRowClassName"
       >
         <el-table-column label="头像" width="80">
           <template #default="{ row }">
@@ -69,7 +88,12 @@
       </el-table>
     </el-card>
 
-    <el-dialog v-model="addMemberDialogVisible" title="添加成员" width="500px">
+    <el-dialog 
+      v-model="addMemberDialogVisible" 
+      title="添加成员" 
+      width="500px"
+      class="modern-dialog"
+      >
       <el-form :model="addMemberForm" label-width="80px">
         <el-form-item label="搜索用户">
           <el-input 
@@ -121,6 +145,16 @@
         </el-button>
       </template>
     </el-dialog>
+
+
+      <ChatDialog 
+        v-model="groupChatVisible"
+        :current-user="currentUser"
+        :target-user="targetUser"
+        :chat-conversation-id="currentChatId"
+        :chat-type="chatType"
+      />
+
   </div>
 </template>
 
@@ -128,8 +162,13 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search } from '@element-plus/icons-vue'
+import { Plus, Search,ChatDotRound } from '@element-plus/icons-vue'
 import { get, post } from '@/net'
+import ChatDialog from '@/components/ChatDialog.vue'
+
+import useUserInfo from '@/hooks/useUserInfo';
+const { state: userInfo, loadUserInfo } = useUserInfo();
+
 
 const route = useRoute()
 const router = useRouter()
@@ -148,11 +187,74 @@ const searchResult = ref([])
 const selectedUser = ref(null)
 const projectId = ref(null)
 
+// 新增群聊相关状态
+const chatVisible = ref(false);
+const showTooltip = ref(false);
+const groupChatVisible = ref(false);
+const currentChatId = ref(null); // 修改为从API获取
+const chatType = ref(2); // 2表示群聊类型
+const currentUser = ref({});
+const targetUser = ref({});
+
+
 onMounted(() => {
-  projectId.value = route.params.id
-  loadProjectInfo()
-  loadMemberList()
+    projectId.value = route.params.id
+    if (!userInfo.data.id) {
+      loadUserInfo().then(() => {
+        getConversationId()
+        loadProjectInfo()
+        loadMemberList()
+      });
+    } else {
+      getConversationId()
+      loadProjectInfo()
+      loadMemberList()
+    }
+ 
 })
+
+const getConversationId = async () => {
+  try {
+    const res = await get(`/api/auth/chat/getChatIdByProjectId?projectId=${projectId.value}`)
+    if (res) {
+      console.log('获取到的会话ID:', res)
+      currentChatId.value = res
+    } else {
+      ElMessage.warning('获取会话ID失败，将使用项目ID作为替代')
+      currentChatId.value = projectId.value
+    }
+  } catch (error) {
+    console.error('获取会话ID失败:', error)
+  }
+}
+
+
+const showGroupChat = () => {
+  if (!currentChatId.value) {
+    ElMessage.warning('正在获取会话信息，请稍后...')
+    return
+  }
+  // 设置用户信息
+  currentUser.value = {
+    id: userInfo.data?.id,
+    username: userInfo.data?.username,
+    avatarUrl: userInfo.data?.avatarUrl
+  }
+
+  targetUser.value = {};
+  chatVisible.value = true;
+  groupChatVisible.value = true
+  
+  // 添加打开动画效果
+  setTimeout(() => {
+    const chatBtn = document.querySelector('.chat-button')
+    if (chatBtn) {
+      chatBtn.classList.add('animate-pulse')
+      setTimeout(() => chatBtn.classList.remove('animate-pulse'), 1000)
+    }
+  }, 50)
+}
+
 
 const loadProjectInfo = async () => {
   try {
@@ -368,5 +470,130 @@ const handleRemoveMember = (member) => {
     margin-top: 10px;
     width: 100%;
   }
+}
+
+/* 现代卡片样式 */
+.header-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.project-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0;
+}
+
+.meta-info {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  color: #4a5568;
+}
+
+.member-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 现代表格样式 */
+.modern-table {
+  --el-table-border-color: transparent;
+  --el-table-header-bg-color: #f8fafc;
+}
+
+.modern-table :deep(.el-table__row) {
+  transition: all 0.3s ease;
+}
+
+.modern-table :deep(.el-table__row:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* 对话框样式 */
+.modern-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modern-dialog :deep(.el-dialog__header) {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  margin-right: 0;
+}
+
+.modern-dialog :deep(.el-dialog__body) {
+  padding: 20px;
+}
+
+/* 用户搜索结果项动画 */
+.user-item {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.user-item:hover {
+  transform: translateX(4px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* 返回按钮样式 */
+.back-button {
+  position: absolute;
+  left: 30px;
+  top: 30px;
+  z-index: 1000;
+  background: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.back-button:hover {
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 按钮样式增强 */
+.action-button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.chat-button {
+  background: linear-gradient(135deg, #4ade80 0%, #22d3ee 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 2px 10px rgba(74, 222, 128, 0.3);
+}
+
+.chat-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(74, 222, 128, 0.4);
+}
+
+/* 按钮间距调整 */
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.animate-pulse {
+  animation: pulse 0.5s ease;
 }
 </style>

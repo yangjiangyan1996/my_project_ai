@@ -9,6 +9,7 @@ import com.example.entity.resp.ChatHistoryResp;
 import com.example.entity.resp.ChatCheckReadStatusResp;
 import com.example.entity.resp.ChatListResp;
 import com.example.enums.ChatEnums;
+import com.example.enums.ProjectEnum;
 import com.example.service.*;
 import io.lettuce.core.internal.LettuceLists;
 import jakarta.annotation.Resource;
@@ -32,6 +33,10 @@ import java.util.stream.Stream;
 @Slf4j
 public class ChatFacade {
 
+    @Resource
+    ProjectMembersService projectMembersService;
+    @Resource
+    ProjectService projectService;
     @Resource
     private ChatConversationMemberService chatConversationMemberService;
     @Resource
@@ -340,9 +345,34 @@ public class ChatFacade {
                 }
             }
         } else if (req.getChatType().equals(ChatEnums.TypeEnum.GROUP.getCode())) {
+            Projects projects = projectService.selectByProjectId(req.getProjectId());
 
+            ChatConversation cc = new ChatConversation();
+            cc.setChatType(req.getChatType());
+            cc.setProjectId(req.getProjectId());
+            cc.setTitle("【"+projects.getName()+"】项目群聊");
+            cc.setLastActiveAt(new Date());
+            cc.setCreatedAt(new Date());
+            cc.setCreatedBy(req.getCurrentUserId());
+            cc.setModifiedAt(new Date());
+            cc.setModifiedBy(req.getCurrentUserId());
+            boolean ccSave = chatConversationService.save(cc);
+            if (ccSave) {
+                List<ProjectMembers> pmList = projectMembersService.selectByProjectId(req.getProjectId(), ProjectEnum.MemberStatusEnum.IN.getCode());
+                List<ChatConversationMember> list = pmList.stream().map(v -> {
+                    ChatConversationMember ccm = new ChatConversationMember();
+                    ccm.setConversationId(cc.getId());
+                    ccm.setUserId(v.getUserId());
+                    ccm.setJoinedAt(new Date());
+                    return ccm;
+                }).collect(Collectors.toList());
+                boolean ccmSave = chatConversationMemberService.saveBatch(list);
+                if (!ccmSave) {
+                    throw new ValidationException("创建聊天会话失败");
+                }
+                chatConversationId = cc.getId();
+            }
         }
-
         return chatConversationId;
     }
 
@@ -450,5 +480,17 @@ public class ChatFacade {
         });
 
         return result;
+    }
+
+    public Long getChatIdByProjectId(Long projectId) {
+        ChatConversation cc = chatConversationService.selectByProjectId(projectId);
+        if (cc != null) {
+            return cc.getId();
+        }
+
+        ChatCreateMessageReq e = new ChatCreateMessageReq();
+        e.setProjectId(projectId);
+        e.setChatType(ChatEnums.TypeEnum.GROUP.getCode());
+        return initChatConversation(e);
     }
 }

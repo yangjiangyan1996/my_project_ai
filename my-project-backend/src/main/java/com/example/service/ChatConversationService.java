@@ -16,4 +16,6 @@ public interface ChatConversationService extends IService<ChatConversation> {
     boolean updateLastActiveAtById(Date date, Long Id);
 
     List<ChatConversation> selectByIds(List<Long> ids, Integer chatType);
+
+    ChatConversation selectByProjectId(Long projectId);
 }

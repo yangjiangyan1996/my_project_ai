@@ -119,7 +119,7 @@ const props = defineProps({
     required: false
   },
   //会话ID
-  chatId: {  
+  chatConversationId: {  
     type: Number,
     default: null
   },
@@ -155,7 +155,6 @@ const chatHistory = ref([])
 const chatPage = ref(1)
 const chatSize = ref(10)
 const chatTotal = ref(0)
-const chatConversationId = ref(null)
 const isNewConversation = ref(false)
 const firstMessageRef = ref(null)
 const pollInterval = ref(null)
@@ -187,7 +186,6 @@ const loadChatHistory = async () => {
   // 重置聊天状态
   chatHistory.value = []
   chatPage.value = 1
-  chatConversationId.value = null
   isNewConversation.value = false
   
   try {
@@ -198,8 +196,8 @@ const loadChatHistory = async () => {
       size: chatSize.value
     }
 
-    if(props.chatId) {
-      requestData.chatId = props.chatId
+    if(props.chatConversationId) {
+      requestData.chatId = props.chatConversationId
     }
     if(props.targetUser?.secrecyId) {
       requestData.secrecyId = props.targetUser.secrecyId
@@ -210,7 +208,6 @@ const loadChatHistory = async () => {
     if (res.records && res.records.length > 0) {
       chatHistory.value = res.records
       chatTotal.value = res.total
-      chatConversationId.value = res.records[0].chatConversationId
       
       formatChatHistory()
       // 确保DOM更新后滚动到底部
@@ -276,11 +273,11 @@ const stopPolling = () => {
 
 // 专门检查已读状态
 const checkReadStatus = async () => {
-  if (!chatConversationId.value) return
+  if (!props.chatConversationId) return
   
   try {
     const res = await post('/api/auth/chat/checkReadStatus', {
-      conversationId: chatConversationId.value,
+      conversationId: props.chatConversationId,
       userId: props.currentUser.id
     })
 
@@ -322,11 +319,11 @@ const checkReadStatus = async () => {
 
 // 获取新消息
 const fetchNewMessages = async () => {
-  if (!chatConversationId.value || loading.value) return
+  if (!props.chatConversationId || loading.value) return
   
   try {
     const res = await post('/api/auth/chat/getNewMessages', {
-      chatConversationId: chatConversationId.value,
+      chatConversationId: props.chatConversationId,
       lastMessageId: chatHistory.value.length > 0 
         ? chatHistory.value[chatHistory.value.length - 1].chatMessageId 
         : null
@@ -413,8 +410,8 @@ const loadMoreMessages = async () => {
     if(props.targetUser) {
       requestData.secrecyId = props.targetUser.secrecyId
     }
-    if(props.chatId) {
-      requestData.chatId = props.chatId
+    if(props.chatConversationId) {
+      requestData.chatId = props.chatConversationId
     }
 
     const res = await post('/api/auth/chat/getChatHistory', requestData)
@@ -459,33 +456,29 @@ const loadMoreMessages = async () => {
 // 发送消息
 const sendMessage = async () => {
   if (!messageContent.value.trim()) return
-  
+  console.log("发送消息",props)
   sending.value = true
   try {
     const requestData = {
       content: messageContent.value,
     }
-    if (chatConversationId.value) {
-      requestData.chatConversationId = chatConversationId.value
+    if (props.chatConversationId) {
+      requestData.chatConversationId = props.chatConversationId
     }
     if(props.chatType) {
       requestData.chatType = props.chatType
     }
-    
     const res = await post('/api/auth/chat/sendMessage', requestData)
-    console.log("发送消息",res)
-    console.log("发送消息1",props)
-    
     if (res) {
-      if (!chatConversationId.value && res) {
-        chatConversationId.value = res.conversationId
+      if (!props.chatConversationId && res) {
+        // props.chatConversationId.value = res.conversationId
         isNewConversation.value = false
       }
       
       // 直接使用API返回的数据结构
       const newMsg = {
         chatMessageId: res.chatMessageId,
-        chatConversationId: chatConversationId.value,
+        chatConversationId: props.chatConversationId,
         senderId: props.currentUser.id,
         senderName: props.currentUser.username,
         senderAvatar: props.currentUser.avatarUrl,

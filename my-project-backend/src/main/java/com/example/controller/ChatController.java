@@ -136,4 +136,23 @@ public class ChatController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+    /**
+     * 获取项目下的聊天会话
+     * @param req
+     * @return
+     */
+    @GetMapping("/getChatIdByProjectId")
+    public RespBean<Long> getChatIdByProjectId(@RequestParam("projectId") Long projectId) {
+        try {
+            Long result = chatFacade.getChatIdByProjectId(projectId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ChatController#getChatIdByProjectId,req:{}", projectId, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ChatController#getChatIdByProjectId,req:{}", projectId, e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 }

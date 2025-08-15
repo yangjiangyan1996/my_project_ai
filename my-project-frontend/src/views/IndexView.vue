@@ -515,7 +515,7 @@
       v-model="chatVisible"
       :current-user="currentUser"
       :target-user="targetUser"
-      :chat-id="currentChatId"
+      :chat-conversation-id="currentChatId"
       :chat-type="chatType"
     />
 

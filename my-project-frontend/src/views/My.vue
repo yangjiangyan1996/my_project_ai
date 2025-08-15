@@ -1115,8 +1115,6 @@ const showPointsShop = () => {
 
 
 onMounted(() => {
-  console.log(Object.keys(icons)) // 查看所有可用图标名称
-
   fetchSkillCategories().then(() =>{
     if (!userInfo.data.id) {
       loadUserInfo().then(() => {

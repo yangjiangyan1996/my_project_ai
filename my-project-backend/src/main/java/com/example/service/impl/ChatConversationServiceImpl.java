@@ -30,6 +30,11 @@ public class ChatConversationServiceImpl extends ServiceImpl<ChatConversationMap
     }
 
     @Override
+    public ChatConversation selectByProjectId(Long projectId) {
+        return this.getOne(new QueryWrapper<ChatConversation>().eq("project_id", projectId).eq("is_deleted", 0));
+    }
+
+    @Override
     public List<ChatConversation> selectByIds(List<Long> ids, Integer chatType) {
         if (CollectionUtils.isEmpty(ids)) {
             return Collections.emptyList();
