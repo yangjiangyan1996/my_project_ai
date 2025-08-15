@@ -79,11 +79,15 @@ public class ChatFacade {
         if (chatId == null) {
             return Page.of(req.getPage(), req.getSize());
         }
+        Page<ChatMessage> chatMessagePage = chatMessageService.selectPageByConversationId(Page.of(req.getPage(), req.getSize()), chatId);
+        if (CollectionUtils.isEmpty(chatMessagePage.getRecords())) {
+            return Page.of(req.getPage(), req.getSize());
+        }
 
-        List<Account> accounts = accountService.selectByIds(LettuceLists.newList(req.getCurrentUserId(), req.getTargetUserId()));
+        List<Long> userIds = chatMessagePage.getRecords().stream().map(v -> v.getSenderId()).distinct().collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
         Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
 
-        Page<ChatMessage> chatMessagePage = chatMessageService.selectPageByConversationId(Page.of(req.getPage(), req.getSize()), chatId);
 
         //获取消息是否已读
         List<Long> messageIds = chatMessagePage.getRecords().stream().map(v -> v.getId()).distinct().collect(Collectors.toList());

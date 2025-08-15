@@ -104,6 +104,8 @@
 import { ref, computed, onMounted, watch, nextTick, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { post } from '@/net'
+import { debounce } from 'lodash-es'
+
 
 const props = defineProps({
   // 当前用户信息
@@ -382,15 +384,14 @@ const scrollToBottom = (behavior = 'smooth') => {
   })
 }
 
-const handleScroll = ({ scrollTop }) => {
+const handleScroll = debounce(({ scrollTop }) => {
   const scrollContainer = document.querySelector('.message-history-container .el-scrollbar__wrap')
   if (!scrollContainer) return
   
-  // 如果滚动到顶部附近，加载更多消息
   if (scrollTop < 100 && !loading.value && chatPage.value * chatSize.value < chatTotal.value) {
     loadMoreMessages()
   }
-}
+}, 200)
 
 const loadMoreMessages = async () => {
   if (loading.value || chatPage.value * chatSize.value >= chatTotal.value) return
@@ -555,6 +556,8 @@ watch(visible, (newVal) => {
 // 组件卸载时停止轮询
 onUnmounted(() => {
   stopPolling()
+  handleScroll.cancel()
+
 })
 </script>
 
