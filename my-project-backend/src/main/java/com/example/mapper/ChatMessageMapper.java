@@ -2,7 +2,11 @@ package com.example.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.entity.dto.ChatMessage;
+import com.example.entity.dto.ChatMessageStatus;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -11,4 +15,6 @@ import org.apache.ibatis.annotations.Mapper;
  * @Date 2025/8/13 10:37
  */
 @Mapper
-public interface ChatMessageMapper extends BaseMapper<ChatMessage> {}
+public interface ChatMessageMapper extends BaseMapper<ChatMessage> {
+    List<ChatMessage> selectLastMessagesOfConversations(@Param("conversationIds") List<Long> conversationIds);
+}

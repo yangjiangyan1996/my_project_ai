@@ -6,13 +6,11 @@ import com.example.Facade.ChatFacade;
 import com.example.Facade.CommonFacade;
 import com.example.Facade.UserFacade;
 import com.example.entity.base.RespBean;
-import com.example.entity.req.ChatCreateMessageReq;
-import com.example.entity.req.ChatHistoryPageReq;
-import com.example.entity.req.ChatNewMessagesReq;
-import com.example.entity.req.ChatCheckReadStatusReq;
+import com.example.entity.req.*;
 import com.example.entity.resp.ChatCreateMessageResp;
 import com.example.entity.resp.ChatHistoryResp;
 import com.example.entity.resp.ChatCheckReadStatusResp;
+import com.example.entity.resp.ChatListResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -54,9 +52,29 @@ public class ChatController {
         }
     }
 
+    /**
+     * 获取聊天人员列表
+     * @param req
+     * @return
+     */
+    @PostMapping("/getChats")
+    public RespBean<Page<ChatListResp>> getChats(@RequestBody ChatListPageReq req) {
+        try {
+            req.setCurrentUserId(UserUtil.getCurrentUser().getId());
+            Page<ChatListResp> result = chatFacade.getChats(req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ChatController#getChats,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ChatController#getChats,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
 
     /**
-     * 获取聊天记录
+     * 获取具体的聊天记录
      * @param req
      * @return
      */
@@ -66,9 +84,6 @@ public class ChatController {
             if (req.getSecrecyId() != null) {
                 Long userId = commonFacade.getUserIdBySecrecyId(req.getSecrecyId());
                 req.setTargetUserId(userId);
-            }
-            if (req.getTargetUserId() == null) {
-                return new RespBean<>();
             }
 
             req.setCurrentUserId(UserUtil.getCurrentUser().getId());

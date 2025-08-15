@@ -13,12 +13,16 @@ import java.util.List;
  */
 @Data
 public class ChatHistoryPageReq extends PageReq {
-    //前端传
+    //前端传(访问他人主页发起私聊)
     private Long secrecyId;
+    //后端填充(访问他人主页发起私聊)
+    private Long targetUserId;
+
+    //前端传（主页私聊通知）
+    private Long chatId;
 
     private Integer chatType;
 
-    //后端使用，不需要前端
-    private Long targetUserId;
+    //后端填充
     private Long currentUserId;
 }

@@ -1,5 +1,87 @@
 <template>
   <div class="index-container">
+
+    <!-- 新增私聊图标 -->
+    <el-popover
+      placement="bottom-end"
+      trigger="click"
+      width="350"
+      v-model:visible="chatListVisible"
+    >
+      <template #reference>
+        <div class="chat-icon" >
+          <el-badge :value="totalUnreadCount" :max="99" class="badge">
+            <el-icon :size="20"><Message /></el-icon>
+          </el-badge>
+        </div>
+      </template>
+      
+      <!-- 私聊列表内容 -->
+      <div class="chat-list-container">
+        <!-- 列表头部 -->
+        <div class="chat-list-header">
+          <h3>私聊消息</h3>
+          <el-button 
+            type="text" 
+            size="small" 
+            @click="markAllChatsAsRead"
+            :disabled="totalUnreadCount === 0"
+          >
+            <el-icon><CircleCheck /></el-icon>
+            全部已读
+          </el-button>
+        </div>
+        
+        <!-- 私聊列表 -->
+        <el-scrollbar height="400px">
+          <!-- 列表项 -->
+          <div 
+            v-for="chat in chatList" 
+            :key="chat.chatId" 
+            class="chat-item"
+            :class="{ 'unread-chat': chat.unreadCount > 0 }"
+            @click="openChatDialog(chat)"
+          >
+            <!-- 头像和未读标记 -->
+            <div class="chat-avatar">
+              <el-avatar :size="40" :src="chat.avatar" />
+              <el-badge 
+                :value="chat.unreadCount" 
+                :max="99" 
+                class="chat-badge" 
+                v-if="chat.unreadCount > 0"
+              />
+            </div>
+            
+            <!-- 聊天预览 -->
+            <div class="chat-content">
+              <div class="chat-header">
+                <span class="chat-title">{{ chat.title }}</span>
+                <span class="chat-time">{{ formatChatTime(chat.lastActiveAt) }}</span>
+              </div>
+              <div class="chat-preview">
+                {{ chat.lastMessage || '暂无消息' }}
+              </div>
+            </div>
+          </div>
+          
+          <!-- 加载状态 -->
+          <div v-if="chatLoading" class="loading-more">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            <span>加载中...</span>
+          </div>
+          <div v-else-if="!chatHasMore" class="no-more">
+            没有更多聊天了
+          </div>
+          <div v-else-if="chatList.length === 0" class="no-message">
+            暂无私聊消息
+          </div>
+        </el-scrollbar>
+      </div>
+    </el-popover>
+
+
+    <!-- 通知 -->
     <el-popover
       placement="bottom-end"
       trigger="click"
@@ -438,6 +520,15 @@
       </div>
     </div>
 
+    <!-- 私信对话框 -->
+    <ChatDialog 
+      v-model="chatVisible"
+      :current-user="currentUser"
+      :target-user="targetUser"
+      :chat-id="currentChatId"
+      :chat-type="chatType"
+    />
+
     <!-- 技能匹配展示区域 -->
     <SkillMatch v-if="displayMode === 'skillMatch'" />
 
@@ -450,13 +541,12 @@
      <QuanList v-if="displayMode === 'quanList'" />
 
      <!-- <GrowthCenter v-if="displayMode === 'growthCenter'" /> -->
-
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted ,computed, watch} from 'vue';
-import { Loading, ArrowDown,Bell, CircleCheck } from '@element-plus/icons-vue';
+import { Loading, ArrowDown,Bell, CircleCheck, Message } from '@element-plus/icons-vue';
 import router from "@/router";
 import { logout, post, get } from '@/net';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -536,6 +626,79 @@ const applySize = ref(10);
 const applyHasMore = ref(true);
 const applyLoading = ref(false);
 
+// 私聊列表相关状态
+const chatListVisible = ref(false);
+const chatList = ref([]);
+const chatPage = ref(1);
+const chatSize = ref(10);
+const chatLoading = ref(false);
+const chatHasMore = ref(true);
+const totalUnreadCount = ref(0);
+
+
+//私聊对话框列表
+import ChatDialog from '@/components/ChatDialog.vue'
+const chatVisible = ref(false)
+const currentChatId = ref(null)  // 当前选中的聊天ID
+const chatType = ref(null)  // 会话类型
+const currentUser = ref({})  // 当前用户信息
+const targetUser = ref({})  // 目标用户信息
+
+//私聊列表相关状态
+const chatDialogVisible = ref(false);
+const currentChat = ref(null);
+const messageHistory = ref([]);
+const messageContent = ref('');
+const sendingMessage = ref(false);
+const chatHistoryPage = ref(1);
+const chatHistorySize = ref(10);
+const chatHistoryLoading = ref(false);
+const currentUserAvatar = computed(() => currentUserInfo.data?.avatarUrl || '/images/default-avatar.png');
+
+const handleChatClick = () => {
+  chatListVisible.value = !chatListVisible.value;
+  loadChatList();
+};
+
+const formatChatTime = (timeString) => {
+  if (!timeString) return '';
+  const date = new Date(timeString);
+  return `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}`;
+};
+
+const loadChatList = async () => {
+  if (chatLoading.value) return;
+  chatLoading.value = true;
+  
+  try {
+    const res = await post('/api/auth/chat/getChats', {
+      page: chatPage.value,
+      size: chatSize.value
+    });
+    
+    if (res?.records) {
+      chatList.value = chatPage.value === 1 
+        ? res.records 
+        : [...chatList.value, ...res.records];
+      
+      chatHasMore.value = chatList.value.length < res.total;
+      totalUnreadCount.value = chatList.value.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
+    }
+  } catch (e) {
+    console.error('加载私聊列表失败:', e);
+  } finally {
+    chatLoading.value = false;
+  }
+};
+
+const openChatDialog = async (chat) => {
+  console.log("打开私聊对话框",state.data)
+  currentChatId.value = chat.chatId
+  chatType.value = chat.chatType
+  currentUser.value = state.data
+  targetUser.value = {}
+  chatVisible.value = true
+};
 
 // 获取未读消息数
 const fetchUnreadCount = async () => {
@@ -1187,10 +1350,12 @@ onMounted(() => {
     loadUserInfo().then(() => {
       loadProjects();
       fetchUnreadCount();
+      loadChatList()
     });
   } else {
     fetchUnreadCount();
     loadProjects();
+    loadChatList();
   }
 });
 
@@ -1705,5 +1870,71 @@ function userLogout() {
   right: 20px;
   top: 10px;
   z-index: 1001;
+}
+
+/* 私聊图标 */
+.chat-icon {
+  position: absolute;
+  right: 140px;
+  top: 15px;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.3s;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1001; /* 确保在最上层 */
+}
+.chat-icon:hover {
+  background-color: #f0f0f0;
+  color: #409EFF;
+  transform: scale(1.1);
+}
+
+/* 私聊列表 */
+.chat-list-container {
+  padding: 10px;
+}
+.chat-item {
+  display: flex;
+  padding: 12px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.chat-item:hover {
+  background-color: #f5f7fa;
+}
+.unread-chat {
+  background-color: #f8fafc;
+}
+.chat-avatar {
+  position: relative;
+  margin-right: 12px;
+}
+.chat-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+}
+.chat-content {
+  flex: 1;
+  min-width: 0;
+}
+.chat-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-time {
+  font-size: 12px;
+  color: #999;
+}
+.chat-preview {
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

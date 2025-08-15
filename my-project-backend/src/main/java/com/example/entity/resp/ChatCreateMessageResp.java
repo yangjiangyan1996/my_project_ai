@@ -2,6 +2,8 @@ package com.example.entity.resp;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -14,4 +16,6 @@ public class ChatCreateMessageResp {
     Long conversationId;
     //消息ID
     Long chatMessageId;
+    //消息接受人名称（为前端的已读未读服务）
+    List<String> readUserNames;
 }

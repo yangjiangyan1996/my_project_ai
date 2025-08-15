@@ -1,6 +1,7 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ChatConversationMember;
 import com.example.mapper.ChatConversationMemberMapper;
@@ -18,6 +19,15 @@ import java.util.List;
 @Service
 public class ChatConversationMemberServiceImpl extends ServiceImpl<ChatConversationMemberMapper, ChatConversationMember> implements ChatConversationMemberService {
     @Override
+    public Page<ChatConversationMember> selectPageByUserId(Page<ChatConversationMember> of, Long currentUserId) {
+        return this.baseMapper.selectPage(of, new QueryWrapper<ChatConversationMember>()
+                .eq("user_id", currentUserId)
+                .eq("is_deleted", 0)
+                .orderByDesc("last_read_message_id")
+        );
+    }
+
+    @Override
     public ChatConversationMember selectByConversationIdAndUserId(Long conversationId, Long currentUserId) {
         return this.baseMapper.selectOne(new QueryWrapper<ChatConversationMember>()
                 .eq("conversation_id", conversationId)
@@ -29,8 +39,8 @@ public class ChatConversationMemberServiceImpl extends ServiceImpl<ChatConversat
     public List<ChatConversationMember> selectByConversationId(Long conversationId) {
         return this.baseMapper.selectList(
                 new QueryWrapper<ChatConversationMember>()
-                .eq("conversation_id", conversationId)
-                .eq("is_deleted", 0));
+                        .eq("conversation_id", conversationId)
+                        .eq("is_deleted", 0));
     }
 
     @Override

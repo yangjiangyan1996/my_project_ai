@@ -1,5 +1,6 @@
 package com.example.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.AccountShow;
 import com.example.entity.dto.ChatConversationMember;
@@ -18,4 +19,6 @@ public interface ChatConversationMemberService extends IService<ChatConversation
     List<ChatConversationMember> selectByConversationId(Long conversationId);
 
     ChatConversationMember selectByConversationIdAndUserId(Long conversationId, Long currentUserId);
+
+    Page<ChatConversationMember> selectPageByUserId(Page<ChatConversationMember> of, Long currentUserId);
 }

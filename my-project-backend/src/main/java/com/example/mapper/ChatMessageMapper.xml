@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.ChatMessageMapper">
+    <!-- 保持原有resultMap定义 -->
+    <resultMap id="baseResultMap" type="com.example.entity.dto.ChatMessage">
+        <id property="id" column="id" />
+        <result property="conversationId" column="conversation_id" />
+        <result property="senderId" column="sender_id" />
+        <result property="messageType" column="message_type" />
+        <result property="content" column="content" />
+        <result property="status" column="status" />
+    </resultMap>
+
+    <select id="selectLastMessagesOfConversations" resultMap="baseResultMap">
+        SELECT cm.*
+        FROM chat_message cm
+                 INNER JOIN (
+            SELECT conversation_id, MAX(created_at) AS latest_time
+            FROM chat_message
+            WHERE conversation_id IN
+            <foreach item="conversationId" collection="conversationIds" separator="," open="(" close=")">
+                #{conversationId}
+            </foreach>
+              AND is_deleted = 0
+            GROUP BY conversation_id
+        ) latest ON cm.conversation_id = latest.conversation_id AND cm.created_at = latest.latest_time
+        WHERE cm.is_deleted = 0
+        ORDER BY cm.created_at DESC;
+    </select>
+</mapper>

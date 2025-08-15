@@ -19,6 +19,19 @@ import java.util.List;
  */
 @Service
 public class ChatMessageStatusServiceImpl extends ServiceImpl<ChatMessageStatusMapper, ChatMessageStatus> implements ChatMessageStatusService {
+
+    @Override
+    public List<ChatMessageStatus> selectByConversationIdsAndUserIdAndStatus(List<Long> conversationIds, Long userId, Integer code) {
+        if (conversationIds == null || conversationIds.isEmpty()||userId==null) {
+            return new ArrayList<>();
+        }
+        return this.baseMapper.selectList(new QueryWrapper<ChatMessageStatus>()
+                .in("conversation_id", conversationIds)
+                .eq("user_id", userId)
+                .eq("is_deleted", 0)
+                .eq(code != null, "is_read", code));
+    }
+
     @Override
     public List<ChatMessageStatus> selectByMessageIds(List<Long> messageIds, Long conversationId,Long currentUserId) {
         if (messageIds == null || messageIds.isEmpty()||conversationId==null || currentUserId==null) {

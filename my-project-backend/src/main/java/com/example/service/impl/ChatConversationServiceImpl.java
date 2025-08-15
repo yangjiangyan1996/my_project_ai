@@ -1,13 +1,16 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ChatConversation;
 import com.example.entity.dto.ChatMessage;
 import com.example.mapper.ChatConversationMapper;
 import com.example.service.ChatConversationService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -28,6 +31,9 @@ public class ChatConversationServiceImpl extends ServiceImpl<ChatConversationMap
 
     @Override
     public List<ChatConversation> selectByIds(List<Long> ids, Integer chatType) {
+        if (CollectionUtils.isEmpty(ids)) {
+            return Collections.emptyList();
+        }
         return this.baseMapper.selectList(new QueryWrapper<ChatConversation>()
                 .in("id", ids)
                 .eq(chatType != null, "chat_type", chatType)

@@ -3,13 +3,11 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.config.AsyncTaskUtil;
 import com.example.entity.dto.*;
-import com.example.entity.req.ChatCreateMessageReq;
-import com.example.entity.req.ChatHistoryPageReq;
-import com.example.entity.req.ChatNewMessagesReq;
-import com.example.entity.req.ChatCheckReadStatusReq;
+import com.example.entity.req.*;
 import com.example.entity.resp.ChatCreateMessageResp;
 import com.example.entity.resp.ChatHistoryResp;
 import com.example.entity.resp.ChatCheckReadStatusResp;
+import com.example.entity.resp.ChatListResp;
 import com.example.enums.ChatEnums;
 import com.example.service.*;
 import io.lettuce.core.internal.LettuceLists;
@@ -45,46 +43,57 @@ public class ChatFacade {
     @Resource
     private ChatMessageStatusService chatMessageStatusService;
 
-    public Page<ChatHistoryResp> getChatHistory(ChatHistoryPageReq req) {
-        List<ChatConversationMember> targetUserChatList = chatConversationMemberService.selectByUserId(req.getTargetUserId());
-        List<ChatConversationMember> currentUserChatList = chatConversationMemberService.selectByUserId(req.getCurrentUserId());
-        if (CollectionUtils.isEmpty(targetUserChatList) || CollectionUtils.isEmpty(currentUserChatList)) {
-            return Page.of(req.getPage(), req.getSize());
+    private Long getChatIdByChatHistoryPageReq(ChatHistoryPageReq req) {
+        if (req.getTargetUserId() != null){
+            List<ChatConversationMember> targetUserChatList = chatConversationMemberService.selectByUserId(req.getTargetUserId());
+            List<ChatConversationMember> currentUserChatList = chatConversationMemberService.selectByUserId(req.getCurrentUserId());
+            if (CollectionUtils.isEmpty(targetUserChatList) || CollectionUtils.isEmpty(currentUserChatList)) {
+                return null;
+            }
+
+            //获取currentUserChatList，targetUserChatList集合中的conversationId
+            List<Long> conversationIds = Stream.concat(
+                            targetUserChatList.stream(),
+                            currentUserChatList.stream()
+                    )
+                    .map(ChatConversationMember::getConversationId)
+                    .collect(Collectors.toList());
+            List<ChatConversation> chatMessages = chatConversationService.selectByIds(conversationIds, req.getChatType());
+            List<Long> twoUserConversionIds = chatMessages.stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
+            //获取 targetUserChatList 和 currentUserChatList 的交集
+            List<Long> currentConversionIds = currentUserChatList.stream().map(v -> v.getConversationId()).distinct().collect(Collectors.toList());
+            ChatConversationMember ccm = targetUserChatList.stream()
+                    .filter(c -> twoUserConversionIds.contains(c.getConversationId()))
+                    .filter(c -> currentConversionIds.contains(c.getConversationId()))
+                    .collect(Collectors.toList()).stream().findFirst().orElse(null);
+            return ccm.getConversationId();
         }
 
-        //获取currentUserChatList，targetUserChatList集合中的conversationId
-        List<Long> conversationIds = Stream.concat(
-                        targetUserChatList.stream(),
-                        currentUserChatList.stream()
-                )
-                .map(ChatConversationMember::getConversationId)
-                .collect(Collectors.toList());
-        List<ChatConversation> chatMessages = chatConversationService.selectByIds(conversationIds, req.getChatType());
-        List<Long> twoUserConversionIds = chatMessages.stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
-        //获取 targetUserChatList 和 currentUserChatList 的交集
-        List<Long> currentConversionIds = currentUserChatList.stream().map(v -> v.getConversationId()).distinct().collect(Collectors.toList());
-        ChatConversationMember ccm = targetUserChatList.stream()
-                .filter(c -> twoUserConversionIds.contains(c.getConversationId()))
-                .filter(c -> currentConversionIds.contains(c.getConversationId()))
-                .collect(Collectors.toList()).stream().findFirst().orElse(null);
-        if (ccm == null) {
+        if (req.getChatId() != null) {
+            return req.getChatId();
+        }
+        return null;
+    }
+    public Page<ChatHistoryResp> getChatHistory(ChatHistoryPageReq req) {
+        Long chatId = getChatIdByChatHistoryPageReq(req);
+        if (chatId == null) {
             return Page.of(req.getPage(), req.getSize());
         }
 
         List<Account> accounts = accountService.selectByIds(LettuceLists.newList(req.getCurrentUserId(), req.getTargetUserId()));
         Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
 
-        Page<ChatMessage> chatMessagePage = chatMessageService.selectPageByConversationId(Page.of(req.getPage(), req.getSize()), ccm.getConversationId());
+        Page<ChatMessage> chatMessagePage = chatMessageService.selectPageByConversationId(Page.of(req.getPage(), req.getSize()), chatId);
 
         //获取消息是否已读
         List<Long> messageIds = chatMessagePage.getRecords().stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
-        List<ChatMessageStatus> cmsList = chatMessageStatusService.selectByMessageIds(messageIds, ccm.getConversationId(), req.getCurrentUserId());
+        List<ChatMessageStatus> cmsList = chatMessageStatusService.selectByMessageIds(messageIds, chatId, req.getCurrentUserId());
         Map<Long, List<ChatMessageStatus>> messageId2CmsMap = cmsList.stream().collect(Collectors.groupingBy(v -> v.getMessageId()));
 
         List<ChatHistoryResp> list = chatMessagePage.getRecords().stream().map(v -> {
             ChatHistoryResp p = new ChatHistoryResp();
             p.setChatMessageId(v.getId());
-            p.setChatConversationId(ccm.getConversationId());
+            p.setChatConversationId(chatId);
             p.setContent(v.getContent());
             p.setCreatedTime(v.getCreatedAt());
             p.setMessageType(v.getMessageType());
@@ -98,7 +107,9 @@ public class ChatFacade {
                 List<String> unReadUserNikeName = cmsOfMessageList.stream()
                         .filter(cms -> cms.getCreatedBy().equals(req.getCurrentUserId()))
                         .filter(cms -> ChatEnums.IsReadEnum.UNREAD.getCode().equals(cms.getIsRead()))
-                        .map(cms -> userId2UserInfoMap.get(cms.getUserId()).getNickname())
+                        .map(cms -> Optional.ofNullable(userId2UserInfoMap.get(cms.getUserId()))
+                                .map(Account::getNickname)
+                                .orElse("未知用户"))  // 如果找不到用户，返回默认值
                         .collect(Collectors.toList());
                 p.setReadUserNames(unReadUserNikeName);
             }
@@ -111,7 +122,7 @@ public class ChatFacade {
             try{
                 //获取list中最后一个ID
                 Long lastMessageId = list.get(list.size() - 1).getChatMessageId();
-                updateUserRead(ccm.getConversationId(), req.getCurrentUserId(), lastMessageId);
+                updateUserRead(chatId, req.getCurrentUserId(), lastMessageId);
             }catch (Exception e) {
                 log.error("ChatFacade#getChatHistory, 更新用户已读失败",e);
             }
@@ -123,6 +134,48 @@ public class ChatFacade {
         return result;
     }
 
+
+    public Page<ChatListResp> getChats(ChatListPageReq req) {
+        Page<ChatConversationMember> ccmp = chatConversationMemberService.selectPageByUserId(Page.of(req.getPage(), req.getSize()), req.getCurrentUserId());
+        if (CollectionUtils.isEmpty(ccmp.getRecords())) {
+            return Page.of(req.getPage(), req.getSize());
+        }
+
+        List<Long> conversationIds = ccmp.getRecords().stream().map(v -> v.getConversationId()).distinct().collect(Collectors.toList());
+
+        List<ChatConversation> chatConversations = chatConversationService.selectByIds(conversationIds, null);
+        Map<Long, ChatConversation> conversationId2InfoMap = chatConversations.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+        //获取未读数据
+        List<ChatMessageStatus> cmsList = chatMessageStatusService.selectByConversationIdsAndUserIdAndStatus(conversationIds, req.getCurrentUserId(), ChatEnums.IsReadEnum.UNREAD.getCode());
+        //统计cmsList中的某个会话的未读数
+        Map<Long, Long> conversationid2NotReadCountMap = cmsList.stream().collect(Collectors.groupingBy(v -> v.getConversationId(), Collectors.counting()));
+
+        //获取会话的某个会话的最后一条消息
+        List<ChatMessage> onlyOneMessageList = chatMessageService.selectLastMessagesOfConversations(conversationIds);
+        Map<Long, ChatMessage> conversationid2LastMessageMap = onlyOneMessageList.stream().collect(Collectors.toMap(v -> v.getConversationId(), v -> v));
+
+        List<ChatListResp> list = ccmp.getRecords().stream().map(v -> {
+            ChatListResp r = new ChatListResp();
+            r.setChatId(v.getConversationId());
+            if(conversationId2InfoMap.containsKey(v.getConversationId())) {
+                r.setChatType(conversationId2InfoMap.get(v.getConversationId()).getChatType());
+                r.setTitle(conversationId2InfoMap.get(v.getConversationId()).getTitle());
+                r.setAvatar(conversationId2InfoMap.get(v.getConversationId()).getAvatar());
+                r.setLastMessage(conversationid2LastMessageMap.get(v.getConversationId()).getContent());
+            }
+            r.setLastMessage(conversationid2LastMessageMap.getOrDefault(v.getConversationId(), new ChatMessage()).getContent());
+            if (conversationid2NotReadCountMap.containsKey(v.getConversationId())) {
+                r.setUnreadCount(conversationid2NotReadCountMap.get(v.getConversationId()));
+            }
+            return r;
+        }).collect(Collectors.toList());
+
+        Page<ChatListResp> result = Page.of(req.getPage(), req.getSize());
+        result.setTotal(ccmp.getTotal());
+        result.setRecords(list);
+        return result;
+    }
 
     /**
      * 更新用户已读
@@ -179,9 +232,19 @@ public class ChatFacade {
                 }
             });
         }
+
+        List<ChatConversationMember> ccmList = chatConversationMemberService.selectByConversationId(req.getChatConversationId());
+        List<Long> userIds = ccmList.stream().filter(v -> !v.getUserId().equals(req.getCurrentUserId()))
+                .map(v -> v.getUserId())
+                .distinct()
+                .collect(Collectors.toList());
+
+        List<Account> accounts = accountService.selectByIds(userIds);
+        List<String> userNameList = accounts.stream().map(v -> v.getNickname()).collect(Collectors.toList());
         ChatCreateMessageResp r = new ChatCreateMessageResp();
         r.setChatMessageId(cm.getId());
         r.setConversationId(req.getChatConversationId());
+        r.setReadUserNames(userNameList);
         return r;
     }
 
@@ -341,7 +404,9 @@ public class ChatFacade {
                 List<String> unReadUserNikeName = cmsOfMessageList.stream()
                         .filter(cms -> cms.getCreatedBy().equals(req.getCurrentUserId()))
                         .filter(cms -> ChatEnums.IsReadEnum.UNREAD.getCode().equals(cms.getIsRead()))
-                        .map(cms -> userId2UserInfoMap.get(cms.getUserId()).getNickname())
+                        .map(cms -> Optional.ofNullable(userId2UserInfoMap.get(cms.getUserId()))
+                                .map(Account::getNickname)
+                                .orElse("未知用户"))  // 如果找不到用户，返回默认值
                         .collect(Collectors.toList());
                 p.setReadUserNames(unReadUserNikeName);
             }

@@ -14,9 +14,9 @@ import lombok.Data;
 public class ChatCreateMessageReq {
     @NotBlank(message = "消息不能为空")
     String content;
-    @NotNull(message = "发送人ID不能为空")
-    Long receiverId;
+    //优先用 chatConversationId, 其次是 receiverId (主要是首次发起会话)
     Long chatConversationId;
+    Long receiverId;
     @NotNull(message = "聊天类型不能为空")
     Integer chatType;
     //@NotNull(message = "项目ID不能为空")

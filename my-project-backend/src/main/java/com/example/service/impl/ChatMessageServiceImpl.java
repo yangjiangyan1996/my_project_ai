@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ChatMessage;
+import com.example.entity.dto.ChatMessageStatus;
 import com.example.mapper.ChatMessageMapper;
 import com.example.service.ChatMessageService;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,11 @@ import java.util.List;
  */
 @Service
 public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessage> implements ChatMessageService {
+
+    @Override
+    public List<ChatMessage> selectLastMessagesOfConversations(List<Long> conversationIds) {
+        return this.baseMapper.selectLastMessagesOfConversations(conversationIds);
+    }
 
     @Override
     public ChatMessageMapper getBaseMapper() {
