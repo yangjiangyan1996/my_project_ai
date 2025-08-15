@@ -6,12 +6,20 @@
       trigger="click"
       width="350"
       v-model:visible="chatListVisible"
+      popper-class="chat-popover"
+      :teleported="false"
     >
       <template #reference>
-        <div class="chat-icon">
-          <el-badge :value="totalUnreadCount" :max="99" class="badge">
+        <div class="chat-icon" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
+          <el-badge :value="totalUnreadCount" :max="99" class="badge" :hidden="totalUnreadCount === 0">
             <el-icon :size="20"><Message /></el-icon>
           </el-badge>
+          <el-tooltip 
+            v-if="showTooltip"
+            content="私聊消息"
+            placement="bottom"
+            effect="light"
+          />
         </div>
       </template>
       
@@ -19,55 +27,58 @@
       <div class="chat-list-container">
         <div class="chat-list-header">
           <h3>私聊消息</h3>
-          <el-button 
+          <!-- <el-button 
+            v-if="totalUnreadCount > 0"
             type="text" 
             size="small" 
-            @click="markAllChatsAsRead"
-            :disabled="totalUnreadCount === 0"
+            @click.stop="markAllChatsAsRead"
+            class="mark-read-btn"
           >
             <el-icon><CircleCheck /></el-icon>
             全部已读
-          </el-button>
+          </el-button> -->
         </div>
         
-        <el-scrollbar height="400px">
-          <div 
-            v-for="chat in chatList" 
-            :key="chat.chatId" 
-            class="chat-item"
-            :class="{ 'unread-chat': chat.unreadCount > 0 }"
-            @click="openChatDialog(chat)"
-          >
-            <div class="chat-avatar">
-              <el-avatar :size="40" :src="chat.avatar" />
-              <el-badge 
-                :value="chat.unreadCount" 
-                :max="99" 
-                class="chat-badge" 
-                v-if="chat.unreadCount > 0"
-              />
-            </div>
-            
-            <div class="chat-content">
-              <div class="chat-header">
-                <span class="chat-title">{{ chat.title }}</span>
-                <span class="chat-time">{{ formatChatTime(chat.lastActiveAt) }}</span>
+        <el-scrollbar height="400px" class="chat-scrollbar">
+          <transition-group name="chat-list" tag="div">
+            <div 
+              v-for="chat in chatList" 
+              :key="chat.chatId" 
+              class="chat-item"
+              :class="{ 'unread-chat': chat.unreadCount > 0 }"
+              @click="openChatDialog(chat)"
+            >
+              <div class="chat-avatar">
+                <el-avatar :size="40" :src="chat.avatar" />
+                <el-badge 
+                  :value="chat.unreadCount" 
+                  :max="99" 
+                  class="chat-badge" 
+                  v-if="chat.unreadCount > 0"
+                />
               </div>
-              <div class="chat-preview">
-                {{ chat.lastMessage || '暂无消息' }}
+              
+              <div class="chat-content">
+                <div class="chat-header">
+                  <span class="chat-title">{{ chat.title }}</span>
+                  <span class="chat-time">{{ formatChatTime(chat.lastActiveAt) }}</span>
+                </div>
+                <div class="chat-preview">
+                  {{ chat.lastMessage || '暂无消息' }}
+                </div>
               </div>
             </div>
-          </div>
+          </transition-group>
           
           <div v-if="chatLoading" class="loading-more">
             <el-icon class="is-loading"><Loading /></el-icon>
             <span>加载中...</span>
           </div>
-          <div v-else-if="!chatHasMore" class="no-more">
+          <div v-else-if="!chatHasMore && chatList.length > 0" class="no-more">
             没有更多聊天了
           </div>
           <div v-else-if="chatList.length === 0" class="no-message">
-            暂无私聊消息
+            <el-empty description="暂无私聊消息" :image-size="80" />
           </div>
         </el-scrollbar>
       </div>
@@ -600,6 +611,8 @@ const currentChatId = ref(null);
 const chatType = ref(null);
 const currentUser = ref({});
 const targetUser = ref({});
+const showTooltip = ref(false);
+
 
 const formatChatTime = (timeString) => {
   if (!timeString) return '';
@@ -1700,21 +1713,50 @@ function userLogout() {
   padding: 8px;
   cursor: pointer;
   border-radius: 50%;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .chat-icon:hover {
-  background-color: #f0f0f0;
+  background-color: #f5f7fa;
   color: #409EFF;
   transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .chat-list-container {
-  padding: 10px;
+  /* 修改为 */
+  padding: 0;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  /* 新增 */
+  position: relative;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
 }
+
+.chat-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f2f7;
+}
+
+.chat-list-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2d3d;
+}
+
 
 .chat-item {
   display: flex;
@@ -1765,5 +1807,162 @@ function userLogout() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+
+.mark-read-btn {
+  color: #909399;
+  padding: 0;
+  font-size: 12px;
+}
+
+.mark-read-btn:hover {
+  color: #409EFF;
+}
+
+.chat-scrollbar {
+  padding: 0 8px;
+}
+
+.chat-item {
+  display: flex;
+  padding: 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  margin: 4px 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.chat-item::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #f0f2f7, transparent);
+}
+
+.chat-item:hover {
+  background-color: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.unread-chat {
+  background-color: rgba(64, 158, 255, 0.05);
+}
+
+.unread-chat:hover {
+  background-color: rgba(64, 158, 255, 0.08);
+}
+
+.chat-avatar {
+  position: relative;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.chat-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  transform: scale(0.9);
+  transition: all 0.3s;
+}
+
+.chat-item:hover .chat-badge {
+  transform: scale(1);
+}
+
+.chat-content {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.chat-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2d3d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.chat-time {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.chat-preview {
+  font-size: 13px;
+  color: #909399;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.loading-more, .no-more {
+  text-align: center;
+  padding: 16px;
+  color: #909399;
+  font-size: 13px;
+}
+
+.no-message {
+  padding: 40px 0;
+}
+
+/* 列表动画 */
+.chat-list-enter-active,
+.chat-list-leave-active {
+  transition: all 0.5s ease;
+}
+
+.chat-list-enter-from,
+.chat-list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.chat-list-move {
+  transition: transform 0.5s ease;
+}
+
+.chat-popover {
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  /* 新增以下样式 */
+  position: fixed !important;
+  inset: 0 !important;
+  width: 350px !important;
+  height: auto !important;
+  max-height: 80vh !important;
+  transform: none !important;
+  margin: 0 !important;
+}
+
+.chat-popover .el-popper__arrow {
+  display: none !important;
+}
+
+.chat-popover .el-scrollbar__wrap {
+  overscroll-behavior: contain !important;
 }
 </style>
