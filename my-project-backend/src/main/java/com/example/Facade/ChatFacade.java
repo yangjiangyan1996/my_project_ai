@@ -140,35 +140,60 @@ public class ChatFacade {
         if (CollectionUtils.isEmpty(ccmp.getRecords())) {
             return Page.of(req.getPage(), req.getSize());
         }
-
         List<Long> conversationIds = ccmp.getRecords().stream().map(v -> v.getConversationId()).distinct().collect(Collectors.toList());
 
+        // 查询会话信息
         List<ChatConversation> chatConversations = chatConversationService.selectByIds(conversationIds, null);
         Map<Long, ChatConversation> conversationId2InfoMap = chatConversations.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+
+        //获取单聊的他人头像
+        List<Long> singleChatIdList = chatConversations.stream().filter(v -> v.getChatType().equals(ChatEnums.TypeEnum.SINGLE.getCode())).map(v -> v.getId()).distinct().collect(Collectors.toList());
+        List<ChatConversationMember> ccmOfSignleChatList = chatConversationMemberService.selectByConversationIds(singleChatIdList);
+        Map<Long, ChatConversationMember> ccmOfSingleChatMap = ccmOfSignleChatList.stream()
+                .filter(v->!v.getUserId().equals(req.getCurrentUserId()))
+                .collect(Collectors.toMap(v -> v.getConversationId(), v -> v));
+        List<Long> userIds = ccmOfSingleChatMap.values().stream().map(v -> v.getUserId()).collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(userIds);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
 
         //获取未读数据
         List<ChatMessageStatus> cmsList = chatMessageStatusService.selectByConversationIdsAndUserIdAndStatus(conversationIds, req.getCurrentUserId(), ChatEnums.IsReadEnum.UNREAD.getCode());
         //统计cmsList中的某个会话的未读数
         Map<Long, Long> conversationid2NotReadCountMap = cmsList.stream().collect(Collectors.groupingBy(v -> v.getConversationId(), Collectors.counting()));
 
+
         //获取会话的某个会话的最后一条消息
         List<ChatMessage> onlyOneMessageList = chatMessageService.selectLastMessagesOfConversations(conversationIds);
         Map<Long, ChatMessage> conversationid2LastMessageMap = onlyOneMessageList.stream().collect(Collectors.toMap(v -> v.getConversationId(), v -> v,(v1, v2) -> v2));
+
 
         List<ChatListResp> list = ccmp.getRecords().stream().map(v -> {
             ChatListResp r = new ChatListResp();
             r.setChatId(v.getConversationId());
             if(conversationId2InfoMap.containsKey(v.getConversationId())) {
-                r.setChatType(conversationId2InfoMap.get(v.getConversationId()).getChatType());
-                r.setTitle(conversationId2InfoMap.get(v.getConversationId()).getTitle());
-                r.setAvatar(conversationId2InfoMap.get(v.getConversationId()).getAvatar());
-                r.setLastMessage(conversationid2LastMessageMap.get(v.getConversationId()).getContent());
-                r.setLastActiveAt(conversationid2LastMessageMap.get(v.getConversationId()).getCreatedAt());
+                ChatConversation cc = conversationId2InfoMap.get(v.getConversationId());
+                r.setChatType(cc.getChatType());
+                r.setAvatar(cc.getAvatar());
+                if (ChatEnums.TypeEnum.SINGLE.getCode().equals(cc.getChatType())) {
+                    ChatConversationMember ccm = ccmOfSingleChatMap.get(v.getConversationId());
+                    if (ccm != null && userId2UserInfoMap.containsKey(ccm.getUserId())) {
+                        r.setAvatar(userId2UserInfoMap.get(ccm.getUserId()).getAvatarUrl());
+                        r.setTitle(userId2UserInfoMap.get(ccm.getUserId()).getNickname());
+                    }
+                } else {
+                    r.setTitle(cc.getTitle());
+                    r.setAvatar(cc.getAvatar());
+                }
             }
+            r.setLastMessage(conversationid2LastMessageMap.get(v.getConversationId()).getContent());
+            r.setLastActiveAt(conversationid2LastMessageMap.get(v.getConversationId()).getCreatedAt());
             r.setLastMessage(conversationid2LastMessageMap.getOrDefault(v.getConversationId(), new ChatMessage()).getContent());
             if (conversationid2NotReadCountMap.containsKey(v.getConversationId())) {
                 r.setUnreadCount(conversationid2NotReadCountMap.get(v.getConversationId()));
             }
+
             return r;
         }).collect(Collectors.toList());
 

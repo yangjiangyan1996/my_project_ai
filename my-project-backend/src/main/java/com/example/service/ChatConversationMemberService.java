@@ -18,6 +18,8 @@ public interface ChatConversationMemberService extends IService<ChatConversation
 
     List<ChatConversationMember> selectByConversationId(Long conversationId);
 
+    List<ChatConversationMember> selectByConversationIds(List<Long> conversationIds);
+
     ChatConversationMember selectByConversationIdAndUserId(Long conversationId, Long currentUserId);
 
     Page<ChatConversationMember> selectPageByUserId(Page<ChatConversationMember> of, Long currentUserId);
