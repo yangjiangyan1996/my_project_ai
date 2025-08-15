@@ -153,7 +153,7 @@ public class ChatFacade {
 
         //获取会话的某个会话的最后一条消息
         List<ChatMessage> onlyOneMessageList = chatMessageService.selectLastMessagesOfConversations(conversationIds);
-        Map<Long, ChatMessage> conversationid2LastMessageMap = onlyOneMessageList.stream().collect(Collectors.toMap(v -> v.getConversationId(), v -> v));
+        Map<Long, ChatMessage> conversationid2LastMessageMap = onlyOneMessageList.stream().collect(Collectors.toMap(v -> v.getConversationId(), v -> v,(v1, v2) -> v2));
 
         List<ChatListResp> list = ccmp.getRecords().stream().map(v -> {
             ChatListResp r = new ChatListResp();
@@ -163,6 +163,7 @@ public class ChatFacade {
                 r.setTitle(conversationId2InfoMap.get(v.getConversationId()).getTitle());
                 r.setAvatar(conversationId2InfoMap.get(v.getConversationId()).getAvatar());
                 r.setLastMessage(conversationid2LastMessageMap.get(v.getConversationId()).getContent());
+                r.setLastActiveAt(conversationid2LastMessageMap.get(v.getConversationId()).getCreatedAt());
             }
             r.setLastMessage(conversationid2LastMessageMap.getOrDefault(v.getConversationId(), new ChatMessage()).getContent());
             if (conversationid2NotReadCountMap.containsKey(v.getConversationId())) {
@@ -218,13 +219,9 @@ public class ChatFacade {
         cm.setStatus(ChatEnums.StatusEnum.NORMAL.getCode());
         boolean save = chatMessageService.save(cm);
         if (save) {
-            AsyncTaskUtil.execute(() -> {
-                try{
-                    createMessageStatus(req.getChatConversationId(), cm.getId(), req.getCurrentUserId());
-                }catch (Exception e) {
-                    log.error("Chat#sendMessage,创建消息状态失败, ConversationId:{},messageId:{},userId:{}", req.getChatConversationId(), cm.getId(), req.getCurrentUserId(), e);
-                }
+            createMessageStatus(req.getChatConversationId(), cm.getId(), req.getCurrentUserId());
 
+            AsyncTaskUtil.execute(() -> {
                 try{
                     chatConversationService.updateLastActiveAtById(new Date(), req.getChatConversationId());
                 }catch (Exception e){

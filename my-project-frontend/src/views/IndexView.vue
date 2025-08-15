@@ -1,6 +1,5 @@
 <template>
   <div class="index-container">
-
     <!-- 新增私聊图标 -->
     <el-popover
       placement="bottom-end"
@@ -9,7 +8,7 @@
       v-model:visible="chatListVisible"
     >
       <template #reference>
-        <div class="chat-icon" >
+        <div class="chat-icon">
           <el-badge :value="totalUnreadCount" :max="99" class="badge">
             <el-icon :size="20"><Message /></el-icon>
           </el-badge>
@@ -18,7 +17,6 @@
       
       <!-- 私聊列表内容 -->
       <div class="chat-list-container">
-        <!-- 列表头部 -->
         <div class="chat-list-header">
           <h3>私聊消息</h3>
           <el-button 
@@ -32,9 +30,7 @@
           </el-button>
         </div>
         
-        <!-- 私聊列表 -->
         <el-scrollbar height="400px">
-          <!-- 列表项 -->
           <div 
             v-for="chat in chatList" 
             :key="chat.chatId" 
@@ -42,7 +38,6 @@
             :class="{ 'unread-chat': chat.unreadCount > 0 }"
             @click="openChatDialog(chat)"
           >
-            <!-- 头像和未读标记 -->
             <div class="chat-avatar">
               <el-avatar :size="40" :src="chat.avatar" />
               <el-badge 
@@ -53,7 +48,6 @@
               />
             </div>
             
-            <!-- 聊天预览 -->
             <div class="chat-content">
               <div class="chat-header">
                 <span class="chat-title">{{ chat.title }}</span>
@@ -65,7 +59,6 @@
             </div>
           </div>
           
-          <!-- 加载状态 -->
           <div v-if="chatLoading" class="loading-more">
             <el-icon class="is-loading"><Loading /></el-icon>
             <span>加载中...</span>
@@ -79,7 +72,6 @@
         </el-scrollbar>
       </div>
     </el-popover>
-
 
     <!-- 通知 -->
     <el-popover
@@ -97,7 +89,6 @@
       </template>
       
       <el-tabs v-model="activeMessageTab" class="message-tabs">
-        <!-- 添加一键已读按钮 -->
         <div class="mark-all-read-container">
           <el-button 
             type="text" 
@@ -260,7 +251,6 @@
                 </div>
                 <div class="message-text">关注了你</div>
               </div>
-              <!-- 新增回关按钮 -->
               <div class="follow-back-container" v-if="item.needFollow">
                 <el-button 
                   size="small" 
@@ -357,33 +347,33 @@
     </el-popover>
 
     <!-- 头像下拉菜单 -->
-      <template v-if="state.data.id">
-        <el-dropdown class="avatar-dropdown" trigger="click">
-          <div class="avatar-wrapper">
-            <el-avatar :src="state.data.avatarUrl || '/images/default-avatar.png'" />
-          </div>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item @click="changeDisplayMode('myInfo')">
-                <i class="el-icon-user"></i>我的
-              </el-dropdown-item>
-              <el-dropdown-item divided @click="userLogout">
-                <i class="el-icon-switch-button"></i>退出登录
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </template>
-      <template v-else>
-        <el-button 
-          class="login-button" 
-          type="primary" 
-          size="small" 
-          @click="goToLogin"
-        >
-          登录/注册
-        </el-button>
-      </template>
+    <template v-if="state.data.id">
+      <el-dropdown class="avatar-dropdown" trigger="click">
+        <div class="avatar-wrapper">
+          <el-avatar :src="state.data.avatarUrl || '/images/default-avatar.png'" />
+        </div>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item @click="changeDisplayMode('myInfo')">
+              <i class="el-icon-user"></i>我的
+            </el-dropdown-item>
+            <el-dropdown-item divided @click="userLogout">
+              <i class="el-icon-switch-button"></i>退出登录
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </template>
+    <template v-else>
+      <el-button 
+        class="login-button" 
+        type="primary" 
+        size="small" 
+        @click="goToLogin"
+      >
+        登录/注册
+      </el-button>
+    </template>
 
     <el-menu 
       mode="horizontal"
@@ -402,18 +392,15 @@
         </el-menu-item>
       </el-sub-menu>
 
-
       <el-sub-menu index="2">
         <template #title><i class="el-icon-chat-dot-round"></i>社区互动</template>
         <el-menu-item index="forum" @click="changeDisplayMode('quanList')">圈子论坛</el-menu-item>
-        <!-- <el-menu-item index="qa" @click="router.push({ name: 'qa' })">问答专区</el-menu-item> -->
       </el-sub-menu>
 
       <el-sub-menu index="3">
         <template #title><i class="el-icon-user"></i>找人合作</template>
         <el-menu-item index="skill-match" @click="changeDisplayMode('skillMatch')">人才榜</el-menu-item>
         <el-menu-item index="skill-match" @click="changeDisplayMode('talentMatch')">人才匹配</el-menu-item>
-        <!-- <el-menu-item index="partner-map" @click="router.push({ name: 'partner-map' })">合作地图</el-menu-item> -->
       </el-sub-menu>
 
       <el-sub-menu index="4">
@@ -423,17 +410,13 @@
         <el-menu-item index="ziyuandaohang" @click="router.push({ name: 'resources' })">资源导航</el-menu-item>
       </el-sub-menu>
 
-
       <el-sub-menu index="5">
         <template #title><i class="el-icon-s-custom"></i>AI推荐</template>
-        <el-menu-item index="ai-assistant"  @click="changeDisplayMode('growthCenter')" >副业推荐助手</el-menu-item>
+        <el-menu-item index="ai-assistant" @click="changeDisplayMode('growthCenter')">副业推荐助手</el-menu-item>
       </el-sub-menu>
-
-      
     </el-menu>
 
     <!-- 搜索区域 -->
-    <!-- 搜索 + 项目展示：只在非技能匹配页面展示 -->
     <div v-if="displayMode === 'project'">
       <div class="search-bar">
         <el-input v-model="search.name" placeholder="搜索副业名称" style="width: 200px; margin-right: 10px" />
@@ -450,12 +433,10 @@
             :key="group.code"
             :label="group.desc"
           >
-            <!-- 一级分类选项 -->
             <el-option
               :label="group.desc"
               :value="group.code"
             />
-            <!-- 二级分类选项 -->
             <el-option
               v-for="sub in group.subs"
               :key="sub.code"
@@ -481,7 +462,6 @@
       </div>
       <!-- 项目展示区域 -->
       <div class="main-content">
-        <!-- 项目列表容器，添加滚动监听 -->
         <div class="project-container" @scroll="handleScroll">
           <el-row :gutter="20" class="project-list">
             <el-col 
@@ -508,7 +488,6 @@
             </el-col>
           </el-row>
 
-          <!-- 加载更多提示 -->
           <div v-if="loading" class="loading-more">
             <el-icon class="is-loading"><Loading /></el-icon>
             <span>加载中...</span>
@@ -529,24 +508,18 @@
       :chat-type="chatType"
     />
 
-    <!-- 技能匹配展示区域 -->
+    <!-- 组件展示区域 -->
     <SkillMatch v-if="displayMode === 'skillMatch'" />
-
     <MyInfo v-if="displayMode === 'myInfo'" />
-
     <TalentMatch v-if="displayMode === 'talentMatch'" />
-
-     <RankingList v-if="displayMode === 'rankingList'" />
-
-     <QuanList v-if="displayMode === 'quanList'" />
-
-     <!-- <GrowthCenter v-if="displayMode === 'growthCenter'" /> -->
+    <RankingList v-if="displayMode === 'rankingList'" />
+    <QuanList v-if="displayMode === 'quanList'" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted ,computed, watch} from 'vue';
-import { Loading, ArrowDown,Bell, CircleCheck, Message } from '@element-plus/icons-vue';
+import { ref, onMounted, computed, watch, nextTick } from 'vue';
+import { Loading, Bell, CircleCheck, Message } from '@element-plus/icons-vue';
 import router from "@/router";
 import { logout, post, get } from '@/net';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -554,13 +527,9 @@ import SkillMatch from '@/views/SkillMatch.vue';
 import TalentMatch from '@/views/TalentMatch.vue';
 import RankingList from '@/views/RankingList.vue';
 import QuanList from '@/views/QuanList.vue';
-// import GrowthCenter from '@/views/GrowthCenter.vue';
-
 import MyInfo from '@/views/My.vue';
 import useUserInfo from '@/hooks/useUserInfo';
-//评论区导入
-// 新增的状态和导入
-import { nextTick } from 'vue';
+import ChatDialog from '@/components/ChatDialog.vue';
 import markdownIt from 'markdown-it';
 import emoji from 'markdown-it-emoji';
 
@@ -576,57 +545,49 @@ const categories = ref([]);
 const difficulties = ref([]);
 const search = ref({ 
   name: '', 
-  categories: [],  // 改为数组形式
+  categories: [],
   difficulties: [] 
 });
-
 
 // 消息相关状态
 const messageVisible = ref(false);
 const activeMessageTab = ref('comment');
 const unreadCount = ref(0);
-// 评论消息
 const commentMessages = ref([]);
 const commentPage = ref(1);
 const commentSize = ref(10);
 const commentHasMore = ref(true);
 const commentLoading = ref(false);
-// 关注消息
 const followMessages = ref([]);
 const followPage = ref(1);
 const followHasMore = ref(true);
 const followLoading = ref(false);
-// 点赞消息
 const likeMessages = ref([]);
 const likePage = ref(1);
 const likeHasMore = ref(true);
 const likeLoading = ref(false);
-
-//评论回复相关
-const commentDialogVisible = ref(false);
-const allComments = ref([]);
-const currentCommentId = ref(null);
-const commentListRef = ref(null);
-const commentItems = ref([]);
-
-const mdParser = markdownIt().use(emoji);
-const emojis = ['😀', '😂', '😍', '👍', '👏', '🙏', '❤️', '🔥', '🎉', '🤔'];
-
-// 评论对话框相关状态
-const expandedDialogComments = ref({});
-const activeReplyCommentId = ref(null);
-const replyContent = ref('');
-const replyToUsername = ref('');
-const currentProjectId = ref(null);
-
-// 申请通知消息
 const applyMessages = ref([]);
 const applyPage = ref(1);
 const applySize = ref(10);
 const applyHasMore = ref(true);
 const applyLoading = ref(false);
 
-// 私聊列表相关状态
+// 评论对话框相关
+const commentDialogVisible = ref(false);
+const allComments = ref([]);
+const currentCommentId = ref(null);
+const commentListRef = ref(null);
+const commentItems = ref([]);
+const expandedDialogComments = ref({});
+const activeReplyCommentId = ref(null);
+const replyContent = ref('');
+const replyToUsername = ref('');
+const currentProjectId = ref(null);
+
+const mdParser = markdownIt().use(emoji);
+const emojis = ['😀', '😂', '😍', '👍', '👏', '🙏', '❤️', '🔥', '🎉', '🤔'];
+
+// 私聊相关
 const chatListVisible = ref(false);
 const chatList = ref([]);
 const chatPage = ref(1);
@@ -634,31 +595,11 @@ const chatSize = ref(10);
 const chatLoading = ref(false);
 const chatHasMore = ref(true);
 const totalUnreadCount = ref(0);
-
-
-//私聊对话框列表
-import ChatDialog from '@/components/ChatDialog.vue'
-const chatVisible = ref(false)
-const currentChatId = ref(null)  // 当前选中的聊天ID
-const chatType = ref(null)  // 会话类型
-const currentUser = ref({})  // 当前用户信息
-const targetUser = ref({})  // 目标用户信息
-
-//私聊列表相关状态
-const chatDialogVisible = ref(false);
-const currentChat = ref(null);
-const messageHistory = ref([]);
-const messageContent = ref('');
-const sendingMessage = ref(false);
-const chatHistoryPage = ref(1);
-const chatHistorySize = ref(10);
-const chatHistoryLoading = ref(false);
-const currentUserAvatar = computed(() => currentUserInfo.data?.avatarUrl || '/images/default-avatar.png');
-
-const handleChatClick = () => {
-  chatListVisible.value = !chatListVisible.value;
-  loadChatList();
-};
+const chatVisible = ref(false);
+const currentChatId = ref(null);
+const chatType = ref(null);
+const currentUser = ref({});
+const targetUser = ref({});
 
 const formatChatTime = (timeString) => {
   if (!timeString) return '';
@@ -692,23 +633,18 @@ const loadChatList = async () => {
 };
 
 const openChatDialog = async (chat) => {
-  console.log("打开私聊对话框",state.data)
-  currentChatId.value = chat.chatId
-  chatType.value = chat.chatType
-  currentUser.value = state.data
-  targetUser.value = {}
-  chatVisible.value = true
+  currentChatId.value = chat.chatId;
+  chatType.value = chat.chatType;
+  currentUser.value = state.data;
+  targetUser.value = {};
+  chatVisible.value = true;
 };
 
-// 获取未读消息数
 const fetchUnreadCount = async () => {
   try {
-    console.log("获取未读消息数",state.data.id)
     if(state.data.id) {
       const res = await get('/api/auth/msg/unreadMsgCount');
       unreadCount.value = res || 0;
-    } else {
-      console.log("未登录，不获取未读消息数")
     }
   } catch (e) {
     console.error('获取未读消息数失败:', e);
@@ -719,7 +655,6 @@ const goToLogin = () => {
   router.push({ name: 'welcome-login' });
 };
 
-// 加载申请通知消息
 const loadApplyMessages = async () => {
   if (applyLoading.value) return;
   applyLoading.value = true;
@@ -737,10 +672,8 @@ const loadApplyMessages = async () => {
   }
 };
 
-// 回关用户
 const followBack = async (senderId) => {
   try {
-    // 设置加载状态
     const item = followMessages.value.find(m => m.senderId === senderId);
     if (item) {
       item.followLoading = true;
@@ -750,7 +683,6 @@ const followBack = async (senderId) => {
       });
       
       if (res) {
-        // 回关成功后更新状态
         item.needFollow = false;
         ElMessage.success('回关成功');
       }
@@ -766,15 +698,11 @@ const followBack = async (senderId) => {
   }
 };
 
-
-// 显示神奇通知详情
 const showApplyDetail = async (item) => {
   try {
-    await markMessagesAsRead(item.id);//标记为已读
+    await markMessagesAsRead(item.id);
     
-    // 根据type字段进行不同的跳转
     if (item.type === 103) {
-      // type为103时跳转到申请列表页
       router.push('/index/my/applyList');
     } else if (item.type === 104) {
       router.push('/index/my/applicationList');
@@ -788,17 +716,13 @@ const showApplyDetail = async (item) => {
 };
 
 const goToUserProfile = (userId) => {
-  console.log("访问用户详情页",userId)
-  // router.push(`/index/user/${userId}`)
   window.open(`/index/user/${userId}`, '_blank');
 }
 
-// 添加一键已读方法
 const markAllAsRead = async (tab) => {
   try {
     const res = await get(`/api/auth/msg/allMarkRead?type=${tab}`);
     if (res) {
-      // 根据tab类型更新对应的消息列表
       switch(tab) {
         case 'comment':
           commentMessages.value.forEach(msg => msg.isRead = 1);
@@ -814,9 +738,7 @@ const markAllAsRead = async (tab) => {
           break;
       }
       
-      // 重置未读计数
       fetchUnreadCount();
-      
       ElMessage.success('消息已标记为已读');
     }
   } catch (e) {
@@ -825,27 +747,22 @@ const markAllAsRead = async (tab) => {
   }
 };
 
-// 显示评论详情
 const showCommentDetail = async (item) => {
   try {
-    console.log("显示点赞详情item",item)
-    await markMessagesAsRead(item.id);//标记为已读
-    currentProjectId.value = item.projectId; // 设置当前项目ID
+    await markMessagesAsRead(item.id);
+    currentProjectId.value = item.projectId;
 
-    // 获取所有评论
     const res = await get(`/api/unauth/project/commentShow?projectId=${item.projectId}`);
     allComments.value = res || [];
     currentCommentId.value = item.commentId;
     commentDialogVisible.value = true;
     
-    // 展开所有回复
     allComments.value.forEach(comment => {
       if (comment.replies?.length) {
         expandedDialogComments.value[comment.id] = true;
       }
     });
     
-    // 在下一个tick滚动到指定评论
     await nextTick();
     scrollToCurrentComment();
   } catch (e) {
@@ -854,41 +771,6 @@ const showCommentDetail = async (item) => {
   }
 };
 
-// 显示点赞详情
-const showLikeDetail = async (item) => {
-  try {
-    console.log("显示点赞详情item",item)
-    await markMessagesAsRead(item.id);//标记为已读
-    
-    if (item.targetType === 'comment') {
-      // 如果是评论点赞，显示评论详情
-      currentProjectId.value = item.projectId;
-      const res = await get(`/api/unauth/project/commentShow?projectId=${item.projectId}`);
-      allComments.value = res || [];
-      currentCommentId.value = item.commentId;
-      commentDialogVisible.value = true;
-      
-      // 展开所有回复
-      allComments.value.forEach(comment => {
-        if (comment.replies?.length) {
-          expandedDialogComments.value[comment.id] = true;
-        }
-      });
-      
-      // 在下一个tick滚动到指定评论
-      await nextTick();
-      scrollToCurrentComment();
-    } else {
-      // 如果是项目点赞，跳转到项目详情页
-      router.push({ name: 'project-detail', params: { id: item.projectId } });
-    }
-  } catch (e) {
-    console.error('获取点赞详情失败:', e);
-    ElMessage.error('加载点赞详情失败');
-  }
-};
-
-// 滚动到当前评论
 const scrollToCurrentComment = () => {
   if (commentItems.value && currentCommentId.value) {
     const index = allComments.value.findIndex(c => c.id === currentCommentId.value);
@@ -896,7 +778,6 @@ const scrollToCurrentComment = () => {
       const container = commentListRef.value;
       const element = commentItems.value[index];
       
-      // 计算滚动位置
       const containerRect = container.getBoundingClientRect();
       const elementRect = element.getBoundingClientRect();
       const scrollPosition = elementRect.top - containerRect.top + container.scrollTop - (containerRect.height / 2) + (elementRect.height / 2);
@@ -909,12 +790,10 @@ const scrollToCurrentComment = () => {
   }
 };
 
-// 对话框关闭时重置状态
 const handleDialogClosed = () => {
   allComments.value = [];
   currentCommentId.value = null;
 };
-
 
 const formatTime = (timeString) => {
   if (!timeString) return '';
@@ -926,7 +805,6 @@ const padZero = (num) => {
   return num < 10 ? `0${num}` : num;
 };
 
-// 加载评论消息
 const loadCommentMessages = async () => {
   if (commentLoading.value) return;
   commentLoading.value = true;
@@ -944,25 +822,21 @@ const loadCommentMessages = async () => {
   }
 };
 
-// 加载更多评论
 const loadMoreComments = () => {
   commentPage.value += 1;
   loadCommentMessages();
 };
 
-// 对话框回复相关方法
 const replyToDialog = (commentId, username) => {
   activeReplyCommentId.value = commentId;
   replyToUsername.value = username;
   replyContent.value = '';
   
-  // 确保父评论是展开的
   const firstLevelId = findFirstLevelCommentId(commentId);
   if (firstLevelId && firstLevelId !== commentId && !expandedDialogComments.value[firstLevelId]) {
     expandedDialogComments.value[firstLevelId] = true;
   }
   
-  // 滚动到回复框位置
   nextTick(() => {
     const container = commentListRef.value;
     container.scrollTo({
@@ -997,7 +871,6 @@ const submitDialogReply = async () => {
     if (res) {
       replyContent.value = '';
       cancelReply();
-      // 重新加载评论
       await showCommentDetail({ projectId: currentProjectId.value, commentId: currentCommentId.value });
       ElMessage.success('回复成功');
     }
@@ -1010,7 +883,6 @@ const likeDialogComment = async (commentId) => {
   try {
     const res = await get(`/api/auth/project/commentLike?projectId=${currentProjectId.value}&commentId=${commentId}`);
     if (res) {
-      // 重新加载评论
       await showCommentDetail({ projectId: currentProjectId.value, commentId: currentCommentId.value });
       ElMessage.success('点赞成功');
     }
@@ -1025,7 +897,6 @@ const deleteDialogComment = async (commentId) => {
     if (confirm) {
       const res = await get(`/api/auth/project/commentDeleted?projectId=${currentProjectId.value}&commentId=${commentId}`);
       if (res) {
-        // 重新加载评论
         await showCommentDetail({ projectId: currentProjectId.value, commentId: currentCommentId.value });
         ElMessage.success('删除成功');
       }
@@ -1081,8 +952,6 @@ const findCommentInReplies = (replies, commentId) => {
   return null;
 };
 
-
-// 加载关注消息
 const loadFollowMessages = async () => {
   if (followLoading.value) return;
   followLoading.value = true;
@@ -1100,13 +969,11 @@ const loadFollowMessages = async () => {
   }
 };
 
-// 加载更多关注
 const loadMoreFollows = () => {
   followPage.value += 1;
   loadFollowMessages();
 };
 
-// 加载点赞消息
 const loadLikeMessages = async () => {
   if (likeLoading.value) return;
   likeLoading.value = true;
@@ -1124,22 +991,18 @@ const loadLikeMessages = async () => {
   }
 };
 
-// 加载更多点赞
 const loadMoreLikes = () => {
   likePage.value += 1;
   loadLikeMessages();
 };
 
-// 加载更多申请通知
 const loadMoreApplies = () => {
   applyPage.value += 1;
   loadApplyMessages();
 };
 
-// 点击消息图标
 const handleMessageClick = () => {
   if (!messageVisible.value) {
-    // 每次打开时刷新当前tab数据
     switch (activeMessageTab.value) {
       case 'comment':
         commentMessages.value = [];
@@ -1165,49 +1028,40 @@ const handleMessageClick = () => {
   }
 };
 
-// 标记消息为已读
 const markMessagesAsRead = async (messageId) => {
   try {
     await post('/api/auth/msg/markMsgAsRead',{
       id:messageId
     });
-    // 更新本地消息状态
     updateMessageReadStatus(messageId);
-    // 更新未读计数
     fetchUnreadCount();
   } catch (e) {
     console.error('标记消息为已读失败:', e);
   }
 };
 
-// 更新本地消息的已读状态
 const updateMessageReadStatus = (messageId) => {
-  // 更新评论消息
   const commentIndex = commentMessages.value.findIndex(m => m.id === messageId);
   if (commentIndex !== -1) {
     commentMessages.value[commentIndex].isRead = 1;
   }
   
-  // 更新关注消息
   const followIndex = followMessages.value.findIndex(m => m.id === messageId);
   if (followIndex !== -1) {
     followMessages.value[followIndex].isRead = 1;
   }
   
-  // 更新点赞消息
   const likeIndex = likeMessages.value.findIndex(m => m.id === messageId);
   if (likeIndex !== -1) {
     likeMessages.value[likeIndex].isRead = 1;
   }
 
-  // 更新神奇通知消息
   const applyIndex = applyMessages.value.findIndex(m => m.id === messageId);
   if (applyIndex !== -1) {
     applyMessages.value[applyIndex].isRead = 1;
   }
 };
 
-// 监听tab切换
 watch(activeMessageTab, (newVal) => {
   if (messageVisible.value) {
     switch (newVal) {
@@ -1239,26 +1093,18 @@ function changeDisplayMode(mode) {
   displayMode.value = mode;
 }
 
-//跳转到列表详情页
 function goToDetail(project) {
   router.push({ name: 'project-detail', params: { id: project.id } });
 }
 
-//加载下拉框的数据
 const fetchOptions = async () => {
   try {
-    const res = await get('/api/unauth/common/category');
-
     const [catRes, diffRes] = await Promise.all([
       get('/api/unauth/common/category'),
       get('/api/unauth/common/difficulty')
     ]);
     categories.value = catRes || [];
     difficulties.value = diffRes || [];
-
-    // console.log("categories",categories)
-    // console.log("difficulties",difficulties)
-
   } catch (e) {
     ElMessage.error('加载搜索选项失败');
   }
@@ -1274,7 +1120,7 @@ const fetchProjectListData = async (params = {}) => {
     const res = await post('/api/unauth/project/show', { 
       page: currentPage.value, 
       size: pageSize.value,
-      categories: params?.categories,  // 改为复数形式
+      categories: params?.categories,
       difficulty: params?.difficulty,
       projectName: params?.projectName
     });
@@ -1317,13 +1163,12 @@ const loadProjects = async () => {
   });
 };
 
-// 修改搜索方法
 const onSearch = () => {
   currentPage.value = 1;
   projectList.value = [];
   hasMore.value = true;
   fetchProjectListData({
-    categories: search.value.categories,  // 改为复数形式
+    categories: search.value.categories,
     difficulties: search.value.difficulties,
     projectName: search.value.name
   });
@@ -1341,10 +1186,8 @@ const handleScroll = (e) => {
 };
 
 onMounted(() => {
-  // console.log("indexView页面的用户数据",state)
-  // 无论是否登录都执行这两个方法
   loadProjects();
-    fetchUnreadCount();
+  fetchUnreadCount();
 
   if (!state.data.id) {
     loadUserInfo().then(() => {
@@ -1453,16 +1296,8 @@ function userLogout() {
 }
 
 @keyframes rotating {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.flex-grow {
-  flex-grow: 1;
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .search-bar {
@@ -1475,7 +1310,6 @@ function userLogout() {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-/* 新增头像下拉菜单样式 */
 .avatar-dropdown {
   position: absolute;
   right: 20px;
@@ -1489,12 +1323,6 @@ function userLogout() {
   cursor: pointer;
 }
 
-.avatar-wrapper .el-icon {
-  margin-left: 5px;
-  color: #666;
-}
-
-/* 新增消息通知样式 */
 .message-bell {
   position: absolute;
   right: 100px;
@@ -1504,12 +1332,12 @@ function userLogout() {
   padding: 8px;
   border-radius: 50%;
   transition: background-color 0.3s;
-  color: #606266; /* 添加图标颜色，改为深灰色 */
+  color: #606266;
 }
 
 .message-bell:hover {
   background-color: #f0f0f0;
-  color: #409EFF; /* 悬停时变为蓝色 */
+  color: #409EFF;
 }
 
 .badge {
@@ -1536,7 +1364,6 @@ function userLogout() {
   transition: all 0.3s;
 }
 
-/* 未读消息样式 */
 .unread-message {
   background-color: #f8fafc;
 }
@@ -1558,7 +1385,7 @@ function userLogout() {
 
 .message-content {
   flex: 1;
-  margin-left: 15px; /* 为未读标记留出空间 */
+  margin-left: 15px;
 }
 
 .message-header {
@@ -1598,33 +1425,27 @@ function userLogout() {
   cursor: default;
 }
 
-.loading-more {
-  text-align: center;
-  padding: 10px;
-}
-
 .message-text {
   font-size: 14px;
   line-height: 1.5;
 }
 
 .sender-name {
-  color: #409EFF; /* 蓝色显示发送者名字 */
+  color: #409EFF;
   font-weight: bold;
   margin-right: 5px;
 }
 
 .message-content-text {
-  color: #666; /* 灰色显示消息内容 */
+  color: #666;
   margin-right: 5px;
 }
 
 .related-words {
-  color: #67C23A; /* 绿色显示相关词 */
+  color: #67C23A;
   font-style: italic;
 }
 
-/* 新增评论对话框样式 */
 .comment-detail-dialog {
   border-radius: 12px;
 }
@@ -1824,7 +1645,7 @@ function userLogout() {
   font-size: 20px;
   padding: 2px;
 }
-/* 添加一键已读按钮样式 */
+
 .mark-all-read-container {
   display: flex;
   justify-content: flex-end;
@@ -1849,7 +1670,6 @@ function userLogout() {
   margin-right: 4px;
 }
 
-/* 新增回关按钮样式 */
 .follow-back-container {
   margin-left: auto;
   padding-right: 10px;
@@ -1865,6 +1685,7 @@ function userLogout() {
   position: relative;
   transition: all 0.3s;
 }
+
 .login-button {
   position: absolute;
   right: 20px;
@@ -1872,7 +1693,6 @@ function userLogout() {
   z-index: 1001;
 }
 
-/* 私聊图标 */
 .chat-icon {
   position: absolute;
   right: 140px;
@@ -1883,53 +1703,62 @@ function userLogout() {
   transition: all 0.3s;
   background-color: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 1001; /* 确保在最上层 */
+  z-index: 1001;
 }
+
 .chat-icon:hover {
   background-color: #f0f0f0;
   color: #409EFF;
   transform: scale(1.1);
 }
 
-/* 私聊列表 */
 .chat-list-container {
   padding: 10px;
 }
+
 .chat-item {
   display: flex;
   padding: 12px;
   cursor: pointer;
   border-radius: 8px;
 }
+
 .chat-item:hover {
   background-color: #f5f7fa;
 }
+
 .unread-chat {
   background-color: #f8fafc;
 }
+
 .chat-avatar {
   position: relative;
   margin-right: 12px;
 }
+
 .chat-badge {
   position: absolute;
   top: -5px;
   right: -5px;
 }
+
 .chat-content {
   flex: 1;
   min-width: 0;
 }
+
 .chat-title {
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .chat-time {
   font-size: 12px;
   color: #999;
 }
+
 .chat-preview {
   font-size: 13px;
   color: #666;
