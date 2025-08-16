@@ -6,6 +6,7 @@
     :close-on-click-modal="false"
     custom-class="message-dialog"
     @closed="handleDialogClosed"
+    :lock-scroll="true"
   >
     <div class="message-dialog-content">
       <!-- 消息历史区域 -->
@@ -557,9 +558,11 @@ onUnmounted(() => {
 <style scoped>
 /* 保留原有的样式，确保与之前一致 */
 .message-dialog {
-  --el-drawer-bg-color: #f8fafc;
-  border-radius: 12px;
-  overflow: hidden;
+   position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
 }
 
 .message-dialog .el-dialog__header {
@@ -577,6 +580,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
 }
 
 .message-history-container {
@@ -703,6 +707,7 @@ onUnmounted(() => {
   padding: 16px;
   border-top: 1px solid #e4e7ed;
   background-color: white;
+  flex-shrink: 0;
 }
 
 .message-actions {

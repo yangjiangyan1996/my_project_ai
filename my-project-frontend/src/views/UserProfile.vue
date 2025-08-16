@@ -136,7 +136,6 @@
               class="activity-item"
               v-for="(item, index) in teamList"
               :key="'team-' + index"
-              @click="goToMyMemberGroupDetail(item.projectId)"
             >
               <div class="activity-type">我的角色：{{ item.roleOfMemberGroup }}</div>
               <div class="activity-time">{{ item.createdAt?.slice(0,10) || '-' }}</div>
