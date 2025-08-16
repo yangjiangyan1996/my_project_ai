@@ -3,10 +3,7 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.config.AsyncTaskUtil;
-import com.example.entity.dto.Account;
-import com.example.entity.dto.ProjectApplications;
-import com.example.entity.dto.ProjectMembers;
-import com.example.entity.dto.Projects;
+import com.example.entity.dto.*;
 import com.example.entity.req.AddMemberByManagerReq;
 import com.example.entity.req.MyMemberGroupsReq;
 import com.example.entity.req.RemoveMemberReq;
@@ -14,10 +11,7 @@ import com.example.entity.resp.MemberListResp;
 import com.example.entity.resp.MyMemberGroupsResp;
 import com.example.enums.ProjectEnum;
 import com.example.enums.UserEnums;
-import com.example.service.AccountService;
-import com.example.service.ProjectApplicationsService;
-import com.example.service.ProjectMembersService;
-import com.example.service.ProjectService;
+import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
@@ -48,6 +42,10 @@ public class ProjectMemberFacade {
     ProjectService projectService;
     @Resource
     MessageFacade messageFacade;
+    @Resource
+    ChatConversationService chatConversationService;
+    @Resource
+    ChatConversationMemberService chatConversationMemberService;
     @Resource
     private ProjectMembersService projectMembersService;
 
@@ -149,8 +147,11 @@ public class ProjectMemberFacade {
         return b;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Boolean addMemberByManager(AddMemberByManagerReq req, Long userId) {
         ProjectMembers p = projectMembersService.selectByProjectIdAndUserId(req.getProjectId(), req.getUserId());
+
+        Boolean addResult = false;
         if (p != null) {
             if (Objects.equals(p.getStatus(), ProjectEnum.MemberStatusEnum.IN.getCode())) {
                 throw new ValidationException("用户已加入");
@@ -161,7 +162,7 @@ public class ProjectMemberFacade {
                 e.setRole(ProjectEnum.ProjectMemberRoleEnum.getByCode(req.getRole()).getCode());
                 e.setModifiedBy(userId);
                 e.setModifiedAt(new Date());
-                return projectMembersService.updateById(e);
+                addResult = projectMembersService.updateById(e);
             }
         } else {
             ProjectMembers e = new ProjectMembers();
@@ -174,7 +175,19 @@ public class ProjectMemberFacade {
             e.setCreatedBy(userId);
             e.setModifiedBy(userId);
             e.setModifiedAt(new Date());
-            return projectMembersService.save(e);
+            addResult = projectMembersService.save(e);
         }
+        if (addResult) {
+            //加入到聊天中
+            ChatConversation cc = chatConversationService.selectByProjectId(req.getProjectId());
+            if (cc != null) {
+                ChatConversationMember ccm = new ChatConversationMember();
+                ccm.setConversationId(cc.getId());
+                ccm.setUserId(req.getUserId());
+                ccm.setJoinedAt(new Date());
+                chatConversationMemberService.save(ccm);
+            }
+        }
+        return addResult;
     }
 }

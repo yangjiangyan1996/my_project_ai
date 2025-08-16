@@ -196,9 +196,12 @@ public class ChatFacade {
                     r.setAvatar(cc.getAvatar());
                 }
             }
-            r.setLastMessage(conversationid2LastMessageMap.get(v.getConversationId()).getContent());
-            r.setLastActiveAt(conversationid2LastMessageMap.get(v.getConversationId()).getCreatedAt());
-            r.setLastMessage(conversationid2LastMessageMap.getOrDefault(v.getConversationId(), new ChatMessage()).getContent());
+            if (conversationid2LastMessageMap.containsKey(v.getConversationId())) {
+                r.setLastMessage(conversationid2LastMessageMap.get(v.getConversationId()).getContent());
+                r.setLastActiveAt(conversationid2LastMessageMap.get(v.getConversationId()).getCreatedAt());
+                r.setLastMessage(conversationid2LastMessageMap.getOrDefault(v.getConversationId(), new ChatMessage()).getContent());
+            }
+
             if (conversationid2NotReadCountMap.containsKey(v.getConversationId())) {
                 r.setUnreadCount(conversationid2NotReadCountMap.get(v.getConversationId()));
             }
