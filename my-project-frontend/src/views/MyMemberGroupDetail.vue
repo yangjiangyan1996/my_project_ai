@@ -13,6 +13,15 @@
           </div>
         </div>
         <div class="header-actions">
+            <el-button 
+              v-if="isAdmin && !projectFinished"
+              type="warning" 
+              @click="showFinishProjectDialog"
+              class="action-button finish-button"
+            >
+              <el-icon><Finished /></el-icon> 完结项目
+            </el-button>
+
           <el-button 
             v-if="isAdmin"
             type="primary" 
@@ -40,7 +49,6 @@
         v-loading="loading"
         style="width: 100%"
         class="modern-table"
-        :row-class-name="tableRowClassName"
       >
         <el-table-column label="头像" width="80">
           <template #default="{ row }">
@@ -73,10 +81,20 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="220" v-if="isAdmin">
+       <el-table-column label="操作" width="220" v-if="isAdmin || projectFinished">
           <template #default="{ row }">
             <el-button 
-              v-if="row.roleOfMemberGroup !== 'CREATOR'"
+              v-if="projectFinished && (isAdmin || row.roleOfMemberGroup === 'ADMIN' || row.roleOfMemberGroup === 'CREATOR')"
+              type="info" 
+              size="small"
+              @click="showEvaluationDialog(row)"
+              class="evaluation-button"
+            >
+              <el-icon><Edit /></el-icon> 评价
+            </el-button>
+            
+            <el-button 
+              v-if="isAdmin && !projectFinished && row.roleOfMemberGroup !== 'CREATOR'"
               type="danger" 
               size="small"
               @click="handleRemoveMember(row)"
@@ -85,9 +103,12 @@
             </el-button>
           </template>
         </el-table-column>
+
+
       </el-table>
     </el-card>
 
+    
     <el-dialog 
       v-model="addMemberDialogVisible" 
       title="添加成员" 
@@ -147,6 +168,108 @@
     </el-dialog>
 
 
+
+<el-dialog 
+  v-model="finishProjectDialogVisible" 
+  title="完结项目" 
+  width="600px"
+  class="modern-dialog"
+>
+  <div class="finish-project-content">
+    <el-alert 
+      title="项目完结后，所有成员将无法再进行项目操作" 
+      type="warning" 
+      show-icon 
+      class="mb-4"
+    />
+    
+    <el-form :model="finishProjectForm" label-width="100px">
+      <el-form-item label="项目总结">
+        <el-input 
+          v-model="finishProjectForm.summary" 
+          type="textarea" 
+          :rows="4" 
+          placeholder="请输入项目总结"
+        />
+      </el-form-item>
+    </el-form> 
+  </div>
+  
+  <template #footer>
+    <el-button @click="finishProjectDialogVisible = false">取消</el-button>
+    <el-button 
+      type="warning" 
+      @click="confirmFinishProject"
+      :loading="finishingProject"
+    >
+      确认完结
+    </el-button>
+  </template>
+</el-dialog>
+
+<!-- 评价对话框 -->
+<el-dialog 
+  v-model="evaluationDialogVisible" 
+  :title="`评价 ${evaluationTarget.nickname || evaluationTarget.username}`"
+  width="700px"
+  class="modern-dialog evaluation-dialog"
+>
+  <div class="evaluation-content">
+    <div class="evaluation-header">
+      <el-avatar :size="60" :src="evaluationTarget.avatarUrl" />
+      <div class="evaluation-user-info">
+        <h3>{{ evaluationTarget.nickname || evaluationTarget.username }}</h3>
+        <div class="user-role">
+          <el-tag :type="getRoleTagType(evaluationTarget.roleOfMemberGroup)">
+            {{ formatRole(evaluationTarget.roleOfMemberGroup) }}
+          </el-tag>
+        </div>
+      </div>
+    </div>
+    
+    <el-divider />
+    
+    <el-form :model="evaluationForm" label-width="100px">
+      <el-form-item label="评分">
+        <el-rate
+          v-model="evaluationForm.rating"
+          :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+          :max="5"
+          show-text
+          text-color="#ff9900"
+          :texts="['差', '一般', '不错', '很好', '优秀']"
+        />
+      </el-form-item>
+      
+      <el-form-item label="评价内容">
+        <el-input
+          v-model="evaluationForm.comment"
+          type="textarea"
+          :rows="4"
+          placeholder="请输入详细评价内容"
+          maxlength="300"
+          show-word-limit
+        />
+      </el-form-item>
+      
+      <el-form-item label="匿名评价" v-if="!isAdmin">
+        <el-switch v-model="evaluationForm.anonymous" />
+      </el-form-item>
+    </el-form>
+  </div>
+  
+  <template #footer>
+    <el-button @click="evaluationDialogVisible = false">取消</el-button>
+    <el-button 
+      type="primary" 
+      @click="submitEvaluation"
+      :loading="submittingEvaluation"
+    >
+      提交评价
+    </el-button>
+  </template>
+</el-dialog>
+    
       <ChatDialog 
         v-model="groupChatVisible"
         :current-user="currentUser"
@@ -162,7 +285,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search,ChatDotRound } from '@element-plus/icons-vue'
+import { Plus, Search,ChatDotRound,Finished ,Edit} from '@element-plus/icons-vue'
 import { get, post } from '@/net'
 import ChatDialog from '@/components/ChatDialog.vue'
 
@@ -197,6 +320,24 @@ const currentUser = ref({});
 const targetUser = ref({});
 
 
+// 完结评价
+const projectFinished = ref(false)
+const finishProjectDialogVisible = ref(false)
+const finishingProject = ref(false)
+const finishProjectForm = ref({
+  summary: ''
+})
+
+const evaluationDialogVisible = ref(false)
+const evaluationTarget = ref({})
+const evaluationForm = ref({
+  rating: 5,
+  comment: '',
+  anonymous: false
+})
+const submittingEvaluation = ref(false)
+
+
 onMounted(() => {
     projectId.value = route.params.id
     if (!userInfo.data.id) {
@@ -212,6 +353,74 @@ onMounted(() => {
     }
  
 })
+
+
+
+// 添加方法
+const showFinishProjectDialog = () => {
+  finishProjectDialogVisible.value = true
+  finishProjectForm.value = {
+    summary: ''
+  }
+}
+
+const confirmFinishProject = async () => {
+  try {
+    finishingProject.value = true
+    await post('/api/auth/project/finish', {
+      projectId: projectId.value,
+      summary: finishProjectForm.value.summary
+    })
+    ElMessage.success('项目已完结')
+    projectFinished.value = true
+    finishProjectDialogVisible.value = false
+    loadProjectInfo() // 重新加载项目信息
+  } catch (error) {
+    ElMessage.error(error.message || '完结项目失败')
+  } finally {
+    finishingProject.value = false
+  }
+}
+
+const showEvaluationDialog = (member) => {
+  evaluationTarget.value = member
+  evaluationForm.value = {
+    rating: 5,
+    comment: '',
+    anonymous: false
+  }
+  evaluationDialogVisible.value = true
+}
+
+const submitEvaluation = async () => {
+  try {
+    submittingEvaluation.value = true
+    await post('/api/auth/project/evaluate', {
+      projectId: projectId.value,
+      targetUserId: evaluationTarget.value.id,
+      rating: evaluationForm.value.rating,
+      comment: evaluationForm.value.comment,
+      anonymous: evaluationForm.value.anonymous
+    })
+    ElMessage.success('评价提交成功')
+    evaluationDialogVisible.value = false
+  } catch (error) {
+    ElMessage.error(error.message || '提交评价失败')
+  } finally {
+    submittingEvaluation.value = false
+  }
+}
+
+// 在 loadProjectInfo 方法中更新 projectFinished 状态
+const loadProjectInfo = async () => {
+  try {
+    const res = await get(`/api/unauth/project/detail?projectId=${projectId.value}`)
+    projectName.value = res.name || '项目名称'
+    projectFinished.value = res.status === 'FINISHED'
+  } catch (error) {
+    ElMessage.error('加载项目信息失败')
+  }
+}
 
 const getConversationId = async () => {
   try {
@@ -256,14 +465,6 @@ const showGroupChat = () => {
 }
 
 
-const loadProjectInfo = async () => {
-  try {
-    const res = await get(`/api/unauth/project/detail?projectId=${projectId.value}`)
-    projectName.value = res.name || '项目名称'
-  } catch (error) {
-    ElMessage.error('加载项目信息失败')
-  }
-}
 
 const loadMemberList = async () => {
   try {
@@ -595,5 +796,85 @@ const handleRemoveMember = (member) => {
 
 .animate-pulse {
   animation: pulse 0.5s ease;
+}
+
+
+/* 完结按钮样式 */
+.finish-button {
+  background: linear-gradient(135deg, #f6ad55 0%, #f687b3 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 2px 10px rgba(246, 173, 85, 0.3);
+}
+
+.finish-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(246, 173, 85, 0.4);
+}
+
+/* 评价对话框样式 */
+.evaluation-dialog :deep(.el-dialog__body) {
+  padding: 20px 25px;
+}
+
+.evaluation-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.evaluation-user-info {
+  margin-left: 15px;
+}
+
+.evaluation-user-info h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #2d3748;
+}
+
+.user-role {
+  margin-top: 5px;
+}
+
+/* 评价按钮样式 */
+.evaluation-button {
+  background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+  border: none;
+  color: white;
+}
+
+.evaluation-button:hover {
+  background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
+}
+
+/* 项目完结状态提示 */
+.project-status-tag {
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+/* 动画效果 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.evaluation-content {
+  animation: fadeInUp 0.4s ease;
+}
+
+.finish-project-content {
+  animation: fadeInUp 0.4s ease;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
 }
 </style>
