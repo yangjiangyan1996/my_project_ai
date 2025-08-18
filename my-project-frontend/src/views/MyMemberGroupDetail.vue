@@ -170,67 +170,102 @@
 
 
 <!-- 评价对话框 -->
-<el-dialog 
-  v-model="evaluationDialogVisible" 
-  :title="`评价 ${evaluationTarget.nickname || evaluationTarget.username}`"
-  width="700px"
-  class="modern-dialog evaluation-dialog"
->
-  <div class="evaluation-content">
-    <div class="evaluation-header">
-      <el-avatar :size="60" :src="evaluationTarget.avatarUrl" />
-      <div class="evaluation-user-info">
-        <h3>{{ evaluationTarget.nickname || evaluationTarget.username }}</h3>
-        <div class="user-role">
-          <el-tag :type="getRoleTagType(evaluationTarget.roleOfMemberGroup)">
-            {{ formatRole(evaluationTarget.roleOfMemberGroup) }}
-          </el-tag>
+ <el-dialog 
+    v-model="evaluationDialogVisible" 
+    title="项目成员评价"
+    width="800px"
+    class="modern-dialog evaluation-dialog"
+  >
+    <div class="evaluation-container">
+      <!-- 成员选择区域 -->
+      <div class="member-selection">
+        <h4>选择要评价的成员</h4>
+        <div class="member-list">
+          <div 
+            v-for="member in evaluableMembers" 
+            :key="member.id"
+            class="member-item"
+            :class="{ 
+              active: evaluationTarget.id === member.userId,
+              disabled: member.userId === userInfo.data?.id
+            }"
+            @click="handleMemberSelection(member)"
+          >
+            <el-avatar :size="50" :src="member.avatarUrl" />
+            <div class="member-info">
+              <div class="member-name">{{ member.nickname || member.username }}</div>
+              <el-tag :type="getRoleTagType(member.roleOfMemberGroup)" size="small">
+                {{ formatRole(member.roleOfMemberGroup) }}
+              </el-tag>
+              <div v-if="member.userId === userInfo.data?.id" class="self-tag">(自己)</div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <!-- 评价表单区域 -->
+      <div class="evaluation-form-area" v-if="evaluationTarget.id">
+        <div class="evaluation-header">
+          <el-avatar :size="60" :src="evaluationTarget.avatarUrl" />
+          <div class="evaluation-user-info">
+            <h3>{{ evaluationTarget.nickname || evaluationTarget.username }}</h3>
+            <div class="user-role">
+              <el-tag :type="getRoleTagType(evaluationTarget.roleOfMemberGroup)">
+                {{ formatRole(evaluationTarget.roleOfMemberGroup) }}
+              </el-tag>
+            </div>
+          </div>
+        </div>
+        
+        <el-divider />
+        
+        <el-form :model="evaluationForm" label-width="100px">
+          <el-form-item label="评分">
+            <el-rate
+              v-model="evaluationForm.rating"
+              :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+              :max="5"
+              show-text
+              text-color="#ff9900"
+              :texts="['差', '一般', '不错', '很好', '优秀']"
+            />
+          </el-form-item>
+          
+          <el-form-item label="评价内容">
+            <el-input
+              v-model="evaluationForm.comment"
+              type="textarea"
+              :rows="4"
+              placeholder="请输入详细评价内容"
+              maxlength="300"
+              show-word-limit
+            />
+          </el-form-item>
+          
+          <el-form-item label="匿名评价" v-if="!isAdmin">
+            <el-switch v-model="evaluationForm.anonymous" />
+          </el-form-item>
+        </el-form>
+      </div>
+      <div v-else class="empty-target">
+        <el-icon><User /></el-icon>
+        <p>请从左侧选择要评价的成员</p>
       </div>
     </div>
     
-    <el-divider />
-    
-    <el-form :model="evaluationForm" label-width="100px">
-      <el-form-item label="评分">
-        <el-rate
-          v-model="evaluationForm.rating"
-          :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-          :max="5"
-          show-text
-          text-color="#ff9900"
-          :texts="['差', '一般', '不错', '很好', '优秀']"
-        />
-      </el-form-item>
-      
-      <el-form-item label="评价内容">
-        <el-input
-          v-model="evaluationForm.comment"
-          type="textarea"
-          :rows="4"
-          placeholder="请输入详细评价内容"
-          maxlength="300"
-          show-word-limit
-        />
-      </el-form-item>
-      
-      <el-form-item label="匿名评价" v-if="!isAdmin">
-        <el-switch v-model="evaluationForm.anonymous" />
-      </el-form-item>
-    </el-form>
-  </div>
-  
-  <template #footer>
-    <el-button @click="evaluationDialogVisible = false">取消</el-button>
-    <el-button 
-      type="primary" 
-      @click="submitEvaluation"
-      :loading="submittingEvaluation"
-    >
-      提交评价
-    </el-button>
-  </template>
-</el-dialog>
+    <template #footer>
+      <el-button @click="evaluationDialogVisible = false">取消</el-button>
+      <el-button 
+        type="primary" 
+        @click="submitEvaluation"
+        :loading="submittingEvaluation"
+        :disabled="!evaluationTarget.id"
+      >
+        提交评价
+      </el-button>
+    </template>
+  </el-dialog>
+
     
       <ChatDialog 
         v-model="groupChatVisible"
@@ -241,6 +276,25 @@
       />
 
   </div>
+
+  <!-- 新增：评价完成提示框 -->
+  <el-dialog
+    v-model="evaluationCompleteDialogVisible"
+    title="评价完成"
+    width="400px"
+    :show-close="false"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
+  >
+    <div class="evaluation-complete-content">
+      <el-icon color="#67C23A" :size="60"><CircleCheck /></el-icon>
+      <h3>您已完成所有成员的评价！</h3>
+      <p>感谢您的认真评价，这将帮助团队成员更好地成长</p>
+    </div>
+    <template #footer>
+      <el-button type="primary" @click="closeEvaluationCompleteDialog">确定</el-button>
+    </template>
+  </el-dialog>
 
 
   <el-dialog
@@ -278,10 +332,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted ,computed} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search,ChatDotRound,Finished ,Edit,MessageBox, Bell} from '@element-plus/icons-vue'
+import { Plus, Search,ChatDotRound,Finished ,Edit,MessageBox, Bell, CircleCheck} from '@element-plus/icons-vue'
 
 import { get, post } from '@/net'
 import ChatDialog from '@/components/ChatDialog.vue'
@@ -338,6 +392,9 @@ const submittingEvaluation = ref(false)
 const evaluationPromptVisible = ref(false)
 const showEvaluationReminder = ref(false)
 const hasEvaluated = ref(false)
+const evaluationCompleteDialogVisible = ref(false)
+const evaluatedMembers = ref(new Set()) // 用于记录已评价的成员
+
 
 onMounted(() => {
     projectId.value = route.params.id
@@ -354,6 +411,18 @@ onMounted(() => {
     }
  
 })
+
+
+
+const handleMemberSelection = (member) => {
+  console.log('member', member)
+  console.log('userInfo.data?.id', userInfo.data?.id)
+  if (member.userId === userInfo.data?.id) {
+    ElMessage.warning('不能评价自己')
+    return
+  }
+  selectEvaluationTarget(member)
+}
 
 // 添加完结项目方法
 const confirmFinishProject = () => {
@@ -384,14 +453,22 @@ const confirmFinishProject = () => {
   })
 }
 
+// 新增方法：关闭评价完成提示框
+const closeEvaluationCompleteDialog = () => {
+  evaluationCompleteDialogVisible.value = false
+  hasEvaluated.value = true
+  showEvaluationReminder.value = false
+}
+
+
+// 修改方法：显示评价对话框
 const showEvaluationDialog = (member) => {
-  evaluationTarget.value = member
-  evaluationForm.value = {
-    rating: 5,
-    comment: '',
-    anonymous: false
-  }
   evaluationDialogVisible.value = true
+  if (member) {
+    selectEvaluationTarget(member)
+  } else if (evaluableMembers.value.length > 0) {
+    selectEvaluationTarget(evaluableMembers.value[0])
+  }
 }
 
 
@@ -412,19 +489,26 @@ const loadProjectInfo = async () => {
 }
 
 
+// 修改方法：选择评价目标
+const selectEvaluationTarget = (member) => {
+  evaluationTarget.value = member
+  // 重置表单
+  evaluationForm.value = {
+    rating: 5,
+    comment: '',
+    anonymous: false
+  }
+}
 
-// 新增方法：处理立即前往评价
+
+// 修改方法：处理立即前往评价
 const handleGoEvaluation = () => {
   evaluationPromptVisible.value = false
-  // 找到第一个未评价的成员（这里简化处理，实际可以根据业务需求调整）
-  const firstMember = memberList.value.find(member => 
-    member.id !== userInfo.data?.id // 通常不需要评价自己
-  )
-  
-  if (firstMember) {
-    showEvaluationDialog(firstMember)
-  } else {
-    ElMessage.warning('没有可评价的成员')
+  // 直接打开评价对话框，让用户选择要评价的成员
+  evaluationDialogVisible.value = true
+  // 默认选择第一个可评价成员
+  if (evaluableMembers.value.length > 0 && !evaluationTarget.value.userId) {
+    selectEvaluationTarget(evaluableMembers.value[0])
   }
 }
 
@@ -433,6 +517,15 @@ const handleLaterEvaluation = () => {
   evaluationPromptVisible.value = false
   showEvaluationReminder.value = true
 }
+
+
+
+// 新增计算属性：获取可评价的成员列表
+const evaluableMembers = computed(() => {
+  return memberList.value.filter(member => 
+       member.userId !== userInfo.data?.id // 排除当前用户
+  )
+})
 
 // 修改submitEvaluation方法
 const submitEvaluation = async () => {
@@ -448,12 +541,36 @@ const submitEvaluation = async () => {
     
     if (success) {
       ElMessage.success('评价提交成功')
-      evaluationDialogVisible.value = false
-      hasEvaluated.value = true
-      showEvaluationReminder.value = false
+
+
+      console.log("111===evaluationTarget",evaluationTarget.value)
+      console.log('111===已评价的成员1:', evaluatedMembers)
+
+      // 记录已评价的成员
+      evaluatedMembers.value.add(evaluationTarget.value.userId)
+
+       // 检查是否还有未评价的成员
+      const remainingMembers = evaluableMembers.value.filter(member => !evaluatedMembers.value.has(member.userId));
       
-      // 检查是否还有未评价的成员
-      await checkEvaluationStatus()
+      console.log('剩余未评价成员:', remainingMembers)
+      console.log('222===已评价的成员1:', evaluatedMembers)
+
+
+
+      if (remainingMembers.length > 0) {
+        // 还有未评价的成员，自动选择下一个
+        selectEvaluationTarget(remainingMembers[0])
+        // 重置表单
+        evaluationForm.value = {
+          rating: 5,
+          comment: '',
+          anonymous: false
+        }
+      } else {
+        // 所有成员已评价完毕
+        evaluationDialogVisible.value = false
+        evaluationCompleteDialogVisible.value = true
+      }
     } else {
       ElMessage.error('评价提交失败')
     }
@@ -1058,5 +1175,120 @@ const handleRemoveMember = (member) => {
 /* 文本区域样式 */
 .evaluation-form :deep(.el-textarea__inner) {
   min-height: 120px !important;
+}
+
+
+.evaluation-container {
+  display: flex;
+  min-height: 400px;
+}
+
+.member-selection {
+  width: 250px;
+  border-right: 1px solid #ebeef5;
+  padding-right: 20px;
+  margin-right: 20px;
+}
+
+.member-selection h4 {
+  margin: 0 0 15px 0;
+  color: #606266;
+}
+
+.member-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.member-item:hover {
+  background-color: #f5f7fa;
+}
+
+.member-item.active {
+  background-color: #ecf5ff;
+  border-left: 3px solid #409eff;
+}
+
+.member-info {
+  margin-left: 10px;
+}
+
+.member-name {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.evaluation-form-area {
+  flex: 1;
+}
+
+.empty-target {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+}
+
+.empty-target .el-icon {
+  font-size: 60px;
+  margin-bottom: 15px;
+}
+
+.empty-target p {
+  margin: 0;
+  font-size: 16px;
+}
+
+
+.member-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+}
+
+.self-tag {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
+}
+
+.evaluation-complete-content {
+  text-align: center;
+  padding: 20px;
+}
+
+.evaluation-complete-content h3 {
+  margin: 15px 0 10px;
+  color: #2d3748;
+}
+
+.evaluation-complete-content p {
+  color: #718096;
+  margin-bottom: 0;
+}
+
+.member-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+  pointer-events: none; /* 添加这行确保鼠标事件不会触发 */
+}
+
+.self-tag {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
 }
 </style>
