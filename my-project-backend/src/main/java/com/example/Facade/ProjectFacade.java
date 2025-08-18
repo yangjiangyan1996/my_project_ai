@@ -983,4 +983,17 @@ public class ProjectFacade {
         }
         return saveOrUpdate;
     }
+
+    public List<ProjectEvaluateListResp> getEvaluateList(Long projectId, Long userId) {
+        List<ProjectReview> list = projectReviewService.selectByProjectIdAndFromUserId(projectId, userId);
+        return list.stream().map(item -> {
+            ProjectEvaluateListResp r = new ProjectEvaluateListResp();
+            r.setComment(item.getComment());
+            r.setScore(item.getScore());
+            r.setUserId(item.getToUserId());
+            r.setReviewId(item.getId());
+            r.setProjectId(item.getProjectId());
+            return r;
+        }).collect(Collectors.toList());
+    }
 }

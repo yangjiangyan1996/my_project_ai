@@ -6,6 +6,16 @@
       <div class="header-card">
         <div class="header-content">
           <h2 class="project-title">{{ projectName }}</h2>
+          <div class="status-badge" :class="getStatusClass(projectStatus)">
+            <span class="status-icon">
+              <el-icon v-if="projectStatus === 0"><Clock /></el-icon>
+              <el-icon v-else-if="projectStatus === 5"><CircleClose /></el-icon>
+              <el-icon v-else-if="projectStatus === 10"><User /></el-icon>
+              <el-icon v-else-if="projectStatus === 11"><UserFilled /></el-icon>
+              <el-icon v-else-if="projectStatus === 30"><Finished /></el-icon>
+            </span>
+            <span class="status-text">{{ projectStatusName }}</span>
+          </div>
           <div class="meta-info">
             <span class="member-count">
               <el-icon><User /></el-icon> {{ memberList.length }} 位成员
@@ -213,6 +223,9 @@
               <el-tag :type="getRoleTagType(evaluationTarget.roleOfMemberGroup)">
                 {{ formatRole(evaluationTarget.roleOfMemberGroup) }}
               </el-tag>
+              <el-tag v-if="hasEvaluatedMember(evaluationTarget.userId)" type="success" style="margin-left: 8px;">
+                已评价
+              </el-tag>
             </div>
           </div>
         </div>
@@ -242,10 +255,23 @@
             />
           </el-form-item>
           
-          <el-form-item label="匿名评价" v-if="!isAdmin">
-            <el-switch v-model="evaluationForm.anonymous" />
-          </el-form-item>
+          <!-- <el-form-item label="匿名评价" v-if="!isAdmin">
+            <el-switch 
+              v-model="evaluationForm.anonymous" 
+              :disabled="hasEvaluatedMember(evaluationTarget.userId)"
+            />
+          </el-form-item> -->
         </el-form>
+
+        <!-- 显示已评价的信息 -->
+        <!-- <div v-if="hasEvaluatedMember(evaluationTarget.userId)" class="evaluation-history">
+          <h4>您的评价记录</h4>
+          <div class="history-item">
+            <div>评分: {{ getMemberEvaluation(evaluationTarget.userId).score }} 星</div>
+            <div>评价: {{ getMemberEvaluation(evaluationTarget.userId).comment }}</div>
+          </div>
+        </div> -->
+
       </div>
       <div v-else class="empty-target">
         <el-icon><User /></el-icon>
@@ -335,7 +361,7 @@
 import { ref, onMounted ,computed} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search,ChatDotRound,Finished ,Edit,MessageBox, Bell, CircleCheck} from '@element-plus/icons-vue'
+import { Plus, Search,ChatDotRound,Finished ,Edit,MessageBox, Bell, CircleCheck,  Clock, CircleClose, User, UserFilled} from '@element-plus/icons-vue'
 
 import { get, post } from '@/net'
 import ChatDialog from '@/components/ChatDialog.vue'
@@ -394,7 +420,11 @@ const showEvaluationReminder = ref(false)
 const hasEvaluated = ref(false)
 const evaluationCompleteDialogVisible = ref(false)
 const evaluatedMembers = ref(new Set()) // 用于记录已评价的成员
-
+// 添加评价数据状态
+const evaluationData = ref([])
+// 在data/ref部分添加
+const projectStatus = ref(0)
+const projectStatusName = ref('')
 
 onMounted(() => {
     projectId.value = route.params.id
@@ -403,14 +433,64 @@ onMounted(() => {
         getConversationId()
         loadProjectInfo()
         loadMemberList()
+        loadEvaluationData() // 新增
       });
     } else {
       getConversationId()
       loadProjectInfo()
       loadMemberList()
+      loadEvaluationData() // 新增
     }
  
 })
+
+
+// 检查成员是否已被评价
+const hasEvaluatedMember = (userId) => {
+  return evaluationData.value.some(item => item.userId === userId)
+}
+
+
+// 获取成员的评价数据
+const getMemberEvaluation = (userId) => {
+  return evaluationData.value.find(item => item.userId === userId) || {}
+}
+
+// 修改 selectEvaluationTarget 方法，初始化表单时填充已有评价数据
+const selectEvaluationTarget = (member) => {
+  evaluationTarget.value = member
+  
+  // 检查是否有已评价数据
+  const existingEvaluation = getMemberEvaluation(member.userId)
+  
+  if (existingEvaluation) {
+    // 填充已有评价
+    evaluationForm.value = {
+      rating: existingEvaluation.score || 5,
+      comment: existingEvaluation.comment || '',
+      anonymous: false
+    }
+  } else {
+    // 重置表单
+    evaluationForm.value = {
+      rating: 5,
+      comment: '',
+      anonymous: false
+    }
+  }
+}
+
+// 新增方法：获取评价数据
+const loadEvaluationData = async () => {
+  try {
+    const res = await get(`/api/auth/project/getEvaluateList?projectId=${projectId.value}`)
+    evaluationData.value = res || []
+    console.log('获取到的评价数据:', evaluationData.value)
+  } catch (error) {
+    ElMessage.error('获取评价数据失败')
+  }
+}
+
 
 
 
@@ -463,6 +543,7 @@ const closeEvaluationCompleteDialog = () => {
 
 // 修改方法：显示评价对话框
 const showEvaluationDialog = (member) => {
+  loadEvaluationData();
   evaluationDialogVisible.value = true
   if (member) {
     selectEvaluationTarget(member)
@@ -478,6 +559,8 @@ const loadProjectInfo = async () => {
     const res = await get(`/api/unauth/project/detail?projectId=${projectId.value}`)
     projectName.value = res.name || '项目名称'
     projectFinished.value = res.status === 30 // 根据新接口返回的status判断
+    projectStatus.value = res.status
+    projectStatusName.value = res.statusName
     
     // 如果项目已完结，检查用户是否已完成评价
     if (projectFinished.value) {
@@ -488,17 +571,28 @@ const loadProjectInfo = async () => {
   }
 }
 
+// 添加状态样式方法
+const getStatusClass = (status) => {
+  return {
+    0: 'waiting',    // 待审核
+    5: 'rejected',   // 退回
+    10: 'recruiting', // 招募中
+    11: 'full',       // 已满员
+    30: 'closed'      // 已关闭
+  }[status] || ''
+}
+
 
 // 修改方法：选择评价目标
-const selectEvaluationTarget = (member) => {
-  evaluationTarget.value = member
-  // 重置表单
-  evaluationForm.value = {
-    rating: 5,
-    comment: '',
-    anonymous: false
-  }
-}
+// const selectEvaluationTarget = (member) => {
+//   evaluationTarget.value = member
+//   // 重置表单
+//   evaluationForm.value = {
+//     rating: 5,
+//     comment: '',
+//     anonymous: false
+//   }
+// }
 
 
 // 修改方法：处理立即前往评价
@@ -542,21 +636,12 @@ const submitEvaluation = async () => {
     if (success) {
       ElMessage.success('评价提交成功')
 
-
-      console.log("111===evaluationTarget",evaluationTarget.value)
-      console.log('111===已评价的成员1:', evaluatedMembers)
-
       // 记录已评价的成员
       evaluatedMembers.value.add(evaluationTarget.value.userId)
 
        // 检查是否还有未评价的成员
       const remainingMembers = evaluableMembers.value.filter(member => !evaluatedMembers.value.has(member.userId));
       
-      console.log('剩余未评价成员:', remainingMembers)
-      console.log('222===已评价的成员1:', evaluatedMembers)
-
-
-
       if (remainingMembers.length > 0) {
         // 还有未评价的成员，自动选择下一个
         selectEvaluationTarget(remainingMembers[0])
@@ -1290,5 +1375,103 @@ const handleRemoveMember = (member) => {
   font-size: 12px;
   color: #909399;
   margin-top: 2px;
+}
+
+.evaluation-history {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+}
+
+.evaluation-history h4 {
+  margin: 0 0 10px 0;
+  color: #2d3748;
+}
+
+.history-item {
+  padding: 10px;
+  background-color: white;
+  border-radius: 4px;
+}
+
+.history-item div {
+  margin-bottom: 5px;
+}
+
+.title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.status-icon {
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+}
+
+/* 不同状态的颜色样式 */
+.status-badge.waiting {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.1) 100%);
+  color: #d97706;
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.status-badge.rejected {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.1) 100%);
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.status-badge.recruiting {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.status-badge.full {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(99, 102, 241, 0.1) 100%);
+  color: #3730a3;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.status-badge.closed {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%);
+  color: #5b21b6;
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* 悬停效果 */
+.status-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 响应式调整 */
+@media screen and (max-width: 768px) {
+  .title-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .status-badge {
+    margin-top: 4px;
+  }
 }
 </style>

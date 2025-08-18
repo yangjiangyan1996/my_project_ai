@@ -20,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @Slf4j
 @RequestMapping("/api/auth/project/")
@@ -33,6 +35,27 @@ public class ProjectController {
     ProjectFacade projectFacade;
     @Resource
     private ProjectService projectService;
+
+    /**
+     * 项目评价其他人
+     *
+     * @param req
+     * @return
+     */
+    @GetMapping("/getEvaluateList")
+    public RespBean<List<ProjectEvaluateListResp>> getEvaluateList(@RequestParam("projectId") Long projectId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<ProjectEvaluateListResp> result = projectFacade.getEvaluateList(projectId, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProjectController#getEvaluateList,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#getEvaluateList,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
     /**
      * 项目评价其他人
