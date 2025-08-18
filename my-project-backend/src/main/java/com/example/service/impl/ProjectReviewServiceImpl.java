@@ -20,6 +20,13 @@ import java.util.List;
 @Slf4j
 public class ProjectReviewServiceImpl extends ServiceImpl<ProjectReviewMapper, ProjectReview> implements ProjectReviewService {
     @Override
+    public List<ProjectReview> selectByProjectId(Long projectId) {
+        return this.baseMapper.selectList(new QueryWrapper<ProjectReview>()
+                .eq("project_id", projectId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
     public List<ProjectReview> selectByProjectIdAndFromUserId(Long projectId, Long userId) {
         return this.baseMapper.selectList(new QueryWrapper<ProjectReview>()
                 .eq("project_id", projectId)

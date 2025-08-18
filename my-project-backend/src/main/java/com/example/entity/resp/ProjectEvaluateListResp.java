@@ -1,4 +1,4 @@
-package com.example.entity.req;
+package com.example.entity.resp;
 
 import lombok.Data;
 
@@ -15,5 +15,4 @@ public class ProjectEvaluateListResp {
     private Long userId;
     Integer score;
     String comment;
-
 }

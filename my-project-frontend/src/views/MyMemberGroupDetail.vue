@@ -118,6 +118,86 @@
       </el-table>
     </el-card>
 
+
+    <el-card class="evaluation-summary-card" v-if="evaluationSummary.length > 0">
+    <template #header>
+      <div class="summary-header">
+        <h3>成员评价汇总</h3>
+        <el-tag type="info" effect="dark">
+          <el-icon><DataAnalysis /></el-icon>
+          平均评分: {{ overallAverage.toFixed(1) }} / 5.0
+        </el-tag>
+      </div>
+    </template>
+
+    <div class="summary-container" :class="{ 'blur-content': !hasEvaluated }">
+      <div 
+        v-for="user in evaluationSummary" 
+        :key="user.userId"
+        class="user-evaluation"
+      >
+        <div class="user-header">
+          <el-avatar :src="user.avatarUrl" />
+          <div class="user-info">
+            <div class="username">{{ user.userName }}</div>
+            <div class="avg-score">
+              <el-rate 
+                v-model="user.avgScore"
+                disabled
+                show-score
+                :colors="ratingColors"
+                text-color="#ff9900"
+                score-template="{value}"
+              />
+              <span class="score-text">({{ user.evaluateList.length }}人评价)</span>
+            </div>
+          </div>
+        </div>
+
+        <el-collapse accordion class="evaluation-collapse">
+          <el-collapse-item>
+            <template #title>
+              <span class="collapse-title">查看详细评价</span>
+            </template>
+            <div 
+              v-for="evaluate in user.evaluateList"
+              :key="index"
+              class="evaluation-item"
+            >
+              <div class="evaluation-meta">
+                <span class="from-user">{{ evaluate.fromUserName }}</span>
+                <el-rate 
+                  v-model="evaluate.score"
+                  disabled
+                  :colors="ratingColors"
+                  :max="5"
+                  class="evaluation-rate"
+                />
+              </div>
+              <div class="evaluation-comment" v-if="evaluate.comment">
+                "{{ evaluate.comment }}"
+              </div>
+            </div>
+          </el-collapse-item>
+        </el-collapse>
+      </div>
+
+      <!-- 添加模糊化遮罩层 -->
+      <div class="blur-overlay" v-if="!hasEvaluated">
+        <el-icon><Lock /></el-icon>
+        <p>完成评价后即可查看汇总结果</p>
+        <el-button 
+          type="primary" 
+          size="small"
+          @click="handleGoEvaluation"
+          class="go-evaluate-btn"
+        >
+          立即评价
+        </el-button>
+      </div>
+
+    </div>
+  </el-card>
     
     <el-dialog 
       v-model="addMemberDialogVisible" 
@@ -355,13 +435,14 @@
     <el-icon><Bell /></el-icon>
     <span>您有待完成的项目评价</span>
   </div>
+  
 </template>
 
 <script setup>
 import { ref, onMounted ,computed} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search,ChatDotRound,Finished ,Edit,MessageBox, Bell, CircleCheck,  Clock, CircleClose, User, UserFilled} from '@element-plus/icons-vue'
+import { Plus, Search,ChatDotRound,Finished ,Edit,MessageBox, Bell, CircleCheck, Lock, Clock, CircleClose, User, UserFilled, DataAnalysis } from '@element-plus/icons-vue'
 
 import { get, post } from '@/net'
 import ChatDialog from '@/components/ChatDialog.vue'
@@ -425,6 +506,10 @@ const evaluationData = ref([])
 // 在data/ref部分添加
 const projectStatus = ref(0)
 const projectStatusName = ref('')
+// 在data/ref部分添加
+const evaluationSummary = ref([])
+const overallAverage = ref(0)
+const ratingColors = ref(['#99A9BF', '#F7BA2A', '#FF9900'])
 
 onMounted(() => {
     projectId.value = route.params.id
@@ -434,16 +519,56 @@ onMounted(() => {
         loadProjectInfo()
         loadMemberList()
         loadEvaluationData() // 新增
+        loadEvaluationSummary()
       });
     } else {
       getConversationId()
       loadProjectInfo()
       loadMemberList()
       loadEvaluationData() // 新增
+      loadEvaluationSummary()
     }
  
 })
 
+// 新增方法：检查评价状态
+const checkEvaluationStatus = async () => {
+  try {
+    const res = await get(`/api/auth/project/hasEvaluate?projectId=${projectId.value}`)
+    hasEvaluated.value = res
+    console.log('评价状态:', hasEvaluated.value ? '已评价' : '未评价')
+    
+    // 如果未评价，显示提示框
+    if (!hasEvaluated.value) {
+      evaluationPromptVisible.value = true
+    } else {
+      loadEvaluationSummary();
+    }
+  } catch (error) {
+    console.error('检查评价状态失败:', error)
+    ElMessage.error('检查评价状态失败')
+  }
+}
+
+// 添加方法
+const loadEvaluationSummary = async () => {
+  try {
+    console.log('正在加载评价汇总数据...')
+    const res = await get(`/api/unauth/project/getAvgEvaluateList?projectId=${projectId.value}`)
+    console.log('评价汇总接口返回数据:', res)
+    evaluationSummary.value = res || []
+    
+    // 计算整体平均分
+    if (evaluationSummary.value.length > 0) {
+      const total = evaluationSummary.value.reduce((sum, user) => sum + user.avgScore, 0)
+      overallAverage.value = total / evaluationSummary.value.length
+    }
+    console.log('处理后的评价汇总数据:', evaluationSummary.value)
+  } catch (error) {
+    console.error('获取评价汇总失败:', error)
+    ElMessage.error('获取评价汇总失败')
+  }
+}
 
 // 检查成员是否已被评价
 const hasEvaluatedMember = (userId) => {
@@ -598,8 +723,9 @@ const getStatusClass = (status) => {
 // 修改方法：处理立即前往评价
 const handleGoEvaluation = () => {
   evaluationPromptVisible.value = false
-  // 直接打开评价对话框，让用户选择要评价的成员
+  showEvaluationReminder.value = true
   evaluationDialogVisible.value = true
+  
   // 默认选择第一个可评价成员
   if (evaluableMembers.value.length > 0 && !evaluationTarget.value.userId) {
     selectEvaluationTarget(evaluableMembers.value[0])
@@ -655,6 +781,7 @@ const submitEvaluation = async () => {
         // 所有成员已评价完毕
         evaluationDialogVisible.value = false
         evaluationCompleteDialogVisible.value = true
+        showEvaluationReminder.value = false
       }
     } else {
       ElMessage.error('评价提交失败')
@@ -666,20 +793,6 @@ const submitEvaluation = async () => {
   }
 }
 
-// 新增方法：检查评价状态
-const checkEvaluationStatus = async () => {
-  try {
-    const res = await get(`/api/auth/project/hasEvaluate?projectId=${projectId.value}`)
-    hasEvaluated.value = res
-    
-    // 如果未评价，显示提示框
-    if (!hasEvaluated.value) {
-      evaluationPromptVisible.value = true
-    }
-  } catch (error) {
-    ElMessage.error('检查评价状态失败')
-  }
-}
 
 const getConversationId = async () => {
   try {
@@ -1473,5 +1586,208 @@ const handleRemoveMember = (member) => {
   .status-badge {
     margin-top: 4px;
   }
+}
+
+
+
+
+
+
+/* 评价汇总卡片样式 */
+.evaluation-summary-card {
+  margin-top: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: none;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+}
+
+.summary-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #2d3748;
+}
+
+.summary-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+  padding: 10px;
+}
+
+.user-evaluation {
+  background: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.user-evaluation:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.user-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.user-info {
+  margin-left: 12px;
+}
+
+.user-info .username {
+  font-weight: 600;
+  font-size: 16px;
+  color: #2d3748;
+}
+
+.avg-score {
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.score-text {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 10px;
+}
+
+.evaluation-collapse {
+  border: none;
+}
+
+.evaluation-collapse :deep(.el-collapse-item__header) {
+  border: none;
+  height: auto;
+  padding: 0;
+}
+
+.evaluation-collapse :deep(.el-collapse-item__content) {
+  padding-bottom: 0;
+}
+
+.collapse-title {
+  font-size: 13px;
+  color: #409eff;
+  display: inline-block;
+  padding: 5px 0;
+}
+
+.evaluation-item {
+  padding: 12px 0;
+  border-top: 1px dashed #ebeef5;
+}
+
+.evaluation-item:first-child {
+  border-top: none;
+}
+
+.evaluation-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.from-user {
+  font-weight: 500;
+  color: #606266;
+}
+
+.evaluation-rate {
+  transform: scale(0.8);
+  transform-origin: right;
+}
+
+.evaluation-comment {
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.5;
+  padding: 8px;
+  background: #f8fafc;
+  border-radius: 4px;
+  margin-top: 5px;
+  position: relative;
+}
+
+.evaluation-comment::before {
+  content: "";
+  font-size: 20px;
+  color: #e0e0e0;
+  position: absolute;
+  left: 3px;
+  top: 0;
+  line-height: 1;
+}
+
+/* 响应式调整 */
+@media screen and (max-width: 768px) {
+  .summary-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .user-evaluation {
+    padding: 12px;
+  }
+}
+
+
+/* 模糊化内容样式 */
+.blur-content {
+  position: relative;
+  filter: blur(5px);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* 模糊化遮罩层 */
+.blur-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.7);
+  z-index: 10;
+  color: #606266;
+}
+
+.blur-overlay .el-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+  color: #909399;
+}
+
+.blur-overlay p {
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+/* 修改立即评价按钮样式 */
+.blur-overlay .go-evaluate-btn {
+  margin-top: 10px;
+  background: linear-gradient(135deg, #409eff 0%, #36b5ff 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 2px 10px rgba(64, 158, 255, 0.3);
+}
+
+.blur-overlay .go-evaluate-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(64, 158, 255, 0.4);
 }
 </style>

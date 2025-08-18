@@ -47,6 +47,26 @@ public class UnauthProjectController {
     @Resource
     private ProjectService projectService;
 
+    /**
+     * 获取平均评价列表
+     * @param req
+     * @return
+     */
+    @GetMapping("/getAvgEvaluateList")
+    public RespBean<List<ProjectAvgEvaluateListResp>> getAvgEvaluateList(@RequestParam("projectId") Long projectId) {
+        try {
+            List<ProjectAvgEvaluateListResp> result = projectFacade.getAvgEvaluateList(projectId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("UnauthProjectController#getAvgEvaluateList,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("UnauthProjectController#getAvgEvaluateList,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
     @PostMapping("/projectShowList")
     public RespBean<Page<ProjectOfMyShowGetResp>> projectShowList(@RequestBody ProjectShowListReq req) {
         try {

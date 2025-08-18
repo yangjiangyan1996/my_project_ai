@@ -15,4 +15,6 @@ public interface ProjectReviewService extends IService<ProjectReview> {
     List<ProjectReview> selectByProjectIdAndFromUserId(Long projectId, Long userId);
 
     ProjectReview selectByProjectIdAndFromUserIdAndToUserId(Long projectId, Long fromUserId, Long toUserId);
+
+    List<ProjectReview> selectByProjectId(Long projectId);
 }

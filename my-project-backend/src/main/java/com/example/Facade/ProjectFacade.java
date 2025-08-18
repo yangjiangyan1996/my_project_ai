@@ -23,6 +23,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @Author YangJian
@@ -995,5 +996,51 @@ public class ProjectFacade {
             r.setProjectId(item.getProjectId());
             return r;
         }).collect(Collectors.toList());
+    }
+
+    public List<ProjectAvgEvaluateListResp> getAvgEvaluateList(Long projectId) {
+        List<ProjectReview> list = projectReviewService.selectByProjectId(projectId);
+        if (CollectionUtils.isEmpty( list)) {
+            return new ArrayList<>();
+        }
+        List<Long> u1 = list.stream().map(v -> v.getFromUserId()).collect(Collectors.toList());
+        List<Long> u2 = list.stream().map(v -> v.getToUserId()).collect(Collectors.toList());
+        u1.addAll(u2);
+        List<Account> accounts = accountService.selectByIds(u1);
+        Map<Long, Account> userId2UserInfoMap = accounts.stream().collect(Collectors.toMap(v -> v.getId(), v -> v));
+
+        Map<Long, List<ProjectReview>> toUserId2PrListMap = list.stream().collect(Collectors.groupingBy(ProjectReview::getToUserId));
+
+        List<ProjectAvgEvaluateListResp> paixuProjectIds = new ArrayList<>();
+        for (Long toUserId : toUserId2PrListMap.keySet()) {
+            List<ProjectReview> prOfUser = toUserId2PrListMap.get(toUserId);
+
+            List<ProjectAvgEvaluateListResp.ProjectEvaluateResp> respList = prOfUser.stream().map(v -> {
+                ProjectAvgEvaluateListResp.ProjectEvaluateResp r = new ProjectAvgEvaluateListResp.ProjectEvaluateResp();
+                if (userId2UserInfoMap.containsKey(v.getFromUserId())) {
+                    r.setFromUserName(userId2UserInfoMap.get(v.getFromUserId()).getNickname());
+                    r.setFromUserAvatar(userId2UserInfoMap.get(v.getFromUserId()).getAvatarUrl());
+                }
+                r.setComment(v.getComment());
+                r.setScore(v.getScore());
+                return r;
+            }).collect(Collectors.toList());
+
+            //计算prOfUser中的score字段的平均值，并且四舍五入保留2位小数
+
+            double avgScore = prOfUser.stream().mapToInt(v -> v.getScore()).average().orElse(0);
+            if (avgScore > 0) {
+                avgScore = Math.round(avgScore * 100) / 100.0;
+            }
+
+            ProjectAvgEvaluateListResp r = new ProjectAvgEvaluateListResp();
+            r.setUserId(toUserId);
+            r.setUserName(userId2UserInfoMap.get(toUserId).getNickname());
+            r.setAvatar(userId2UserInfoMap.get(toUserId).getAvatarUrl());
+            r.setAvgScore(avgScore);
+            r.setEvaluateList(respList);
+            paixuProjectIds.add(r);
+        }
+        return paixuProjectIds;
     }
 }
