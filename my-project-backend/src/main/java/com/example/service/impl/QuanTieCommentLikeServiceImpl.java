@@ -2,7 +2,6 @@ package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.example.entity.dto.ProjectCommentLike;
 import com.example.entity.dto.QuanTieCommentLike;
 import com.example.mapper.QuanTieCommentLikeMapper;
 import com.example.service.QuanTieCommentLikeService;

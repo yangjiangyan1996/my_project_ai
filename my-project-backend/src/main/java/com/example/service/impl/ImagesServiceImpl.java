@@ -2,11 +2,8 @@ package com.example.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.Images;
-import com.example.entity.dto.UserFollow;
 import com.example.mapper.ImagesMapper;
-import com.example.mapper.UserFollowMapper;
 import com.example.service.ImagesService;
-import com.example.service.UserFollowService;
 import org.springframework.stereotype.Service;
 
 /**

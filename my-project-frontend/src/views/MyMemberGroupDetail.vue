@@ -16,7 +16,7 @@
             <el-button 
               v-if="isAdmin && !projectFinished"
               type="warning" 
-              @click="showFinishProjectDialog"
+              @click="confirmFinishProject"
               class="action-button finish-button"
             >
               <el-icon><Finished /></el-icon> 完结项目
@@ -169,44 +169,6 @@
 
 
 
-<el-dialog 
-  v-model="finishProjectDialogVisible" 
-  title="完结项目" 
-  width="600px"
-  class="modern-dialog"
->
-  <div class="finish-project-content">
-    <el-alert 
-      title="项目完结后，所有成员将无法再进行项目操作" 
-      type="warning" 
-      show-icon 
-      class="mb-4"
-    />
-    
-    <el-form :model="finishProjectForm" label-width="100px">
-      <el-form-item label="项目总结">
-        <el-input 
-          v-model="finishProjectForm.summary" 
-          type="textarea" 
-          :rows="4" 
-          placeholder="请输入项目总结"
-        />
-      </el-form-item>
-    </el-form> 
-  </div>
-  
-  <template #footer>
-    <el-button @click="finishProjectDialogVisible = false">取消</el-button>
-    <el-button 
-      type="warning" 
-      @click="confirmFinishProject"
-      :loading="finishingProject"
-    >
-      确认完结
-    </el-button>
-  </template>
-</el-dialog>
-
 <!-- 评价对话框 -->
 <el-dialog 
   v-model="evaluationDialogVisible" 
@@ -279,13 +241,48 @@
       />
 
   </div>
+
+
+  <el-dialog
+    v-model="evaluationPromptVisible"
+    title="项目评价提醒"
+    width="500px"
+    class="modern-dialog"
+    :close-on-click-modal="false"
+  >
+    <div class="evaluation-prompt-content">
+      <el-icon class="prompt-icon"><MessageBox /></el-icon>
+      <h3>该项目已完结，请对团队成员进行评价</h3>
+      <p>您的评价将帮助团队成员更好地成长和改进</p>
+    </div>
+    <template #footer>
+      <el-button @click="handleLaterEvaluation">稍后前往</el-button>
+      <el-button 
+        type="primary" 
+        @click="handleGoEvaluation"
+        class="go-evaluate-btn"
+      >
+        立即前往
+      </el-button>
+    </template>
+  </el-dialog>
+
+  <div 
+    v-if="showEvaluationReminder && !evaluationPromptVisible"
+    class="evaluation-reminder"
+    @click="handleGoEvaluation"
+  >
+    <el-icon><Bell /></el-icon>
+    <span>您有待完成的项目评价</span>
+  </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search,ChatDotRound,Finished ,Edit} from '@element-plus/icons-vue'
+import { Plus, Search,ChatDotRound,Finished ,Edit,MessageBox, Bell} from '@element-plus/icons-vue'
+
 import { get, post } from '@/net'
 import ChatDialog from '@/components/ChatDialog.vue'
 
@@ -337,6 +334,10 @@ const evaluationForm = ref({
 })
 const submittingEvaluation = ref(false)
 
+// 新增状态变量
+const evaluationPromptVisible = ref(false)
+const showEvaluationReminder = ref(false)
+const hasEvaluated = ref(false)
 
 onMounted(() => {
     projectId.value = route.params.id
@@ -354,32 +355,33 @@ onMounted(() => {
  
 })
 
-
-
-// 添加方法
-const showFinishProjectDialog = () => {
-  finishProjectDialogVisible.value = true
-  finishProjectForm.value = {
-    summary: ''
-  }
-}
-
-const confirmFinishProject = async () => {
-  try {
-    finishingProject.value = true
-    await post('/api/auth/project/finish', {
-      projectId: projectId.value,
-      summary: finishProjectForm.value.summary
-    })
-    ElMessage.success('项目已完结')
-    projectFinished.value = true
-    finishProjectDialogVisible.value = false
-    loadProjectInfo() // 重新加载项目信息
-  } catch (error) {
-    ElMessage.error(error.message || '完结项目失败')
-  } finally {
-    finishingProject.value = false
-  }
+// 添加完结项目方法
+const confirmFinishProject = () => {
+  ElMessageBox.confirm(
+    '确定要完结该项目吗? 完结后将无法再进行项目操作',
+    '完结项目确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      finishingProject.value = true
+      await post('/api/auth/project/closed', {
+        projectId: projectId.value
+      })
+      ElMessage.success('项目已成功完结')
+      // 重新加载项目信息以更新状态
+      loadProjectInfo()
+    } catch (error) {
+      ElMessage.error(error.message || '完结项目失败')
+    } finally {
+      finishingProject.value = false
+    }
+  }).catch(() => {
+    // 用户取消操作
+  })
 }
 
 const showEvaluationDialog = (member) => {
@@ -392,18 +394,69 @@ const showEvaluationDialog = (member) => {
   evaluationDialogVisible.value = true
 }
 
+
+// 修改loadProjectInfo方法
+const loadProjectInfo = async () => {
+  try {
+    const res = await get(`/api/unauth/project/detail?projectId=${projectId.value}`)
+    projectName.value = res.name || '项目名称'
+    projectFinished.value = res.status === 30 // 根据新接口返回的status判断
+    
+    // 如果项目已完结，检查用户是否已完成评价
+    if (projectFinished.value) {
+      checkEvaluationStatus()
+    }
+  } catch (error) {
+    ElMessage.error('加载项目信息失败')
+  }
+}
+
+
+
+// 新增方法：处理立即前往评价
+const handleGoEvaluation = () => {
+  evaluationPromptVisible.value = false
+  // 找到第一个未评价的成员（这里简化处理，实际可以根据业务需求调整）
+  const firstMember = memberList.value.find(member => 
+    member.id !== userInfo.data?.id // 通常不需要评价自己
+  )
+  
+  if (firstMember) {
+    showEvaluationDialog(firstMember)
+  } else {
+    ElMessage.warning('没有可评价的成员')
+  }
+}
+
+// 新增方法：处理稍后前往
+const handleLaterEvaluation = () => {
+  evaluationPromptVisible.value = false
+  showEvaluationReminder.value = true
+}
+
+// 修改submitEvaluation方法
 const submitEvaluation = async () => {
   try {
+    console.log('评价目标:', evaluationTarget.value)
     submittingEvaluation.value = true
-    await post('/api/auth/project/evaluate', {
+    const success = await post('/api/auth/project/evaluate', {
       projectId: projectId.value,
-      targetUserId: evaluationTarget.value.id,
-      rating: evaluationForm.value.rating,
+      toUserId: evaluationTarget.value.userId,
       comment: evaluationForm.value.comment,
-      anonymous: evaluationForm.value.anonymous
+      score: evaluationForm.value.rating
     })
-    ElMessage.success('评价提交成功')
-    evaluationDialogVisible.value = false
+    
+    if (success) {
+      ElMessage.success('评价提交成功')
+      evaluationDialogVisible.value = false
+      hasEvaluated.value = true
+      showEvaluationReminder.value = false
+      
+      // 检查是否还有未评价的成员
+      await checkEvaluationStatus()
+    } else {
+      ElMessage.error('评价提交失败')
+    }
   } catch (error) {
     ElMessage.error(error.message || '提交评价失败')
   } finally {
@@ -411,14 +464,18 @@ const submitEvaluation = async () => {
   }
 }
 
-// 在 loadProjectInfo 方法中更新 projectFinished 状态
-const loadProjectInfo = async () => {
+// 新增方法：检查评价状态
+const checkEvaluationStatus = async () => {
   try {
-    const res = await get(`/api/unauth/project/detail?projectId=${projectId.value}`)
-    projectName.value = res.name || '项目名称'
-    projectFinished.value = res.status === 'FINISHED'
+    const res = await get(`/api/auth/project/hasEvaluate?projectId=${projectId.value}`)
+    hasEvaluated.value = res
+    
+    // 如果未评价，显示提示框
+    if (!hasEvaluated.value) {
+      evaluationPromptVisible.value = true
+    }
   } catch (error) {
-    ElMessage.error('加载项目信息失败')
+    ElMessage.error('检查评价状态失败')
   }
 }
 
@@ -876,5 +933,130 @@ const handleRemoveMember = (member) => {
 
 .mb-4 {
   margin-bottom: 1rem;
+}
+
+/* 完结按钮样式 */
+.finish-button {
+  background: linear-gradient(135deg, #f6ad55 0%, #f687b3 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 2px 10px rgba(246, 173, 85, 0.3);
+}
+
+.finish-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(246, 173, 85, 0.4);
+}
+
+/* 评价提示框内容 */
+.evaluation-prompt-content {
+  text-align: center;
+  padding: 20px;
+}
+
+.prompt-icon {
+  font-size: 60px;
+  color: #f6ad55;
+  margin-bottom: 15px;
+}
+
+.evaluation-prompt-content h3 {
+  margin: 10px 0;
+  color: #2d3748;
+}
+
+.evaluation-prompt-content p {
+  color: #718096;
+  margin-bottom: 20px;
+}
+
+/* 立即前往按钮样式 */
+.go-evaluate-btn {
+  background: linear-gradient(135deg, #f6ad55 0%, #f687b3 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 2px 10px rgba(246, 173, 85, 0.3);
+}
+
+.go-evaluate-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(246, 173, 85, 0.4);
+}
+
+/* 评价提醒标签 */
+.evaluation-reminder {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: linear-gradient(135deg, #f6ad55 0%, #f687b3 100%);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(246, 173, 85, 0.3);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  animation: pulse 2s infinite;
+}
+
+.evaluation-reminder:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(246, 173, 85, 0.4);
+}
+
+.evaluation-reminder .el-icon {
+  font-size: 18px;
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* 评价对话框增强样式 */
+.evaluation-dialog :deep(.el-dialog__body) {
+  padding: 20px 25px;
+}
+
+.evaluation-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.evaluation-user-info {
+  margin-left: 15px;
+}
+
+.evaluation-user-info h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #2d3748;
+}
+
+.user-role {
+  margin-top: 5px;
+}
+
+/* 评分样式增强 */
+.evaluation-form :deep(.el-rate) {
+  margin-top: 8px;
+}
+
+.evaluation-form :deep(.el-rate__icon) {
+  font-size: 28px;
+}
+
+/* 文本区域样式 */
+.evaluation-form :deep(.el-textarea__inner) {
+  min-height: 120px !important;
 }
 </style>

@@ -13,6 +13,7 @@ public class MemberListResp {
     @Data
     public static class MemberInfo {
         private Long id;
+        private Long userId;
         private String sexName;
         private String avatarUrl;
         private String nickname;

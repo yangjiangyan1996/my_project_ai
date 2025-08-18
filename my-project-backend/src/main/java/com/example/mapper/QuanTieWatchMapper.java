@@ -1,7 +1,6 @@
 package com.example.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.example.entity.dto.QuanPosts;
 import com.example.entity.dto.QuanTieWatch;
 import org.apache.ibatis.annotations.Mapper;
 

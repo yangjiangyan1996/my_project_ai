@@ -2,6 +2,7 @@ package com.example.Facade;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.constants.CommonConstant;
 import com.example.entity.dto.*;
 import com.example.entity.query.TaskProgressQuery;
 import com.example.entity.req.AchievementMyPageReq;
@@ -10,7 +11,6 @@ import com.example.entity.resp.AchievementMyPageResp;
 import com.example.entity.resp.TaskBadgeResp;
 import com.example.entity.vo.TaskCompletedEvent;
 import com.example.enums.AchievementEnums;
-import com.example.constants.CommonConstant;
 import com.example.service.*;
 import io.lettuce.core.internal.LettuceLists;
 import jakarta.annotation.Resource;

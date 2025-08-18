@@ -6,8 +6,6 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ProjectFavorite;
-import com.example.entity.dto.ProjectLike;
-import com.example.entity.dto.Projects;
 import com.example.mapper.ProjectFavoriteMapper;
 import com.example.service.ProjectFavoriteService;
 import org.springframework.stereotype.Service;

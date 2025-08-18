@@ -1,6 +1,5 @@
 package com.example.service;
 
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.example.entity.dto.QuanTieFavorite;
 
 import java.util.List;

@@ -1,12 +1,8 @@
 package com.example.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.example.entity.dto.ChatMessage;
 import com.example.entity.dto.ChatMessageStatus;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-
-import java.util.List;
 
 /**
  * @Author YangJian

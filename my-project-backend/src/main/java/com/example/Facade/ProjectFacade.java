@@ -8,7 +8,10 @@ import com.example.constants.CommonConstant;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
 import com.example.entity.resp.*;
-import com.example.enums.*;
+import com.example.enums.CommonEnum;
+import com.example.enums.MessageEnums;
+import com.example.enums.ProjectEnum;
+import com.example.enums.UserEnums;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -36,6 +39,8 @@ public class ProjectFacade {
     MessageFacade messageFacade;
     @Resource
     ProjectApplicationsService projectApplicationsService;
+    @Resource
+    ProjectReviewService projectReviewService;
     @Resource
     ProjectMembersService projectMembersService;
     @Resource
@@ -82,6 +87,8 @@ public class ProjectFacade {
 
 
         r.setName(projectDown.getName());
+        r.setStatus(projectDown.getStatus());
+        r.setStatusName(ProjectEnum.ProjectStatusEnum.getByCode(projectDown.getStatus()));
         r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
         r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
         r.setTimePerDay(project.getTimePerDay() + "小时/天");
@@ -666,7 +673,7 @@ public class ProjectFacade {
         ProjectApplications pa = projectApplicationsService.getById(req.getId());
         Integer result = projectApplicationsService.updateStatus(req.getId(), ProjectEnum.ProjectApplyStatusEnum.REJECTED.getCode(), id);
         if (result > 0) {
-            AsyncTaskUtil.execute(()->messageFacade.createApproveRefuse(pa.getUserId(), pa.getProcessedBy(),pa.getProjectId()));
+            AsyncTaskUtil.execute(() -> messageFacade.createApproveRefuse(pa.getUserId(), pa.getProcessedBy(), pa.getProjectId()));
         }
         return result == 1;
     }
@@ -826,7 +833,7 @@ public class ProjectFacade {
         }
         Boolean result = projectApplicationsService.updateStatus(p.getId(), ProjectEnum.ProjectApplyStatusEnum.CANCELED.getCode(), userId) > 0;
         if (result) {
-            AsyncTaskUtil.execute(()->messageFacade.deletedMessage(userId, p.getProcessedBy(), p.getProjectId(), MessageEnums.MessageType.JOIN_PROJECT.getCode()));
+            AsyncTaskUtil.execute(() -> messageFacade.deletedMessage(userId, p.getProcessedBy(), p.getProjectId(), MessageEnums.MessageType.JOIN_PROJECT.getCode()));
         }
         return result;
     }
@@ -920,5 +927,60 @@ public class ProjectFacade {
             return true;
         }
         return projectWatchService.insertOne(projectId, userId);
+    }
+
+    public Boolean closed(ProjectFinishReq req, Long userId) {
+        Projects p = projectService.selectByProjectId(req.getProjectId());
+        if (!p.getCreatedBy().equals(userId)) {
+            throw new ValidationException("您没有权限关闭项目");
+        }
+        if (p.getStatus().equals(ProjectEnum.ProjectStatusEnum.CLOSED.getCode())) {
+            return true;
+        }
+        return projectService.closeProject(req.getProjectId(), userId);
+    }
+
+    public Boolean hasEvaluate(Long projectId, Long userId) {
+        List<ProjectMembers> pm = projectMembersService.selectByProjectId(projectId, ProjectEnum.MemberStatusEnum.IN.getCode());
+        if (pm.size() < 2) {
+            return true;
+        }
+
+        List<ProjectReview> prList = projectReviewService.selectByProjectIdAndFromUserId(projectId, userId);
+        if (prList.size() < pm.size() -1) {
+            return false;
+        }
+        return true;
+    }
+
+    public Boolean evaluate(ProjectEvaluateReq req, Long userId) {
+        ProjectMembers pm = projectMembersService.selectByProjectIdAndUserId(req.getProjectId(), req.getToUserId());
+        if (pm == null || !pm.getStatus().equals(ProjectEnum.MemberStatusEnum.IN.getCode())) {
+            throw new ValidationException("用户未加入");
+        }
+
+        Boolean saveOrUpdate =false;
+        ProjectReview pr = projectReviewService.selectByProjectIdAndFromUserIdAndToUserId(req.getProjectId(), userId, req.getToUserId());
+        if (pr != null) {
+            pr.setScore(req.getScore());
+            pr.setComment(req.getComment());
+            pr.setModifiedBy(userId);
+            pr.setModifiedAt(new Date());
+            saveOrUpdate = projectReviewService.updateById( pr);
+        } else {
+            pr = new ProjectReview();
+            pr.setProjectId(req.getProjectId());
+            pr.setFromUserId(userId);
+            pr.setToUserId(req.getToUserId());
+            pr.setRole(pm.getRole());
+            pr.setScore(req.getScore());
+            pr.setComment(req.getComment());
+            pr.setCreatedAt(new Date());
+            pr.setCreatedBy(userId);
+            pr.setModifiedBy(userId);
+            pr.setModifiedAt(new Date());
+            saveOrUpdate = projectReviewService.save(pr);
+        }
+        return saveOrUpdate;
     }
 }

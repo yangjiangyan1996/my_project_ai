@@ -34,6 +34,65 @@ public class ProjectController {
     @Resource
     private ProjectService projectService;
 
+    /**
+     * 项目评价其他人
+     *
+     * @param req
+     * @return
+     */
+    @PostMapping("/evaluate")
+    public RespBean<Boolean> evaluate(@RequestBody @Validated ProjectEvaluateReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.evaluate(req, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProjectController#evaluate,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#evaluate,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 项目是否评价
+     */
+    @GetMapping("/hasEvaluate")
+    public RespBean<Boolean> hasEvaluate(@RequestParam("projectId") Long projectId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.hasEvaluate(projectId, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProjectController#hasEvaluate,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#hasEvaluate,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 完结
+     *
+     * @param req
+     * @return
+     */
+    @PostMapping("/closed")
+    public RespBean<Boolean> closed(@RequestBody ProjectFinishReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Boolean result = projectFacade.closed(req, user.getId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProjectController#closed,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#closed,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
     @GetMapping("/getMyCount")
     public RespBean<MyCountResp> getMyCount() {
@@ -53,6 +112,7 @@ public class ProjectController {
 
     /**
      * 申请加入项目
+     *
      * @param req
      * @return
      */
@@ -122,6 +182,7 @@ public class ProjectController {
 
     /**
      * 管理员审核通过
+     *
      * @param req
      * @return
      */
@@ -145,6 +206,7 @@ public class ProjectController {
 
     /**
      * 管理员审核不通过
+     *
      * @param req
      * @return
      */
@@ -168,7 +230,6 @@ public class ProjectController {
 
 
     /**
-     *
      * @param req
      * @return
      */
@@ -189,6 +250,7 @@ public class ProjectController {
 
     /**
      * 我的申请列表
+     *
      * @param req
      * @return
      */
@@ -209,6 +271,7 @@ public class ProjectController {
 
     /**
      * 加入项目申请，审批通过
+     *
      * @param req
      * @return
      */
@@ -229,6 +292,7 @@ public class ProjectController {
 
     /**
      * 取消申请
+     *
      * @param req
      * @return
      */
@@ -249,6 +313,7 @@ public class ProjectController {
 
     /**
      * 拒绝申请
+     *
      * @param req
      * @return
      */
@@ -305,7 +370,7 @@ public class ProjectController {
     }
 
     @PostMapping("/createFindCollage")
-    @TaskProgress(category = {"qingtongzuozhe","baiyinzuozhe","huangjinzuozhe","zuanshizuozhe","wangzhezuozhe"})
+    @TaskProgress(category = {"qingtongzuozhe", "baiyinzuozhe", "huangjinzuozhe", "zuanshizuozhe", "wangzhezuozhe"})
     public RespBean<Boolean> createFindCollage(@RequestBody CreateFindCollageReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
@@ -323,6 +388,7 @@ public class ProjectController {
 
     /**
      * 关注
+     *
      * @param req
      * @return
      */
@@ -343,6 +409,7 @@ public class ProjectController {
 
     /**
      * 取消关注
+     *
      * @param req
      * @return
      */

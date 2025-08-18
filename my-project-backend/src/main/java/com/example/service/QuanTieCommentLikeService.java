@@ -1,6 +1,5 @@
 package com.example.service;
 
-import com.example.entity.dto.ProjectCommentLike;
 import com.example.entity.dto.QuanTieCommentLike;
 
 import java.util.List;

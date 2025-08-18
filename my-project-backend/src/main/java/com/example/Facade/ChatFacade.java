@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.config.AsyncTaskUtil;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
+import com.example.entity.resp.ChatCheckReadStatusResp;
 import com.example.entity.resp.ChatCreateMessageResp;
 import com.example.entity.resp.ChatHistoryResp;
-import com.example.entity.resp.ChatCheckReadStatusResp;
 import com.example.entity.resp.ChatListResp;
 import com.example.enums.ChatEnums;
 import com.example.enums.ProjectEnum;
@@ -49,7 +49,7 @@ public class ChatFacade {
     private ChatMessageStatusService chatMessageStatusService;
 
     private Long getChatIdByChatHistoryPageReq(ChatHistoryPageReq req) {
-        if (req.getTargetUserId() != null){
+        if (req.getTargetUserId() != null) {
             List<ChatConversationMember> targetUserChatList = chatConversationMemberService.selectByUserId(req.getTargetUserId());
             List<ChatConversationMember> currentUserChatList = chatConversationMemberService.selectByUserId(req.getCurrentUserId());
             if (CollectionUtils.isEmpty(targetUserChatList) || CollectionUtils.isEmpty(currentUserChatList)) {
@@ -79,6 +79,7 @@ public class ChatFacade {
         }
         return null;
     }
+
     public Page<ChatHistoryResp> getChatHistory(ChatHistoryPageReq req) {
         Long chatId = getChatIdByChatHistoryPageReq(req);
         if (chatId == null) {
@@ -128,12 +129,12 @@ public class ChatFacade {
 
         //这里记录用户的已读
         AsyncTaskUtil.execute(() -> {
-            try{
+            try {
                 //获取list中最后一个ID
                 Long lastMessageId = list.get(list.size() - 1).getChatMessageId();
                 updateUserRead(chatId, req.getCurrentUserId(), lastMessageId);
-            }catch (Exception e) {
-                log.error("ChatFacade#getChatHistory, 更新用户已读失败",e);
+            } catch (Exception e) {
+                log.error("ChatFacade#getChatHistory, 更新用户已读失败", e);
             }
         });
 
@@ -160,7 +161,7 @@ public class ChatFacade {
         List<Long> singleChatIdList = chatConversations.stream().filter(v -> v.getChatType().equals(ChatEnums.TypeEnum.SINGLE.getCode())).map(v -> v.getId()).distinct().collect(Collectors.toList());
         List<ChatConversationMember> ccmOfSignleChatList = chatConversationMemberService.selectByConversationIds(singleChatIdList);
         Map<Long, ChatConversationMember> ccmOfSingleChatMap = ccmOfSignleChatList.stream()
-                .filter(v->!v.getUserId().equals(req.getCurrentUserId()))
+                .filter(v -> !v.getUserId().equals(req.getCurrentUserId()))
                 .collect(Collectors.toMap(v -> v.getConversationId(), v -> v));
         List<Long> userIds = ccmOfSingleChatMap.values().stream().map(v -> v.getUserId()).collect(Collectors.toList());
         List<Account> accounts = accountService.selectByIds(userIds);
@@ -175,13 +176,13 @@ public class ChatFacade {
 
         //获取会话的某个会话的最后一条消息
         List<ChatMessage> onlyOneMessageList = chatMessageService.selectLastMessagesOfConversations(conversationIds);
-        Map<Long, ChatMessage> conversationid2LastMessageMap = onlyOneMessageList.stream().collect(Collectors.toMap(v -> v.getConversationId(), v -> v,(v1, v2) -> v2));
+        Map<Long, ChatMessage> conversationid2LastMessageMap = onlyOneMessageList.stream().collect(Collectors.toMap(v -> v.getConversationId(), v -> v, (v1, v2) -> v2));
 
 
         List<ChatListResp> list = ccmp.getRecords().stream().map(v -> {
             ChatListResp r = new ChatListResp();
             r.setChatId(v.getConversationId());
-            if(conversationId2InfoMap.containsKey(v.getConversationId())) {
+            if (conversationId2InfoMap.containsKey(v.getConversationId())) {
                 ChatConversation cc = conversationId2InfoMap.get(v.getConversationId());
                 r.setChatType(cc.getChatType());
                 r.setAvatar(cc.getAvatar());
@@ -259,9 +260,9 @@ public class ChatFacade {
             createMessageStatus(req.getChatConversationId(), cm.getId(), req.getCurrentUserId());
 
             AsyncTaskUtil.execute(() -> {
-                try{
+                try {
                     chatConversationService.updateLastActiveAtById(new Date(), req.getChatConversationId());
-                }catch (Exception e){
+                } catch (Exception e) {
                     log.error("Chat#sendMessage,更新会话最后活跃时间失败, ConversationId:{}", req.getChatConversationId(), e);
                 }
             });
@@ -353,7 +354,7 @@ public class ChatFacade {
             ChatConversation cc = new ChatConversation();
             cc.setChatType(req.getChatType());
             cc.setProjectId(req.getProjectId());
-            cc.setTitle("【"+projects.getName()+"】项目群聊");
+            cc.setTitle("【" + projects.getName() + "】项目群聊");
             cc.setLastActiveAt(new Date());
             cc.setCreatedAt(new Date());
             cc.setCreatedBy(req.getCurrentUserId());
@@ -473,12 +474,12 @@ public class ChatFacade {
         }).sorted(Comparator.comparing(ChatHistoryResp::getCreatedTime)).collect(Collectors.toList());
 
         AsyncTaskUtil.execute(() -> {
-            try{
+            try {
                 //获取list中最后一个ID
                 Long lastMessageId = result.get(list.size() - 1).getChatMessageId();
                 updateUserRead(req.getChatConversationId(), req.getCurrentUserId(), lastMessageId);
-            }catch (Exception e) {
-                log.error("ChatFacade#getNewMessages, 更新用户已读失败",e);
+            } catch (Exception e) {
+                log.error("ChatFacade#getNewMessages, 更新用户已读失败", e);
             }
         });
 

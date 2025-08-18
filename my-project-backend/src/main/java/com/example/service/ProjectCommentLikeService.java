@@ -1,9 +1,7 @@
 package com.example.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.example.entity.dto.Account;
 import com.example.entity.dto.ProjectCommentLike;
-import org.springframework.security.core.userdetails.UserDetailsService;
 
 import java.util.List;
 

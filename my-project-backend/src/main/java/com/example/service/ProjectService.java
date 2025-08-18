@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.Projects;
 import com.example.entity.req.ProjectListReq;
-import com.example.entity.req.ShowHotProjectListPageReq;
-import com.example.entity.resp.ShowHotProjectListPageResp;
 
 import java.util.List;
 
@@ -29,8 +27,11 @@ public interface ProjectService extends IService<Projects> {
 
     Projects selectByProjectIdAndStatus(Long projectId, Integer status);
 
+    List<Projects> selectEnabledByProjectIds(List<Long> projectIds);
+
     List<Projects> selectByProjectIds(List<Long> projectIds);
 
     Boolean updateStatus(Long projectId, Integer status, String reason, Long userId);
 
+    Boolean closeProject(Long projectId, Long userId);
 }

@@ -3,7 +3,6 @@ package com.example.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.dto.TaskDefinition;
-import com.example.entity.dto.TaskUserBadge;
 import com.example.entity.req.AchievementMyPageReq;
 
 import java.util.List;

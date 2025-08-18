@@ -83,10 +83,29 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects> im
     }
 
     @Override
-    public List<Projects> selectByProjectIds(List<Long> projectIds) {
+    public List<Projects> selectEnabledByProjectIds(List<Long> projectIds) {
         return this.baseMapper.selectList(new QueryWrapper<Projects>().in("id", projectIds)
                 .gt("status", ProjectEnum.ProjectStatusEnum.NO.getCode())
-                .lt("status", ProjectEnum.ProjectStatusEnum.CLOSED.getCode()).eq("is_deleted", 0));
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public List<Projects> selectByProjectIds(List<Long> projectIds) {
+        return this.baseMapper.selectList(new QueryWrapper<Projects>()
+                .in("id", projectIds)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public Boolean closeProject(Long projectId, Long userId) {
+        Projects p = new Projects();
+        p.setStatus(ProjectEnum.ProjectStatusEnum.CLOSED.getCode());
+        p.setModifiedBy(userId);
+        p.setModifiedAt(new Date());
+        return this.baseMapper.update(p,
+                new QueryWrapper<Projects>()
+                        .eq("id", projectId)
+                        .eq("is_deleted", 0)) == 1;
     }
 
     @Override

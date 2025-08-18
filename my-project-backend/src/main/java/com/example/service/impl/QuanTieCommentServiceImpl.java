@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.QuanTieComment;
-import com.example.entity.dto.QuanTieWatch;
 import com.example.entity.req.QuanTieCommentPageReq;
 import com.example.enums.TieEnum;
 import com.example.mapper.QuanTieCommentMapper;

@@ -1,9 +1,5 @@
 package com.example.entity.resp;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
 /**
@@ -21,6 +17,8 @@ public class ProjectsDetailResp {
     private Long projectsId;
     private String imageUrl;
     private String steps;
+    private Integer status;
+    private String statusName;
     private String tools;
     private String timePerDay;
     private String incomeEstimate;

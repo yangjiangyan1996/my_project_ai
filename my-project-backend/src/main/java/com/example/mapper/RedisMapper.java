@@ -2,7 +2,6 @@ package com.example.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.entity.dto.RedisDTO;
-import com.example.entity.dto.UserFavorites;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

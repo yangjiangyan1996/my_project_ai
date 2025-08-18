@@ -7,15 +7,20 @@ import lombok.Data;
 
 /**
  * @Author YangJian
- * @Description 任务定义表实体类
+ * @Description
  * @Email 1776080295@qq.com
- * @Date 2025/6/18 22:36
+ * @Date 2025/8/18 10:02
  */
+//
 @Data
-@TableName("task_user_point")
-public class TaskUserPoint extends BaseModel {
+@TableName("project_review")
+public class ProjectReview extends BaseModel{
     @TableId(type = IdType.AUTO)
-    private Long id;
-    private Long userId;
-    private Integer points;
+    Long id;
+    Long projectId;
+    Long fromUserId;
+    Long toUserId;
+    Integer role;
+    Integer score;
+    String comment;
 }

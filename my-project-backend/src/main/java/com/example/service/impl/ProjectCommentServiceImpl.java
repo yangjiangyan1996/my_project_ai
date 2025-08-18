@@ -3,7 +3,6 @@ package com.example.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ProjectComment;
-import com.example.entity.dto.ProjectFavorite;
 import com.example.enums.ProjectEnum;
 import com.example.mapper.ProjectCommentMapper;
 import com.example.service.ProjectCommentService;

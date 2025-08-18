@@ -2,7 +2,6 @@ package com.example.Facade;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.example.config.AsyncTaskUtil;
 import com.example.entity.dto.*;
 import com.example.entity.req.AddMemberByManagerReq;
 import com.example.entity.req.MyMemberGroupsReq;
@@ -87,6 +86,7 @@ public class ProjectMemberFacade {
         List<MemberListResp.MemberInfo> list = members.stream().map(v -> {
                     MemberListResp.MemberInfo memberGetResp = new MemberListResp.MemberInfo();
                     memberGetResp.setId(v.getId());
+                    memberGetResp.setUserId(v.getUserId());
                     memberGetResp.setSexName(UserEnums.SexEnum.getByCode(userId2UserInfoMap.get(v.getUserId()).getSex()).getName());
                     memberGetResp.setAvatarUrl(userId2UserInfoMap.get(v.getUserId()).getAvatarUrl());
                     memberGetResp.setNickname(userId2UserInfoMap.get(v.getUserId()).getNickname());

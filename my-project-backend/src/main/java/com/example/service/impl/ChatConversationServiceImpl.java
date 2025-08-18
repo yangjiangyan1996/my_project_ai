@@ -1,10 +1,8 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.ChatConversation;
-import com.example.entity.dto.ChatMessage;
 import com.example.mapper.ChatConversationMapper;
 import com.example.service.ChatConversationService;
 import org.springframework.stereotype.Service;
