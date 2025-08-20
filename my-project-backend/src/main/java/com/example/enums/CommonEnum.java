@@ -231,6 +231,18 @@ public class CommonEnum {
             this.subCategories = subCategories;
         }
 
+        //根据二级code,获取一级code
+        public static int getParentCode(int code) {
+            for (IndustryCategory category : values()) {
+                for (IndustrySubCategory subCategory : category.subCategories) {
+                    if (subCategory.code == code) {
+                        return category.code;
+                    }
+                }
+            }
+            return -1;
+        }
+
         public static int checkCodeLevel(int code) {
             // First check if it's a top-level category code
             for (IndustryCategory category : values()) {

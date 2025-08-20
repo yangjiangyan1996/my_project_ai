@@ -3,6 +3,20 @@ springdoc:
   paths-to-match: /api/**
   swagger-ui:
     operations-sorter: alpha
+
+deepseek:
+  api:
+    key: sk-696a39eb459349eaa2a7712901918eaf
+    timeout: 300
+    model: deepseek-chat
+    temperature: 0.7
+    max-tokens: 2000
+
+auto-publish:
+  enabled: true
+  schedule: "0 0 10,16 * * ?" # 每天10点和16点执行
+  max-daily: 3 # 每天最多自动发布3个项目
+
 spring:
   servlet:
     multipart:

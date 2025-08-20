@@ -15,6 +15,7 @@ import com.example.enums.UserEnums;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ import java.util.stream.Stream;
  * @Date 2025/6/20 17:56
  */
 @Service
+@Slf4j
 public class ProjectFacade {
 
     @Resource
@@ -100,8 +102,12 @@ public class ProjectFacade {
         r.setCreatorName(account.getNickname());
         r.setSecrecyId(account.getSecrecyId());
         if (StringUtils.isNotBlank(r.getTags())) {
-            String tags = Arrays.stream(r.getTags().split(",")).map(v -> CommonEnum.LabelEnums.getByCode(Integer.valueOf(v))).collect(Collectors.joining(","));
-            r.setTags(tags);
+            try{
+                String tags = Arrays.stream(r.getTags().split(",")).map(v -> CommonEnum.LabelEnums.getByCode(Integer.valueOf(v))).collect(Collectors.joining(","));
+                r.setTags(tags);
+            }catch (Exception e) {
+                log.error("标签转换错误:{}",r.getTags(), e);
+            }
         }
 
         if (userId != null) {
