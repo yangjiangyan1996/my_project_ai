@@ -72,7 +72,11 @@ spring:
       credentials: false
       methods: '*'
 
+
+#线上配置放到下面
 logging:
+  file:
+    path: /opt/apps/your-springboot-app/my_project_ai/my-project-backend/log
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
