@@ -66,7 +66,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Account account = this.findAccountByNameOrEmail(username);
+        Account account = this.findAccountByNickNameOrEmail(username);
         if (account == null) {
             throw new UsernameNotFoundException("用户名不存在");
         }
@@ -120,7 +120,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 //        Account account = new Account(null, info.getUsername(),
 //                password, email, Const.ROLE_DEFAULT, new Date());
         Account account = new Account();
-        account.setUsername(info.getUsername());
+        account.setNickname(info.getUsername());
         account.setPassword(password);
         account.setSecrecyId(DateUtils.generateTimestamp());
         account.setEmail(email);
@@ -242,9 +242,9 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      * @param text 用户名或邮件
      * @return 账户实体
      */
-    public Account findAccountByNameOrEmail(String text) {
+    public Account findAccountByNickNameOrEmail(String text) {
         return this.query()
-                .eq("username", text).or()
+                .eq("nickname", text).or()
                 .eq("email", text)
                 .one();
     }
