@@ -5,7 +5,10 @@ import axios from "axios";
 
 import 'element-plus/theme-chalk/dark/css-vars.css'
 
-axios.defaults.baseURL = 'http://localhost:8080'
+//开发环境
+// axios.defaults.baseURL = 'http://localhost:8080'
+//生产环境
+axios.defaults.baseURL = '/api'
 
 const app = createApp(App)
 
