@@ -1,13 +1,17 @@
 <template>
     <div style="width: 100vw;height: 100vh;overflow: hidden;display: flex">
         <div style="flex: 1">
-            <el-image style="width: 100%;height: 100%" fit="cover"
-                      src="https://img1.baidu.com/it/u=4097856652,4033702227&fm=253&fmt=auto&app=120&f=JPEG?w=1422&h=800"/>
+             <el-image 
+                style="width: 100%; height: 100%" 
+                fit="cover"
+                :src="shouyePng"
+                />
+                      
         </div>
         <div class="welcome-title">
-            <div style="font-size: 30px;font-weight: bold">欢迎来到我们的学习平台</div>
-            <div style="margin-top: 10px">在这里你可以学习如何使用Java，如何搭建网站，并且与Java之父密切交流。</div>
-            <div style="margin-top: 5px">在这里你可以同性交友，因为都是男的，没有学Java的女生。</div>
+            <div style="font-size: 30px;font-weight: bold">欢迎来到副业协作平台</div>
+            <div style="margin-top: 10px">在这里，你可以发现有趣的副业项目，结识志同道合的伙伴，一起合作共创。</div>
+            <div style="margin-top: 5px">无论你是想学习新技能、寻找兼职机会，还是想把创意变成现实，都能在这里找到舞台。</div>
         </div>
         <div class="right-card">
             <router-view v-slot="{ Component }">
@@ -20,6 +24,7 @@
 </template>
 
 <script setup>
+import shouyePng from '@/assets/shouye.png'
 
 </script>
 

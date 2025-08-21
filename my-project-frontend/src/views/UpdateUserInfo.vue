@@ -14,11 +14,11 @@
         :rules="rules"
         ref="userFormRef"
       >
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="userForm.username" disabled></el-input>
+        <el-form-item label="昵称" prop="username">
+          <el-input v-model="userForm.username" ></el-input>
         </el-form-item>
 
-        <el-form-item label="昵称" prop="nickname">
+        <el-form-item label="用户名" prop="nickname">
           <el-input v-model="userForm.nickname" placeholder="请输入昵称"></el-input>
         </el-form-item>
 

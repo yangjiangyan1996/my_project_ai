@@ -621,6 +621,9 @@ const formatChatTime = (timeString) => {
 };
 
 const loadChatList = async () => {
+  if(!state.data.id) {
+     return;
+  } 
   if (chatLoading.value) return;
   chatLoading.value = true;
   
