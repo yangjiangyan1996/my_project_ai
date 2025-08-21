@@ -8,7 +8,7 @@ import 'element-plus/theme-chalk/dark/css-vars.css'
 //开发环境
 // axios.defaults.baseURL = 'http://localhost:8080'
 //生产环境
-axios.defaults.baseURL = '/api'
+axios.defaults.baseURL = '/'
 
 const app = createApp(App)
 
