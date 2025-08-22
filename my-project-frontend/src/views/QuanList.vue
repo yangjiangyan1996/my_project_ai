@@ -336,7 +336,7 @@
       <el-form-item label="圈图标" prop="avatar">
         <el-upload
           class="avatar-uploader"
-          action="http://localhost:8080/api/unauth/common/upload"
+          :action="uploadAction"
           :show-file-list="false"
           :on-success="handleAvatarSuccess"
           :before-upload="beforeAvatarUpload"
@@ -373,7 +373,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted,getCurrentInstance } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { 
@@ -385,7 +385,9 @@ import {
 import { logout, post, get } from '@/net';
 import useUserInfo from '@/hooks/useUserInfo';
 
-
+//上传接口，vue中添加 computed,getCurrentInstance
+const { proxy } = getCurrentInstance();
+const uploadAction = computed(() => proxy.$uploadAction());
 
 const router = useRouter()
 const { state: userInfo, loadUserInfo } = useUserInfo();

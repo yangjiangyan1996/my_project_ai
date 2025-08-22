@@ -53,7 +53,7 @@
         <el-form-item label="头像" prop="avatarUrl">
           <el-upload
             class="avatar-uploader"
-            action="http://localhost:8080/api/unauth/common/upload"
+            :action="uploadAction"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
             :before-upload="beforeAvatarUpload"
@@ -86,12 +86,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted,computed,getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { get, post } from '@/net'
 import useUserInfo from '@/hooks/useUserInfo';
+
+//上传接口，vue中添加 computed,getCurrentInstance
+const { proxy } = getCurrentInstance();
+const uploadAction = computed(() => proxy.$uploadAction());
 
 const { state, loadUserInfo } = useUserInfo();
 const router = useRouter()

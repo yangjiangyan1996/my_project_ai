@@ -271,7 +271,7 @@
      <el-form-item label="图片" prop="images">
         <el-upload
           class="cover-uploader"
-          action="http://localhost:8080/api/unauth/common/upload"
+          :action="uploadAction"
           list-type="picture-card"
           :on-success="handleImageSuccess"
           :before-upload="beforeImageUpload"
@@ -357,7 +357,7 @@
 </template>
 
 <script setup>
-import { ref, computed,onMounted,shallowRef, onBeforeUnmount } from 'vue';
+import { ref, computed,onMounted,shallowRef, onBeforeUnmount,getCurrentInstance } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { get, post } from '@/net';
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
@@ -369,6 +369,28 @@ import {
 } from '@element-plus/icons-vue';
 import useUserInfo from '@/hooks/useUserInfo';
 import { debounce } from 'lodash-es';
+
+//上传接口，vue中添加 computed,getCurrentInstance
+const { proxy } = getCurrentInstance();
+const uploadAction = computed(() => proxy.$uploadAction());
+
+
+const editorConfig = {
+  placeholder: '请输入帖子内容...',
+  MENU_CONF: {
+    uploadImage: {
+      server: uploadAction.value,
+      fieldName: 'file',
+      maxFileSize: 2 * 1024 * 1024, // 2M
+      allowedFileTypes: ['image/*'],
+      customInsert(res, insertFn) {
+        if (res && res.data) {
+          insertFn(res.data)
+        }
+      }
+    }
+  }
+}
 
 const route = useRoute();
 const router = useRouter();
@@ -417,22 +439,8 @@ const barInfo = ref({
 // 富文本编辑器相关
 const editorRef = shallowRef()
 const toolbarConfig = {}
-const editorConfig = {
-  placeholder: '请输入帖子内容...',
-  MENU_CONF: {
-    uploadImage: {
-      server: 'http://localhost:8080/api/unauth/common/upload',
-      fieldName: 'file',
-      maxFileSize: 2 * 1024 * 1024, // 2M
-      allowedFileTypes: ['image/*'],
-      customInsert(res, insertFn) {
-        if (res && res.data) {
-          insertFn(res.data)
-        }
-      }
-    }
-  }
-}
+
+
 // 是否已关注
 const isFollowed = ref(false);
 

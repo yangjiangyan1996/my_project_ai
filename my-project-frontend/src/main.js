@@ -6,11 +6,19 @@ import axios from "axios";
 import 'element-plus/theme-chalk/dark/css-vars.css'
 
 //开发环境
-// axios.defaults.baseURL = 'http://localhost:8080'
+axios.defaults.baseURL = 'http://localhost:8080'
 //生产环境
-axios.defaults.baseURL = '/'
+// axios.defaults.baseURL = '/'
 
 const app = createApp(App)
+
+// 添加全局属性
+app.config.globalProperties.$uploadAction = (path = '/api/unauth/common/upload') => {
+    
+   const b =  `${axios.defaults.baseURL}${path}`;
+   console.log("b",b);
+   return b;
+}
 
 app.use(router)
 

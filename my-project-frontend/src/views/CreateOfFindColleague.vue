@@ -15,7 +15,7 @@
         <el-form-item label="封面图片" prop="imageUrl">
           <el-upload
             class="cover-uploader"
-            action="http://localhost:8080/api/unauth/common/upload"
+            :action="uploadAction"
             :show-file-list="false"
             :on-success="handleCoverSuccess"
             :before-upload="beforeCoverUpload">
@@ -216,13 +216,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick, shallowRef, onBeforeUnmount, watch } from 'vue'
+import { ref, reactive, onMounted, nextTick, shallowRef, onBeforeUnmount, watch,computed,getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { post, get } from '@/net'
 import { ElMessage } from 'element-plus'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import '@wangeditor/editor/dist/css/style.css'
+
+
+//上传接口，vue中添加 computed,getCurrentInstance
+const { proxy } = getCurrentInstance();
+const uploadAction = computed(() => proxy.$uploadAction());
 
 const router = useRouter()
 //const itemId = router.query.id
@@ -392,7 +397,7 @@ const editorConfig = {
   placeholder: '请输入操作步骤...',
   MENU_CONF: {
     uploadImage: {
-      server: 'http://localhost:8080/api/unauth/common/upload',
+      server: uploadAction.value,
       fieldName: 'file',
       maxFileSize: 2 * 1024 * 1024, // 2M
       allowedFileTypes: ['image/*'],
