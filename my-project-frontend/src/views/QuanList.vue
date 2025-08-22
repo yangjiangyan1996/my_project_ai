@@ -337,6 +337,7 @@
         <el-upload
           class="avatar-uploader"
           :action="uploadAction"
+          :headers="uploadHeaders"
           :show-file-list="false"
           :on-success="handleAvatarSuccess"
           :before-upload="beforeAvatarUpload"
@@ -382,12 +383,20 @@ import {
   Plus, CircleCheckFilled, Picture,
   Loading, User, Document
 } from '@element-plus/icons-vue'
-import { logout, post, get } from '@/net';
+import { logout, post, get,takeAccessToken } from '@/net';
 import useUserInfo from '@/hooks/useUserInfo';
 
 //上传接口，vue中添加 computed,getCurrentInstance
 const { proxy } = getCurrentInstance();
 const uploadAction = computed(() => proxy.$uploadAction());
+// 创建计算属性来获取上传headers
+const uploadHeaders = computed(() => {
+  const token = takeAccessToken();
+  return {
+    'Authorization': token ? `Bearer ${token}` : ''
+  };
+});
+
 
 const router = useRouter()
 const { state: userInfo, loadUserInfo } = useUserInfo();

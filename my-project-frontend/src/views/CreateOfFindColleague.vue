@@ -16,6 +16,7 @@
           <el-upload
             class="cover-uploader"
             :action="uploadAction"
+            :headers="uploadHeaders"
             :show-file-list="false"
             :on-success="handleCoverSuccess"
             :before-upload="beforeCoverUpload">
@@ -219,7 +220,7 @@
 import { ref, reactive, onMounted, nextTick, shallowRef, onBeforeUnmount, watch,computed,getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
-import { post, get } from '@/net'
+import { post, get ,takeAccessToken} from '@/net'
 import { ElMessage } from 'element-plus'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import '@wangeditor/editor/dist/css/style.css'
@@ -228,6 +229,14 @@ import '@wangeditor/editor/dist/css/style.css'
 //上传接口，vue中添加 computed,getCurrentInstance
 const { proxy } = getCurrentInstance();
 const uploadAction = computed(() => proxy.$uploadAction());
+// 创建计算属性来获取上传headers
+const uploadHeaders = computed(() => {
+  const token = takeAccessToken();
+  return {
+    'Authorization': token ? `Bearer ${token}` : ''
+  };
+});
+
 
 const router = useRouter()
 //const itemId = router.query.id
@@ -401,6 +410,13 @@ const editorConfig = {
       fieldName: 'file',
       maxFileSize: 2 * 1024 * 1024, // 2M
       allowedFileTypes: ['image/*'],
+
+      // 添加headers配置
+      headers: {
+        'Authorization': takeAccessToken() ? `Bearer ${takeAccessToken()}` : ''
+      },
+
+
       customInsert(res, insertFn) {
       console.log("图片",res)
         if (res && res.data) {

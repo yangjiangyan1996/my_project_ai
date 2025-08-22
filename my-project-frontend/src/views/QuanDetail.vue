@@ -272,6 +272,7 @@
         <el-upload
           class="cover-uploader"
           :action="uploadAction"
+          :headers="uploadHeaders"
           list-type="picture-card"
           :on-success="handleImageSuccess"
           :before-upload="beforeImageUpload"
@@ -359,7 +360,7 @@
 <script setup>
 import { ref, computed,onMounted,shallowRef, onBeforeUnmount,getCurrentInstance } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { get, post } from '@/net';
+import { get, post ,takeAccessToken} from '@/net';
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import '@wangeditor/editor/dist/css/style.css'
 import { 
@@ -373,8 +374,15 @@ import { debounce } from 'lodash-es';
 //上传接口，vue中添加 computed,getCurrentInstance
 const { proxy } = getCurrentInstance();
 const uploadAction = computed(() => proxy.$uploadAction());
+// 创建计算属性来获取上传headers
+const uploadHeaders = computed(() => {
+  const token = takeAccessToken();
+  return {
+    'Authorization': token ? `Bearer ${token}` : ''
+  };
+});
 
-
+//  //TODO 111111
 const editorConfig = {
   placeholder: '请输入帖子内容...',
   MENU_CONF: {
@@ -383,6 +391,12 @@ const editorConfig = {
       fieldName: 'file',
       maxFileSize: 2 * 1024 * 1024, // 2M
       allowedFileTypes: ['image/*'],
+
+       // 添加headers配置
+      headers: {
+        'Authorization': takeAccessToken() ? `Bearer ${takeAccessToken()}` : ''
+      },
+
       customInsert(res, insertFn) {
         if (res && res.data) {
           insertFn(res.data)

@@ -14,10 +14,9 @@ axios.defaults.baseURL = '/'
 const app = createApp(App)
 
 // 添加全局属性
-app.config.globalProperties.$uploadAction = (path = '/api/unauth/common/upload') => {
-    
+app.config.globalProperties.$uploadAction = (path = '/api/auth/common/upload') => {
    const b =  `${axios.defaults.baseURL}${path}`;
-   console.log("b",b);
+   console.log("上传图片=====",b);
    return b;
 }
 

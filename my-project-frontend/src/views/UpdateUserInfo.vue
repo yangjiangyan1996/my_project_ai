@@ -90,12 +90,21 @@ import { ref, onMounted,computed,getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { get, post } from '@/net'
+import { get, post ,takeAccessToken} from '@/net'
 import useUserInfo from '@/hooks/useUserInfo';
 
 //上传接口，vue中添加 computed,getCurrentInstance
 const { proxy } = getCurrentInstance();
 const uploadAction = computed(() => proxy.$uploadAction());
+// 创建计算属性来获取上传headers
+const uploadHeaders = computed(() => {
+  const token = takeAccessToken();
+  return {
+    'Authorization': token ? `Bearer ${token}` : ''
+  };
+});
+
+
 
 const { state, loadUserInfo } = useUserInfo();
 const router = useRouter()
