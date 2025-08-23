@@ -414,17 +414,17 @@
         <el-menu-item index="skill-match" @click="changeDisplayMode('talentMatch')">人才匹配</el-menu-item>
       </el-sub-menu>
 
-      <el-sub-menu index="4">
+      <!-- <el-sub-menu index="4">
         <template #title><i class="el-icon-guide"></i>导航工具</template>
         <el-menu-item index="fuyeceping" @click="router.push({ name: 'survey' })">副业测评</el-menu-item>
         <el-menu-item index="gongjuxiang" @click="router.push({ name: 'toolbox' })">工具箱</el-menu-item>
         <el-menu-item index="ziyuandaohang" @click="router.push({ name: 'resources' })">资源导航</el-menu-item>
-      </el-sub-menu>
+      </el-sub-menu> -->
 
-      <el-sub-menu index="5">
+      <!-- <el-sub-menu index="5">
         <template #title><i class="el-icon-s-custom"></i>AI推荐</template>
         <el-menu-item index="ai-assistant" @click="changeDisplayMode('growthCenter')">副业推荐助手</el-menu-item>
-      </el-sub-menu>
+      </el-sub-menu> -->
     </el-menu>
 
     <!-- 搜索区域 -->
