@@ -6,7 +6,9 @@ import com.example.entity.dto.QuanTieWatch;
 import com.example.mapper.QuanTieWatchMapper;
 import com.example.service.QuanTieWatchService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -44,6 +46,9 @@ public class QuanTieWatchServiceImpl  extends ServiceImpl<QuanTieWatchMapper, Qu
 
     @Override
     public List<QuanTieWatch> selectByTieIds(List<Long> tieIds) {
+        if (CollectionUtils.isEmpty(tieIds)) {
+            return new ArrayList<>();
+        }
         return this.baseMapper.selectList(new QueryWrapper<QuanTieWatch>().in("tie_id", tieIds).eq("is_deleted", 0));
     }
 }
