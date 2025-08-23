@@ -11,10 +11,7 @@ import com.example.mapper.QuanTieCommentMapper;
 import com.example.service.QuanTieCommentService;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -75,6 +72,9 @@ public class QuanTieCommentServiceImpl extends ServiceImpl<QuanTieCommentMapper,
 
     @Override
     public Long getReplyCount(Long commenId) {
+        if (commenId == null) {
+            return 0L;
+        }
         return this.baseMapper.selectCount(new QueryWrapper<QuanTieComment>()
                 .eq("first_level_common_id", commenId)
                 .eq("status", TieEnum.CommentStatusEnum.ok.getCode())
@@ -84,6 +84,9 @@ public class QuanTieCommentServiceImpl extends ServiceImpl<QuanTieCommentMapper,
 
     @Override
     public QuanTieComment selectByTieIdAndCommentId(Long tieId, Long commentId) {
+        if (commentId == null || tieId == null) {
+            return new QuanTieComment();
+        }
         return this.baseMapper.selectOne(new QueryWrapper<QuanTieComment>()
                 .eq("tie_id", tieId)
                 .eq("id", commentId)
@@ -92,6 +95,9 @@ public class QuanTieCommentServiceImpl extends ServiceImpl<QuanTieCommentMapper,
 
     @Override
     public List<QuanTieComment> selectByTieIds(List<Long> tieIds) {
+        if (CollectionUtils.isEmpty(tieIds)) {
+            return new ArrayList<>();
+        }
         return this.baseMapper.selectList(new QueryWrapper<QuanTieComment>()
                 .in("tie_id", tieIds)
                 .eq("is_deleted", 0));
@@ -111,6 +117,9 @@ public class QuanTieCommentServiceImpl extends ServiceImpl<QuanTieCommentMapper,
 
     @Override
     public List<QuanTieComment> selectByTieId(Long tieId) {
+        if (tieId == null) {
+            return new ArrayList<>();
+        }
         return this.baseMapper.selectList(new QueryWrapper<QuanTieComment>()
                 .eq("tie_id", tieId)
                 .eq("is_deleted", 0));
@@ -118,6 +127,9 @@ public class QuanTieCommentServiceImpl extends ServiceImpl<QuanTieCommentMapper,
 
     @Override
     public int updateStatus(Long commentId, Long userId, Integer code) {
+        if (commentId == null || userId == null || code == null) {
+            return 0;
+        }
         QuanTieComment q = new QuanTieComment();
         q.setStatus(code);
         q.setModifiedAt(new Date());
