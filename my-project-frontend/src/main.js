@@ -13,9 +13,14 @@ axios.defaults.baseURL = '/'
 
 const app = createApp(App)
 
-// 添加全局属性
+// 添加上传图片获取地址的全局属性
+// 只用来上传文件
+// 只用来上传文件
+// 只用来上传文件
+// 只用来上传文件
 app.config.globalProperties.$uploadAction = (path = '/api/auth/common/upload') => {
-   const b =  `${axios.defaults.baseURL}${path}`;
+   const url = "https://xsidework.com";
+   const b =  `${url}${path}`;
    console.log("上传图片=====",b);
    return b;
 }
