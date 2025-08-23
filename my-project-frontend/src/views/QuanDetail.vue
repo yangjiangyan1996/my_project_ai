@@ -618,7 +618,7 @@ const handleImageSuccess = (response, file, fileList) => {
 // 图片上传前校验 (保持原有逻辑不变)
 const beforeImageUpload = (file) => {
   const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
+  const isLt2M = file.size / 1024 / 1024 < 10
   const isSizeValid = new Promise((resolve) => {
     const img = new Image()
     img.src = URL.createObjectURL(file)
@@ -636,7 +636,7 @@ const beforeImageUpload = (file) => {
     return false
   }
   if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB!')
+    ElMessage.error('图片大小不能超过 10MB!')
     return false
   }
   

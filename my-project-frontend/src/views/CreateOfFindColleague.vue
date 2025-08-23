@@ -477,16 +477,16 @@ const handleCoverSuccess = (response) => {
 
 const beforeCoverUpload = (file) => {
   const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
+  const isLt2M = file.size / 1024 / 1024 < 10
 
   if (!isJPG) {
     ElMessage.error('封面图片只能是 JPG/PNG 格式!')
     return false
   }
-  // if (!isLt2M) {
-  //   ElMessage.error('封面图片大小不能超过 2MB!')
-  //   return false
-  // }
+  if (!isLt2M) {
+    ElMessage.error('封面图片大小不能超过 10MB!')
+    return false
+  }
   return isJPG && isLt2M
 }
 

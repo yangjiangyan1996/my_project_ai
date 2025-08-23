@@ -837,14 +837,14 @@ const showCreateDialog = async () => {
 
 const beforeAvatarUpload = (file) => {
   const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
+  const isLt2M = file.size / 1024 / 1024 < 10
 
   if (!isJPG) {
     ElMessage.error('头像图片只能是 JPG/PNG 格式!')
     return false
   }
   if (!isLt2M) {
-    ElMessage.error('头像图片大小不能超过 2MB!')
+    ElMessage.error('头像图片大小不能超过 10MB!')
     return false
   }
   return true
@@ -904,22 +904,6 @@ const handleAvatarSuccess = (response) => {
 const handleCoverSuccess = (response) => {
   form.imageUrl = response.data
   ElMessage.success('上传成功')
-}
-
-// 封面图片上传前校验 (保持不变)
-const beforeCoverUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
-
-  if (!isJPG) {
-    ElMessage.error('封面图片只能是 JPG/PNG 格式!')
-    return false
-  }
-  if (!isLt2M) {
-    ElMessage.error('封面图片大小不能超过 2MB!')
-    return false
-  }
-  return true
 }
 
 // 关闭对话框前的确认
