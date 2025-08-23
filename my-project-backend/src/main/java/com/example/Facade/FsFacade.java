@@ -1,6 +1,7 @@
 package com.example.Facade;
 
 import com.alibaba.fastjson2.JSON;
+import com.example.config.TenXunConfig;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicSessionCredentials;
@@ -8,6 +9,7 @@ import com.qcloud.cos.model.*;
 import com.qcloud.cos.region.Region;
 import com.tencent.cloud.CosStsClient;
 import com.tencent.cloud.Response;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -26,13 +28,16 @@ import java.util.TreeMap;
 @Slf4j
 public class FsFacade {
 
+    @Resource
+    private TenXunConfig tenXunConfig;
+
 
     private Response getCredential() throws IOException {
         TreeMap<String, Object> config = new TreeMap<String, Object>();
         // 云 api 密钥 SecretId
-        config.put("secretId", "");
+        config.put("secretId", tenXunConfig.getSecretId());
         // 云 api 密钥 SecretKey
-        config.put("secretKey", "");
+        config.put("secretKey", tenXunConfig.getSecretKey());
 
         // 设置域名,可通过此方式设置内网域名
         //config.put("host", "sts.internal.tencentcloudapi.com");
