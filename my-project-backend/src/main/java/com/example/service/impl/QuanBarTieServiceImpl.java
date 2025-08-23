@@ -1,6 +1,7 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.QuanBarTie;
@@ -10,6 +11,7 @@ import com.example.mapper.QuanBarTieMapper;
 import com.example.service.QuanBarTieService;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -51,6 +53,9 @@ public class QuanBarTieServiceImpl extends ServiceImpl<QuanBarTieMapper, QuanBar
 
     @Override
     public List<QuanBarTie> selectByTieIds(List<Long> tieids) {
+        if (CollectionUtils.isEmpty(tieids)) {
+            return new ArrayList<>();
+        }
         return this.baseMapper.selectList(new QueryWrapper<QuanBarTie>()
                 .in("id", tieids)
                 .eq("is_deleted", 0)
