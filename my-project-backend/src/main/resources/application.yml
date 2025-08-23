@@ -5,7 +5,6 @@ spring:
     import: optional:file:.env[.properties]  # 可选加载外部.env文件
 
 # 公共配置（所有环境共享）
-spring:
   servlet:
     multipart:
       max-file-size: 5MB
