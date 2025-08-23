@@ -14,9 +14,9 @@ deepseek:
     max-tokens: ${DEEPSEEK_MAX_TOKENS:2000}
 
 auto-publish:
-  enabled: ${AUTO_PUBLISH_ENABLED:true}
-  schedule: ${AUTO_PUBLISH_SCHEDULE:"0 0 10,16 * * ?"}
-  max-daily: ${AUTO_PUBLISH_MAX_DAILY:3}
+  enabled: true
+  schedule: 0 0 10,16 * * ?
+  max-daily: 3
 
 spring:
   mail:
