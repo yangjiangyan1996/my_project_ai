@@ -1,3 +1,33 @@
 spring:
   profiles:
-    active: '@environment@'
+    active: '@environment@'  # 由 Maven 资源过滤替换
+  config:
+    import: optional:file:.env[.properties]  # 可选加载外部.env文件
+
+# 公共配置（所有环境共享）
+spring:
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+  web:
+    verify:
+      mail-limit: 60
+    flow:
+      period: 3
+      limit: 50
+      block: 30
+    cors:
+      origin: '*'
+      credentials: false
+      methods: '*'
+  security:
+    filter:
+      order: -100
+
+# 公共日志配置
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.example.mapper: DEBUG
