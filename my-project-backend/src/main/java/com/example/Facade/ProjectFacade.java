@@ -24,7 +24,6 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @Author YangJian
@@ -86,44 +85,45 @@ public class ProjectFacade {
 
         ProjectsDetailResp r = new ProjectsDetailResp();
         ProjectsDetail project = projectsDetailService.selectByProjectId(projectId);
-        BeanUtils.copyProperties(project, r);
+        if (project != null) {
+            BeanUtils.copyProperties(project, r);
+            r.setName(projectDown.getName());
+            r.setStatus(projectDown.getStatus());
+            r.setStatusName(ProjectEnum.ProjectStatusEnum.getByCode(projectDown.getStatus()));
+            r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
+            r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
+            r.setTimePerDay(project.getTimePerDay() + "小时/天");
+            r.setIncomeEstimate(project.getIncomeEstimateMin() + "-" + project.getIncomeEstimateMax() + "元/天");
+            r.setTargetAudience(CommonEnum.UserTypeEnum.getByCode(project.getTargetAudience()));
+            r.setImageUrl(projectDown.getImageUrl());
+            Account account = accountService.selectById(project.getCreatedBy());
+            r.setCreatorName(account.getNickname());
+            r.setSecrecyId(account.getSecrecyId());
+            if (StringUtils.isNotBlank(r.getTags())) {
+                try {
+                    String tags = Arrays.stream(r.getTags().split(",")).map(v -> CommonEnum.LabelEnums.getByCode(Integer.valueOf(v))).collect(Collectors.joining(","));
+                    r.setTags(tags);
+                } catch (Exception e) {
+                    log.error("标签转换错误:{}", r.getTags(), e);
+                }
+            }
 
+            if (userId != null) {
+                Boolean myLike = projectLikeService.selectByProjectIdAndUserId(projectId, userId);
+                r.setMyLike(myLike);
+                Boolean myFavorite = projectFavoriteService.selectByProjectIdAndUserId(projectId, userId);
+                r.setMyFavorite(myFavorite);
 
-        r.setName(projectDown.getName());
-        r.setStatus(projectDown.getStatus());
-        r.setStatusName(ProjectEnum.ProjectStatusEnum.getByCode(projectDown.getStatus()));
-        r.setLikeCount(projectLikeService.selectCountByProjectId(projectId));
-        r.setFavoriteCount(projectFavoriteService.selectCountByProjectId(projectId));
-        r.setTimePerDay(project.getTimePerDay() + "小时/天");
-        r.setIncomeEstimate(project.getIncomeEstimateMin() + "-" + project.getIncomeEstimateMax() + "元/天");
-        r.setTargetAudience(CommonEnum.UserTypeEnum.getByCode(project.getTargetAudience()));
-        r.setImageUrl(projectDown.getImageUrl());
-        Account account = accountService.selectById(project.getCreatedBy());
-        r.setCreatorName(account.getNickname());
-        r.setSecrecyId(account.getSecrecyId());
-        if (StringUtils.isNotBlank(r.getTags())) {
-            try{
-                String tags = Arrays.stream(r.getTags().split(",")).map(v -> CommonEnum.LabelEnums.getByCode(Integer.valueOf(v))).collect(Collectors.joining(","));
-                r.setTags(tags);
-            }catch (Exception e) {
-                log.error("标签转换错误:{}",r.getTags(), e);
+                Boolean followed = userFollowService.selectByUserIdAndFollowedId(userId, project.getCreatedBy());
+                r.setFollowed(followed);
+
+                ProjectApplications pa = projectApplicationsService.selectByProjectIdAndUserId(projectId, userId);
+                if (pa != null) {
+                    r.setApplyStatus(pa.getStatus());
+                }
             }
         }
 
-        if (userId != null) {
-            Boolean myLike = projectLikeService.selectByProjectIdAndUserId(projectId, userId);
-            r.setMyLike(myLike);
-            Boolean myFavorite = projectFavoriteService.selectByProjectIdAndUserId(projectId, userId);
-            r.setMyFavorite(myFavorite);
-
-            Boolean followed = userFollowService.selectByUserIdAndFollowedId(userId, project.getCreatedBy());
-            r.setFollowed(followed);
-
-            ProjectApplications pa = projectApplicationsService.selectByProjectIdAndUserId(projectId, userId);
-            if (pa != null) {
-                r.setApplyStatus(pa.getStatus());
-            }
-        }
         return r;
     }
 
@@ -954,7 +954,7 @@ public class ProjectFacade {
         }
 
         List<ProjectReview> prList = projectReviewService.selectByProjectIdAndFromUserId(projectId, userId);
-        if (prList.size() < pm.size() -1) {
+        if (prList.size() < pm.size() - 1) {
             return false;
         }
         return true;
@@ -966,14 +966,14 @@ public class ProjectFacade {
             throw new ValidationException("用户未加入");
         }
 
-        Boolean saveOrUpdate =false;
+        Boolean saveOrUpdate = false;
         ProjectReview pr = projectReviewService.selectByProjectIdAndFromUserIdAndToUserId(req.getProjectId(), userId, req.getToUserId());
         if (pr != null) {
             pr.setScore(req.getScore());
             pr.setComment(req.getComment());
             pr.setModifiedBy(userId);
             pr.setModifiedAt(new Date());
-            saveOrUpdate = projectReviewService.updateById( pr);
+            saveOrUpdate = projectReviewService.updateById(pr);
         } else {
             pr = new ProjectReview();
             pr.setProjectId(req.getProjectId());
@@ -1006,7 +1006,7 @@ public class ProjectFacade {
 
     public List<ProjectAvgEvaluateListResp> getAvgEvaluateList(Long projectId) {
         List<ProjectReview> list = projectReviewService.selectByProjectId(projectId);
-        if (CollectionUtils.isEmpty( list)) {
+        if (CollectionUtils.isEmpty(list)) {
             return new ArrayList<>();
         }
         List<Long> u1 = list.stream().map(v -> v.getFromUserId()).collect(Collectors.toList());

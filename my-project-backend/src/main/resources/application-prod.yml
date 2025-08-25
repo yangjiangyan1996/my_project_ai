@@ -15,7 +15,7 @@ deepseek:
 
 auto-publish:
   enabled: true
-  schedule: 0 0 10,16 * * ?
+  schedule: 0 0 9-22 * * ?
   max-daily: 3
 
 spring:
@@ -58,6 +58,12 @@ spring:
 tengxun:
   secretId: ${TENGXUN_SECRET_ID:}
   secretKey: ${TENGXUN_SECRET_KEY:}
+  prodEvn: true
+
+jimeng:
+  accessKeyId: ${JIMENG_ACCESS_KEY_ID:}
+  accessKeySecret: ${JIMENG_ACCESS_KEY_SECRET:}
+
 
 logging:
   file:

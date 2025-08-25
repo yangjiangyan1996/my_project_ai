@@ -142,10 +142,20 @@
             <version>5.6.227</version>
         </dependency>
 
+<!--        腾讯云-->
         <dependency>
             <groupId>com.qcloud</groupId>
             <artifactId>cos-sts_api</artifactId>
             <version>3.1.0</version>
+        </dependency>
+
+
+<!--        即梦-->
+        <!-- https://mvnrepository.com/artifact/com.volcengine/volcengine-java-sdk-core -->
+        <dependency>
+            <groupId>com.volcengine</groupId>
+            <artifactId>volc-sdk-java</artifactId>
+            <version>1.0.230</version>
         </dependency>
     </dependencies>
 

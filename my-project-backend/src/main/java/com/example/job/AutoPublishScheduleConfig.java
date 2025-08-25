@@ -1,8 +1,7 @@
-package com.example.config;
+package com.example.job;
 
 import com.example.service.AutoProjectService;
 import jakarta.annotation.Resource;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -31,11 +30,5 @@ public class AutoPublishScheduleConfig {
         } else {
             log.info("未发布新项目(可能已达每日上限或没有活跃用户)");
         }
-    }
-
-    // 每小时检查一次，确保每天至少有1个项目
-    @Scheduled(cron = "0 0 * * * ?")
-    public void ensureDailyMinimum() {
-        // 实现略...
     }
 }

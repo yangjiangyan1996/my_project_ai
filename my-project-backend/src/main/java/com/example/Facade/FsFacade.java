@@ -1,6 +1,5 @@
 package com.example.Facade;
 
-import com.alibaba.fastjson2.JSON;
 import com.example.config.TenXunConfig;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
@@ -31,7 +30,6 @@ public class FsFacade {
     @Resource
     private TenXunConfig tenXunConfig;
 
-
     private Response getCredential() throws IOException {
         TreeMap<String, Object> config = new TreeMap<String, Object>();
         // 云 api 密钥 SecretId
@@ -46,9 +44,9 @@ public class FsFacade {
         config.put("durationSeconds", 1800);
 
         // 换成你的 bucket
-        config.put("bucket", "fy-user-fs-1370764194");
+        config.put("bucket", tenXunConfig.getBucketName());
         // 换成 bucket 所在地区
-        config.put("region", "ap-guangzhou");
+        config.put("region", tenXunConfig.getBucketRegion());
 
         // 可以通过 allowPrefixes 指定前缀数组, 例子： a.jpg 或者 a/* 或者 * (使用通配符*存在重大安全风险, 请谨慎评估使用)
         config.put("allowPrefixes", new String[] {
@@ -95,7 +93,7 @@ public class FsFacade {
         BasicSessionCredentials cred = new BasicSessionCredentials(tmpSecretId, tmpSecretKey, sessionToken);
         // 2 设置 bucket 的地域
         // clientConfig 中包含了设置 region, https(默认 http), 超时, 代理等 set 方法, 使用可参见源码或者常见问题 Java SDK 部分
-        Region region = new Region("ap-guangzhou"); //COS_REGION 参数：配置成存储桶 bucket 的实际地域，例如 ap-beijing，更多 COS 地域的简称请参见 https://cloud.tencent.com/document/product/436/6224
+        Region region = new Region(tenXunConfig.getBucketRegion()); //COS_REGION 参数：配置成存储桶 bucket 的实际地域，例如 ap-beijing，更多 COS 地域的简称请参见 https://cloud.tencent.com/document/product/436/6224
         ClientConfig clientConfig = new ClientConfig(region);
         // 3 生成 cos 客户端
         COSClient cosClient = new COSClient(cred, clientConfig);
@@ -118,7 +116,6 @@ public class FsFacade {
         // 指定要上传的文件
         // 指定文件上传到 COS 上的路径，即对象键。例如对象键为 folder/picture.jpg，则表示将文件 picture.jpg 上传到 folder 路径下
         PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key, localFile);
-        log.info("上传文件: {}", JSON.toJSONString(putObjectRequest));
         PutObjectResult putObjectResult = cosClient.putObject(putObjectRequest);
         log.info("上传结果: {}", putObjectResult);
         return putObjectResult;

@@ -1,19 +1,15 @@
 package com.example.controller;
 
 import com.example.Facade.FsFacade;
+import com.example.config.TenXunConfig;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.filter.UserUtil;
 import com.example.mapper.ImagesMapper;
-import com.example.utils.ImageUtils;
+import com.example.utils.FileUtils;
 import com.qcloud.cos.COSClient;
-import com.qcloud.cos.ClientConfig;
-import com.qcloud.cos.auth.BasicSessionCredentials;
 import com.qcloud.cos.exception.CosServiceException;
-import com.qcloud.cos.model.Bucket;
 import com.qcloud.cos.model.PutObjectResult;
-import com.qcloud.cos.region.Region;
-import com.tencent.cloud.Response;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,10 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 
 /**
@@ -41,6 +33,8 @@ import java.util.UUID;
 public class UploadController {
 
     @Resource
+    TenXunConfig tenXunConfig;
+    @Resource
     FsFacade fsFacade;
     @Resource
     private ImagesMapper imagesMapper;
@@ -50,19 +44,19 @@ public class UploadController {
         File tempFile = null;
         try {
             COSClient cc = fsFacade.getCosClient();
-            tempFile = convertMultipartFileToFile(file);
+            tempFile = FileUtils.convertMultipartFileToFile(file);
 
             UserInfo user = UserUtil.getCurrentUser();
 
             // 生成唯一的文件key，避免文件名冲突
             String originalFilename = file.getOriginalFilename();
             String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String fileKey = "image/"+user.getId() + "/" + System.currentTimeMillis() + "_" + UUID.randomUUID() + fileExtension;
+            String fileKey = tenXunConfig.getDir() +user.getId() + "/" + System.currentTimeMillis() + "_" + UUID.randomUUID() + fileExtension;
 
-            PutObjectResult putObjectResult = fsFacade.uploadFile(cc, "fy-user-fs-1370764194", fileKey, tempFile);
+            PutObjectResult putObjectResult = fsFacade.uploadFile(cc, tenXunConfig.bucketName, fileKey, tempFile);
 
             // 构建文件的访问URL（需要根据您的实际情况调整）
-            String fileUrl = "https://fy-user-fs-1370764194.cos.ap-guangzhou.myqcloud.com/" + fileKey;
+            String fileUrl = tenXunConfig.getBucketUrl() + fileKey;
 
             return RespBean.success(fileUrl);
 
@@ -86,22 +80,4 @@ public class UploadController {
             }
         }
     }
-
-    public File convertMultipartFileToFile(MultipartFile multipartFile) {
-        // 创建临时文件或指定目标文件
-        File file = new File(System.getProperty("java.io.tmpdir") + "/" + multipartFile.getOriginalFilename());
-
-        // 或者创建真正的临时文件（会在JVM退出时自动删除）
-        // File file = File.createTempFile("upload-", "-" + multipartFile.getOriginalFilename());
-
-        // 将MultipartFile内容传输到文件
-        try {
-            multipartFile.transferTo(file);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return file;
-    }
-
 }

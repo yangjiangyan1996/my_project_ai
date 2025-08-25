@@ -1,5 +1,4 @@
-// ChatRequest.java
-package com.example.entity.base;
+package com.example.entity.deepseek;
 
 import lombok.Data;
 

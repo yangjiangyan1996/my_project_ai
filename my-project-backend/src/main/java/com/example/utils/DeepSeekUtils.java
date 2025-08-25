@@ -1,7 +1,7 @@
 package com.example.utils;
 
-import com.example.entity.base.ChatRequest;
-import com.example.entity.base.DeepSeekResponse;
+import com.example.entity.deepseek.ChatRequest;
+import com.example.entity.deepseek.DeepSeekResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
