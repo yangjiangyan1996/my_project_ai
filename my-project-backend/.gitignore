@@ -33,7 +33,8 @@ build/
 .vscode/
 
 # 忽略开发环境配置文件
-application-dev.yml
+**/application-dev.yml
+**/application-dev.yaml
 
 # 忽略日志文件
 log/
