@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.example.Facade.FsFacade;
 import com.example.Facade.JimengFacade;
 import com.example.config.AsyncTaskUtil;
+import com.example.config.JMConfig;
 import com.example.config.TenXunConfig;
 import com.example.entity.RestBean;
 import com.example.entity.jimeng.JimengResp;
@@ -38,6 +39,8 @@ import java.util.UUID;
 @RequestMapping("/api/unauth/project/")
 public class TestController {
     @Resource
+    JMConfig jmConfig;
+    @Resource
     TenXunConfig tenXunConfig;
     @Resource
     JimengFacade jimengFacade;
@@ -60,9 +63,9 @@ public class TestController {
     public String sendSimpleMail() {
         IVisualService visualService = VisualServiceImpl.getInstance();
 
-        visualService.setAccessKey(tenXunConfig.getSecretId());
+        visualService.setAccessKey(jmConfig.getAccessKey());
 
-        visualService.setSecretKey(tenXunConfig.getSecretKey());
+        visualService.setSecretKey(jmConfig.getAccessKeySecret());
 
         JSONObject req = new JSONObject();
         req.put("req_key", "jimeng_high_aes_general_v21_L");

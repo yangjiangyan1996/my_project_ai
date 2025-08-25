@@ -2,6 +2,7 @@ package com.example.Facade;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.example.config.JMConfig;
 import com.example.config.TenXunConfig;
 import com.example.entity.jimeng.CustomMultipartFile;
 import com.example.entity.jimeng.JimengResp;
@@ -32,6 +33,8 @@ import java.util.UUID;
 @Slf4j
 public class JimengFacade {
 
+    @Resource
+    JMConfig jmConfig;
     @Resource
     TenXunConfig tenXunConfig;
     @Resource
@@ -86,9 +89,9 @@ public class JimengFacade {
     private String generateImageSync(String prompt) throws Exception {
         IVisualService visualService = VisualServiceImpl.getInstance();
 
-        visualService.setAccessKey(tenXunConfig.getSecretId());
+        visualService.setAccessKey(jmConfig.getAccessKey());
 
-        visualService.setSecretKey(tenXunConfig.getSecretKey());
+        visualService.setSecretKey(jmConfig.getAccessKeySecret());
 
         JSONObject req = new JSONObject();
         req.put("req_key", "jimeng_high_aes_general_v21_L");
