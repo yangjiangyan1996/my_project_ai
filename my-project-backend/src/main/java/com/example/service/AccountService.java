@@ -30,4 +30,10 @@ public interface AccountService extends IService<Account>, UserDetailsService {
     Account selectBySecrecyId(Long secrecyId);
 
     List<Account> selectFildByUserId();
+
+    /**
+     * 查询默认用户
+     * @return
+     */
+    List<Account> selectDefaultUser();
 }

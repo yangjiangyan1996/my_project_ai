@@ -15,7 +15,6 @@ import com.example.service.AutoProjectService;
 import com.example.service.QuanBarTieService;
 import com.example.service.QuanBarsService;
 import com.google.common.collect.Lists;
-import io.lettuce.core.internal.LettuceLists;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomUtils;
@@ -315,10 +314,10 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
 
 
     private Long getRandomActiveUserId() {
-        // 获取最近30天活跃的用户
-        List<Long> ods = LettuceLists.newList(1L, 2L, 8L, 12L);
-        List<Account> activeUsers = accountService.selectByIds(ods);
+        // 获取默认用户
+        List<Account> activeUsers = accountService.selectDefaultUser();
         if (activeUsers.isEmpty()) {
+            log.warn("没有找到默认用户");
             return null;
         }
         return activeUsers.get(RandomUtils.nextInt(0, activeUsers.size())).getId();
