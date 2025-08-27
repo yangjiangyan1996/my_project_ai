@@ -7,9 +7,7 @@ import jakarta.annotation.Resource;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
 
@@ -19,19 +17,30 @@ import java.util.List;
 public class DeepSeekContentService {
 
     @Resource
-    WebClient deepSeekWebClient;
-
-    @Value("${deepseek.api.model}")
-    private String model;
-
-    @Value("${deepseek.api.temperature}")
-    private Double temperature;
-
-    @Value("${deepseek.api.max-tokens}")
-    private Integer maxTokens;
-
-    @Resource
     private DeepSeekUtils deepSeekUtils;
+
+    /**
+     * 生成圈子帖子标题
+     */
+    public String generateQuanTieTitle(String barName) {
+        String prompt = "请为'" + barName + "'圈子生成一个创业教学帖子的标题。" +
+                "要求：1、突出创业教学主题，吸引人点击，长度在15-25字之间。" +
+                " 2、只提供一个标题\n" +
+                "示例：'摆摊创业全攻略：从零开始月入过万的烧烤技巧'";
+
+        return deepSeekUtils.callDeepSeek(prompt);
+    }
+
+    /**
+     * 生成圈子帖子内容
+     */
+    public String generateQuanTieContent(String barName, String title) {
+        String prompt = "请为'" + barName + "'领域生成一篇关于" + title + "的完整的创业教学帖子内容。" +
+                "要求包含：具体操作步骤、所需工具材料、盈利模式分析。" +
+                "内容要实用具体，适合创业者学习，使用html格式分段，字数在800-1200字。";
+
+        return deepSeekUtils.callDeepSeek(prompt);
+    }
 
     public String generateProjectContent(String prompt) {
         return deepSeekUtils.callDeepSeek(prompt);

@@ -35,6 +35,15 @@ public class QuanBarsServiceImpl extends ServiceImpl<QuanBarsMapper,QuanBars > i
     }
 
     @Override
+    public List<QuanBars> selectAll() {
+        return this.baseMapper.selectList(
+                new QueryWrapper<QuanBars>()
+                        .eq("status", QuanEnum.BarStatusEnums.AUDIT_PASS.getCode())
+                        .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
     public List<QuanBars> selectByTieIds(List<Long> barIds) {
         return this.baseMapper.selectList(
                 new QueryWrapper<QuanBars>()

@@ -1,9 +1,5 @@
 package com.example.service;
 
-import com.example.entity.dto.Projects;
-import com.example.entity.dto.ProjectsDetail;
-import com.example.enums.CommonEnum;
-
 /**
  * @Author YangJian
  * @Description
@@ -12,10 +8,9 @@ import com.example.enums.CommonEnum;
  */
 public interface AutoProjectService {
 
+    //自动发布项目
     Long autoPublishProject();
 
-    Projects generateRandomProject(CommonEnum.IndustryCategory parent, CommonEnum.IndustryCategory.IndustrySubCategory sub);
-
-    ProjectsDetail generateRandomProjectDetail(Long projectId, String projectName);
-
+    //自动在圈子中发布内容
+    void autoQuanTieProject();
 }

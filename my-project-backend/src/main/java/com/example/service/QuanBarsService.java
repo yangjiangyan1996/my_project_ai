@@ -22,4 +22,6 @@ public interface QuanBarsService extends IService<QuanBars> {
     List<QuanBars> selectByTieIds(List<Long> barIds);
 
     List<QuanBars> selectByIds(List<Long> barIds);
+
+    List<QuanBars> selectAll();
 }

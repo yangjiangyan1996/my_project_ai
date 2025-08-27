@@ -52,9 +52,16 @@ public class TestController {
     AutoProjectService autoProjectService;
 
     @Operation(summary = "手动触发自动发布项目")
-    @GetMapping("/publish")
+    @GetMapping("/publishProject")
     public RestBean<Long> autoPublishProject() {
         AsyncTaskUtil.execute(() -> autoProjectService.autoPublishProject());
+        return RestBean.success();
+    }
+
+    @Operation(summary = "手动触发自动发布帖子")
+    @GetMapping("/publishTie")
+    public RestBean<Long> autoPublishQuanTie() {
+        AsyncTaskUtil.execute(() -> autoProjectService.autoQuanTieProject());
         return RestBean.success();
     }
 

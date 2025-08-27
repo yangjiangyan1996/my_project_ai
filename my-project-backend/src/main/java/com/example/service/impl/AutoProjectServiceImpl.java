@@ -1,25 +1,27 @@
 package com.example.service.impl;
 
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.Facade.JimengFacade;
-import com.example.entity.dto.Account;
-import com.example.entity.dto.Projects;
-import com.example.entity.dto.ProjectsDetail;
+import com.example.entity.dto.*;
 import com.example.enums.CommonEnum;
 import com.example.enums.ProjectEnum;
+import com.example.enums.QuanEnum;
 import com.example.mapper.ProjectsDetailMapper;
 import com.example.mapper.ProjectsMapper;
 import com.example.service.AccountService;
 import com.example.service.AutoProjectService;
+import com.example.service.QuanBarTieService;
+import com.example.service.QuanBarsService;
+import com.google.common.collect.Lists;
 import io.lettuce.core.internal.LettuceLists;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
@@ -37,14 +39,144 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
     AccountService accountService;
     @Resource
     DeepSeekContentService deepSeekContentService;
-    @Resource
-    WebClient webClient;
 
-    @Value("${auto-publish.max-daily:3}")
-    private int maxDailyPublish;
+    @Resource
+    QuanBarsService quanBarsService;
+    @Resource
+    QuanBarTieService quanBarTieService;
+
 
     @Override
-    public Projects generateRandomProject(CommonEnum.IndustryCategory parent, CommonEnum.IndustryCategory.IndustrySubCategory sub) {
+    public void autoQuanTieProject() {
+        List<QuanBars> quanBars = quanBarsService.selectAll();
+        //随机挑选一个
+        QuanBars quanBar = quanBars.get(RandomUtils.nextInt(0, quanBars.size()));
+        try {
+            // 生成与圈子相关的帖子内容
+            QuanBarTie tie = generateQuanBarTie(quanBar);
+            if (tie != null) {
+                // 设置圈子ID
+                tie.setBarId(quanBar.getId());
+                // 保存帖子
+                quanBarTieService.save(tie);
+                log.info("成功为圈子 {} 创建帖子: {}", quanBar.getName(), tie.getTitle());
+            }
+        } catch (Exception e) {
+            log.error("为圈子 {} 创建帖子失败", quanBar.getName(), e);
+        }
+    }
+
+    /**
+     * 为圈子生成帖子
+     *
+     * @param quanBar
+     * @return
+     */
+    private QuanBarTie generateQuanBarTie(QuanBars quanBar) {
+        Long userId = getRandomActiveUserId();
+        if (userId == null) {
+            log.warn("没有找到活跃用户，无法自动发布项目");
+            return null;
+        }
+        // 使用DeepSeek生成与圈子相关的帖子标题和内容
+        String barName = quanBar.getName();
+
+        // 生成创业教学相关的帖子标题
+        String title = deepSeekContentService.generateQuanTieTitle(barName);
+        if (title == null) {
+            title = "如何在" + barName + "领域成功创业 - 实用指南";
+        }
+
+        // 生成详细的创业教学内容
+        String content = deepSeekContentService.generateQuanTieContent(barName, title);
+        if (content == null) {
+            content = generateDefaultContent(barName);
+        }
+
+        // 处理内容中的图片
+        content = processContentWithImages(content);
+
+        // 生成相关的头像图片
+        String avatar = jimengFacade.getAiPictureUrl(title);
+
+        QuanBarTie tie = new QuanBarTie();
+        tie.setTitle(title);
+        tie.setContent(content);
+        tie.setAvatar(avatar != null ? JSON.toJSONString(Lists.newArrayList(avatar)) : new String());
+        tie.setStatus(QuanEnum.TieStatusEnums.NORMAL.getCode());
+        tie.setCreatedBy(userId);
+        tie.setCreatedAt(new Date());
+        tie.setModifiedBy(userId);
+        tie.setModifiedAt(new Date());
+        return tie;
+    }
+
+    private String generateDefaultContent(String barName) {
+        return "<h1>" + barName + "创业完整指南</h1>" +
+                "<p><strong>一、市场分析</strong></p>" +
+                "<p>在进入" + barName + "领域前，需要充分了解市场需求和竞争情况。</p>" +
+                "<p><strong>二、启动步骤</strong></p>" +
+                "<p>1. 市场调研</p>" +
+                "<p>2. 资金准备</p>" +
+                "<p>3. 技能学习</p>" +
+                "<p>4. 实际操作</p>" +
+                "<p><strong>三、盈利模式</strong></p>" +
+                "<p>详细分析各种盈利途径和收入预期。</p>" +
+                "<p><strong>四、风险提示</strong></p>" +
+                "<p>需要注意的市场风险和应对策略。</p>";
+    }
+
+    private String processContentWithImages(String content) {
+        // 分析内容结构，为关键段落添加配图
+        String[] sections = content.split("(?=<p><strong>|<h[1-6]>)");
+        StringBuilder result = new StringBuilder();
+
+        for (String section : sections) {
+            result.append(section);
+
+            // 为每个主要段落添加相关图片
+            if (section.contains("<strong>") || section.startsWith("<h")) {
+                // 提取段落关键词用于生成图片
+                String keywords = extractKeywordsFromSection(section);
+                if (keywords != null && !keywords.trim().isEmpty()) {
+                    String imageUrl = generateImageForContent(keywords);
+                    if (imageUrl != null) {
+                        result.append("<p><img src=\"")
+                                .append(imageUrl)
+                                .append("\" alt=\"")
+                                .append(keywords)
+                                .append("\" style=\"width: 100%; margin: 10px 0;\"/></p>");
+                    }
+                }
+            }
+        }
+
+        return result.toString();
+    }
+
+    private String extractKeywordsFromSection(String section) {
+        // 移除HTML标签
+        String text = section.replaceAll("<[^>]*>", "");
+        // 提取关键名词和动词
+        return text.length() > 50 ? text.substring(0, Math.min(50, text.length())) : text;
+    }
+
+    private String generateImageForContent(String keywords) {
+        try {
+            return jimengFacade.getAiPictureUrl(keywords + " 创业教学,图片不要带文字");
+        } catch (Exception e) {
+            log.error("生成内容图片失败: {}", keywords, e);
+            return null;
+        }
+    }
+
+    private String getDefaultAvatar() {
+        // 返回默认头像URL
+        return "https://example.com/default-avatar.png";
+    }
+
+    //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    private Projects generateRandomProject(CommonEnum.IndustryCategory parent, CommonEnum.IndustryCategory.IndustrySubCategory sub) {
         Random random = new Random();
         Projects project = new Projects();
 
@@ -106,8 +238,7 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
     }
 
 
-    @Override
-    public ProjectsDetail generateRandomProjectDetail(Long projectId, String projectName) {
+    private ProjectsDetail generateRandomProjectDetail(Long projectId, String projectName) {
         Random random = new Random();
         ProjectsDetail detail = new ProjectsDetail();
 

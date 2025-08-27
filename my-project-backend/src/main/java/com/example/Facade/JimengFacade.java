@@ -6,7 +6,6 @@ import com.example.config.JMConfig;
 import com.example.config.TenXunConfig;
 import com.example.entity.jimeng.CustomMultipartFile;
 import com.example.entity.jimeng.JimengResp;
-import com.example.entity.jimeng.LogoInfo;
 import com.example.utils.FileUtils;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.PutObjectResult;
@@ -94,11 +93,11 @@ public class JimengFacade {
         visualService.setSecretKey(jmConfig.getAccessKeySecret());
 
         JSONObject req = new JSONObject();
-        req.put("req_key", "jimeng_high_aes_general_v21_L");
+        req.put("req_key", "high_aes_general_v21_L");
         req.put("prompt", prompt);
-        req.put("logo_info", JSON.toJSONString(new LogoInfo()));
-        req.put("ddim_steps", 30);
-        req.put("scale", 7.5);
+//        req.put("logo_info", JSON.toJSONString(new LogoInfo()));
+//        req.put("ddim_steps", 30);
+//        req.put("scale", 7.5);
 
         Object response = visualService.cvProcess(req);
         //把response 转换成 JimengResp对象
