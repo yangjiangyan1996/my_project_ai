@@ -251,7 +251,7 @@ const tagsOptions = ref([])
 // 初始化加载数据
 onMounted(async() => {
   const itemId = router.currentRoute.value.query.id;
-  console.log('接收到的项目ID:', itemId);
+  // console.log('接收到的项目ID:', itemId);
   
    // 加载适合人群选项
   await loadTargetAudienceOptions()
@@ -263,7 +263,7 @@ onMounted(async() => {
     loadProjectDetail(itemId);
   } else {
     // ElMessage.error('无效的项目ID参数');
-    console.warn('非法项目ID:', itemId);
+    // console.warn('非法项目ID:', itemId);
   }
 })
 
@@ -306,7 +306,7 @@ const loadTagsOptions = async () => {
       }))
     }
   } catch (error) {
-    console.log(error)
+    // console.log(error)
     ElMessage.error('获取副业属性选项失败')
   }
 }
@@ -418,7 +418,7 @@ const editorConfig = {
 
 
       customInsert(res, insertFn) {
-      console.log("图片",res)
+      // console.log("图片",res)
         if (res && res.data) {
           insertFn(res.data)
         }
@@ -552,10 +552,10 @@ const goBack = () => {
 }
 const loadProjectDetail = async (id) => {
   try {
-    console.log("id", id)
+    // console.log("id", id)
     const res = await get(`/api/unauth/project/detailForUpdate?projectId=${id}`);
     const data = res;
-    console.log("form after before", data);
+    // console.log("form after before", data);
 
     // 逐个赋值
     form.imageUrl = data.imageUrl || '';
@@ -609,7 +609,7 @@ const loadProjectDetail = async (id) => {
       }
     }
 
-    console.log("form after setting", form);
+    // console.log("form after setting", form);
 
     // 等编辑器初始化完成后再设置内容
     nextTick(() => {

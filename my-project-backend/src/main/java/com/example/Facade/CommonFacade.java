@@ -31,7 +31,7 @@ public class CommonFacade {
         return list.stream().map(v -> {
             UserSearchResp memberInfo = new UserSearchResp();
             memberInfo.setId(v.getId());
-            memberInfo.setUsername(v.getUsername());
+            memberInfo.setUsername(v.getNickname());
             memberInfo.setAvatarUrl(v.getAvatarUrl());
             memberInfo.setSex(v.getSex());
             return memberInfo;

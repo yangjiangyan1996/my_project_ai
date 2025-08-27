@@ -793,7 +793,7 @@ public class ProjectFacade {
             // 封装结果
             MatchUserResp resp = new MatchUserResp();
             resp.setUserId(user.getUserId());
-            resp.setUsername(userId2UserInfoMap.get(user.getUserId()).getUsername());
+            resp.setUsername(userId2UserInfoMap.get(user.getUserId()).getNickname());
             resp.setSecrecyId(userId2UserInfoMap.get(user.getUserId()).getSecrecyId());
             resp.setAvatarUrl(userId2UserInfoMap.get(user.getUserId()).getAvatarUrl());
             resp.setSex(userId2UserInfoMap.get(user.getUserId()).getSex());

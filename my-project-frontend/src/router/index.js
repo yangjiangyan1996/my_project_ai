@@ -130,9 +130,9 @@ const router = createRouter({
 // 导航守卫正确定义在路由实例之后
 router.beforeEach((to, from, next) => {
     const isUnauthRoute = to.matched.some(record => {
-    console.log("=======")
-    console.log("path:",record.path)
-    console.log("name:",record.name)
+    // console.log("=======")
+    // console.log("path:",record.path)
+    // console.log("name:",record.name)
     return record.path.startsWith('/api/unauth') || 
         record.name === 'welcome-login' || 
         record.name === 'welcome-register' || 
@@ -141,9 +141,9 @@ router.beforeEach((to, from, next) => {
         record.name === 'quanTieDetail'
 });
 
-    console.log("isUnauthRoute",isUnauthRoute)
+    // console.log("isUnauthRoute",isUnauthRoute)
     if (to.matched.some(record => record.meta.requiresAuth) && unauthorized() && !isUnauthRoute) {
-        console.log("去登录3")
+        // console.log("去登录3")
         next({ name: 'welcome-login' });
     } else if (to.name === 'welcome' && !unauthorized()) {
         next('/index');

@@ -16,7 +16,6 @@ const app = createApp(App)
 // 只用来做上传图片接口全局
 app.config.globalProperties.$uploadAction = (path = 'api/auth/common/upload') => {
    const b =  `${axios.defaults.baseURL}${path}`;
-   console.log("上传图片=====",b);
    return b;
 }
 

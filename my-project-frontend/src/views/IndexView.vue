@@ -642,7 +642,7 @@ const loadChatList = async () => {
       totalUnreadCount.value = chatList.value.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
     }
   } catch (e) {
-    console.error('加载私聊列表失败:', e);
+    // console.error('加载私聊列表失败:', e);
   } finally {
     chatLoading.value = false;
   }
@@ -663,7 +663,7 @@ const fetchUnreadCount = async () => {
       unreadCount.value = res || 0;
     }
   } catch (e) {
-    console.error('获取未读消息数失败:', e);
+    // console.error('获取未读消息数失败:', e);
   }
 };
 
@@ -682,7 +682,7 @@ const loadApplyMessages = async () => {
     applyMessages.value = [...applyMessages.value, ...(res.records || [])];
     applyHasMore.value = applyMessages.value.length < (res.total || 0);
   } catch (e) {
-    console.error('加载神奇通知失败:', e);
+    // console.error('加载神奇通知失败:', e);
   } finally {
     applyLoading.value = false;
   }
@@ -704,7 +704,7 @@ const followBack = async (senderId) => {
       }
     }
   } catch (e) {
-    console.error('回关失败:', e);
+    // console.error('回关失败:', e);
     ElMessage.error('回关失败');
   } finally {
     const item = followMessages.value.find(m => m.senderId === senderId);
@@ -726,7 +726,7 @@ const showApplyDetail = async (item) => {
       router.push('/index/my/myMemberGroupDetail/' + item.projectId);
     }
   } catch (e) {
-    console.error('处理申请通知失败:', e);
+    // console.error('处理申请通知失败:', e);
     ElMessage.error('加载详情失败');
   }
 };
@@ -758,7 +758,7 @@ const markAllAsRead = async (tab) => {
       ElMessage.success('消息已标记为已读');
     }
   } catch (e) {
-    console.error('一键已读失败:', e);
+    // console.error('一键已读失败:', e);
     ElMessage.error('标记消息为已读失败');
   }
 };
@@ -782,7 +782,7 @@ const showCommentDetail = async (item) => {
     await nextTick();
     scrollToCurrentComment();
   } catch (e) {
-    console.error('获取评论详情失败:', e);
+    // console.error('获取评论详情失败:', e);
     ElMessage.error('加载评论详情失败');
   }
 };
@@ -832,7 +832,7 @@ const loadCommentMessages = async () => {
     commentMessages.value = [...commentMessages.value, ...(res.records || [])];
     commentHasMore.value = commentMessages.value.length < (res.total || 0);
   } catch (e) {
-    console.error('加载评论消息失败:', e);
+    // console.error('加载评论消息失败:', e);
   } finally {
     commentLoading.value = false;
   }
@@ -979,7 +979,7 @@ const loadFollowMessages = async () => {
     followMessages.value = [...followMessages.value, ...(res.records || [])];
     followHasMore.value = followMessages.value.length < (res.total || 0);
   } catch (e) {
-    console.error('加载关注消息失败:', e);
+    // console.error('加载关注消息失败:', e);
   } finally {
     followLoading.value = false;
   }
@@ -1001,7 +1001,7 @@ const loadLikeMessages = async () => {
     likeMessages.value = [...likeMessages.value, ...(res.records || [])];
     likeHasMore.value = likeMessages.value.length < (res.total || 0);
   } catch (e) {
-    console.error('加载点赞消息失败:', e);
+    // console.error('加载点赞消息失败:', e);
   } finally {
     likeLoading.value = false;
   }
@@ -1052,7 +1052,7 @@ const markMessagesAsRead = async (messageId) => {
     updateMessageReadStatus(messageId);
     fetchUnreadCount();
   } catch (e) {
-    console.error('标记消息为已读失败:', e);
+    // console.error('标记消息为已读失败:', e);
   }
 };
 
@@ -1142,7 +1142,7 @@ const fetchProjectListData = async (params = {}) => {
     });
 
     if (!res?.records) {
-      console.warn("接口返回异常结构：", res);
+      // console.warn("接口返回异常结构：", res);
       return;
     }
 
@@ -1163,7 +1163,7 @@ const fetchProjectListData = async (params = {}) => {
     hasMore.value = projectList.value.length < total.value;
     currentPage.value += 1;
   } catch (error) {
-    console.error("加载失败：", error);
+    // console.error("加载失败：", error);
     ElMessage.error('数据加载失败');
   } finally {
     loading.value = false;

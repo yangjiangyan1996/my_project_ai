@@ -407,7 +407,7 @@ const { state: userInfo, loadUserInfo } = useUserInfo();
 const fetchFollowedBars = async (page = 1, size = 5) => {
   try {
      if(!userInfo.data.id) {
-         console.log("未登录，不获取我关注的圈子")
+        //  console.log("未登录，不获取我关注的圈子")
          return;
      }
     const response = await post('/api/auth/quan/myFavoriteBar', {
@@ -426,7 +426,7 @@ const fetchFollowedBars = async (page = 1, size = 5) => {
       }));
     }
   } catch (error) {
-    console.error('获取关注的圈子失败:', error);
+    // console.error('获取关注的圈子失败:', error);
     ElMessage.error('获取关注的圈子失败，请稍后重试');
   }
 };
@@ -559,7 +559,7 @@ const fetchPosts = async (page = 1) => {
       currentPage.value = page; // 确保当前页码同步
     }
   } catch (error) {
-    console.error('获取帖子列表失败:', error);
+    // console.error('获取帖子列表失败:', error);
     ElMessage.error('获取帖子失败，请稍后重试');
   } finally {
     loadingPosts.value = false;
@@ -603,7 +603,7 @@ const fetchFriendBars = async (page = 1) => {
       friendBarCurrentPage.value = page
     }
   } catch (error) {
-    console.error('获取相关圈子失败:', error)
+    // console.error('获取相关圈子失败:', error)
     ElMessage.error('获取相关圈子失败，请稍后重试')
   }
 }
@@ -634,7 +634,7 @@ const formatTime = (timeStr) => {
 }
 
 const goToUserProfile = (barId) => {
-  console.log("访问帖子详情页",barId)
+  // console.log("访问帖子详情页",barId)
   // router.push(`/index/user/${userId}`)
   window.open(`/index/quan/QuanDetail/${barId}`, '_blank');
 }
@@ -654,7 +654,7 @@ const fetchFirstLevelCategories = async () => {
       firstLevelCategories.value = [];
     }
   } catch (error) {
-    console.error('获取分类数据失败:', error);
+    // console.error('获取分类数据失败:', error);
     ElMessage.error('获取分类数据失败，请稍后重试');
     firstLevelCategories.value = [];
   }
@@ -677,7 +677,7 @@ const fetchBarsByCategory = async (categoryCode) => {
     const response = await get(`/api/unauth/quan/getBarsByCategory?categoryCode=${categoryCode}`);
     categoryBars.value[categoryCode] = response || [];
   } catch (error) {
-    console.error(`获取分类${categoryCode}的圈子列表失败:`, error);
+    // console.error(`获取分类${categoryCode}的圈子列表失败:`, error);
     ElMessage.error('获取圈子列表失败，请稍后重试');
     categoryBars.value[categoryCode] = [];
   } finally {
@@ -686,7 +686,7 @@ const fetchBarsByCategory = async (categoryCode) => {
 };
 
 const navigateToPost = (tieId) => {
-  console.log("访问帖子详情页",tieId)
+  // console.log("访问帖子详情页",tieId)
   // router.push(`/index/user/${userId}`)
   window.open(`/index/quan/QuanTieDetail/${tieId}`, '_blank');
 };
@@ -706,7 +706,7 @@ const fetchHotTopics = async () => {
       }))
     }
   } catch (error) {
-    console.error('获取今日热议失败:', error)
+    // console.error('获取今日热议失败:', error)
     ElMessage.error('获取热议话题失败，请稍后重试')
   }
 }
@@ -733,7 +733,7 @@ const refreshFriendBars = () => {
 
 // 关注/取消关注圈子
 const toggleFollowBar = async (bar) => {
-  console.log("关注/取消关注圈子", bar);
+  // console.log("关注/取消关注圈子", bar);
   try {
     // if (!userInfo?.data?.id) {
     //   // 未登录处理，可以跳转到登录页
@@ -774,7 +774,7 @@ const toggleFollowBar = async (bar) => {
     
     ElMessage.success(bar.followed ? '关注成功' : '已取消关注');
   } catch (error) {
-    console.error('操作失败:', error);
+    // console.error('操作失败:', error);
     ElMessage.error(bar.followed ? '关注失败' : '取消关注失败');
   }
 };
@@ -797,7 +797,7 @@ const refreshCategories = () => {
 const fetchCategories = async () => {
   try {
     const response = await get('/api/unauth/common/category');
-    console.log("分类数据:", response); // 调试用
+    // console.log("分类数据:", response); // 调试用
     
     if (response && response.length > 0) {
       categoryOptions.value = response.map(item => ({
@@ -805,13 +805,13 @@ const fetchCategories = async () => {
         desc: item.desc,
         subs: item.subs || [] // 确保 subs 有默认值
       }));
-      console.log("处理后的分类选项:", categoryOptions.value); // 调试用
+      // console.log("处理后的分类选项:", categoryOptions.value); // 调试用
     } else {
       ElMessage.warning('暂无分类数据');
       categoryOptions.value = [];
     }
   } catch (error) {
-    console.error('获取分类数据失败:', error);
+    // console.error('获取分类数据失败:', error);
     ElMessage.error('获取分类数据失败，请稍后重试');
     categoryOptions.value = [];
   }
@@ -829,7 +829,7 @@ const showCreateDialog = async () => {
     try {
       await fetchCategories();
     } catch (error) {
-      console.error('加载分类数据失败:', error);
+      // console.error('加载分类数据失败:', error);
       ElMessage.error('加载分类数据失败');
     }
   }
@@ -856,7 +856,7 @@ const submitCreateForm = () => {
     if (!valid) return
     
     // 检查是否已上传图片
-    console.log("createForm.value.avatar:", createForm.value)
+    // console.log("createForm.value.avatar:", createForm.value)
     if (!createForm.value.avatar) {
       ElMessage.error('请上传圈图标')
       return
@@ -877,7 +877,7 @@ const submitCreateForm = () => {
       createDialogVisible.value = false
       refreshHotBars()
     } catch (error) {
-      console.error('创建圈失败:', error)
+      // console.error('创建圈失败:', error)
     } finally {
       submitting.value = false
     }
@@ -955,7 +955,7 @@ const handleTabChange = () => {
 
 
 const toggleLike = async (post) => {
-  console.log("post:", post)
+  // console.log("post:", post)
    const targetState = !post.liked;
     const result = await get(`/api/auth/quan/favoriteTie?tieId=${post.id}&favorited=${targetState}`);
     if(result) {

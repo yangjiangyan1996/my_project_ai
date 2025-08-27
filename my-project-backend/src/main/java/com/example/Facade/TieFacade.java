@@ -332,9 +332,15 @@ public class TieFacade {
         for (QuanTieComment q : qs) {
             QuanTieTodayHotResp r = new QuanTieTodayHotResp();
             r.setId(q.getTieId());
-            r.setComments(quanTieCommentListMap.get(q.getTieId()).size());
-            r.setTitle(tieId2BarTieMap.get(q.getTieId()).getTitle());
-            r.setViews(tieId2WatchListMap.get(q.getTieId()).size());
+            if (quanTieCommentListMap.containsKey(q.getTieId())) {
+                r.setComments(quanTieCommentListMap.get(q.getTieId()).size());
+            }
+            if (tieId2BarTieMap.containsKey(q.getTieId())) {
+                r.setTitle(tieId2BarTieMap.get(q.getTieId()).getTitle());
+            }
+            if(tieId2WatchListMap.containsKey(q.getTieId())) {
+                r.setViews(tieId2WatchListMap.get(q.getTieId()).size());
+            }
             result.add(r);
         }
         return result;

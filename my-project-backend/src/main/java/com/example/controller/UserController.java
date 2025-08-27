@@ -95,7 +95,7 @@ public class UserController {
             Long userIdBySecrecyId = commonFacade.getUserIdBySecrecyId(secrecyId);
             UserAllInfo userAllInfo = userFacade.getUserAllInfo(userIdBySecrecyId);
             UserInfo user = new UserInfo();
-            user.setUsername(userAllInfo.getUsername());
+            user.setUsername(userAllInfo.getNickname());
             user.setIndustryName(CommonEnum.IndustryEnum.getByCode(userAllInfo.getIndustryCode()));
             user.setAvatarUrl(userAllInfo.getAvatarUrl());
             user.setId(userAllInfo.getId());

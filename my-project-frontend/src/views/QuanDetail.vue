@@ -465,14 +465,14 @@ onMounted(() => {
 
   if (!userInfo.data.id) {
     loadUserInfo().then(() => {
-      console.log("当前用户", userInfo)
+      // console.log("当前用户", userInfo)
       fetchBarInfo().then(() => {
         fetchPosts()
       })
       checkFollowStatus()
     })
   } else {
-    console.log("当前用户", userInfo)
+    // console.log("当前用户", userInfo)
     fetchBarInfo().then(() => {
       fetchPosts()
     })
@@ -515,7 +515,7 @@ const fetchHotTopics = async () => {
       }));
     }
   } catch (error) {
-    console.error('获取今日热议失败:', error);
+    // console.error('获取今日热议失败:', error);
   }
 };
 
@@ -558,7 +558,7 @@ const fetchFriendBars = async (page = 1, size = 5) => {
       }
     }
   } catch (error) {
-    console.error('获取相关圈子失败:', error);
+    // console.error('获取相关圈子失败:', error);
   }
 };
 
@@ -569,7 +569,7 @@ const debouncedSearch = debounce(() => {
 }, 500);
 
 const handleSearch = () => {
-  console.log('搜索:', searchQuery.value);
+  // console.log('搜索:', searchQuery.value);
   currentPage.value = 1; // 重置为第一页
   fetchPosts(); // 重新获取帖子列表
   debouncedSearch();
@@ -658,7 +658,7 @@ const handleEditorCreated = (editor) => {
 }
 
 const navigateToPost = (tieId) => {
-  console.log("访问用户详情页",tieId)
+  // console.log("访问用户详情页",tieId)
   // router.push(`/index/user/${userId}`)
   window.open(`/index/quan/QuanTieDetail/${tieId}?barId=${barId}`, '_blank');
 };
@@ -674,7 +674,7 @@ const fetchPosts = async (page = 1) => {
       keyword: searchQuery.value || undefined // 添加keyword参数
     })
     
-    console.log("获取帖子列表", response.records)
+    // console.log("获取帖子列表", response.records)
     if (response && response.records) {
       posts.value = response.records.map(item => ({
         id: item.id,
@@ -692,7 +692,7 @@ const fetchPosts = async (page = 1) => {
       currentPage.value = page
     }
   } catch (error) {
-    console.error('获取帖子列表失败:', error)
+    // console.error('获取帖子列表失败:', error)
   }
 }
 
@@ -705,16 +705,16 @@ const checkFollowStatus = async () => {
       barId: barId, 
       userId: userInfo.data.id 
     });
-    console.log("检查关注状态", response)
+    // console.log("检查关注状态", response)
     isFollowed.value = response; // 假设返回的data字段为布尔值
   } catch (error) {
-    console.error('检查关注状态失败:', error);
+    // console.error('检查关注状态失败:', error);
     isFollowed.value = false; // 出错时默认未关注
   }
 };
 
 const goToUserProfile = (userId) => {
-  console.log("访问用户详情页", userId);
+  // console.log("访问用户详情页", userId);
   window.open(`/index/user/${userId}`, '_blank');
 };
 
@@ -740,7 +740,7 @@ const fetchBarInfo = async () => {
       };
     }
   } catch (error) {
-    console.error('获取圈子信息失败:', error);
+    // console.error('获取圈子信息失败:', error);
   }
 };
 
@@ -772,7 +772,7 @@ const toggleFollow = async () => {
     }
     isFollowed.value = !isFollowed.value;
   } catch (error) {
-    console.error('操作失败:', error);
+    // console.error('操作失败:', error);
     ElMessage.error(isFollowed.value ? '取消关注失败' : '关注失败');
   }
 };
@@ -789,14 +789,14 @@ const isMobile = computed(() => window.innerWidth < 768);
 
 // 方法
 const navigateToBar = (barId) => {
-  console.log('跳转圈子:', barId);
+  // console.log('跳转圈子:', barId);
    window.open(`/index/quan/QuanDetail/${barId}`, '_blank');
 };
 
 
 
 const showPostMenu = (postId) => {
-  console.log('显示帖子菜单:', postId);
+  // console.log('显示帖子菜单:', postId);
 };
 
 
@@ -844,7 +844,7 @@ const submitPost = async () => {
     // await fetchPosts()
     
   } catch (error) {
-    console.error('发帖失败:', error)
+    // console.error('发帖失败:', error)
     ElMessage.error(error.message || '发帖失败')
   } finally {
     submitting.value = false

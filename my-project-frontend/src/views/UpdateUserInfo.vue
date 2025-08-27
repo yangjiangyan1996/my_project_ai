@@ -181,10 +181,10 @@ const fetchUserInfo = async () => {
 
 // 头像上传成功
 const handleAvatarSuccess = (response) => {
-    console.log("上传成功",response)
-    console.log("上传成功-userForm",userForm.avatarUrl)
+    // console.log("上传成功",response)
+    // console.log("上传成功-userForm",userForm.avatarUrl)
   userForm.value.avatarUrl = response.data
-  console.log("上传成功-userForm",userForm.avatarUrl)
+  // console.log("上传成功-userForm",userForm.avatarUrl)
   ElMessage.success('上传成功')
 }
 

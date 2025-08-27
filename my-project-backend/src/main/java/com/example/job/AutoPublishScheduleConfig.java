@@ -3,7 +3,6 @@ package com.example.job;
 import com.example.service.AutoProjectService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -17,9 +16,6 @@ public class AutoPublishScheduleConfig {
 
     @Resource
     AutoProjectService autoProjectService;
-
-    @Value("${auto-publish.schedule}")
-    private String cronExpression;
 
     @Scheduled(cron = "${auto-publish.schedule}")
     public void scheduledAutoPublish() {

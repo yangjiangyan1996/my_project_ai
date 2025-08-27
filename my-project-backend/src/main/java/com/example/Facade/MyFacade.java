@@ -164,7 +164,7 @@ public class MyFacade {
                     if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getFollowerId())) {
                         Account account = userId2UserInfoMap.get(v.getFollowerId());
                         projectsResp.setUserId(account.getId());
-                        projectsResp.setUsername(account.getUsername());
+                        projectsResp.setUsername(account.getNickname());
                         projectsResp.setSecrecyId(account.getSecrecyId());
                         projectsResp.setAvatarUrl(account.getAvatarUrl());
                         projectsResp.setCreatedAt(v.getCreatedAt());
@@ -205,7 +205,7 @@ public class MyFacade {
                     if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getFollowerId())) {
                         Account account = userId2UserInfoMap.get(v.getFollowerId());
                         projectsResp.setUserId(account.getId());
-                        projectsResp.setUsername(account.getUsername());
+                        projectsResp.setUsername(account.getNickname());
                         projectsResp.setSecrecyId(account.getSecrecyId());
                         projectsResp.setAvatarUrl(account.getAvatarUrl());
                         projectsResp.setCreatedAt(v.getCreatedAt());
@@ -247,7 +247,7 @@ public class MyFacade {
                     if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getFolloweeId())) {
                         Account account = userId2UserInfoMap.get(v.getFolloweeId());
                         projectsResp.setUserId(account.getId());
-                        projectsResp.setUsername(account.getUsername());
+                        projectsResp.setUsername(account.getNickname());
                         projectsResp.setSecrecyId(account.getSecrecyId());
                         projectsResp.setAvatarUrl(account.getAvatarUrl());
                         projectsResp.setCreatedAt(v.getCreatedAt());
@@ -287,7 +287,7 @@ public class MyFacade {
                     if (!CollectionUtils.isEmpty(userId2UserInfoMap) && userId2UserInfoMap.containsKey(v.getFolloweeId())) {
                         Account account = userId2UserInfoMap.get(v.getFolloweeId());
                         projectsResp.setUserId(account.getId());
-                        projectsResp.setUsername(account.getUsername());
+                        projectsResp.setUsername(account.getNickname());
                         projectsResp.setSecrecyId(account.getSecrecyId());
                         projectsResp.setAvatarUrl(account.getAvatarUrl());
                         projectsResp.setCreatedAt(v.getCreatedAt());
