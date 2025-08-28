@@ -209,7 +209,7 @@ const submitForm = async () => {
     const response = await axios.post('/api/auth/taohua/kanTaohua', payload)
     analysisResult.value = response.data
   } catch (error) {
-    console.error(error)
+    // console.error(error)
     ElMessage.error(error.response?.data?.message || '分析失败，请稍后重试')
   } finally {
     loading.value = false

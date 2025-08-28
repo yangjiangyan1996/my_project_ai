@@ -536,7 +536,7 @@ const checkEvaluationStatus = async () => {
   try {
     const res = await get(`/api/auth/project/hasEvaluate?projectId=${projectId.value}`)
     hasEvaluated.value = res
-    console.log('评价状态:', hasEvaluated.value ? '已评价' : '未评价')
+    // console.log('评价状态:', hasEvaluated.value ? '已评价' : '未评价')
     
     // 如果未评价，显示提示框
     if (!hasEvaluated.value) {
@@ -545,7 +545,7 @@ const checkEvaluationStatus = async () => {
       loadEvaluationSummary();
     }
   } catch (error) {
-    console.error('检查评价状态失败:', error)
+    // console.error('检查评价状态失败:', error)
     ElMessage.error('检查评价状态失败')
   }
 }
@@ -553,9 +553,9 @@ const checkEvaluationStatus = async () => {
 // 添加方法
 const loadEvaluationSummary = async () => {
   try {
-    console.log('正在加载评价汇总数据...')
+    // console.log('正在加载评价汇总数据...')
     const res = await get(`/api/unauth/project/getAvgEvaluateList?projectId=${projectId.value}`)
-    console.log('评价汇总接口返回数据:', res)
+    // console.log('评价汇总接口返回数据:', res)
     evaluationSummary.value = res || []
     
     // 计算整体平均分
@@ -563,9 +563,9 @@ const loadEvaluationSummary = async () => {
       const total = evaluationSummary.value.reduce((sum, user) => sum + user.avgScore, 0)
       overallAverage.value = total / evaluationSummary.value.length
     }
-    console.log('处理后的评价汇总数据:', evaluationSummary.value)
+    // console.log('处理后的评价汇总数据:', evaluationSummary.value)
   } catch (error) {
-    console.error('获取评价汇总失败:', error)
+    // console.error('获取评价汇总失败:', error)
     ElMessage.error('获取评价汇总失败')
   }
 }
@@ -610,7 +610,7 @@ const loadEvaluationData = async () => {
   try {
     const res = await get(`/api/auth/project/getEvaluateList?projectId=${projectId.value}`)
     evaluationData.value = res || []
-    console.log('获取到的评价数据:', evaluationData.value)
+    // console.log('获取到的评价数据:', evaluationData.value)
   } catch (error) {
     ElMessage.error('获取评价数据失败')
   }
@@ -620,8 +620,8 @@ const loadEvaluationData = async () => {
 
 
 const handleMemberSelection = (member) => {
-  console.log('member', member)
-  console.log('userInfo.data?.id', userInfo.data?.id)
+  // console.log('member', member)
+  // console.log('userInfo.data?.id', userInfo.data?.id)
   if (member.userId === userInfo.data?.id) {
     ElMessage.warning('不能评价自己')
     return
@@ -750,7 +750,7 @@ const evaluableMembers = computed(() => {
 // 修改submitEvaluation方法
 const submitEvaluation = async () => {
   try {
-    console.log('评价目标:', evaluationTarget.value)
+    // console.log('评价目标:', evaluationTarget.value)
     submittingEvaluation.value = true
     const success = await post('/api/auth/project/evaluate', {
       projectId: projectId.value,
@@ -798,14 +798,14 @@ const getConversationId = async () => {
   try {
     const res = await get(`/api/auth/chat/getChatIdByProjectId?projectId=${projectId.value}`)
     if (res) {
-      console.log('获取到的会话ID:', res)
+      // console.log('获取到的会话ID:', res)
       currentChatId.value = res
     } else {
       ElMessage.warning('获取会话ID失败，将使用项目ID作为替代')
       currentChatId.value = projectId.value
     }
   } catch (error) {
-    console.error('获取会话ID失败:', error)
+    // console.error('获取会话ID失败:', error)
   }
 }
 
@@ -846,8 +846,8 @@ const loadMemberList = async () => {
     currentUserRole.value = res.currentUserRole || ''
     isAdmin.value = ['管理员', '组长'].includes(currentUserRole.value)
 
-    console.log('当前用户角色：', currentUserRole.value)
-console.log('是否管理员：', isAdmin.value)
+    // console.log('当前用户角色：', currentUserRole.value)
+// console.log('是否管理员：', isAdmin.value)
   } catch (error) {
     ElMessage.error('加载成员列表失败')
   } finally {

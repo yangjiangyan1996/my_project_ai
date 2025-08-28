@@ -80,16 +80,16 @@ const hoveredItem = ref(null)
 
 // 跳转到项目详情页
 function goToDetail(item) {
-  console.log("跳转项目详情", item)
+  // console.log("跳转项目详情", item)
   if (!item) {
-    console.error("跳转失败：item参数为空")
+    // console.error("跳转失败：item参数为空")
     return
   }
   
   // 确保有可用的ID
   const projectId = item.projectId || item.id
   if (!projectId) {
-    console.error("跳转失败：缺少项目ID")
+    // console.error("跳转失败：缺少项目ID")
     return
   }
 
@@ -97,7 +97,7 @@ function goToDetail(item) {
     name: 'project-detail', 
     params: { id: projectId } 
   }).catch(err => {
-    console.error("路由跳转失败:", err)
+    // console.error("路由跳转失败:", err)
   })
 }
 

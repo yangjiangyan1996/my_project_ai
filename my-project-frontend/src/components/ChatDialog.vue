@@ -205,7 +205,6 @@ const loadChatHistory = async () => {
     }
     const res = await post('/api/auth/chat/getChatHistory', requestData)
     
-    console.log('获取聊天历史:', res)
     if (res.records && res.records.length > 0) {
       chatHistory.value = res.records
       chatTotal.value = res.total
@@ -223,7 +222,6 @@ const loadChatHistory = async () => {
     // 开启轮询获取新消息
     startPolling()
   } catch (error) {
-    console.error('获取聊天历史失败:', error)
     ElMessage.error('获取聊天历史失败')
   } finally {
     loading.value = false
@@ -314,7 +312,6 @@ const checkReadStatus = async () => {
       }
     }
   } catch (error) {
-    console.error('检查已读状态失败:', error)
   }
 }
 
@@ -352,7 +349,7 @@ const fetchNewMessages = async () => {
       }
     }
   } catch (error) {
-    console.error('获取新消息失败:', error)
+    // console.error('获取新消息失败:', error)
   }
 }
 
@@ -447,7 +444,7 @@ const loadMoreMessages = async () => {
       })
     }
   } catch (error) {
-    console.error('加载更多消息失败:', error)
+    // console.error('加载更多消息失败:', error)
     chatPage.value-- // 回退页码
   } finally {
     loading.value = false
@@ -457,7 +454,7 @@ const loadMoreMessages = async () => {
 // 发送消息
 const sendMessage = async () => {
   if (!messageContent.value.trim()) return
-  console.log("发送消息",props)
+  // console.log("发送消息",props)
   sending.value = true
   try {
     const requestData = {
@@ -501,7 +498,7 @@ const sendMessage = async () => {
       scrollToBottom('smooth')
     }
   } catch (error) {
-    console.error('发送消息失败:', error)
+    // console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败')
   } finally {
     sending.value = false
@@ -528,7 +525,7 @@ const markOtherMessagesAsRead = async () => {
         )
       })
     } catch (error) {
-      console.error('更新消息已读状态失败:', error)
+      // console.error('更新消息已读状态失败:', error)
     }
   }
 }

@@ -406,7 +406,7 @@ const fetchTieDetail = async () => {
         username: res.createdName,
         createdTime: res.createdTime,
         createdAvatar: res.createdAvatar,
-         avatar: Array.isArray(res.avatar) ? res.avatar : []
+        avatar: Array.isArray(res.avatar) ? res.avatar : []
       };
       favorited.value = res.myLike || false;
     }
@@ -508,7 +508,7 @@ const handleShare = () => {
 
 // 生成分享链接
 const generateShareLink = () => {
-  console.log("生成分享链接",tieId,barId)
+  // console.log("生成分享链接",tieId,barId)
   return `${window.location.origin}/index/quan/QuanTieDetail/${tieId}?barId=${barId}`;
 };
 
@@ -525,7 +525,7 @@ const copyLink = async () => {
 };
 
 const goToUserProfile = (userId) => {
-  console.log("访问用户详情页",userId)
+  // console.log("访问用户详情页",userId)
   // router.push(`/index/user/${userId}`)
   window.open(`/index/user/${userId}`, '_blank');
 }
@@ -566,7 +566,7 @@ const submitReply = async (commentId) => {
     return;
   }
 
-  console.log("提交回复commentId",commentId)
+  // console.log("提交回复commentId",commentId)
   try {
     await post('/api/auth/quan/comment', {
       tieId: tieId,
@@ -656,7 +656,7 @@ const submitDialogReply = async (replyId) => {
     return;
   }
 
-  console.log("提交弹窗中的回复currentCommentId",currentCommentId.value)
+  // console.log("提交弹窗中的回复currentCommentId",currentCommentId.value)
   try {
     await post('/api/auth/quan/comment', {
       tieId: tieId,
@@ -693,7 +693,7 @@ function findFirstLevelCommentId(commentId) {
   }
   
   for (const comment of comments.value) {
-    console.log("comment.replies",comment.replies)
+    // console.log("comment.replies",comment.replies)
     if (comment.replies && comment.replies.length > 0) {
       const foundReply = findCommentInReplies(comment.replies, commentId);
       if (foundReply) {
@@ -794,7 +794,7 @@ function renderMarkdown(text) {
 
 // 返回上一页
 const goBack = () => {
-    console.log("返回上一页",barId)
+    // console.log("返回上一页",barId)
   router.push('/index/quan/QuanDetail/' + barId);
 };
 </script>

@@ -11,7 +11,7 @@ const accessHeader = () => {
 }
 
 const defaultError = (error) => {
-    console.log(error);
+    // console.log(error);
     const status = error.response?.status;
     if (status === 429) {
         ElMessage.error(error.response.data.message);
@@ -21,7 +21,7 @@ const defaultError = (error) => {
 }
 
 const defaultFailure = (message, status, url) => {
-    console.warn(`请求地址: ${url}, 状态码: ${status}, 错误信息: ${message}`);
+    // console.warn(`请求地址: ${url}, 状态码: ${status}, 错误信息: ${message}`);
     ElMessage.warning(message);
 }
 
@@ -53,7 +53,7 @@ function takeAccessToken() {
             }
         }
     } catch (e) {
-        console.error("读取 token 时出错", e);
+        // console.error("读取 token 时出错", e);
         // 如果解析出错，清除无效的 token
         deleteAccessToken();
     }
@@ -86,14 +86,14 @@ function deleteAccessToken(redirect = false) {
     localStorage.removeItem(authItemName);
     sessionStorage.removeItem(authItemName);
     if (redirect) {
-         console.log("去登录1")
+        //  console.log("去登录1")
         router.push({ name: 'welcome-login' });
     }
 }
 
 function internalPost(url, data, headers, success = () => {}, failure = defaultFailure, error = defaultError) {
     return axios.post(url, data, { headers: headers }).then(({ data: responseData }) => {
-        console.log("====internalPost",url)
+        // console.log("====internalPost",url)
 
         if (responseData.code === 200) {
             success(responseData.data);
@@ -110,7 +110,7 @@ function internalPost(url, data, headers, success = () => {}, failure = defaultF
             }
         }
     }).catch(err => {
-        console.log("接口调用失败", err);
+        // console.log("接口调用失败", err);
         error(err);
         throw err;
     });
@@ -118,7 +118,6 @@ function internalPost(url, data, headers, success = () => {}, failure = defaultF
 
 function internalGet(url, headers, success = () => {}, failure = defaultFailure, error = defaultError) {
     return axios.get(url, { headers: headers }).then(({ data: responseData }) => {
-        console.log("====internalGet",url)
 
         if (responseData.code === 200) {
             success(responseData.data);
@@ -195,7 +194,7 @@ router.beforeEach((to, from, next) => {
     
     // 如果路由需要认证但用户未授权，且不是API路由(/api/unauth)，则跳转登录
     if (to.matched.some(record => record.meta.requiresAuth) && unauthorized()) {
-        console.log("去登录2 - 需要认证的路由");
+        // console.log("去登录2 - 需要认证的路由");
         next({ name: 'welcome-login' });
     } else {
         next();
@@ -211,7 +210,7 @@ axios.interceptors.request.use(config => {
     } else if (!isUnauth && router.currentRoute.value.name !== 'welcome-login') {
         // 只有非unauth接口且不在登录页时才可能跳转
         // 这里不再自动跳转，由路由守卫处理
-        console.log("检测到未授权但不需要跳转");
+        // console.log("检测到未授权但不需要跳转");
     }
     return config;
 });

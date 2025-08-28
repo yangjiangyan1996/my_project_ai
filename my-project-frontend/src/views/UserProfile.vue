@@ -793,7 +793,7 @@ const updateMessageStatus = async (messageIds, status) => {
       status
     })
   } catch (error) {
-    console.error('更新消息状态失败:', error)
+    // console.error('更新消息状态失败:', error)
   }
 }
 
@@ -814,7 +814,7 @@ const openMessageDialog = async () => {
       page: chatPage.value,
       size: chatSize.value
     })
-    console.log("获取聊天历史",res)
+    // console.log("获取聊天历史",res)
     if (res.records && res.records.length > 0) {
       chatHistory.value = res.records
       chatTotal.value = res.total
@@ -833,7 +833,7 @@ const openMessageDialog = async () => {
     // 开启轮询获取新消息
     startPolling()
   } catch (error) {
-    console.error('获取聊天历史失败:', error)
+    // console.error('获取聊天历史失败:', error)
     ElMessage.error('获取聊天历史失败')
   } finally {
     chatLoading.value = false
@@ -867,14 +867,14 @@ const checkReadStatus = async () => {
   if (!chatConversationId.value || !userInfo.value.data?.id) return
   
   try {
-    console.log('开始检查已读状态...')
+    // console.log('开始检查已读状态...')
     const res = await post('/api/auth/chat/checkReadStatus', {
       conversationId: chatConversationId.value,
       userId: currentUserInfo.data.id
     })
 
     if (res && Array.isArray(res.readStatus)) {
-      console.log('收到未读消息状态更新:', res.readStatus)
+      // console.log('收到未读消息状态更新:', res.readStatus)
       
       // 创建消息ID到未读用户列表的映射
       const unreadStatusMap = new Map()
@@ -903,14 +903,14 @@ const checkReadStatus = async () => {
       })
       
       if (shouldUpdate) {
-        console.log('检测到已读状态变化，更新消息列表')
+        // console.log('检测到已读状态变化，更新消息列表')
         messageHistory.value = newMessageHistory
       } else {
-        console.log('已读状态无变化，跳过更新')
+        // console.log('已读状态无变化，跳过更新')
       }
     }
   } catch (error) {
-    console.error('检查已读状态失败:', error)
+    // console.error('检查已读状态失败:', error)
     ElMessage.error('检查消息状态失败，请稍后重试')
   }
 }
@@ -955,7 +955,7 @@ const fetchNewMessages = async () => {
       }
     }
   } catch (error) {
-    console.error('获取新消息失败:', error)
+    // console.error('获取新消息失败:', error)
   }
 }
 
@@ -1069,7 +1069,7 @@ const sendMessage = async () => {
       scrollToBottom('smooth')
     }
   } catch (error) {
-    console.error('发送消息失败:', error)
+    // console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败')
   } finally {
     sendingMessage.value = false
@@ -1096,7 +1096,7 @@ const markOtherMessagesAsRead = async () => {
         )
       })
     } catch (error) {
-      console.error('更新消息已读状态失败:', error)
+      // console.error('更新消息已读状态失败:', error)
     }
   }
 }
@@ -1145,7 +1145,7 @@ const loadMoreMessages = async () => {
       })
     }
   } catch (error) {
-    console.error('加载更多消息失败:', error)
+    // console.error('加载更多消息失败:', error)
     chatPage.value-- // 回退页码
   } finally {
     chatLoading.value = false
@@ -1166,7 +1166,7 @@ const loadMessageHistory = async () => {
     const res = await get(`/api/auth/message/history?userId=${userInfo.value.data.id}`)
     messageHistory.value = res.records || []
   } catch (error) {
-    console.error('加载消息历史失败:', error)
+    // console.error('加载消息历史失败:', error)
     ElMessage.error('加载消息历史失败')
   } finally {
     loadingMessages.value = false
@@ -1184,7 +1184,7 @@ const sendNewMessage = async () => {
     newMessage.value = ''
     loadMessageHistory()
   } catch (error) {
-    console.error('发送消息失败:', error)
+    // console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败')
   }
 }
@@ -1199,7 +1199,7 @@ const fetchFollowedBars = async (page = 1, size = 5) => {
       size: size,
       secrecyId: secrecyId.value,
     })
-    console.log("response",response)
+    // console.log("response",response)
     if (response && response.records) {
       if (size === 5) {
         // 主列表数据
@@ -1228,7 +1228,7 @@ const fetchFollowedBars = async (page = 1, size = 5) => {
 
     }
   } catch (error) {
-    console.error('获取关注的圈子失败:', error)
+    // console.error('获取关注的圈子失败:', error)
     ElMessage.error('获取关注的圈子失败，请稍后重试')
   } finally {
     followedBarsLoading.value = false
@@ -1280,7 +1280,7 @@ const loadFollowerList = async () => {
     }))
     followerTotal.value = res.total || records.length || 0
   } catch (err) {
-    console.error('加载粉丝用户失败', err)
+    // console.error('加载粉丝用户失败', err)
     ElMessage.error('加载粉丝用户失败')
   } finally {
     followerLoading.value = false
@@ -1307,7 +1307,7 @@ const loadFolloweeList = async () => {
     // followeeList.value = records
     // followeeTotal.value = res.total || records.length || 0
   } catch (err) {
-    console.error('加载关注用户失败', err)
+    // console.error('加载关注用户失败', err)
     ElMessage.error('加载关注用户失败')
   } finally {
     followeeLoading.value = false
@@ -1333,7 +1333,7 @@ const handleFollowAction = async (user) => {
     // Toggle the follow state
     user.needFollow = !user.needFollow
   } catch (error) {
-    console.error('操作失败:', error)
+    // console.error('操作失败:', error)
     ElMessage.error('操作失败，请稍后重试')
   } finally {
     user.loading = false
@@ -1364,7 +1364,7 @@ const doFollowBack = async (user) => {
     ElMessage.success(`已回关 ${user.username}`)
     user.needFollow = false
   } catch (error) {
-    console.error('回关失败:', error)
+    // console.error('回关失败:', error)
     ElMessage.error('回关失败')
   }
 }
@@ -1385,7 +1385,7 @@ const checkFollowStatus = async () => {
     const res = await get(`/api/auth/my/isFollewer?followeeId=${userInfo.value.data.id}`)
     isFollowing.value = !res
   } catch (error) {
-    console.error('检查关注状态失败:', error)
+    // console.error('检查关注状态失败:', error)
   }
 }
 
@@ -1409,7 +1409,7 @@ const toggleFollow = async () => {
     isFollowing.value = !isFollowing.value
     await fetchFollowCount()
   } catch (error) {
-    console.error('操作失败:', error)
+    // console.error('操作失败:', error)
     ElMessage.error('操作失败，请稍后重试')
   } finally {
     followLoading.value = false
@@ -1437,7 +1437,7 @@ const fetchTeamData = async () => {
     teamTotal.value = res.total || res.length || 0
     noMoreTeam.value = teamPage.value * teamSize.value >= teamTotal.value
   } catch (err) {
-    console.error('加载我的团队失败', err)
+    // console.error('加载我的团队失败', err)
   } finally {
     teamLoading.value = false
   }
@@ -1458,7 +1458,7 @@ const fetchUserInfo = async () => {
     userInfo.value = { data: res }
     checkFollowStatus();
   } catch (error) {
-    console.error('获取用户信息失败:', error)
+    // console.error('获取用户信息失败:', error)
   }
 }
 
@@ -1493,7 +1493,7 @@ const loadIntentData = async () => {
       hasSubmitted.value = true
     }
   } catch (error) {
-    console.error('加载意向数据失败:', error)
+    // console.error('加载意向数据失败:', error)
   }
 }
 
@@ -1534,7 +1534,7 @@ const fetchFollowCount = async () => {
     followerCount.value = res.followerCount || 0
     followeeCount.value = res.followeeCount || 0
   } catch (error) {
-    console.error('获取关注数失败:', error)
+    // console.error('获取关注数失败:', error)
   }
 }
 

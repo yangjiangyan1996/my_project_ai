@@ -914,7 +914,7 @@ const fetchPointsInfo = async () => {
       badges.value = res.badges || []
     }
   } catch (error) {
-    console.error('获取积分信息失败:', error)
+    // console.error('获取积分信息失败:', error)
   }
 }
 
@@ -934,7 +934,7 @@ const handleTaskReward = async (task) => {
     
     task.loading = true;
     const res = await get(`/api/auth/achievement/receiverTaskReward?taskId=${task.id}`);
-    console.log("task",task)
+    // console.log("task",task)
     if (res) {
       // 更新任务状态
       task.rewardClaimed = 1;
@@ -953,7 +953,7 @@ const handleTaskReward = async (task) => {
       }
     }
   } catch (error) {
-    console.error('领取奖励失败:', error);
+    // console.error('领取奖励失败:', error);
     ElMessage.error('领取奖励失败');
   } finally {
     task.loading = false;
@@ -1006,7 +1006,7 @@ const fetchPointsTasks = async () => {
       pointsTaskTotal.value = Number(res.total) || 0
     }
   } catch (error) {
-    console.error('获取积分任务失败:', error)
+    // console.error('获取积分任务失败:', error)
     ElMessage.error('获取积分任务失败')
   } finally {
     pointsTaskLoading.value = false
@@ -1054,7 +1054,7 @@ const completeTask = async (task) => {
       totalPoints.value += task.points
     }
   } catch (error) {
-    console.error('完成任务失败:', error)
+    // console.error('完成任务失败:', error)
     ElMessage.error('完成任务失败')
   }
 }
@@ -1165,7 +1165,7 @@ const getStatusTagType = (status) => {
 const fetchFollowedBars = async (page = 1, size = 5) => {
   try {
     if(!userInfo.data.id) {
-      console.log("未登录，不获取我关注的圈子")
+      // console.log("未登录，不获取我关注的圈子")
       return
     }
     
@@ -1202,7 +1202,7 @@ const fetchFollowedBars = async (page = 1, size = 5) => {
       followedBarsTotalCount.value = response?.total || response?.records?.length || 0
     }
   } catch (error) {
-    console.error('获取关注的圈子失败:', error)
+    // console.error('获取关注的圈子失败:', error)
     ElMessage.error('获取关注的圈子失败，请稍后重试')
   } finally {
     followedBarsLoading.value = false
@@ -1228,7 +1228,7 @@ const fetchSkillCategories = async () => {
     const res = await get('/api/unauth/common/category')
     skillCategories.value = res
   } catch (error) {
-    console.error('获取技能分类失败:', error)
+    // console.error('获取技能分类失败:', error)
     ElMessage.error('获取技能分类失败')
   }
 }
@@ -1238,7 +1238,7 @@ const fetchUserTypes = async () => {
     const res = await get('/api/unauth/common/getUserType')
     userTypes.value = res
   } catch (error) {
-    console.error('获取用户类型失败:', error)
+    // console.error('获取用户类型失败:', error)
     ElMessage.error('获取用户类型失败')
   }
 }
@@ -1314,7 +1314,7 @@ const handleFollowAction = async (user) => {
     // Toggle the follow state
     user.needFollow = !user.needFollow
   } catch (error) {
-    console.error('操作失败:', error)
+    // console.error('操作失败:', error)
     ElMessage.error('操作失败，请稍后重试')
   } finally {
     user.loading = false
@@ -1328,7 +1328,7 @@ const handleFollowerPageChange = (page) => {
 }
 
 const openFollowDialog = async (type) => {
-  console.log("打开关注弹窗，type:",type)
+  // console.log("打开关注弹窗，type:",type)
   currentFollowTab.value = type
   followDialogTitle.value = type === 'followers' ? '关注我的' : '我关注的'
   
@@ -1370,7 +1370,7 @@ const loadFollowerList = async () => {
     }))
     followerTotal.value = res.total || records.length || 0
   } catch (err) {
-    console.error('加载粉丝用户失败', err)
+    // console.error('加载粉丝用户失败', err)
     ElMessage.error('加载粉丝用户失败')
   } finally {
     followerLoading.value = false
@@ -1400,7 +1400,7 @@ const loadFolloweeList = async () => {
     // followeeList.value = records
     // followeeTotal.value = res.total || records.length || 0
   } catch (err) {
-    console.error('加载关注用户失败', err)
+    // console.error('加载关注用户失败', err)
     ElMessage.error('加载关注用户失败')
   } finally {
     followeeLoading.value = false
@@ -1409,22 +1409,22 @@ const loadFolloweeList = async () => {
 
 // 无限滚动加载更多
 const loadMoreFollows = () => {
-  console.log('无限滚动加载更多开始，当前页码:', followersPage.value)
+  // console.log('无限滚动加载更多开始，当前页码:', followersPage.value)
   
   if (currentFollowTab.value === 'following') {
     if (!loadingFollowing.value && !noMoreFollowing.value) {
-      console.log('加载更多我关注的列表，当前页码:', followingPage.value)
+      // console.log('加载更多我关注的列表，当前页码:', followingPage.value)
       loadFollowingList()
     }
   } else {
     if (!loadingFollowers.value && !noMoreFollowers.value) {
-      console.log('加载更多关注我的列表，当前页码:', followersPage.value)
+      // console.log('加载更多关注我的列表，当前页码:', followersPage.value)
       loadFollowersList()
     } else {
-      console.log('不满足加载条件:', {
-        loading: loadingFollowers.value,
-        noMore: noMoreFollowers.value
-      })
+      // console.log('不满足加载条件:', {
+      //   loading: loadingFollowers.value,
+      //   noMore: noMoreFollowers.value
+      // })
     }
   }
 }
@@ -1432,7 +1432,7 @@ const loadMoreFollows = () => {
 // 关注用户
 const followUser = async (userId, index, isFollowerTab) => {
   try {
-    console.log("关注用户,userId:",userId)
+    // console.log("关注用户,userId:",userId)
     const res = await post('/api/auth/project/concernPublisher', {
         followeeId: userId
       });
@@ -1449,7 +1449,7 @@ const followUser = async (userId, index, isFollowerTab) => {
         ElMessage.error('关注失败')
       }
   } catch (error) {
-    console.error('关注失败:', error)
+    // console.error('关注失败:', error)
     ElMessage.error('关注失败')
   }
 }
@@ -1457,7 +1457,7 @@ const followUser = async (userId, index, isFollowerTab) => {
 // 取消关注
 const unfollowUser = async (userId, index) => {
   try {
-    console.log("取消关注userId",userId)
+    // console.log("取消关注userId",userId)
     const res = await post('/api/auth/project/concernPublisherCancel', {
         followeeId: userId
       })
@@ -1474,7 +1474,7 @@ const unfollowUser = async (userId, index) => {
       }
     
   } catch (error) {
-    console.error('取消关注失败:', error)
+    // console.error('取消关注失败:', error)
     ElMessage.error('取消关注失败')
   }
 }
@@ -1518,7 +1518,7 @@ const fetchTeamData = async () => {
     teamTotal.value = res.total || res.length || 0
     noMoreTeam.value = teamPage.value * teamSize.value >= teamTotal.value
   } catch (err) {
-    console.error('加载我的团队失败', err)
+    // console.error('加载我的团队失败', err)
   } finally {
     teamLoading.value = false
   }
@@ -1530,12 +1530,12 @@ const goToDetail = (project) => {
 }
 
 const goToMyMemberGroupDetail = (projectId) => {
-  console.log("project.id",projectId)
+  // console.log("project.id",projectId)
   router.push({ name: 'myMemberGroupDetail', params: { id: projectId } })
 }
 
 const goToCreateSidejob = (itemId) => {
-  console.log("itemId------",itemId)
+  // console.log("itemId------",itemId)
   router.push({
     name: 'createOfFindColleague',
     query: { id: itemId }
@@ -1567,7 +1567,7 @@ const fetchMyCount = async () => {
     stats.value.applyCount = res.applyCount || 0
     stats.value.applicationCount = res.applicationCount || 0
   } catch (error) {
-    console.error('获取统计数据失败:', error)
+    // console.error('获取统计数据失败:', error)
   }
 }
 
@@ -1580,7 +1580,7 @@ const changeShowStatus = async () => {
       form.value.status = 1
     }
   } catch (error) {
-    console.error('加载意向数据失败:', error)
+    // console.error('加载意向数据失败:', error)
   }
 }
 
@@ -1612,7 +1612,7 @@ const loadIntentData = async () => {
       // 查找对应的身份描述
       const audienceDesc = userTypes.value.find(type => type.code === res.audience)?.desc || res.audienceName
       
-      console.log("skills",skills)
+      // console.log("skills",skills)
       form.value = {
         id: res.id || '',
         audience: res.audience || '', // 使用code值
@@ -1623,11 +1623,11 @@ const loadIntentData = async () => {
         resources: res.resources || '',
         status: res.status ? 1 : 0
       }
-      console.log("form.value after load", form.value)
+      // console.log("form.value after load", form.value)
       hasSubmitted.value = true
     }
   } catch (error) {
-    console.error('加载意向数据失败:', error)
+    // console.error('加载意向数据失败:', error)
   }
 }
 
@@ -1714,7 +1714,7 @@ const fetchFollowCount = async () => {
     followerCount.value = res.followerCount || 0
     followeeCount.value = res.followeeCount || 0
   } catch (error) {
-    console.error('获取关注数失败:', error)
+    // console.error('获取关注数失败:', error)
   }
 }
 

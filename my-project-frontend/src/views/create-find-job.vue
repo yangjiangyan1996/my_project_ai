@@ -102,7 +102,7 @@ const submitIntent = async (publish) => {
       ...form,
       status: publish ? 1 : 0
     });
-    console.log("result",res)
+    // console.log("result",res)
     ElMessage.success(res || '操作成功');
     goBack()
   } catch (e) {

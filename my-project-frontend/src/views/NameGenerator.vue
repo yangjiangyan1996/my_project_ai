@@ -173,7 +173,7 @@ const submitForm = async () => {
     })
     resultList.value = response.data || []
   } catch (error) {
-    console.error(error)
+    // console.error(error)
     ElMessage.error(error.response?.data?.message || '生成失败，请稍后重试')
   } finally {
     loading.value = false

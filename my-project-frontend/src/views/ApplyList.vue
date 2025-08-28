@@ -137,7 +137,7 @@ const formatTime = (timeString) => {
 }
 
 const goToUserProfile = (userId) => {
-  console.log("访问用户详情页",userId)
+  // console.log("访问用户详情页",userId)
   // router.push(`/index/user/${userId}`)
   window.open(`/index/user/${userId}`, '_blank');
 }

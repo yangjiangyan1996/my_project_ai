@@ -10,12 +10,12 @@ const loadUserInfo = async () => {
   state.loading = true
   try {
     const res = await get('/api/auth/user/getCurrentUserInfo')
-    console.log("loadUserInfo",res)
+    // console.log("loadUserInfo",res)
     if(res) {
       state.data = res
       localStorage.setItem('userInfo', JSON.stringify(res))
     } else {
-      console.log("loadUserInfo 未登录")
+      // console.log("loadUserInfo 未登录")
     }
   } finally {
     state.loading = false

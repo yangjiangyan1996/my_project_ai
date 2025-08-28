@@ -87,16 +87,16 @@ const fetchSkillMatchData = async () => {
         secrecyId: item.secrecyId,
       }));
 
-      console.log("newData",newData)
+      // console.log("newData",newData)
       // 确保响应式更新
       skillList.value = [...skillList.value, ...newData];
-      console.log("skillList.value",skillList.value)
+      // console.log("skillList.value",skillList.value)
       page.value += 1;
       hasMore.value = res.total > skillList.value.length;
     }
   } catch (err) {
     ElMessage.error('数据加载失败');
-    console.error(err);
+    // console.error(err);
   } finally {
     loading.value = false;
   }
@@ -115,7 +115,7 @@ onMounted(async () => {
 });
 
 const goToUserProfile = (userId) => {
-  console.log("访问用户详情页",userId)
+  // console.log("访问用户详情页",userId)
   // router.push(`/index/user/${userId}`)
   window.open(`/index/user/${userId}`, '_blank');
 }

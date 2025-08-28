@@ -326,7 +326,7 @@ const fetchCategoryData = async () => {
     }
   } catch (error) {
     ElMessage.error('获取分类数据失败')
-    console.error('获取分类数据失败:', error)
+    // console.error('获取分类数据失败:', error)
   } finally {
     categoryLoading.value = false
   }
@@ -398,7 +398,7 @@ const fetchProjects = async () => {
     }
   } catch (error) {
     ElMessage.error('获取项目列表失败');
-    console.error('获取项目列表失败:', error);
+    // console.error('获取项目列表失败:', error);
   } finally {
     loading.value = false;
   }
@@ -439,7 +439,7 @@ const applyFilters = async () => {
     }
   } catch (error) {
     ElMessage.error('获取项目列表失败')
-    console.error('获取项目列表失败:', error)
+    // console.error('获取项目列表失败:', error)
   } finally {
     loading.value = false
   }
@@ -482,7 +482,7 @@ const loadMore = async () => {
     }
   } catch (error) {
     ElMessage.error('加载更多项目失败')
-    console.error('加载更多项目失败:', error)
+    // console.error('加载更多项目失败:', error)
   } finally {
     loading.value = false
   }
@@ -498,7 +498,7 @@ const toggleFlip = async (project) => {
       project.detailLoading = true
       
        const detail = await get(`/api/unauth/project/detail?projectId=${project.projectId}`);
-       console.log("toggleFlip", detail)
+      //  console.log("toggleFlip", detail)
       project.detail = {
         ...detail,
         // 处理可能的多选标签
@@ -506,7 +506,7 @@ const toggleFlip = async (project) => {
       }
     } catch (error) {
       ElMessage.error('获取项目详情失败')
-      console.error('获取项目详情失败:', error)
+      // console.error('获取项目详情失败:', error)
     } finally {
       project.detailLoading = false
     }
@@ -551,7 +551,7 @@ const toggleLike = async (project) => {
     ElMessage.success(liked ? '点赞成功' : '已取消点赞')
   } catch (error) {
     ElMessage.error('操作失败: ' + (error.message || '未知错误'))
-    console.error('点赞操作失败:', error)
+    // console.error('点赞操作失败:', error)
   }
 }
 
@@ -571,7 +571,7 @@ const toggleFavorite = async (project) => {
     ElMessage.success(liked ? '收藏成功' : '已取消收藏')
   } catch (error) {
     ElMessage.error('操作失败: ' + (error.message || '未知错误'))
-    console.error('收藏操作失败:', error)
+    // console.error('收藏操作失败:', error)
   }
 }
 
@@ -608,7 +608,7 @@ const submitApplication = async () => {
     applyDialogVisible.value = false
   } catch (error) {
     ElMessage.error('申请失败: ' + (error.message || '未知错误'))
-    console.error('申请失败:', error)
+    // console.error('申请失败:', error)
   }
 }
 

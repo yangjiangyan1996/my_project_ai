@@ -395,7 +395,7 @@ const inviteUser = async (user) => {
     ElMessage.success('邀请已发送')
     user.statusOfUserInProject = 0
   } catch (error) {
-    console.log("邀请失败",error)
+    // console.log("邀请失败",error)
   }
 }
 
