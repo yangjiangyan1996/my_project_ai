@@ -1,7 +1,6 @@
 package com.example.service.impl;
 
 
-import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.Facade.JimengFacade;
 import com.example.entity.dto.*;
@@ -14,7 +13,6 @@ import com.example.service.AccountService;
 import com.example.service.AutoProjectService;
 import com.example.service.QuanBarTieService;
 import com.example.service.QuanBarsService;
-import com.google.common.collect.Lists;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomUtils;
@@ -57,8 +55,11 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
                 // 设置圈子ID
                 tie.setBarId(quanBar.getId());
                 // 保存帖子
-                quanBarTieService.save(tie);
-                log.info("成功为圈子 {} 创建帖子: {}", quanBar.getName(), tie.getTitle());
+                //quanBarTieService.save(tie);
+                log.info("创建帖子成功 https://jimeng.jianying.com/ai-tool/generate/?type=image");
+                log.info("创建帖子成功 圈子： {} ", quanBar.getName());
+                log.info("创建帖子成功 创建帖子标题: {}", tie.getTitle());
+                log.info("创建帖子成功 内容是：{}",tie.getContent());
             }
         } catch (Exception e) {
             log.error("为圈子 {} 创建帖子失败", quanBar.getName(), e);
@@ -93,15 +94,15 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
         }
 
         // 处理内容中的图片
-        content = processContentWithImages(content);
+        //content = processContentWithImages(content);
 
         // 生成相关的头像图片
-        String avatar = jimengFacade.getAiPictureUrl(title);
+        //String avatar = jimengFacade.getAiPictureUrl(title);
 
         QuanBarTie tie = new QuanBarTie();
         tie.setTitle(title);
         tie.setContent(content);
-        tie.setAvatar(avatar != null ? JSON.toJSONString(Lists.newArrayList(avatar)) : new String());
+        //tie.setAvatar(avatar != null ? JSON.toJSONString(Lists.newArrayList(avatar)) : new String());
         tie.setStatus(QuanEnum.TieStatusEnums.NORMAL.getCode());
         tie.setCreatedBy(userId);
         tie.setCreatedAt(new Date());
@@ -195,8 +196,8 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
         project.setFirstCategory(firstCategory);
         project.setSecondCategory(Integer.valueOf(secondCategory));
 
-        String aiPictureUrl = jimengFacade.getAiPictureUrl(description);
-        project.setImageUrl(aiPictureUrl);
+//        String aiPictureUrl = jimengFacade.getAiPictureUrl(description);
+//        project.setImageUrl(aiPictureUrl);
 
         return project;
     }
@@ -222,17 +223,24 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
         // 生成随机项目数据
         Projects project = generateRandomProject(parent, sub);
         project.setCreatedBy(userId);
-        project.setStatus(ProjectEnum.ProjectStatusEnum.PUBLISHING.getCode());
+//        project.setStatus(ProjectEnum.ProjectStatusEnum.PUBLISHING.getCode());
 
         // 保存项目
-        projectMapper.insert(project);
+        //projectMapper.insert(project);
 
         // 生成并保存项目详情
         ProjectsDetail detail = generateRandomProjectDetail(project.getId(), project.getName());
         detail.setCreatedBy(userId);
-        projectDetailMapper.insert(detail);
+        //projectDetailMapper.insert(detail);
 
-        log.info("自动发布项目成功，项目ID: {}", project.getId());
+        log.info("自动发布项目成功");
+        log.info("自动发布项目成功，: 标题：{}", project.getName());
+        log.info("自动发布项目成功，: 一级分类：{}", project.getFirstCategory());
+        log.info("自动发布项目成功，: 二级分类：{}", project.getSecondCategory());
+        log.info("自动发布项目成功，: 操作步骤：{}", detail.getSteps());
+        log.info("自动发布项目成功，: 推荐工具：{}", detail.getTools());
+        log.info("自动发布项目成功，: 风险提示：{}", detail.getRiskWarning());
+
         return project.getId();
     }
 
@@ -243,16 +251,16 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
 
         // 使用DeepSeek生成内容
         String steps = deepSeekContentService.generateProjectSteps(projectName);
-        if (steps != null) {
-            steps = processStepsWithImages(steps);
-        } else {
-            steps = "1. 注册账号\n2. 完成培训\n3. 开始工作\n4. 获取收益";
-        }
+//        if (steps != null) {
+//            steps = processStepsWithImages(steps);
+//        } else {
+//            steps = "1. 注册账号\n2. 完成培训\n3. 开始工作\n4. 获取收益";
+//        }
 
 
         String tools = deepSeekContentService.generateProjectTools(projectName);
         String riskWarning = deepSeekContentService.generateRiskWarning(projectName);
-        String tags = deepSeekContentService.generateProjectTags(projectName);
+//        String tags = deepSeekContentService.generateProjectTags(projectName);
 
         detail.setProjectsId(projectId);
         detail.setSteps(steps != null ? steps : "1. 注册账号\n2. 完成培训\n3. 开始工作\n4. 获取收益");
@@ -262,7 +270,7 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
         detail.setIncomeEstimateMax(detail.getIncomeEstimateMin() + (long) (random.nextInt(5000) + 1000));
         detail.setTargetAudience((long) (random.nextInt(3) + 1));
         detail.setRiskWarning(riskWarning != null ? riskWarning : "- 市场竞争风险\n- 平台政策风险");
-        detail.setTags(tags != null ? tags : "新手友好,高收益");
+//        detail.setTags(tags != null ? tags : "新手友好,高收益");
         detail.setNeedMember(random.nextBoolean() ? 1 : 0);
         detail.setMemberNum(detail.getNeedMember() == 1 ? random.nextInt(5) + 1 : 0);
 

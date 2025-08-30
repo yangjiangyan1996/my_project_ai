@@ -37,7 +37,8 @@ public class DeepSeekContentService {
     public String generateQuanTieContent(String barName, String title) {
         String prompt = "请为'" + barName + "'领域生成一篇关于" + title + "的完整的创业教学帖子内容。" +
                 "要求包含：具体操作步骤、所需工具材料、盈利模式分析。" +
-                "内容要实用具体，适合创业者学习，使用html格式分段，字数在800-1200字。";
+                "不要带#，*这样的符号。" +
+                "内容要实用具体，适合创业者学习，使用纯文本格式分段，字数在800-1200字。";
 
         return deepSeekUtils.callDeepSeek(prompt);
     }
