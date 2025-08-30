@@ -55,11 +55,11 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
                 // 设置圈子ID
                 tie.setBarId(quanBar.getId());
                 // 保存帖子
-                //quanBarTieService.save(tie);
-                log.info("创建帖子成功 https://jimeng.jianying.com/ai-tool/generate/?type=image");
-                log.info("创建帖子成功 圈子： {} ", quanBar.getName());
-                log.info("创建帖子成功 创建帖子标题: {}", tie.getTitle());
-                log.info("创建帖子成功 内容是：{}",tie.getContent());
+                quanBarTieService.save(tie);
+//                log.info("创建帖子成功 https://jimeng.jianying.com/ai-tool/generate/?type=image");
+//                log.info("创建帖子成功 圈子： {} ", quanBar.getName());
+//                log.info("创建帖子成功 创建帖子标题: {}", tie.getTitle());
+//                log.info("创建帖子成功 内容是：{}",tie.getContent());
             }
         } catch (Exception e) {
             log.error("为圈子 {} 创建帖子失败", quanBar.getName(), e);
@@ -103,6 +103,7 @@ public class AutoProjectServiceImpl extends ServiceImpl<ProjectsMapper, Projects
         tie.setTitle(title);
         tie.setContent(content);
         //tie.setAvatar(avatar != null ? JSON.toJSONString(Lists.newArrayList(avatar)) : new String());
+        tie.setAvatar("");
         tie.setStatus(QuanEnum.TieStatusEnums.NORMAL.getCode());
         tie.setCreatedBy(userId);
         tie.setCreatedAt(new Date());
