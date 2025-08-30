@@ -6,7 +6,7 @@ const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
         {
-            path: '/',
+            path: '/welcome',
             name: 'welcome',
             component: () => import('@/views/WelcomeView.vue'),
             children: [
@@ -15,17 +15,17 @@ const router = createRouter({
                     name: 'welcome-login',
                     component: () => import('@/views/welcome/LoginPage.vue')
                 }, {
-                    path: 'register',
+                    path: '/welcome/register',
                     name: 'welcome-register',
                     component: () => import('@/views/welcome/RegisterPage.vue')
                 }, {
-                    path: 'forget',
+                    path: '/welcome/forget',
                     name: 'welcome-forget',
                     component: () => import('@/views/welcome/ForgetPage.vue')
                 }
             ]
         }, {
-            path: '/index',
+            path: '/',
             name: 'index',
             component: () => import('@/views/IndexView.vue'),
             meta: { requiresAuth: false },
@@ -146,7 +146,7 @@ router.beforeEach((to, from, next) => {
         // console.log("去登录3")
         next({ name: 'welcome-login' });
     } else if (to.name === 'welcome' && !unauthorized()) {
-        next('/index');
+        next('/');
     } else {
         next();
     }
