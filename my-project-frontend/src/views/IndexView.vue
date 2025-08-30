@@ -472,8 +472,9 @@
         <el-button type="primary" @click="onSearch">搜索</el-button>
       </div>
       <!-- 项目展示区域 -->
+     
       <div class="main-content">
-        <div class="project-container" @scroll="handleScroll">
+        <div class="project-container">
           <el-row :gutter="20" class="project-list">
             <el-col 
               v-for="project in projectList" 
@@ -499,15 +500,52 @@
             </el-col>
           </el-row>
 
-          <div v-if="loading" class="loading-more">
-            <el-icon class="is-loading"><Loading /></el-icon>
-            <span>加载中...</span>
+          <!-- 分页控件 -->
+          <div v-if="total > 0" class="pagination-container">
+            <div class="pagination-info">
+              共 {{ total }} 条记录，第 {{ currentPage }} / {{ totalPages }} 页
+            </div>
+            <div class="pagination-buttons">
+              <el-button 
+                :disabled="currentPage <= 1" 
+                @click="prevPage"
+                class="pagination-btn"
+              >
+                <el-icon><ArrowLeft /></el-icon>
+                上一页
+              </el-button>
+              
+              <!-- 页码按钮 -->
+              <el-button 
+                v-for="page in Math.min(5, totalPages)" 
+                :key="page"
+                :type="currentPage === page ? 'primary' : ''"
+                @click="goToPage(page)"
+                class="page-btn"
+              >
+                {{ page }}
+              </el-button>
+              
+              <!-- 省略号 -->
+              <span v-if="totalPages > 5" class="ellipsis">...</span>
+              
+              <el-button 
+                :disabled="currentPage >= totalPages" 
+                @click="nextPage"
+                class="pagination-btn"
+              >
+                下一页
+                <el-icon><ArrowRight /></el-icon>
+              </el-button>
+            </div>
           </div>
-          <div v-else-if="!hasMore" class="no-more">
-            没有更多数据了
+
+          <div v-if="!loading && projectList.length === 0" class="no-data">
+            <el-empty description="暂无项目数据" :image-size="100" />
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- 私信对话框 -->
@@ -549,7 +587,8 @@ const displayMode = ref('project')
 const projectList = ref([]);
 const loading = ref(false);
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(8);
+const totalPages = ref(0);
 const total = ref(0);
 const hasMore = ref(true);
 const categories = ref([]);
@@ -612,6 +651,8 @@ const chatType = ref(null);
 const currentUser = ref({});
 const targetUser = ref({});
 const showTooltip = ref(false);
+
+
 
 
 const formatChatTime = (timeString) => {
@@ -1126,79 +1167,107 @@ const fetchOptions = async () => {
   }
 };
 
-const fetchProjectListData = async (params = {}) => {
-  if (loading.value || !hasMore.value) {
-      return;
-  }
+
+const fetchProjectListData = async (params = {}, page = 1) => {
+  if (loading.value) return;
   
   loading.value = true;
   try {
     const res = await post('/api/unauth/project/show', { 
-      page: currentPage.value, 
+      page: page,
       size: pageSize.value,
       categories: params?.categories,
-      difficulty: params?.difficulty,
+      difficulty: params?.difficulties,
       projectName: params?.projectName
     });
 
     if (!res?.records) {
-      // console.warn("接口返回异常结构：", res);
+      console.warn("接口返回异常结构：", res);
       return;
     }
 
-    projectList.value = [
-      ...projectList.value,
-      ...res.records.map(item => ({
-        id: item.id,
-        name: item.name,
-        firstCategoryName: item.firstCategoryName,
-        secondCategoryName: item.secondCategoryName,
-        description: item.description,
-        difficulty: '★'.repeat(Number(item.difficulty || 1)),
-        imageUrl: (item.imageUrl?.replace(/["]/g, '') || '/images/default-project.png')
-      }))
-    ];
+    // 处理数据
+    projectList.value = res.records.map(item => ({
+      id: item.id,
+      name: item.name,
+      firstCategoryName: item.firstCategoryName,
+      secondCategoryName: item.secondCategoryName,
+      description: item.description,
+      difficulty: '★'.repeat(Number(item.difficulty || 1)),
+      imageUrl: (item.imageUrl?.replace(/["]/g, '') || '/images/default-project.png')
+    }));
 
     total.value = res.total || 0;
-    hasMore.value = projectList.value.length < total.value;
-    currentPage.value += 1;
+    totalPages.value = Math.ceil(total.value / pageSize.value);
+    currentPage.value = page;
+    
   } catch (error) {
-    // console.error("加载失败：", error);
+    console.error("加载失败：", error);
     ElMessage.error('数据加载失败');
   } finally {
     loading.value = false;
   }
 }
 
-const loadProjects = async () => {
-  fetchOptions();
-  fetchProjectListData({
-    category: search.value.category,
-    difficulty: search.value.difficulties,
-    projectName: search.value.name
-  });
+// 上一页
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    fetchProjectListData({
+      categories: search.value.categories,
+      difficulties: search.value.difficulties,
+      projectName: search.value.name
+    }, currentPage.value - 1);
+  }
 };
 
-const onSearch = () => {
-  currentPage.value = 1;
-  projectList.value = [];
-  hasMore.value = true;
+// 下一页
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    fetchProjectListData({
+      categories: search.value.categories,
+      difficulties: search.value.difficulties,
+      projectName: search.value.name
+    }, currentPage.value + 1);
+  }
+};
+
+// 跳转到指定页
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value && page !== currentPage.value) {
+    fetchProjectListData({
+      categories: search.value.categories,
+      difficulties: search.value.difficulties,
+      projectName: search.value.name
+    }, page);
+  }
+};
+
+
+const loadProjects = async () => {
+ fetchOptions();
   fetchProjectListData({
     categories: search.value.categories,
     difficulties: search.value.difficulties,
     projectName: search.value.name
-  });
+  }, 1);
 };
 
+const onSearch = () => {
+  fetchProjectListData({
+    categories: search.value.categories,
+    difficulties: search.value.difficulties,
+    projectName: search.value.name
+  }, 1);
+};
 const handleScroll = (e) => {
-  const { scrollTop, scrollHeight, clientHeight } = e.target;
-  if (scrollHeight - scrollTop - clientHeight < 100 && !loading.value && hasMore.value) {
-    fetchProjectListData({
-      category: search.value.category,
-      difficulty: search.value.difficulties,
-      projectName: search.value.name
-    });
-  }
+  // const { scrollTop, scrollHeight, clientHeight } = e.target;
+  // if (scrollHeight - scrollTop - clientHeight < 100 && !loading.value && hasMore.value) {
+  //   fetchProjectListData({
+  //     category: search.value.category,
+  //     difficulty: search.value.difficulties,
+  //     projectName: search.value.name
+  //   });
+  // }
 };
 
 onMounted(() => {
@@ -1967,5 +2036,96 @@ function userLogout() {
 
 .chat-popover .el-scrollbar__wrap {
   overscroll-behavior: contain !important;
+}
+
+.pagination-container {
+  position: fixed;
+  right: 30px;
+  bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 15px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid #ebeef5;
+  z-index: 1000;
+  min-width: 300px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-btn {
+  min-width: 40px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+.ellipsis {
+  padding: 0 8px;
+  color: #c0c4cc;
+  font-weight: bold;
+}
+
+.no-data {
+  padding: 60px 0;
+  text-align: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .pagination-container {
+    right: 15px;
+    bottom: 15px;
+    left: 15px;
+    align-items: center;
+    min-width: auto;
+  }
+  
+  .pagination-buttons {
+    justify-content: center;
+  }
+  
+  .pagination-info {
+    text-align: center;
+  }
+}
+
+/* 按钮悬停效果 */
+.pagination-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.page-btn:not(.is-disabled):hover {
+  border-color: #409EFF;
+  color: #409EFF;
 }
 </style>
