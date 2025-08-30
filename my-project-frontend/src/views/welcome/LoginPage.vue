@@ -31,7 +31,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="12" style="text-align: right">
-            <el-link @click="router.push('/forget')">忘记密码？</el-link>
+            <el-link @click="router.push('/welcome/forget')">忘记密码？</el-link>
           </el-col>
         </el-row>
       </el-form>
@@ -43,7 +43,7 @@
       <span style="color: grey;font-size: 13px">没有账号</span>
     </el-divider>
     <div>
-      <el-button style="width: 270px" @click="router.push('/register')" type="warning" plain>注册账号</el-button>
+      <el-button style="width: 270px" @click="router.push('/welcome/register')" type="warning" plain>注册账号</el-button>
     </div>
   </div>
 </template>
@@ -73,7 +73,7 @@ const rules = {
 function userLogin() {
   formRef.value.validate((isValid) => {
     if(isValid) {
-      login(form.username, form.password, form.remember, () => router.push("/index"))
+      login(form.username, form.password, form.remember, () => router.push("/"))
     }
   });
 }
