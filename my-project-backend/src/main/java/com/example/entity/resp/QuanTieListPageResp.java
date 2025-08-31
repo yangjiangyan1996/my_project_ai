@@ -14,6 +14,7 @@ import java.util.List;
 public class QuanTieListPageResp {
     private Long id;
     private String title;
+    private String userAvatar;
     private List<String> avatar;
     private String createdName;
     private String createdTime;

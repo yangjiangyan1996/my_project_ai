@@ -544,7 +544,7 @@ const fetchPosts = async (page = 1) => {
         id: item.id,
         title: item.title,
         content: item.content || '',
-        userAvatar: item.avatar || 'https://via.placeholder.com/40?text=用户',
+        userAvatar: item.userAvatar ,
         username: item.createdName || '匿名用户',
         time: formatTime(item.createdTime),
         views: item.views || 0,
