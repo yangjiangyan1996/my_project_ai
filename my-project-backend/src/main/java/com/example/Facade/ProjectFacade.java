@@ -793,13 +793,16 @@ public class ProjectFacade {
             // 封装结果
             MatchUserResp resp = new MatchUserResp();
             resp.setUserId(user.getUserId());
-            resp.setUsername(userId2UserInfoMap.get(user.getUserId()).getNickname());
-            resp.setSecrecyId(userId2UserInfoMap.get(user.getUserId()).getSecrecyId());
-            resp.setAvatarUrl(userId2UserInfoMap.get(user.getUserId()).getAvatarUrl());
-            resp.setSex(userId2UserInfoMap.get(user.getUserId()).getSex());
-            resp.setProvince(userId2UserInfoMap.get(user.getUserId()).getProvince());
-            resp.setCity(userId2UserInfoMap.get(user.getUserId()).getCity());
-            resp.setCounty(userId2UserInfoMap.get(user.getUserId()).getCounty());
+            if (userId2UserInfoMap.containsKey(user.getUserId())) {
+                resp.setUsername(userId2UserInfoMap.get(user.getUserId()).getNickname());
+                resp.setSecrecyId(userId2UserInfoMap.get(user.getUserId()).getSecrecyId());
+                resp.setAvatarUrl(userId2UserInfoMap.get(user.getUserId()).getAvatarUrl());
+                resp.setSex(userId2UserInfoMap.get(user.getUserId()).getSex());
+                resp.setProvince(userId2UserInfoMap.get(user.getUserId()).getProvince());
+                resp.setCity(userId2UserInfoMap.get(user.getUserId()).getCity());
+                resp.setCounty(userId2UserInfoMap.get(user.getUserId()).getCounty());
+            }
+
             resp.setStatusOfUserInProject(userId2UserStatusMap.get(user.getUserId()));
             resp.setMatchScore(score);
 
@@ -808,10 +811,13 @@ public class ProjectFacade {
             //    private String skillNames;
             //    private Long timePerDay;
             resp.setAudienceName(CommonEnum.UserTypeEnum.getByCode(userId2UseShowMap.get(user.getUserId()).getAudience()));
-            resp.setResources(userId2UseShowMap.get(user.getUserId()).getResources());
-            String skillNames = Arrays.stream(userId2UseShowMap.get(user.getUserId()).getSkills().split(",")).map(z -> CommonEnum.IndustryCategory.getNameByCode(Integer.valueOf(z))).collect(Collectors.joining(","));
-            resp.setSkillNames(skillNames);
-            resp.setTimePerDay(userId2UseShowMap.get(user.getUserId()).getTimePerDay() + CommonConstant.TIME_PER_DAY);
+            if (userId2UseShowMap.containsKey(user.getUserId())) {
+                resp.setResources(userId2UseShowMap.get(user.getUserId()).getResources());
+                String skillNames = Arrays.stream(userId2UseShowMap.get(user.getUserId()).getSkills().split(",")).map(z -> CommonEnum.IndustryCategory.getNameByCode(Integer.valueOf(z))).collect(Collectors.joining(","));
+                resp.setSkillNames(skillNames);
+                resp.setTimePerDay(userId2UseShowMap.get(user.getUserId()).getTimePerDay() + CommonConstant.TIME_PER_DAY);
+
+            }
             matchUserRespList.add(resp);
         }
 
