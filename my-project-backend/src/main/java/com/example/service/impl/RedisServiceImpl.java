@@ -43,10 +43,14 @@ public class RedisServiceImpl extends ServiceImpl<RedisMapper, RedisDTO> impleme
             return null;
         }
         if (key1.getE().before(new Date())) {
-            removeById(key);
+            removebykey(key);
             return null;
         }
         return key1.getV();
+    }
+
+    private void removebykey(String key) {
+        this.remove(new QueryWrapper<RedisDTO>().eq("k", key));
     }
 
     @Override

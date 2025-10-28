@@ -1,5 +1,6 @@
 package com.example.service.impl;
 
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
@@ -17,7 +18,10 @@ import com.example.service.RedisService;
 import com.example.utils.Const;
 import com.example.utils.DateUtils;
 import com.example.utils.FlowUtils;
+import com.example.utils.SmsUtils;
+import com.tencentcloudapi.sms.v20210111.models.SendSmsResponse;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.userdetails.User;
@@ -36,6 +40,7 @@ import java.util.concurrent.TimeUnit;
  * 账户信息处理相关服务
  */
 @Service
+@Slf4j
 public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> implements AccountService {
 
     //验证邮件发送冷却时间限制，秒为单位
@@ -65,13 +70,13 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      * @throws UsernameNotFoundException 如果用户未找到则抛出此异常
      */
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Account account = this.findAccountByNickNameOrEmail(username);
+    public UserDetails loadUserByUsername(String phone) throws UsernameNotFoundException {
+        Account account = this.findAccountByPhone(phone);
         if (account == null) {
-            throw new UsernameNotFoundException("用户名不存在");
+            throw new UsernameNotFoundException("电话号码不存在");
         }
         UserDetails build = User
-                .withUsername(username)
+                .withUsername(account.getNickname())
                 .password(account.getPassword())
                 .roles(account.getRole())
                 .build();
@@ -108,12 +113,13 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      * @param info 注册基本信息
      * @return 操作结果，null表示正常，否则为错误原因
      */
+    @Override
     public String registerEmailAccount(EmailRegisterVO info) {
-        String email = info.getEmail();
-        String code = this.getEmailVerifyCode(email);
+        String phone = info.getPhone();
+        String code = this.getPhoneVerifyCode(phone);
         if (code == null) return "请先获取验证码";
         if (!code.equals(info.getCode())) return "验证码错误，请重新输入";
-        if (this.existsAccountByEmail(email)) return "该邮件地址已被注册";
+        if (this.existsAccountByPhone(phone)) return "该电话号码已被注册";
         String username = info.getUsername();
         if (this.existsAccountByUsername(username)) return "该用户名已被他人使用，请重新更换";
         String password = passwordEncoder.encode(info.getPassword());
@@ -123,12 +129,12 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         account.setNickname(info.getUsername());
         account.setPassword(password);
         account.setSecrecyId(DateUtils.generateTimestamp());
-        account.setEmail(email);
+        account.setPhone(phone);
 
         if (!this.save(account)) {
             return "内部错误，注册失败";
         } else {
-            this.deleteEmailVerifyCode(email);
+            this.deleteEmailVerifyCode(phone);
             return null;
         }
     }
@@ -196,6 +202,22 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     @Override
+    public void askPhoneCode(String phone, String remoteAddr) {
+        //生成6位验证码
+        Random random = new Random();
+        int code = random.nextInt(899999) + 100000;
+        String[] templateParams = {code+"", "5"}; // 验证码
+        SendSmsResponse response = null;
+        try {
+            response = SmsUtils.sendSms(phone, templateParams);
+            log.info("发送短信，phone:{},code:{},resp:{}",phone, code, JSON.toJSONString(response));
+            redisService.saveValue(Const.VERIFY_PHONE_DATA + phone, String.valueOf(code), 5, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
     public List<Account> selectDefaultUser() {
         return this.baseMapper.selectList(new QueryWrapper<Account>()
                 .eq("email", "-1")
@@ -232,6 +254,13 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 //        return stringRedisTemplate.opsForValue().get(key);
     }
 
+    @Override
+    public String getPhoneVerifyCode(String code) {
+        String key = Const.VERIFY_PHONE_DATA + code;
+        return redisService.getValue(key);
+//        return stringRedisTemplate.opsForValue().get(key);
+    }
+
     /**
      * 针对IP地址进行邮件验证码获取限流
      *
@@ -256,6 +285,12 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                 .one();
     }
 
+    public Account findAccountByPhone(String phone) {
+        return this.query()
+                .eq("phone", phone)
+                .one();
+    }
+
     /**
      * 查询指定邮箱的用户是否已经存在
      *
@@ -264,6 +299,16 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      */
     private boolean existsAccountByEmail(String email) {
         return this.baseMapper.exists(Wrappers.<Account>query().eq("email", email));
+    }
+
+    /**
+     * 查询指定邮箱的用户是否已经存在
+     *
+     * @param email 邮箱
+     * @return 是否存在
+     */
+    private boolean existsAccountByPhone(String phone) {
+        return this.baseMapper.exists(Wrappers.<Account>query().eq("phone", phone));
     }
 
     /**

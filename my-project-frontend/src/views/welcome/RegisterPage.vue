@@ -27,10 +27,10 @@
                         </template>
                     </el-input>
                 </el-form-item>
-                <el-form-item prop="email">
-                    <el-input v-model="form.email" type="email" placeholder="电子邮件地址">
+                <el-form-item prop="phone">
+                    <el-input v-model="form.phone" type="tel" placeholder="手机号码">
                         <template #prefix>
-                            <el-icon><Message /></el-icon>
+                            <el-icon><Iphone /></el-icon>
                         </template>
                     </el-input>
                 </el-form-item>
@@ -44,8 +44,8 @@
                             </el-input>
                         </el-col>
                         <el-col :span="5">
-                            <el-button type="success" @click="validateEmail"
-                                       :disabled="!isEmailValid || coldTime > 0">
+                            <el-button type="success" @click="sendCode"
+                                       :disabled="!isPhoneValid || coldTime > 0">
                                 {{coldTime > 0 ? '请稍后 ' + coldTime + ' 秒' : '获取验证码'}}
                             </el-button>
                         </el-col>
@@ -58,13 +58,13 @@
         </div>
         <div style="margin-top: 20px">
             <span style="font-size: 14px;line-height: 15px;color: grey">已有账号? </span>
-            <el-link type="primary" style="translate: 0 -2px" @click="router.push('/')">立即登录</el-link>
+            <el-link type="primary" style="translate: 0 -2px" @click="router.push('/welcome')">立即登录</el-link>
         </div>
     </div>
 </template>
 
 <script setup>
-import {EditPen, Lock, Message, User} from "@element-plus/icons-vue";
+import {EditPen, Lock, User, Iphone} from "@element-plus/icons-vue";
 import router from "@/router";
 import {reactive, ref} from "vue";
 import {ElMessage} from "element-plus";
@@ -74,7 +74,7 @@ const form = reactive({
     username: '',
     password: '',
     password_repeat: '',
-    email: '',
+    phone: '',
     code: ''
 })
 
@@ -98,6 +98,16 @@ const validatePassword = (rule, value, callback) => {
     }
 }
 
+const validatePhone = (rule, value, callback) => {
+    if (value === '') {
+        callback(new Error('请输入手机号码'))
+    } else if (!/^1[3-9]\d{9}$/.test(value)) {
+        callback(new Error('请输入正确的手机号码格式'))
+    } else {
+        callback()
+    }
+}
+
 const rules = {
     username: [
         { validator: validateUsername, trigger: ['blur', 'change'] },
@@ -110,9 +120,8 @@ const rules = {
     password_repeat: [
         { validator: validatePassword, trigger: ['blur', 'change'] },
     ],
-    email: [
-        { required: true, message: '请输入邮件地址', trigger: 'blur' },
-        {type: 'email', message: '请输入合法的电子邮件地址', trigger: ['blur', 'change']}
+    phone: [
+        { validator: validatePhone, trigger: ['blur', 'change'] }
     ],
     code: [
         { required: true, message: '请输入获取的验证码', trigger: 'blur' },
@@ -120,12 +129,12 @@ const rules = {
 }
 
 const formRef = ref()
-const isEmailValid = ref(false)
+const isPhoneValid = ref(false)
 const coldTime = ref(0)
 
 const onValidate = (prop, isValid) => {
-    if(prop === 'email')
-        isEmailValid.value = isValid
+    if(prop === 'phone')
+        isPhoneValid.value = isValid
 }
 
 const register = () => {
@@ -134,7 +143,7 @@ const register = () => {
             post('/api/auth/register', {
                 username: form.username,
                 password: form.password,
-                email: form.email,
+                phone: form.phone,
                 code: form.code
             }, () => {
                 ElMessage.success('注册成功，欢迎加入我们')
@@ -146,12 +155,11 @@ const register = () => {
     })
 }
 
-const validateEmail = () => {
+const sendCode = () => {
   coldTime.value = 60
-  get(`/api/auth/ask-code?email=${form.email}&type=register`, () => {
-    ElMessage.success(`验证码已发送到邮箱: ${form.email}，请注意查收`)
+  get(`/api/unauth/project/askPhoneCode?phone=${form.phone}&type=register`, () => {
+    ElMessage.success(`验证码已发送到手机: ${form.phone}，请注意查收`)
     
-    // 使用箭头函数确保this指向正确
     const handle = setInterval(() => {
       if(coldTime.value > 0) {
         coldTime.value--

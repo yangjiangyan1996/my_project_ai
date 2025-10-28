@@ -5,7 +5,6 @@ import com.example.entity.RestBean;
 import com.example.entity.vo.request.ConfirmResetVO;
 import com.example.entity.vo.request.EmailRegisterVO;
 import com.example.entity.vo.request.EmailResetVO;
-import com.example.enums.AchievementEnums;
 import com.example.service.AccountService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,6 +45,27 @@ public class AuthorizeController {
                                         HttpServletRequest request) {
         return this.messageHandle(() ->
                 accountService.registerEmailVerifyCode(type, String.valueOf(email), request.getRemoteAddr()));
+    }
+
+    /**
+     * 请求邮件验证码
+     *
+     * @param email   请求邮件
+     * @param type    类型
+     * @param request 请求
+     * @return 是否请求成功
+     */
+    @GetMapping("/askPhoneCode")
+    @Operation(summary = "请求手机验证码")
+    public RestBean<Boolean> askPhoneCode(@RequestParam @Email String email,
+                                        @RequestParam @Pattern(regexp = "(register|reset)") String type,
+                                        HttpServletRequest request) {
+        try{
+            accountService.askPhoneCode(String.valueOf(email), request.getRemoteAddr());
+        }catch (Exception e){
+            return RestBean.failure(400, "发送失败");
+        }
+        return RestBean.success();
     }
 
     /**

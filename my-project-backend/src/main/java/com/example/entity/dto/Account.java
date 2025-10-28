@@ -17,6 +17,7 @@ import java.util.Date;
 @TableName("account")
 @NoArgsConstructor
 @AllArgsConstructor
+//TODO yang 加租户ID
 public class Account implements BaseData {
     @TableId(type = IdType.AUTO)
     Long id;

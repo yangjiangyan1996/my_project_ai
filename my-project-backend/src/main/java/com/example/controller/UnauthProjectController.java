@@ -5,6 +5,7 @@ import com.example.Facade.CommonFacade;
 import com.example.Facade.ProjectFacade;
 import com.example.config.AsyncTaskUtil;
 import com.example.config.QqMailService;
+import com.example.entity.RestBean;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.dto.Projects;
@@ -15,9 +16,14 @@ import com.example.entity.req.ShowHotProjectListPageReq;
 import com.example.entity.resp.*;
 import com.example.enums.CommonEnum;
 import com.example.filter.UserUtil;
+import com.example.service.AccountService;
 import com.example.service.ProjectService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ValidationException;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.CollectionUtils;
@@ -43,9 +49,32 @@ public class UnauthProjectController {
     @Resource
     private QqMailService qqMailService;
     @Resource
+    private AccountService accountService;
+    @Resource
     ProjectFacade projectFacade;
     @Resource
     private ProjectService projectService;
+
+    /**
+     * 请求邮件验证码
+     *
+     * @param email   请求邮件
+     * @param type    类型
+     * @param request 请求
+     * @return 是否请求成功
+     */
+    @GetMapping("/askPhoneCode")
+    @Operation(summary = "请求手机验证码")
+    public RestBean<Boolean> askPhoneCode(@RequestParam @Email String phone,
+                                          @RequestParam @Pattern(regexp = "(register|reset)") String type,
+                                          HttpServletRequest request) {
+        try{
+            accountService.askPhoneCode(String.valueOf(phone), request.getRemoteAddr());
+        }catch (Exception e){
+            return RestBean.failure(400, "发送失败");
+        }
+        return RestBean.success();
+    }
 
     /**
      * 获取平均评价列表

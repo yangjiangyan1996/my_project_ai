@@ -12,7 +12,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.rememberme.InvalidCookieException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -31,13 +30,15 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        String username = authentication.getName();
-        String password = authentication.getCredentials().toString();
-        UserDetails user = accountService.loadUserByUsername(username);
+        String phone = authentication.getName();
+        String code = authentication.getCredentials().toString();
+        UserDetails user = accountService.loadUserByUsername(phone);
+        String codeOfRedis = accountService.getPhoneVerifyCode(phone);
 
-        if (passwordEncoder.matches( password, user.getPassword())) {
+//        if (passwordEncoder.matches( password, user.getPassword())) {
+        if (code.equals(codeOfRedis)) {
             return new UsernamePasswordAuthenticationToken(
-                    user, password, user.getAuthorities());
+                    user, user.getAuthorities());
         } else {
             throw new BadCredentialsException("用户名或者密码错误！");
         }

@@ -414,12 +414,12 @@
         <el-menu-item index="skill-match" @click="changeDisplayMode('talentMatch')">人才匹配</el-menu-item>
       </el-sub-menu>
 
-      <!-- <el-sub-menu index="4">
+      <el-sub-menu index="4">
         <template #title><i class="el-icon-guide"></i>导航工具</template>
-        <el-menu-item index="fuyeceping" @click="router.push({ name: 'survey' })">副业测评</el-menu-item>
-        <el-menu-item index="gongjuxiang" @click="router.push({ name: 'toolbox' })">工具箱</el-menu-item>
-        <el-menu-item index="ziyuandaohang" @click="router.push({ name: 'resources' })">资源导航</el-menu-item>
-      </el-sub-menu> -->
+        <!-- <el-menu-item index="fuyeceping" @click="router.push({ name: 'survey' })">副业测评</el-menu-item> -->
+        <el-menu-item index="gongjuxiang" @click="changeDisplayMode('toolbox')">工具箱</el-menu-item>
+        <!-- <el-menu-item index="ziyuandaohang" @click="router.push({ name: 'resources' })">资源导航</el-menu-item> -->
+      </el-sub-menu>
 
       <!-- <el-sub-menu index="5">
         <template #title><i class="el-icon-s-custom"></i>AI推荐</template>
@@ -563,6 +563,7 @@
     <TalentMatch v-if="displayMode === 'talentMatch'" />
     <RankingList v-if="displayMode === 'rankingList'" />
     <QuanList v-if="displayMode === 'quanList'" />
+    <Toolbox v-if="displayMode === 'toolbox'" />
   </div>
 </template>
 
@@ -575,6 +576,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import SkillMatch from '@/views/SkillMatch.vue';
 import TalentMatch from '@/views/TalentMatch.vue';
 import RankingList from '@/views/RankingList.vue';
+import Toolbox from '@/views/Toolbox.vue';
 import QuanList from '@/views/QuanList.vue';
 import MyInfo from '@/views/My.vue';
 import useUserInfo from '@/hooks/useUserInfo';
@@ -709,6 +711,7 @@ const fetchUnreadCount = async () => {
 };
 
 const goToLogin = () => {
+  console.log("去登录a")
   router.push({ name: 'welcome-login' });
 };
 

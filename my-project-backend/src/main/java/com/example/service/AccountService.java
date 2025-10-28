@@ -36,4 +36,19 @@ public interface AccountService extends IService<Account>, UserDetailsService {
      * @return
      */
     List<Account> selectDefaultUser();
+
+    /**
+     * 请求手机验证码
+     * @param phone
+     * @param remoteAddr
+     * @return
+     */
+    void askPhoneCode(String phone, String remoteAddr);
+
+    /**
+     * 获取手机验证码
+     * @param code
+     * @return
+     */
+    String getPhoneVerifyCode(String code);
 }

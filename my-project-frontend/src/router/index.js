@@ -116,13 +116,79 @@ const router = createRouter({
             name: 'quanTieDetail',
             component: () => import('@/views/QuanTieDetail.vue'),
             meta: { requiresAuth: true }
-        }
-        // ,{
-        //     path: '/index/growthCenter',
-        //     name: 'growthCenter',
-        //     component: () => import('@/views/GrowthCenter.vue'),
-        //     meta: { requiresAuth: true }
-        // }
+        },
+        {
+            path: '/index/Toolbox',
+            name: 'toolbox',
+            component: () => import('@/views/Toolbox.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/index/ckIndex',
+            name: 'ckIndex',
+            component: () => import('@/views/ck/CkIndex.vue'),
+            meta: { requiresAuth: false } //TODO yang 这里后面都要改成true
+        },
+        {
+            path: '/index/ckInboundCreate',
+            name: 'ckInboundCreate',
+            component: () => import('@/views/ck/CkInboundCreate.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckOutboundCreate',
+            name: 'ckOutboundCreate',
+            component: () => import('@/views/ck/CkOutboundCreate.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckTransferCreate',
+            name: 'ckTransferCreate',
+            component: () => import('@/views/ck/CkTransferCreate.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckStockTakeCreate',
+            name: 'ckStockTakeCreate',
+            component: () => import('@/views/ck/CkStockTakeCreate.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckApprovalTask',
+            name: 'ckApprovalTask',
+            component: () => import('@/views/ck/CkApprovalTask.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckWarehouseManage',
+            name: 'ckWarehouseManage',
+            component: () => import('@/views/ck/CkWarehouseManage.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckApproveManager',
+            name: 'ckApproveManager',
+            component: () => import('@/views/ck/CkApproveManager.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckSupplierManage',
+            name: 'ckSupplierManage',
+            component: () => import('@/views/ck/CkSupplierManage.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckCustomerManage',
+            name: 'ckCustomerManage',
+            component: () => import('@/views/ck/CkCustomerManage.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckProductManage',
+            name: 'ckProductManage',
+            component: () => import('@/views/ck/CkProductManage.vue'),
+            meta: { requiresAuth: false }
+        },
 
     ]
 })
@@ -132,18 +198,20 @@ router.beforeEach((to, from, next) => {
     const isUnauthRoute = to.matched.some(record => {
     // console.log("=======")
     // console.log("path:",record.path)
-    // console.log("name:",record.name)
+    console.log("name:",record.name)
     return record.path.startsWith('/api/unauth') || 
         record.name === 'welcome-login' || 
         record.name === 'welcome-register' || 
         record.name === 'welcome-forget' ||
         record.name === 'quanDetail' ||
-        record.name === 'quanTieDetail'
+        record.name === 'quanTieDetail' ||
+        // record.name === 'ckIndex' ||
+        record.name.startsWith('ck')
 });
 
     // console.log("isUnauthRoute",isUnauthRoute)
     if (to.matched.some(record => record.meta.requiresAuth) && unauthorized() && !isUnauthRoute) {
-        // console.log("去登录3")
+        console.log("去登录3")
         next({ name: 'welcome-login' });
     } else if (to.name === 'welcome' && !unauthorized()) {
         next('/');

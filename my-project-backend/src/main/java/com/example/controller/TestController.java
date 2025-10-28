@@ -12,8 +12,11 @@ import com.example.entity.jimeng.JimengResp;
 import com.example.entity.jimeng.LogoInfo;
 import com.example.service.AutoProjectService;
 import com.example.utils.FileUtils;
+import com.example.utils.SmsUtils;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.PutObjectResult;
+import com.tencentcloudapi.common.exception.TencentCloudSDKException;
+import com.tencentcloudapi.sms.v20210111.models.SendSmsResponse;
 import com.volcengine.service.visual.IVisualService;
 import com.volcengine.service.visual.impl.VisualServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
@@ -114,4 +117,15 @@ public class TestController {
         }
         return "失败";
     }
+
+
+    @Operation(summary = "手动发送短信")
+    @GetMapping("/sms")
+    public RestBean<com.tencentcloudapi.sms.v20210111.models.SendSmsResponse> sms() throws TencentCloudSDKException {
+        String[] templateParams = {"123456", "5"}; // 验证码
+        SendSmsResponse response = SmsUtils.sendSms("15569640815", templateParams);
+        log.info("resp:{}",JSON.toJSONString(response));
+        return RestBean.success(response);
+    }
+
 }
