@@ -105,7 +105,7 @@ public class SecurityConfiguration {
         } else if (exceptionOrAuthentication instanceof Authentication authentication) {
             User user = (User) authentication.getPrincipal();
             Account account = service.findAccountByNickNameOrEmail(user.getUsername());
-            String jwt = utils.createJwt(user, account.getUsername(), account.getNickname(), account.getId(), account.getRole(), CommonEnum.IndustryEnum.getByCode(account.getIndustryCode()), account.getAvatarUrl(),account.getSecrecyId());
+            String jwt = utils.createJwt(user, account.getUsername(), account.getNickname(), account.getId(), account.getRole(), CommonEnum.IndustryEnum.getByCode(account.getIndustryCode()), account.getAvatarUrl(),account.getSecrecyId(),account.getTenantId());
             if (jwt == null) {
                 writer.write(RestBean.forbidden("登录验证频繁，请稍后再试").asJsonString());
             } else {

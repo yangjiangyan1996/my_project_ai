@@ -86,7 +86,8 @@ public class JwtUtils {
         String avatarUrl = jwt.getClaim("avatarUrl").asString();
         String industryName = jwt.getClaim("industryName").asString();
         Long secrecyId = jwt.getClaim("secrecyId").asLong();
-        return new UserInfo(id, avatarUrl, name, nikeName, role, industryName,secrecyId);
+        Long tenantId = jwt.getClaim("tenantId").asLong();
+        return new UserInfo(id, avatarUrl, name, nikeName, role, industryName,secrecyId,tenantId);
     }
 
     /**
@@ -95,7 +96,7 @@ public class JwtUtils {
      * @param user 用户信息
      * @return 令牌
      */
-    public String createJwt(UserDetails user, String username, String nikeName, Long userId, String role, String industryName, String avatarUrl, Long secrecyId) {
+    public String createJwt(UserDetails user, String username, String nikeName, Long userId, String role, String industryName, String avatarUrl, Long secrecyId, Long tenantId) {
         if (this.frequencyCheck(userId)) {
             Algorithm algorithm = Algorithm.HMAC256(key);
             Date expire = this.expireTime();
@@ -108,6 +109,7 @@ public class JwtUtils {
                     .withClaim("industryName", industryName)
                     .withClaim("avatarUrl", avatarUrl)
                     .withClaim("secrecyId", secrecyId)
+                    .withClaim("tenantId", tenantId)
                     .withClaim("authorities", user.getAuthorities()
                             .stream()
                             .map(GrantedAuthority::getAuthority).toList())

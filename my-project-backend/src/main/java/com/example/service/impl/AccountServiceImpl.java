@@ -18,7 +18,6 @@ import com.example.service.RedisService;
 import com.example.utils.Const;
 import com.example.utils.DateUtils;
 import com.example.utils.FlowUtils;
-import com.example.utils.SmsUtils;
 import com.tencentcloudapi.sms.v20210111.models.SendSmsResponse;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -191,6 +190,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     @Override
     public List<Account> searchByReq(SearchUserReq req) {
         return this.baseMapper.selectList(new QueryWrapper<Account>()
+                        .eq("is_deleted", 0)
+                        .eq("tenant_id",req.getTenantId())
                 .like(StringUtils.isNotBlank(req.getUsername()), "username", req.getUsername()));
     }
 
@@ -209,7 +210,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         String[] templateParams = {code+"", "5"}; // 验证码
         SendSmsResponse response = null;
         try {
-            response = SmsUtils.sendSms(phone, templateParams);
+            //TODO yang open
+            //response = SmsUtils.sendSms(phone, templateParams);
             log.info("发送短信，phone:{},code:{},resp:{}",phone, code, JSON.toJSONString(response));
             redisService.saveValue(Const.VERIFY_PHONE_DATA + phone, String.valueOf(code), 5, TimeUnit.MINUTES);
         } catch (Exception e) {

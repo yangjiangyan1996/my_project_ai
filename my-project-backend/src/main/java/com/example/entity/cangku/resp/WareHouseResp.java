@@ -1,19 +1,16 @@
-package com.example.entity.cangku.dto;
+package com.example.entity.cangku.resp;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
-//仓库表
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/10/29 23:55
+ */
 @Data
-@TableName("ck_warehouse")
-public class Warehouse extends BaseModel {
-    @TableId(type = IdType.AUTO)
-    private Long id;
-    //租户ID
-    private Long tenantId;
+public class WareHouseResp {
+    Long id;
     //仓库编码
     private String code;
     //仓库名称
@@ -22,9 +19,10 @@ public class Warehouse extends BaseModel {
     private String address;
     //负责人ID
     private Long managerId;
+    private String managerName;
+    private String managerAvatar;
     //状态:0-停用,1-启用
     private Integer status;
-
 
     // { value: 1, label: '普通仓库' },
     //  { value: 2, label: '冷链仓库' },
@@ -37,5 +35,6 @@ public class Warehouse extends BaseModel {
     private Double area;
     //容量
     private Long capacity;
+
     private Integer defaultWareHouse;
 }

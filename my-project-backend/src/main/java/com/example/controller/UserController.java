@@ -29,8 +29,12 @@ public class UserController {
     UserFacade userFacade;
 
     @PostMapping("/searchUser")
-    public RespBean<List<UserSearchResp>> searchUser(@RequestBody SearchUserReq req) {
+    public RespBean<List<UserSearchResp>> searchUser(@RequestBody(required = false) SearchUserReq req) {
         try {
+            if (req == null) {
+                req = new SearchUserReq();
+            }
+            req.setTenantId(UserUtil.getCurrentUser().getTenantId());
             List<UserSearchResp> list = commonFacade.myMemberGroups(req);
             return RespBean.success(list);
         } catch (ValidationException e) {

@@ -111,11 +111,11 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="联系电话" width="130">
+          <!-- <el-table-column label="联系电话" width="130">
             <template #default="{ row }">
               <span>{{ row.contactPhone || '--' }}</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
           <el-table-column label="库存数量" width="100" align="center">
             <template #default="{ row }">
               <el-button type="primary" link @click="handleViewInventory(row)">
@@ -133,6 +133,18 @@
               </el-tag>
             </template>
           </el-table-column>
+
+          <el-table-column label="是否默认仓库" width="80" align="center">
+            <template #default="{ row }">
+              <el-tag 
+                :type="row.defaultWareHouse ? 'success' : 'danger'" 
+                size="small"
+              >
+                {{ row.defaultWareHouse ? '是' : '否' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+
           <el-table-column label="创建时间" width="160">
             <template #default="{ row }">
               <span>{{ formatTime(row.createdAt) }}</span>
@@ -283,6 +295,7 @@ const loadWarehouseList = async () => {
     };
     
     const res = await post('/api/auth/warehouse/list', params);
+    console.log('仓库列表:', res);
     if (res && res.records) {
       warehouseList.value = res.records.map(warehouse => ({
         id: warehouse.id || '',
@@ -298,7 +311,8 @@ const loadWarehouseList = async () => {
         capacity: warehouse.capacity || 0,
         productCount: warehouse.productCount || 0,
         isDefault: warehouse.isDefault || false,
-        status: warehouse.status || 1,
+        status: warehouse.status ,
+        defaultWareHouse : warehouse.defaultWareHouse, 
         remark: warehouse.remark || '',
         createdAt: warehouse.createdAt || new Date().toISOString()
       }));

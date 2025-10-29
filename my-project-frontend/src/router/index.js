@@ -189,6 +189,56 @@ const router = createRouter({
             component: () => import('@/views/ck/CkProductManage.vue'),
             meta: { requiresAuth: false }
         },
+        {
+            path: '/index/ckInboundManage',
+            name: 'ckInboundManage',
+            component: () => import('@/views/ck/CkInboundManage.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/inboundDetail/',
+            name: 'inboundDetail',
+            component: () => import('@/views/ck/InboundDetail.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/CkOutboundManage/',
+            name: 'ckOutboundManage',
+            component: () => import('@/views/ck/ckOutboundManage.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckTransferManage/',
+            name: 'ckTransferManage',
+            component: () => import('@/views/ck/CkTransferManage.vue'),
+            meta: { requiresAuth: false }
+                
+        },
+        {
+            path: '/index/ckInventoryList/',
+            name: 'ckInventoryList',
+            component: () => import('@/views/ck/CkInventoryList.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckInventoryTransaction/',
+            name: 'ckInventoryTransaction',
+            component: () => import('@/views/ck/CkInventoryTransaction.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckStockTake/',
+            name: 'ckStockTake',
+            component: () => import('@/views/ck/CkStockTake.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckShelfManage/',
+            name: 'ckShelfManage',
+            component: () => import('@/views/ck/CkShelfManage.vue'),
+            meta: { requiresAuth: false }
+        },
+
 
     ]
 })

@@ -11,4 +11,5 @@ import lombok.Data;
 @Data
 public class SearchUserReq {
     private String username;
+    private Long tenantId;
 }

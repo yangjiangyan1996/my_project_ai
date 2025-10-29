@@ -34,11 +34,20 @@
           <!-- 基础数据 -->
           <el-sub-menu index="base">
             <template #title>基础数据</template>
-            <el-menu-item index="product" @click="changeDisplayMode('product')">产品管理</el-menu-item>
-            <el-menu-item index="warehouse" @click="changeDisplayMode('warehouse')">仓库管理</el-menu-item>
+            <!-- <el-menu-item index="product" @click="changeDisplayMode('product')">产品管理</el-menu-item> -->
+            <!-- <el-menu-item index="warehouse" @click="changeDisplayMode('warehouse')">仓库管理</el-menu-item> -->
             <el-menu-item index="supplier" @click="changeDisplayMode('supplier')">供应商管理</el-menu-item>
             <el-menu-item index="customer" @click="changeDisplayMode('customer')">客户管理</el-menu-item>
             <el-menu-item index="approveManager" @click="changeDisplayMode('approveManager')">审批管理</el-menu-item>
+          </el-sub-menu>
+
+          <el-sub-menu index="base">
+            <template #title>基础数据</template>
+            <el-menu-item index="product" @click="changeDisplayMode('product')">产品管理</el-menu-item>
+            <el-menu-item index="warehouse" @click="changeDisplayMode('warehouse')">仓库管理</el-menu-item>
+            <!-- <el-menu-item index="supplier" @click="changeDisplayMode('supplier')">供应商管理</el-menu-item> -->
+            <!-- <el-menu-item index="customer" @click="changeDisplayMode('customer')">客户管理</el-menu-item> -->
+            <el-menu-item index="shelf" @click="changeDisplayMode('shelf')">货架管理</el-menu-item>
           </el-sub-menu>
           
           <!-- 审批管理 -->
@@ -375,6 +384,7 @@
     <CkInventoryList v-if="displayMode === 'inventory-list'" />
     <CkInventoryTransaction v-if="displayMode === 'inventory-transaction'" />
     <CkStockTake v-if="displayMode === 'stock-take'" />
+    <CkShelfManage v-if="displayMode === 'shelf'" />
   </div>
 </template>
 
@@ -402,6 +412,7 @@ import CkTransferManage from '@/views/ck/CkTransferManage.vue';
 import CkInventoryList from '@/views/ck/CkInventoryList.vue';
 import CkStockTake from '@/views/ck/CkStockTake.vue';
 import CkInventoryTransaction from '@/views/ck/CkInventoryTransaction.vue';
+import CkShelfManage from '@/views/ck/CkShelfManage.vue';
 
 
 

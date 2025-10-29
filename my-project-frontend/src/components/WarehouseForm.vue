@@ -60,19 +60,19 @@
           <el-option
             v-for="user in userList"
             :key="user.id"
-            :label="user.realName"
+            :label="user.username"
             :value="user.id"
           />
         </el-select>
       </el-form-item>
 
-      <el-form-item label="联系电话">
+      <!-- <el-form-item label="联系电话">
         <el-input
           v-model="formData.contactPhone"
           placeholder="请输入联系电话"
           maxlength="20"
         />
-      </el-form-item>
+      </el-form-item> -->
 
       <el-form-item label="仓库面积">
         <el-input-number
@@ -176,8 +176,9 @@ const formRules = {
 
 const loadUserList = async () => {
   try {
-    const res = await get('/api/auth/user/list');
-    userList.value = res.records || [];
+    const res = await post('/api/auth/user/searchUser');
+    console.log('用户列表:', res);
+    userList.value = res || [];
   } catch (error) {
     console.error('加载用户列表失败:', error);
     userList.value = [];
