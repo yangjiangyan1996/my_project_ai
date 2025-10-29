@@ -1,5 +1,6 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -9,6 +10,8 @@ import com.example.mapper.CkWareHouseMapper;
 import com.example.service.CkWareHouseService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -23,12 +26,41 @@ public class CkWareHouseServiceImpl extends ServiceImpl<CkWareHouseMapper, Wareh
         return baseMapper.selectPage(
                 page,
                 new QueryWrapper<Warehouse>()
-                        .eq("status", req.getStatus())
+                        .eq(req.getStatus()!= null ,"status", req.getStatus())
                         .like(StringUtils.isNotBlank(req.getCode() ), "code", req.getCode())
                         .like(StringUtils.isNotBlank(req.getName()) , "name", req.getName())
                         .eq( "tenant_id", req.getTenantId())
                         .eq("is_deleted",0)
-                        .orderByDesc("created_at")
+                        .orderByAsc("id")
         );
+    }
+
+    @Override
+    public List<Warehouse> listWareHouse(Long tenantId) {
+        return baseMapper.selectList(
+                new QueryWrapper<Warehouse>()
+                        .eq("tenant_id", tenantId)
+                        .eq("is_deleted",0)
+                        .orderByAsc("id")
+        );
+    }
+
+    @Override
+    public List<Warehouse> selectByCodeOrName(String code, String name, Long tenantId) {
+        // 构造查询条件
+        LambdaQueryWrapper<Warehouse> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Warehouse::getTenantId, tenantId)
+                .and(wrapper -> wrapper
+                        .eq(StringUtils.isNotBlank(code), Warehouse::getCode, code)
+                        .or()
+                        .eq(StringUtils.isNotBlank(name), Warehouse::getName, name));
+
+        // 查询结果
+        return baseMapper.selectList(queryWrapper);
+    }
+
+    @Override
+    public List<Warehouse> getByIds(List<Long> whIds, Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<Warehouse>().in("id", whIds).eq("is_deleted", 0).eq("tenant_id", tenantId));
     }
 }

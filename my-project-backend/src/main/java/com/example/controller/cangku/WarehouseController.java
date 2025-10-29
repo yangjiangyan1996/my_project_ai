@@ -12,10 +12,9 @@ import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -126,7 +125,7 @@ public class WarehouseController {
     }
 
 
-    @PostMapping("/list")
+    @PostMapping("/pageList")
     public RespBean<Page<WareHouseResp>> listOfWareHouse(@RequestBody WareHouseListPageReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
@@ -141,6 +140,22 @@ public class WarehouseController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("WarehouseController#listOfWareHouse,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+    @GetMapping("/list")
+    public RespBean<List<WareHouseResp>> list() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<WareHouseResp> result = ckWarehouseFacade.list(user);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("WarehouseController#list,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("WarehouseController#list,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

@@ -1,16 +1,15 @@
-package com.example.entity.cangku.dto;
+package com.example.entity.cangku.resp;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
-//仓库货架表
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/10/30 01:41
+ */
 @Data
-@TableName("ck_warehouse_shelf")
-public class WarehouseShelf extends BaseModel {
-    @TableId(type = IdType.AUTO)
+public class ShelfPageListResp {
     private Long id;
     //租户ID
     private Long tenantId;
@@ -38,4 +37,8 @@ public class WarehouseShelf extends BaseModel {
     private Integer sortOrder;
     //备注
     private String remark;
+
+    private String warehouseName;
+
+
 }

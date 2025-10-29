@@ -2,6 +2,7 @@ package com.example.Facade;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.dto.Warehouse;
 import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.WareHouseResp;
@@ -13,7 +14,9 @@ import jakarta.validation.ValidationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -33,16 +36,8 @@ public class CkWarehouseFacade {
     CkWareHouseService wareHouseService;
 
     public Boolean create(WareHourseCreateReq req) {
-        //根据编号和名称去重
-        Warehouse w = new Warehouse();
-        w.setCode(req.getCode());
-        w.setName(req.getName());
-        w.setTenantId(req.getTenantId());
-
-        QueryWrapper<Warehouse> warehouseQueryWrapper = new QueryWrapper<>();
-        warehouseQueryWrapper.setEntity(w);
-        Warehouse one = wareHouseService.getOne(warehouseQueryWrapper);
-        if (one != null) {
+        List<Warehouse> list = wareHouseService.selectByCodeOrName(req.getCode(), req.getName(), req.getTenantId());
+        if (!CollectionUtils.isEmpty(list)) {
             throw new ValidationException("仓库编号和名称已存在");
         }
         Warehouse save = new Warehouse();
@@ -83,6 +78,10 @@ public class CkWarehouseFacade {
         Warehouse wh = wareHouseService.getById(req.getId());
         if (wh == null) {
             throw new ValidationException("仓库不存在");
+        }
+        List<Warehouse> list = wareHouseService.selectByCodeOrName(req.getCode(), req.getName(), req.getTenantId());
+        if (!CollectionUtils.isEmpty(list)) {
+            throw new ValidationException("仓库编号和名称已存在");
         }
         Warehouse save = new Warehouse();
         BeanUtils.copyProperties(req, save);
@@ -140,5 +139,24 @@ public class CkWarehouseFacade {
         save.setModifiedAt(new Date());
         save.setModifiedBy(req.getUserId());
         return wareHouseService.updateById(save);
+    }
+
+    public List<WareHouseResp> list(UserInfo user) {
+        List<Warehouse> list = wareHouseService.listWareHouse(user.getTenantId());
+        if (list.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Long> userIds = list.stream().map(v -> v.getManagerId()).collect(Collectors.toList());
+        List<Account> userInfoList = accountService.selectByIds(userIds);
+        Map<Long, Account> userInfoMap = userInfoList.stream().collect(Collectors.toMap(Account::getId, v -> v));
+        return list.stream().map(v -> {
+            WareHouseResp p = new WareHouseResp();
+            BeanUtils.copyProperties(v, p);
+
+            p.setManagerId(v.getManagerId());
+            p.setManagerName(userInfoMap.get(v.getManagerId()).getNickname());
+            p.setManagerAvatar(userInfoMap.get(v.getManagerId()).getAvatarUrl());
+            return p;
+        }).collect(Collectors.toList());
     }
 }

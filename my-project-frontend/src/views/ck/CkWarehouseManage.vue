@@ -294,7 +294,7 @@ const loadWarehouseList = async () => {
       ...filterForm
     };
     
-    const res = await post('/api/auth/warehouse/list', params);
+    const res = await post('/api/auth/warehouse/pageList', params);
     console.log('仓库列表:', res);
     if (res && res.records) {
       warehouseList.value = res.records.map(warehouse => ({
