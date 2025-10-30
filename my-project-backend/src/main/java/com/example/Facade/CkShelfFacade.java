@@ -3,8 +3,7 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.Warehouse;
 import com.example.entity.cangku.dto.WarehouseShelf;
-import com.example.entity.cangku.req.ShelfCreateReq;
-import com.example.entity.cangku.req.ShelfListPageReq;
+import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.ShelfPageListResp;
 import com.example.service.CkShelfService;
 import com.example.service.CkWareHouseService;
@@ -70,5 +69,42 @@ public class CkShelfFacade {
         result.setTotal(list.getTotal());
         result.setRecords(collect);
         return result;
+    }
+
+
+    public Boolean update(ShelfCreateReq req) {
+        WarehouseShelf wh = shelfService.getById(req.getId());
+        if (wh == null) {
+            throw new ValidationException("仓库不存在");
+        }
+        List<WarehouseShelf> list = shelfService.selectByCodeOrName(req.getShelfCode(), req.getShelfName(), req.getTenantId());
+        if (!CollectionUtils.isEmpty(list)) {
+            for (WarehouseShelf warehouseShelf : list) {
+                if (!warehouseShelf.getId().equals(req.getId())) {
+                    throw new ValidationException("仓库编号和名称已存在");
+                }
+            }
+        }
+        WarehouseShelf save = new WarehouseShelf();
+        BeanUtils.copyProperties(req, save);
+        save.setModifiedAt(new Date());
+        save.setModifiedBy(req.getUserId());
+
+        return shelfService.updateById(save);
+    }
+
+
+    public Boolean updateStatus(ShelfUpdateStatusReq req) {
+        WarehouseShelf wh = shelfService.getById(req.getId());
+        if (wh == null) {
+            throw new ValidationException("仓库不存在");
+        }
+
+        WarehouseShelf save = new WarehouseShelf();
+        save.setId(req.getId());
+        save.setStatus(req.getStatus());
+        save.setModifiedAt(new Date());
+        save.setModifiedBy(req.getUserId());
+        return shelfService.updateById(save);
     }
 }

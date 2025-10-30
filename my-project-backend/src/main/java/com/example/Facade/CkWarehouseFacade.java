@@ -81,7 +81,11 @@ public class CkWarehouseFacade {
         }
         List<Warehouse> list = wareHouseService.selectByCodeOrName(req.getCode(), req.getName(), req.getTenantId());
         if (!CollectionUtils.isEmpty(list)) {
-            throw new ValidationException("仓库编号和名称已存在");
+            for (Warehouse warehouse : list) {
+                if (!warehouse.getId().equals(req.getId())) {
+                    throw new ValidationException("仓库编号或名称已存在");
+                }
+            }
         }
         Warehouse save = new Warehouse();
         BeanUtils.copyProperties(req, save);

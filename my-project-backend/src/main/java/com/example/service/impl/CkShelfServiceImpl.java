@@ -37,11 +37,13 @@ public class CkShelfServiceImpl extends ServiceImpl<CkShelfMapper, WarehouseShel
                 page,
                 new QueryWrapper<WarehouseShelf>()
                         .eq(req.getStatus()!= null ,"status", req.getStatus())
-                        .like(StringUtils.isNotBlank(req.getCode() ), "shelf_code", req.getCode())
-                        .like(StringUtils.isNotBlank(req.getName()) , "shelf_name", req.getName())
+                        .eq(req.getWarehouseId()!= null ,"warehouse_id", req.getWarehouseId())
+                        .like(StringUtils.isNotBlank(req.getArea() ), "area", req.getArea())
+                        .like(StringUtils.isNotBlank(req.getShelfCode() ), "shelf_code", req.getShelfCode())
+                        .like(StringUtils.isNotBlank(req.getShelfName()) , "shelf_name", req.getShelfName())
                         .eq( "tenant_id", req.getTenantId())
                         .eq("is_deleted",0)
-                        .orderByAsc("id")
+                        .orderByAsc("sort_order")
         );
     }
 

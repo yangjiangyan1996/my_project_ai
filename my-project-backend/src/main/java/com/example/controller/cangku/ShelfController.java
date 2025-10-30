@@ -7,9 +7,9 @@ import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.ShelfCreateReq;
 import com.example.entity.cangku.req.ShelfListPageReq;
+import com.example.entity.cangku.req.ShelfUpdateStatusReq;
 import com.example.entity.cangku.resp.ShelfPageListResp;
 import com.example.filter.UserUtil;
-import com.example.service.CkWareHouseService;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -67,6 +67,47 @@ public class ShelfController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("ShelfController#create,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+    @PostMapping("/updateStatus")
+    public RespBean<Boolean> updateStatus(@RequestBody ShelfUpdateStatusReq req) {
+        try {
+            Long userId  = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+            Boolean result = shelfFacade.updateStatus(req);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("ShelfController#updateStatus,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ShelfController#updateStatus,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+
+    @PostMapping("/update")
+    public RespBean<Boolean> update(@RequestBody ShelfCreateReq req) {
+        try {
+            Long userId  = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+            Boolean result = shelfFacade.update(req);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("ShelfController#update,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ShelfController#update,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
