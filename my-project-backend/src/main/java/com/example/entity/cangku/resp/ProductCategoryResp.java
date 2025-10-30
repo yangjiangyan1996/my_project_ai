@@ -1,11 +1,9 @@
 // ProductCategory.java
-package com.example.entity.cangku.dto;
+package com.example.entity.cangku.resp;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * 产品分类实体类
@@ -13,50 +11,34 @@ import lombok.Data;
  */
 
 @Data
-@TableName("ck_product_category")
-public class ProductCategory extends BaseModel {
+public class ProductCategoryResp  {
     /**
      * 主键ID，自增类型
      */
-
-    @TableId(type = IdType.AUTO)
     private Long id;
-
-    private Long tenantId;
-
     /**
      * 分类编码
      */
-
     private String categoryCode;
     /**
      * 分类名称
      */
-
     private String categoryName;
     /**
      * 父级分类ID
      */
-
     private String parentCode;
     /**
      * 分类层级
      */
-
     private Integer level;
     /**
      * 排序序号
      */
-
     private Integer sortOrder;
     /**
      * 状态：0-禁用，1-启用
      */
-
     private Integer status;
-    /**
-     * 备注
-     */
-
-    private String remark;
+    List<ProductCategoryResp> children;
 }

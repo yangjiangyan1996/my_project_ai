@@ -41,8 +41,8 @@
             <el-menu-item index="approveManager" @click="changeDisplayMode('approveManager')">审批管理</el-menu-item>
           </el-sub-menu>
 
-          <el-sub-menu index="base">
-            <template #title>基础数据</template>
+          <el-sub-menu index="product">
+            <template #title>产品管理</template>
             <el-menu-item index="product" @click="changeDisplayMode('product')">产品管理</el-menu-item>
             <el-menu-item index="warehouse" @click="changeDisplayMode('warehouse')">仓库管理</el-menu-item>
             <!-- <el-menu-item index="supplier" @click="changeDisplayMode('supplier')">供应商管理</el-menu-item> -->

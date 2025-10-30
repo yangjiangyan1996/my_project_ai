@@ -1,19 +1,17 @@
-package com.example.entity.cangku.dto;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
+package com.example.entity.cangku.resp;
+
 import lombok.Data;
 
-//产品表
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/10/30 22:31
+ */
 @Data
-@TableName("ck_product")
-public class Product extends BaseModel {
-    @TableId(type = IdType.AUTO)
+public class ProductPageListResp {
     private Long id;
-    //租户ID
-    private Long tenantId;
     //sku编号
     private String sku;
     //条形码
@@ -24,10 +22,13 @@ public class Product extends BaseModel {
     private String spec;
     //分类code
     private String categoryCode;
+    private String categoryName;
     //单位
     private String unitCode;
+    private String unitName;
     //出货单位（比如按箱子出货）
     private String outUnitCode;
+    private String outUnitName;
     //出货单位数量，比如出货时一箱子多少货
     private Long outUnitPerNum;
     //单品重量(可选)
@@ -40,4 +41,5 @@ public class Product extends BaseModel {
     private String remark;
     //状态：0-禁用，1-启用
     private Integer status;
+
 }
