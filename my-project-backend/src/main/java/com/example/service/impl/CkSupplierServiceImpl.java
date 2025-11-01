@@ -1,10 +1,13 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.Supplier;
+import com.example.entity.cangku.req.SupplierListPageReq;
 import com.example.mapper.CkSupplierMapper;
 import com.example.service.CkSupplierService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 /**
@@ -20,5 +23,28 @@ public class CkSupplierServiceImpl extends ServiceImpl<CkSupplierMapper, Supplie
         return baseMapper.selectOne(new QueryWrapper<Supplier>()
                 .eq("tenant_id", tenantId)
                 .eq("supplier_code", supplierCode));
+    }
+
+    @Override
+    public Supplier selectByCodeOrName(String supplierCode, Long tenantId) {
+        return baseMapper.selectOne(new QueryWrapper<Supplier>()
+                .eq("tenant_id", tenantId)
+                .eq("supplier_code", supplierCode)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public Page<Supplier> getPage(Page<Supplier> page, SupplierListPageReq req) {
+        return baseMapper.selectPage(
+                page,
+                new QueryWrapper<Supplier>()
+                        .eq(req.getStatus()!= null ,"status", req.getStatus())
+                        .like(StringUtils.isNotBlank(req.getContactPerson() ) ,"contact_person", req.getContactPerson())
+                        .like(StringUtils.isNotBlank(req.getSupplierCode() ), "supplier_code", req.getSupplierCode())
+                        .like(StringUtils.isNotBlank(req.getSupplierName() ), "supplier_name", req.getSupplierName())
+                        .eq( "tenant_id", req.getTenantId())
+                        .eq("is_deleted",0)
+                        .orderByAsc("created_at")
+        );
     }
 }

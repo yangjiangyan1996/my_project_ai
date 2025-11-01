@@ -1,7 +1,9 @@
 package com.example.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.Supplier;
+import com.example.entity.cangku.req.SupplierListPageReq;
 
 /**
  * @Author YangJian
@@ -11,4 +13,8 @@ import com.example.entity.cangku.dto.Supplier;
  */
 public interface CkSupplierService extends IService<Supplier> {
     Supplier selectByTenantId(Long tenantId, String supplierCode);
+
+    Page<Supplier> getPage(Page<Supplier> page, SupplierListPageReq req);
+
+    Supplier selectByCodeOrName(String supplierCode, Long tenantId);
 }
