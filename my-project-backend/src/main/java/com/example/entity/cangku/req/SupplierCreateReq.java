@@ -1,19 +1,18 @@
-package com.example.entity.cangku.dto;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
+
+package com.example.entity.cangku.req;
+
 import lombok.Data;
 
-//供应商表
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/10/30 22:31
+ */
 @Data
-@TableName("ck_supplier")
-public class Supplier extends BaseModel {
-    @TableId(type = IdType.AUTO)
+public class SupplierCreateReq {
     private Long id;
-    //租户ID
-    private Long tenantId;
     //供应商编码
     private String supplierCode;
     //供应商名称
@@ -35,5 +34,6 @@ public class Supplier extends BaseModel {
     private String email;
     private String remark;
 
-
+    private Long tenantId;
+    private Long userId;
 }

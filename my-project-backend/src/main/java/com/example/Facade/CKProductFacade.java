@@ -17,11 +17,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @Author YangJian
@@ -188,11 +187,17 @@ public class CKProductFacade {
 
 
         //获取list.getRecords() 数据的unitCode和OutUnitCOde放入一个集合中
-        List<String> unitCodeList1 = list.getRecords().stream().map(v -> v.getUnitCode()).collect(Collectors.toList());
-        List<String> unitCodeList2 = list.getRecords().stream().map(v -> v.getOutUnitCode()).collect(Collectors.toList());
-        unitCodeList1.addAll(unitCodeList2);
-        List<Unit> units = unitService.selectByTenantIdAndCodes(req.getTenantId(), unitCodeList1);
-        Map<String, Unit> unitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
+        List<String> allUnitCodes = list.getRecords().stream()
+                .flatMap(v -> Stream.of(v.getUnitCode(), v.getOutUnitCode()))
+                .filter(Objects::nonNull)   // 避免空值
+                .distinct()                  // 去重
+                .collect(Collectors.toList());
+
+        List<Unit> units = unitService.selectByTenantIdAndCodes(req.getTenantId(), allUnitCodes);
+
+        Map<String, Unit> unitMap = units.stream()
+                .collect(Collectors.toMap(Unit::getUnitCode, Function.identity()));
+
 
 
         List<ProductPageListResp> collect = list.getRecords().stream().map(v -> {
