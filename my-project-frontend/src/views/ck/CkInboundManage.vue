@@ -74,7 +74,7 @@
               <el-option
                 v-for="supplier in supplierList"
                 :key="supplier.id"
-                :label="supplier.name"
+                :label="supplier.supplierName"
                 :value="supplier.id"
               />
             </el-select>
@@ -108,7 +108,6 @@
           <el-form-item>
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="handleReset">重置</el-button>
-            <el-button @click="handleExport">导出</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -177,14 +176,6 @@
             <template #default="{ row }">
               <div class="order-info">
                 <span class="order-no">{{ row.orderNo }}</span>
-                <el-tag 
-                  v-if="row.isUrgent" 
-                  type="danger" 
-                  size="small" 
-                  class="urgent-tag"
-                >
-                  紧急
-                </el-tag>
               </div>
             </template>
           </el-table-column>
@@ -215,24 +206,6 @@
               <span>{{ row.totalQuantity }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="总金额" width="120" align="right">
-            <template #default="{ row }">
-              <span class="amount">¥{{ (row.totalAmount || 0).toFixed(2) }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="申请人" width="120">
-            <template #default="{ row }">
-              <div class="applicant-info">
-                <el-avatar :size="24" :src="row.applicantAvatar" class="applicant-avatar" />
-                <span class="applicant-name">{{ row.applicantName }}</span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="创建时间" width="160">
-            <template #default="{ row }">
-              <span>{{ formatTime(row.createdAt) }}</span>
-            </template>
-          </el-table-column>
           <el-table-column label="状态" width="100" align="center">
             <template #default="{ row }">
               <el-tag 
@@ -241,6 +214,11 @@
               >
                 {{ getStatusText(row.status) }}
               </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="创建时间" width="160">
+            <template #default="{ row }">
+              <span>{{ formatTime(row.createdAt) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="200" fixed="right" align="center">
@@ -387,31 +365,17 @@ const orderTypeOptions = [
   { value: 1, label: '采购入库' },
   { value: 2, label: '生产入库' },
   { value: 3, label: '退货入库' },
-  { value: 4, label: '调拨入库' },
-  { value: 5, label: '其他入库' }
+  { value: 4, label: '调拨入库' }
 ];
 
 const statusOptions = [
-  { value: 0, label: '草稿' },
-  { value: 1, label: '待审核' },
+  { value: 0, label: '待提交' },
+  { value: 1, label: '审核中' },
   { value: 2, label: '已通过' },
   { value: 3, label: '已完成' },
   { value: 4, label: '已拒绝' },
   { value: 9, label: '已取消' }
 ];
-
-// 计算属性
-const pendingInbounds = computed(() => {
-  return inboundList.value.filter(item => item.status === 1);
-});
-
-const approvedInbounds = computed(() => {
-  return inboundList.value.filter(item => item.status === 2);
-});
-
-const completedInbounds = computed(() => {
-  return inboundList.value.filter(item => item.status === 3);
-});
 
 // 方法
 const loadInboundList = async () => {
@@ -429,7 +393,7 @@ const loadInboundList = async () => {
       params.endDate = filterForm.dateRange[1];
     }
     
-    const res = await post('/api/auth/inbound/list', params);
+    const res = await post('/api/auth/inbound/pageList', params);
     if (res && res.records) {
       inboundList.value = res.records.map(inbound => ({
         id: inbound.id || '',
@@ -441,15 +405,10 @@ const loadInboundList = async () => {
         supplierName: inbound.supplierName || '',
         itemCount: inbound.itemCount || 0,
         totalQuantity: inbound.totalQuantity || 0,
-        totalAmount: inbound.totalAmount || 0,
-        applicantId: inbound.applicantId || '',
-        applicantName: inbound.applicantName || '',
-        applicantAvatar: inbound.applicantAvatar || '/images/default-avatar.png',
         status: inbound.status || 0,
-        isUrgent: inbound.isUrgent || false,
         remark: inbound.remark || '',
         createdAt: inbound.createdAt || new Date().toISOString(),
-        updatedAt: inbound.updatedAt || new Date().toISOString()
+        modifiedAt: inbound.modifiedAt || new Date().toISOString()
       }));
       pagination.total = res.total || 0;
       
@@ -471,7 +430,7 @@ const loadInboundList = async () => {
 const loadWarehouseList = async () => {
   try {
     const res = await get('/api/auth/warehouse/list');
-    warehouseList.value = res.records || [];
+    warehouseList.value = res || [];
   } catch (error) {
     console.error('加载仓库列表失败:', error);
     warehouseList.value = [];
@@ -480,8 +439,8 @@ const loadWarehouseList = async () => {
 
 const loadSupplierList = async () => {
   try {
-    const res = await get('/api/auth/supplier/list');
-    supplierList.value = res.records || [];
+    const res = await get('/api/auth/supplier/listEnable');
+    supplierList.value = res || [];
   } catch (error) {
     console.error('加载供应商列表失败:', error);
     supplierList.value = [];
@@ -489,10 +448,10 @@ const loadSupplierList = async () => {
 };
 
 const updateStats = () => {
-  stats.total = inboundList.value.length;
-  stats.pending = pendingInbounds.value.length;
-  stats.approved = approvedInbounds.value.length;
-  stats.completed = completedInbounds.value.length;
+  stats.total = pagination.total;
+  stats.pending = inboundList.value.filter(item => item.status === 1).length;
+  stats.approved = inboundList.value.filter(item => item.status === 2).length;
+  stats.completed = inboundList.value.filter(item => item.status === 3).length;
 };
 
 const refreshList = () => {
@@ -518,10 +477,6 @@ const handleReset = () => {
   loadInboundList();
 };
 
-const handleExport = () => {
-  ElMessage.info('导出功能开发中');
-};
-
 const handleSizeChange = (size) => {
   pagination.size = size;
   pagination.current = 1;
@@ -543,7 +498,7 @@ const handleView = (inbound) => {
 };
 
 const handleEdit = (inbound) => {
-  router.push(`/inbound/edit/${inbound.id}`);
+  router.push(`/index/ckInboundCreate/${inbound.id}`);
 };
 
 const handleSubmit = async (inbound) => {
@@ -554,8 +509,9 @@ const handleSubmit = async (inbound) => {
       { type: 'warning' }
     );
     
-    const res = await post('/api/auth/inbound/submit', {
-      id: inbound.id
+    const res = await post('/api/auth/inbound/updateStatus', {
+      id: inbound.id,
+      status: 1 // 审核中
     });
     
     if (res) {
@@ -604,8 +560,9 @@ const handleCancel = async (inbound) => {
       { type: 'warning' }
     );
     
-    const res = await post('/api/auth/inbound/cancel', {
-      id: inbound.id
+    const res = await post('/api/auth/inbound/updateStatus', {
+      id: inbound.id,
+      status: 9 // 已取消
     });
     
     if (res) {
@@ -627,8 +584,9 @@ const handleComplete = async (inbound) => {
       { type: 'warning' }
     );
     
-    const res = await post('/api/auth/inbound/complete', {
-      id: inbound.id
+    const res = await post('/api/auth/inbound/updateStatus', {
+      id: inbound.id,
+      status: 3 // 已完成
     });
     
     if (res) {
@@ -652,8 +610,7 @@ const getTypeTagType = (orderType) => {
     1: 'success',
     2: 'warning',
     3: 'info',
-    4: 'primary',
-    5: ''
+    4: 'primary'
   };
   return types[orderType] || '';
 };
@@ -665,8 +622,8 @@ const getStatusText = (status) => {
 
 const getStatusTagType = (status) => {
   const types = {
-    0: 'info',      // 草稿
-    1: 'warning',   // 待审核
+    0: 'info',      // 待提交
+    1: 'warning',   // 审核中
     2: 'success',   // 已通过
     3: '',          // 已完成
     4: 'danger',    // 已拒绝
@@ -806,29 +763,6 @@ onMounted(() => {
   color: #409EFF;
 }
 
-.urgent-tag {
-  margin-left: 4px;
-}
-
-.amount {
-  font-weight: bold;
-  color: #E6A23C;
-}
-
-.applicant-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.applicant-avatar {
-  flex-shrink: 0;
-}
-
-.applicant-name {
-  font-weight: 500;
-}
-
 .action-buttons {
   display: flex;
   gap: 8px;
@@ -878,12 +812,6 @@ onMounted(() => {
   .action-buttons {
     flex-direction: column;
     gap: 4px;
-  }
-  
-  .applicant-info {
-    flex-direction: column;
-    gap: 4px;
-    text-align: center;
   }
 }
 
