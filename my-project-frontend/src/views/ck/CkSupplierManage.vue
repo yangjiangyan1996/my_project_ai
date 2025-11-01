@@ -54,8 +54,12 @@
           />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="filterForm.status" placeholder="请选择状态" clearable>
-            <el-option label="全部" value="" />
+          <el-select 
+            v-model="filterForm.status" 
+            placeholder="请选择状态" 
+            clearable
+            style="width: 120px"  
+          >
             <el-option label="启用" value="1" />
             <el-option label="禁用" value="0" />
           </el-select>
@@ -319,7 +323,7 @@
         <el-descriptions-item label="地址" :span="2">{{ currentRow?.address || '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ currentRow?.remark || '-' }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ formatTime(currentRow?.createdAt) }}</el-descriptions-item>
-        <el-descriptions-item label="更新时间">{{ formatTime(currentRow?.updatedAt) }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ formatTime(currentRow?.modifiedAt) }}</el-descriptions-item>
       </el-descriptions>
 
       <template #footer>
@@ -460,7 +464,7 @@ const handleEdit = (row) => {
     contactPhone: row.contactPhone,
     email: row.email,
     address: row.address,
-    supplierType: row.supplierType,
+    supplierType: String(row.supplierType || ''),  // 确保是字符串
     cooperationStatus: row.cooperationStatus,
     businessLicense: row.businessLicense,
     bankName: row.bankName,
@@ -651,7 +655,7 @@ const loadSupplierList = async () => {
       ...filterForm
     };
     
-    const res = await post('/api/auth/supplier/list', params);
+    const res = await post('/api/auth/supplier/pageList', params);
     supplierList.value = res.records || [];
     pagination.total = res.total || 0;
   } catch (error) {
