@@ -168,5 +168,22 @@ public class ProductController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+
+    //获取可用商品列表
+    @GetMapping("/listEnable")
+    public RespBean<List<ProductPageListResp>> listEnable() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<ProductPageListResp> result = CKProductFacade.listEnable(user);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProductController#listEnable,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#listEnable,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 }
 

@@ -1,6 +1,7 @@
 package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.dto.Supplier;
 import com.example.entity.cangku.req.SupplierCreateReq;
 import com.example.entity.cangku.req.SupplierDeleteReq;
@@ -13,6 +14,7 @@ import jakarta.validation.ValidationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -127,5 +129,17 @@ public class CkSupplierFacade {
         save.setModifiedAt(new Date());
         save.setModifiedBy(req.getUserId());
         return supplierService.updateById(save);
+    }
+
+    public List<SupplierPageListResp> listEnable(UserInfo user) {
+        List<Supplier> list = supplierService.listWareHouseEnable(user.getTenantId());
+        if (list.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return list.stream().map(v -> {
+            SupplierPageListResp p = new SupplierPageListResp();
+            BeanUtils.copyProperties(v, p);
+            return p;
+        }).collect(Collectors.toList());
     }
 }

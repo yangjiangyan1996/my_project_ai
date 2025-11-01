@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 //库存表
 @Data
 @TableName("ck_inventory")
@@ -19,7 +21,7 @@ public class Inventory extends BaseModel {
     //产品ID
     private Long productId;
     //当前库存数量
-    private Integer quantity;
+    private BigDecimal quantity;
     //锁定数量
-    private Integer lockedQuantity;
+    private BigDecimal lockedQuantity;
 }

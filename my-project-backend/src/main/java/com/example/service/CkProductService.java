@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.Product;
 import com.example.entity.cangku.req.ProductListPageReq;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -15,4 +17,6 @@ public interface CkProductService extends IService<Product> {
     Product selectByTenantId(Long tenantId, String skuCode);
 
     Page<Product> getPage(Page<Product> page, ProductListPageReq req);
+
+    List<Product> listWareHouseEnable(Long tenantId);
 }

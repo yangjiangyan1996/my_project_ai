@@ -1,9 +1,12 @@
 package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.dto.Warehouse;
 import com.example.entity.cangku.dto.WarehouseShelf;
-import com.example.entity.cangku.req.*;
+import com.example.entity.cangku.req.ShelfCreateReq;
+import com.example.entity.cangku.req.ShelfListPageReq;
+import com.example.entity.cangku.req.ShelfUpdateStatusReq;
 import com.example.entity.cangku.resp.ShelfPageListResp;
 import com.example.service.CkShelfService;
 import com.example.service.CkWareHouseService;
@@ -13,6 +16,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -106,5 +110,17 @@ public class CkShelfFacade {
         save.setModifiedAt(new Date());
         save.setModifiedBy(req.getUserId());
         return shelfService.updateById(save);
+    }
+
+    public List<ShelfPageListResp> listEnable(UserInfo user, Long warehouseId) {
+        List<WarehouseShelf> list = shelfService.listWareHouseEnable(user.getTenantId(),warehouseId);
+        if (list.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return list.stream().map(v -> {
+            ShelfPageListResp p = new ShelfPageListResp();
+            BeanUtils.copyProperties(v, p);
+            return p;
+        }).collect(Collectors.toList());
     }
 }

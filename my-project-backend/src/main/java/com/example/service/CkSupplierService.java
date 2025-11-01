@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.Supplier;
 import com.example.entity.cangku.req.SupplierListPageReq;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -17,4 +19,8 @@ public interface CkSupplierService extends IService<Supplier> {
     Page<Supplier> getPage(Page<Supplier> page, SupplierListPageReq req);
 
     Supplier selectByCodeOrName(String supplierCode, Long tenantId);
+
+    List<Supplier> listWareHouseEnable(Long tenantId);
+
+    List<Supplier> selectByTenantIdAndSupplierIds(Long tenantId, List<Long> supplierIds);
 }

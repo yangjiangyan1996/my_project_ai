@@ -163,4 +163,23 @@ public class CkWarehouseFacade {
             return p;
         }).collect(Collectors.toList());
     }
+
+    public List<WareHouseResp> listEnable(UserInfo user) {
+        List<Warehouse> list = wareHouseService.listWareHouseEnable(user.getTenantId());
+        if (list.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Long> userIds = list.stream().map(v -> v.getManagerId()).collect(Collectors.toList());
+        List<Account> userInfoList = accountService.selectByIds(userIds);
+        Map<Long, Account> userInfoMap = userInfoList.stream().collect(Collectors.toMap(Account::getId, v -> v));
+        return list.stream().map(v -> {
+            WareHouseResp p = new WareHouseResp();
+            BeanUtils.copyProperties(v, p);
+
+            p.setManagerId(v.getManagerId());
+            p.setManagerName(userInfoMap.get(v.getManagerId()).getNickname());
+            p.setManagerAvatar(userInfoMap.get(v.getManagerId()).getAvatarUrl());
+            return p;
+        }).collect(Collectors.toList());
+    }
 }

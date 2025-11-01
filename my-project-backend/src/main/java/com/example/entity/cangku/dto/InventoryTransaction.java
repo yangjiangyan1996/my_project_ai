@@ -6,7 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.util.Date;
 
 //库存流水表
 @Data
@@ -27,9 +28,9 @@ public class InventoryTransaction extends BaseModel {
     //单据明细ID
     private Long orderItemId;
     //变动数量(正数表示增加，负数表示减少)
-    private Integer changeQuantity;
+    private BigDecimal changeQuantity;
     //变动后结存数量
-    private Integer balanceQuantity;
+    private BigDecimal balanceQuantity;
     //业务发生时间
-    private LocalDateTime transactionTime;
+    private Date transactionTime;
 }

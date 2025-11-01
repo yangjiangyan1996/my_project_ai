@@ -1,6 +1,7 @@
 package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.dto.Product;
 import com.example.entity.cangku.dto.ProductCategory;
 import com.example.entity.cangku.dto.Unit;
@@ -255,5 +256,17 @@ public class CKProductFacade {
         save.setModifiedAt(new Date());
         save.setModifiedBy(req.getUserId());
         return productService.updateById(save);
+    }
+
+    public List<ProductPageListResp> listEnable(UserInfo user) {
+        List<Product> list = productService.listWareHouseEnable(user.getTenantId());
+        if (list.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return list.stream().map(v -> {
+            ProductPageListResp p = new ProductPageListResp();
+            BeanUtils.copyProperties(v, p);
+            return p;
+        }).collect(Collectors.toList());
     }
 }

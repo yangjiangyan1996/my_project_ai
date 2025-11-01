@@ -21,4 +21,8 @@ public interface CkWareHouseService extends IService<Warehouse> {
     List<Warehouse> selectByCodeOrName(String code, String name, Long tenantId);
 
     List<Warehouse> getByIds(List<Long> whIds, Long tenantId);
+
+    List<Warehouse> listWareHouseEnable(Long tenantId);
+
+    List<Warehouse> selectByTenantIdAndWareHouseIds(Long tenantId, List<Long> wareHouseIds);
 }

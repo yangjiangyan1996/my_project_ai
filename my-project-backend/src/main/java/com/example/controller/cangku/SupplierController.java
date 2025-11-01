@@ -14,10 +14,9 @@ import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -66,6 +65,22 @@ public class SupplierController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("SupplierController#pageList,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    //获取可用供应商列表
+    @GetMapping("/listEnable")
+    public RespBean<List<SupplierPageListResp>> listEnable() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<SupplierPageListResp> result = supplierFacade.listEnable(user);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("SupplierController#listEnable,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("SupplierController#listEnable,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

@@ -10,6 +10,9 @@ import com.example.service.CkSupplierService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -23,6 +26,24 @@ public class CkSupplierServiceImpl extends ServiceImpl<CkSupplierMapper, Supplie
         return baseMapper.selectOne(new QueryWrapper<Supplier>()
                 .eq("tenant_id", tenantId)
                 .eq("supplier_code", supplierCode));
+    }
+
+    @Override
+    public List<Supplier> selectByTenantIdAndSupplierIds(Long tenantId, List<Long> supplierIds) {
+        if (supplierIds == null || supplierIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return baseMapper.selectList(new QueryWrapper<Supplier>()
+                .eq("tenant_id", tenantId)
+                .in("id", supplierIds));
+    }
+
+    @Override
+    public List<Supplier> listWareHouseEnable(Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<Supplier>()
+                .eq("is_deleted", 0)
+                .eq("status", 1)
+                .eq("tenant_id", tenantId));
     }
 
     @Override

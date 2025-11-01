@@ -11,6 +11,7 @@ import com.example.service.CkWareHouseService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -60,7 +61,27 @@ public class CkWareHouseServiceImpl extends ServiceImpl<CkWareHouseMapper, Wareh
     }
 
     @Override
+    public List<Warehouse> selectByTenantIdAndWareHouseIds(Long tenantId, List<Long> wareHouseIds) {
+        if (wareHouseIds == null || wareHouseIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return baseMapper.selectList(new QueryWrapper<Warehouse>()
+                .eq("is_deleted", 0).eq("tenant_id", tenantId).in("id", wareHouseIds));
+    }
+
+    @Override
+    public List<Warehouse> listWareHouseEnable(Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<Warehouse>()
+                .eq("is_deleted", 0)
+                .eq("status", 1)
+                .eq("tenant_id", tenantId));
+    }
+
+    @Override
     public List<Warehouse> getByIds(List<Long> whIds, Long tenantId) {
-        return baseMapper.selectList(new QueryWrapper<Warehouse>().in("id", whIds).eq("is_deleted", 0).eq("tenant_id", tenantId));
+        return baseMapper.selectList(new QueryWrapper<Warehouse>()
+                .in("id", whIds)
+                .eq("is_deleted", 0)
+                .eq("tenant_id", tenantId));
     }
 }

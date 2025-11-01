@@ -10,6 +10,8 @@ import com.example.service.CkProductService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -24,6 +26,13 @@ public class CkProductServiceImpl extends ServiceImpl<CkProductMapper, Product> 
                 .eq("sku", skuCode)
                 .eq("is_deleted", 0)
         );
+    }
+
+    @Override
+    public List<Product> listWareHouseEnable(Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<Product>().eq("is_deleted", 0)
+                .eq("status", 1)
+                .eq("tenant_id", tenantId));
     }
 
     @Override

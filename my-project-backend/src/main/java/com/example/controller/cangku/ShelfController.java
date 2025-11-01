@@ -13,10 +13,9 @@ import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -48,6 +47,21 @@ public class ShelfController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("WarehouseController#pageList,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @GetMapping("/listEnable")
+    public RespBean<List<ShelfPageListResp>> listEnable(@RequestParam("warehouseId") Long warehouseId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<ShelfPageListResp> result = shelfFacade.listEnable(user, warehouseId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("WarehouseController#listEnable,req:{}",warehouseId, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("WarehouseController#listEnable,req:{}",warehouseId, e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

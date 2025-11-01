@@ -5,4 +5,5 @@ import com.example.entity.cangku.dto.Inventory;
 
 // CkInventoryService.java
 public interface CkInventoryService extends IService<Inventory> {
+    Inventory getByWarehouseAndProduct(Long warehouseId, Long productId, Long tenantId);
 }

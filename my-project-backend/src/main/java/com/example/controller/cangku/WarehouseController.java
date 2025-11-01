@@ -159,4 +159,20 @@ public class WarehouseController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+    //获取可用仓库列表
+    @GetMapping("/listEnable")
+    public RespBean<List<WareHouseResp>> listEnable() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<WareHouseResp> result = ckWarehouseFacade.listEnable(user);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("WarehouseController#listEnable,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("WarehouseController#listEnable,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 }
