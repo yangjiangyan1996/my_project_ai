@@ -26,5 +26,8 @@ public class InboundOrderItem extends BaseModel {
     private Long shelfLocationId;
     //具体位置编码
     private String locationCode;
+    //批次号
+    private String batchNo;
+    //备注
     private String remark;
 }

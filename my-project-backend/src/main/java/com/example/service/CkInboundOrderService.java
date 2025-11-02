@@ -8,4 +8,6 @@ import com.example.entity.cangku.req.InboundListPageReq;
 // CkInboundOrderService.java
 public interface CkInboundOrderService extends IService<InboundOrder> {
     Page<InboundOrder> getPage(Page<InboundOrder> page, InboundListPageReq req);
+
+    InboundOrder selectById(Long orderId, Long tenantId);
 }

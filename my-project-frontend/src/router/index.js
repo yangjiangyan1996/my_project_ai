@@ -136,6 +136,12 @@ const router = createRouter({
             meta: { requiresAuth: false }
         },
         {
+            path: '/index/ckInboundCreate/:id',
+            name: 'ckInboundCreateEdit',
+            component: () => import('@/views/ck/CkInboundCreate.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
             path: '/index/ckOutboundCreate',
             name: 'ckOutboundCreate',
             component: () => import('@/views/ck/CkOutboundCreate.vue'),

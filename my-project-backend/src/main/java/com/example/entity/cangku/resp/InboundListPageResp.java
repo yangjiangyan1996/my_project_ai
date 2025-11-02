@@ -17,6 +17,9 @@ public class InboundListPageResp {
     private Long tenantId;
     //入库单号
     private String orderNo;
+
+    private String relatedOrderNo;
+
     //仓库ID
     private Long warehouseId;
     //供应商ID

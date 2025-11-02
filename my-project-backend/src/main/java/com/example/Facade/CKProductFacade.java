@@ -263,9 +263,19 @@ public class CKProductFacade {
         if (list.isEmpty()) {
             return new ArrayList<>();
         }
+
+        Map<String, Unit> unitCode2UnitMap = new HashMap<>();
+        List<Unit> units = unitService.selectByTenantId(user.getTenantId(), 1);
+        if (!CollectionUtils.isEmpty( units)) {
+            unitCode2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
+        }
+
+        Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
         return list.stream().map(v -> {
             ProductPageListResp p = new ProductPageListResp();
             BeanUtils.copyProperties(v, p);
+            p.setUnitName(finalUnitCode2UnitMap.get(v.getUnitCode()).getUnitName());
+            p.setOutUnitName(finalUnitCode2UnitMap.get(v.getOutUnitCode()).getUnitName());
             return p;
         }).collect(Collectors.toList());
     }

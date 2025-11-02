@@ -28,7 +28,7 @@
         <el-form :model="filterForm" inline>
           <el-form-item label="入库单号">
             <el-input
-              v-model="filterForm.orderNo"
+              v-model="filterForm.relatedOrderNo"
               placeholder="请输入入库单号"
               clearable
               style="width: 200px"
@@ -240,6 +240,15 @@
                   v-if="row.status === 0 || row.status === 4"
                 >
                   编辑
+                </el-button>
+                <el-button
+                  type="success"
+                  link
+                  size="small"
+                  @click="handleApprove(row)"
+                  v-if="row.status === 0"
+                >
+                  提交审核
                 </el-button>
                 <el-button
                   type="success"
@@ -509,9 +518,9 @@ const handleSubmit = async (inbound) => {
       { type: 'warning' }
     );
     
-    const res = await post('/api/auth/inbound/updateStatus', {
-      id: inbound.id,
-      status: 1 // 审核中
+    const res = await post('/api/auth/inbound/approveOk', {
+      orderId: inbound.id,
+      status: 2 // 已通过 TODO yang 等审核业务写完后，把这个接口的逻辑，放到审核成功后的回调中
     });
     
     if (res) {
@@ -523,6 +532,11 @@ const handleSubmit = async (inbound) => {
       ElMessage.error('提交失败');
     }
   }
+};
+
+
+const handleApprove = async (inbound) => {
+  ElMessage.success('审核功能暂未开发');
 };
 
 const handleDelete = async (inbound) => {

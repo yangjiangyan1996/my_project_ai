@@ -3,14 +3,24 @@
     <el-card class="form-card" shadow="never">
       <template #header>
         <div class="card-header">
-          <span class="card-title">新建入库单</span>
+          <span class="card-title">{{ isEditMode ? '编辑入库单' : '新建入库单' }}</span>
           <div class="header-actions">
             <el-button @click="handleReset">重置</el-button>
-            <el-button type="primary" @click="handleSaveDraft" :loading="loading">
+            <el-button 
+              type="primary" 
+              @click="handleSaveDraft" 
+              :loading="loading"
+              v-if="!isEditMode || (isEditMode && formData.status === 0)"
+            >
               保存草稿
             </el-button>
-            <el-button type="primary" @click="handleSubmit" :loading="loading">
-              提交审核
+            <el-button 
+              type="primary" 
+              @click="handleSubmit" 
+              :loading="loading"
+              v-if="!isEditMode || (isEditMode && (formData.status === 0 || formData.status === 4))"
+            >
+              {{ isEditMode ? '更新提交' : '提交审核' }}
             </el-button>
           </div>
         </div>
@@ -152,19 +162,6 @@
               <span>{{ row.unit || '-' }}</span>
             </template>
           </el-table-column>
-          <!-- <el-table-column label="计划数量" width="120">
-            <template #default="{ row, $index }">
-              <el-input-number
-                v-model="row.quantity"
-                :min="0.0001"
-                :precision="4"
-                :step="1"
-                controls-position="right"
-                style="width: 100%"
-                @change="() => calculateTotal()"
-              />
-            </template>
-          </el-table-column> -->
           <el-table-column label="实际数量" width="120">
             <template #default="{ row, $index }">
               <el-input-number
@@ -197,9 +194,9 @@
               >
                 <el-option
                   v-for="location in shelfLocationList"
-                  :key="location.shelfCode"
-                  :label="location.shelfName"
-                  :value="location.shelfCode"
+                  :key="location.id"
+                  :label="getShelfLocationLabel(location)"
+                  :value="location.id"
                 />
               </el-select>
             </template>
@@ -237,24 +234,12 @@
                 <span class="value">{{ formData.items.length }} 种</span>
               </div>
             </el-col>
-            <!-- <el-col :span="6">
-              <div class="summary-item">
-                <span class="label">总数量：</span>
-                <span class="value">{{ totalQuantity }} </span>
-              </div>
-            </el-col> -->
             <el-col :span="6">
               <div class="summary-item">
                 <span class="label">实际总数：</span>
                 <span class="value">{{ totalActualQuantity }} </span>
               </div>
             </el-col>
-            <!-- <el-col :span="6">
-              <div class="summary-item">
-                <span class="label">差异数量：</span>
-                <span class="value" :class="quantityDiffClass">{{ quantityDiff }} </span>
-              </div>
-            </el-col> -->
           </el-row>
         </div>
       </div>
@@ -263,24 +248,32 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Delete } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
 const router = useRouter();
+const route = useRoute();
 const formRef = ref();
 const loading = ref(false);
 
+// 判断是否是编辑模式
+const isEditMode = computed(() => {
+  return !!route.params.id;
+});
+
 // 表单数据
 const formData = reactive({
+  id: null,
   orderNo: '',
   orderType: 1,
   warehouseId: null,
   supplierId: null,
   relatedOrderNo: '',
   remark: '',
+  status: 0,
   items: []
 });
 
@@ -303,28 +296,15 @@ const showSupplier = computed(() => {
   return formData.orderType === 1; // 只有采购入库显示供应商
 });
 
-const selectedProductIds = computed(() => {
-  return formData.items.map(item => item.productId).filter(id => id);
-});
-
-const totalQuantity = computed(() => {
-  return formData.items.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0).toFixed(4);
-});
-
 const totalActualQuantity = computed(() => {
   return formData.items.reduce((sum, item) => sum + (parseFloat(item.actualQuantity) || 0), 0).toFixed(4);
 });
 
-const quantityDiff = computed(() => {
-  return (parseFloat(totalActualQuantity.value) - parseFloat(totalQuantity.value)).toFixed(4);
-});
-
-const quantityDiffClass = computed(() => {
-  const diff = parseFloat(quantityDiff.value);
-  if (diff > 0) return 'positive';
-  if (diff < 0) return 'negative';
-  return '';
-});
+// 获取货架位置显示标签
+const getShelfLocationLabel = (location) => {
+  if (!location) return '';
+  return `${location.shelfName} (${location.shelfCode})`;
+};
 
 // 表单验证规则
 const formRules = {
@@ -369,8 +349,16 @@ const handleOrderTypeChange = (value) => {
 const handleWarehouseChange = async (value) => {
   if (value) {
     await loadShelfLocationList(value);
+    // 当仓库变更时，清空所有产品的货架位置选择
+    formData.items.forEach(item => {
+      item.shelfLocationId = null;
+    });
   } else {
     shelfLocationList.value = [];
+    // 清空所有货架位置选择
+    formData.items.forEach(item => {
+      item.shelfLocationId = null;
+    });
   }
 };
 
@@ -396,7 +384,6 @@ const handleAddProduct = () => {
 
 const handleRemoveProduct = (index) => {
   formData.items.splice(index, 1);
-  calculateTotal();
 };
 
 const handleProductChange = (productId, index) => {
@@ -406,12 +393,8 @@ const handleProductChange = (productId, index) => {
     item.productName = product.name;
     item.sku = product.sku;
     item.spec = product.spec;
-    item.unit = product.unitCode;
+    item.unit = product.unitName;
   }
-};
-
-const calculateTotal = () => {
-  // 触发响应式更新
 };
 
 const validateBatchNo = (batchNo, index) => {
@@ -421,14 +404,81 @@ const validateBatchNo = (batchNo, index) => {
   }
 };
 
+// 加载入库单详情
+const loadInboundDetail = async (id) => {
+  loading.value = true;
+  try {
+    const res = await get(`/api/auth/inbound/detail?orderId=${id}`);
+    if (res) {
+      // 先设置基本数据
+      Object.assign(formData, {
+        id: res.id,
+        orderNo: res.orderNo,
+        orderType: res.orderType,
+        warehouseId: res.warehouseId,
+        supplierId: res.supplierId,
+        relatedOrderNo: res.relatedOrderNo || '',
+        remark: res.remark || '',
+        status: res.status
+      });
+
+      // 如果仓库有值，先加载对应的货架位置
+      if (res.warehouseId) {
+        await loadShelfLocationList(res.warehouseId);
+      }
+
+      // 然后设置明细数据，确保货架位置列表已加载
+      if (res.items && res.items.length > 0) {
+        formData.items = res.items.map(item => ({
+          productId: item.productId,
+          productName: item.productName || '',
+          sku: item.sku || '',
+          spec: item.spec || '',
+          unit: item.unit || '',
+          quantity: item.quantity || 1,
+          actualQuantity: item.actualQuantity || 0,
+          shelfLocationId: item.shelfLocationId, // 这里使用数字ID，与下拉框value对应
+          batchNo: item.batchNo || '',
+          remark: item.remark || ''
+        }));
+      } else {
+        formData.items = [];
+      }
+
+      // 设置总数量
+      if (res.totalQuantity) {
+        formData.totalQuantity = res.totalQuantity;
+      }
+      
+      ElMessage.success('数据加载成功');
+    }
+  } catch (error) {
+    console.error('加载入库单详情失败:', error);
+    ElMessage.error('加载数据失败');
+    router.back();
+  } finally {
+    loading.value = false;
+  }
+};
+
 const handleReset = () => {
-  ElMessageBox.confirm('确定要重置表单吗？所有输入的数据将会丢失。', '重置确认', {
-    type: 'warning'
-  }).then(() => {
-    formRef.value?.resetFields();
-    formData.items = [];
-    generateOrderNo();
-    ElMessage.success('表单已重置');
+  ElMessageBox.confirm(
+    `确定要${isEditMode.value ? '重置' : '清空'}表单吗？所有输入的数据将会丢失。`, 
+    `${isEditMode.value ? '重置' : '清空'}确认`, 
+    {
+      type: 'warning'
+    }
+  ).then(() => {
+    if (isEditMode.value) {
+      // 编辑模式下重新加载数据
+      loadInboundDetail(route.params.id);
+    } else {
+      // 创建模式下清空表单
+      formRef.value?.resetFields();
+      formData.items = [];
+      generateOrderNo();
+      ElMessage.success('表单已重置');
+    }
   });
 };
 
@@ -440,16 +490,17 @@ const handleSaveDraft = async () => {
     const submitData = {
       ...formData,
       status: 0, // 待提交状态
-      totalQuantity: totalActualQuantity.value
+      totalQuantity: parseFloat(totalActualQuantity.value)
     };
     
-    const res = await post('/api/auth/inbound/create', submitData);
+    const url = isEditMode.value ? '/api/auth/inbound/update' : '/api/auth/inbound/create';
+    const res = await post(url, submitData);
     if (res) {
-      ElMessage.success('保存草稿成功');
+      ElMessage.success(isEditMode.value ? '更新草稿成功' : '保存草稿成功');
       router.push('/index/ckInboundManage');
     }
   } catch (error) {
-    // ElMessage.error('保存草稿失败');
+    ElMessage.error(isEditMode.value ? '更新草稿失败' : '保存草稿失败');
   } finally {
     loading.value = false;
   }
@@ -469,16 +520,17 @@ const handleSubmit = async () => {
       ...formData,
       // status: 1, // 审核中状态 TODO yang 等审核流程加了后
       status: 2, // 已通过状态
-      totalQuantity: totalActualQuantity.value
+      totalQuantity: parseFloat(totalActualQuantity.value)
     };
     
-    const res = await post('/api/auth/inbound/create', submitData);
+    const url = isEditMode.value ? '/api/auth/inbound/update' : '/api/auth/inbound/create';
+    const res = await post(url, submitData);
     if (res) {
-      ElMessage.success('提交成功，等待审核');
+      ElMessage.success(isEditMode.value ? '更新成功' : '提交成功，等待审核');
       router.push('/index/ckInboundManage');
     }
   } catch (error) {
-    ElMessage.error('提交失败');
+    ElMessage.error(isEditMode.value ? '更新失败' : '提交失败');
   } finally {
     loading.value = false;
   }
@@ -497,7 +549,7 @@ const validateForm = async () => {
         ElMessage.warning(`请选择第 ${i + 1} 行的产品`);
         return false;
       }
-      if (!item.quantity || item.quantity <= 0) {
+      if (!item.actualQuantity || item.actualQuantity <= 0) {
         ElMessage.warning(`请输入第 ${i + 1} 行产品的有效数量`);
         return false;
       }
@@ -543,6 +595,7 @@ const loadShelfLocationList = async (warehouseId) => {
   try {
     const res = await get(`/api/auth/shelf/listEnable?warehouseId=${warehouseId}`);
     shelfLocationList.value = res || [];
+    console.log('加载货架位置列表:', shelfLocationList.value);
   } catch (error) {
     console.error('加载货架位置列表失败:', error);
     shelfLocationList.value = [];
@@ -550,11 +603,41 @@ const loadShelfLocationList = async (warehouseId) => {
 };
 
 onMounted(() => {
-  generateOrderNo();
+  if (isEditMode.value) {
+    // 编辑模式，加载数据
+    loadInboundDetail(route.params.id);
+  } else {
+    // 创建模式，生成单号
+    generateOrderNo();
+  }
   loadWarehouseList();
   loadSupplierList();
   loadProductList();
 });
+
+// 监听路由变化，处理直接通过URL进入的情况
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId) {
+      loadInboundDetail(newId);
+    } else {
+      // 从编辑模式切换到创建模式
+      Object.assign(formData, {
+        id: null,
+        orderNo: '',
+        orderType: 1,
+        warehouseId: null,
+        supplierId: null,
+        relatedOrderNo: '',
+        remark: '',
+        status: 0,
+        items: []
+      });
+      generateOrderNo();
+    }
+  }
+);
 </script>
 
 <style scoped>

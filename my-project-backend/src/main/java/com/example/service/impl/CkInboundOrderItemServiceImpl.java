@@ -1,14 +1,13 @@
 package com.example.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.InboundOrderItem;
-import com.example.entity.cangku.dto.Product;
 import com.example.mapper.CkInboundOrderItemMapper;
 import com.example.service.CkInboundOrderItemService;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -19,6 +18,21 @@ import java.util.List;
  */
 @Service
 public class CkInboundOrderItemServiceImpl extends ServiceImpl<CkInboundOrderItemMapper, InboundOrderItem> implements CkInboundOrderItemService {
+    @Override
+    public boolean deleteByOrderId(Long tenantId, Long orderId, Long userId) {
+        InboundOrderItem inboundOrderItem = new InboundOrderItem();
+        inboundOrderItem.setIsDeleted(1);
+        inboundOrderItem.setModifiedAt(new Date());
+        inboundOrderItem.setModifiedBy(userId);
+        return this.update(inboundOrderItem, new QueryWrapper<InboundOrderItem>().eq("order_id", orderId));
+    }
+
+    @Override
+    public List<InboundOrderItem> selectByInboundOrderId(Long tenantId, Long orderId) {
+        return this.getBaseMapper().selectList(new QueryWrapper<InboundOrderItem>().eq("tenant_id", tenantId).eq("order_id", orderId)
+                .eq("is_deleted", 0));
+    }
+
     @Override
     public List<InboundOrderItem> selectByTenantIdAndInboundOrderIds(Long tenantId, List<Long> inboundOrderIds) {
         return baseMapper.selectList(new QueryWrapper<InboundOrderItem>().eq("is_deleted", 0)

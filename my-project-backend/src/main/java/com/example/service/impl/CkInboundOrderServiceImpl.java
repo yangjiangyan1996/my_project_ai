@@ -15,6 +15,14 @@ import org.springframework.stereotype.Service;
 public class CkInboundOrderServiceImpl extends ServiceImpl<CkInboundOrderMapper, InboundOrder> implements CkInboundOrderService {
 
     @Override
+    public InboundOrder selectById(Long orderId, Long tenantId) {
+        return this.query()
+                .eq("id", orderId)
+                .eq("tenant_id", tenantId)
+                .one();
+    }
+
+    @Override
     public Page<InboundOrder> getPage(Page<InboundOrder> page, InboundListPageReq req) {
         return baseMapper.selectPage(
                 page,
@@ -28,7 +36,7 @@ public class CkInboundOrderServiceImpl extends ServiceImpl<CkInboundOrderMapper,
                         .like(req.getSupplierId() != null, "supplier_id", req.getSupplierId())
                         .eq("tenant_id", req.getTenantId())
                         .eq("is_deleted", 0)
-                        .orderByAsc("created_by")
+                        .orderByDesc("created_at")
         );
     }
 }

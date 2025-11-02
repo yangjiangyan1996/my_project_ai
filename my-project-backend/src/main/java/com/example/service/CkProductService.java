@@ -19,4 +19,6 @@ public interface CkProductService extends IService<Product> {
     Page<Product> getPage(Page<Product> page, ProductListPageReq req);
 
     List<Product> listWareHouseEnable(Long tenantId);
+
+    List<Product> selectByIds(Long tenantId, List<Long> productIds);
 }

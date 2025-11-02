@@ -13,4 +13,9 @@ import java.util.List;
  */
 public interface CkInboundOrderItemService extends IService<InboundOrderItem> {
     List<InboundOrderItem> selectByTenantIdAndInboundOrderIds(Long tenantId, List<Long> inboundOrderIds);
+
+    List<InboundOrderItem> selectByInboundOrderId(Long tenantId, Long orderId);
+
+    public boolean deleteByOrderId(Long tenantId, Long orderId, Long userId);
+
 }

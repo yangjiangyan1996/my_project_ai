@@ -19,6 +19,8 @@ public class InboundOrder extends BaseModel {
     private Long tenantId;
     //入库单号
     private String orderNo;
+    //关联单号
+    private String relatedOrderNo;
     //仓库ID
     private Long warehouseId;
     //供应商ID

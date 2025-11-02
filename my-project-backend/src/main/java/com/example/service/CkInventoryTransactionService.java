@@ -5,4 +5,5 @@ import com.example.entity.cangku.dto.InventoryTransaction;
 
 // CkInventoryTransactionService.java
 public interface CkInventoryTransactionService extends IService<InventoryTransaction> {
+    InventoryTransaction getByOrderAndProduct(Long tenantId, Long orderId, Long productId);
 }

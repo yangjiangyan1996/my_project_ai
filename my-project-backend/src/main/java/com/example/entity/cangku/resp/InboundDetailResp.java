@@ -1,5 +1,5 @@
 
-package com.example.entity.cangku.req;
+package com.example.entity.cangku.resp;
 
 import lombok.Data;
 
@@ -12,7 +12,7 @@ import java.util.List;
  * @Date 2025/10/30 22:31
  */
 @Data
-public class InboundCreateReq {
+public class InboundDetailResp {
     Long id;
     private String orderNo;
     private Integer orderType;
@@ -28,9 +28,11 @@ public class InboundCreateReq {
     public static class InboundDetailCreateReq {
         private Double actualQuantity;
         private String batchNo;
+        private String spec;
+        private String unit;
         private Long productId;
         private String remark;
-        private String shelfLocationId;
+        private Long shelfLocationId;
     }
 
     private Long tenantId;
