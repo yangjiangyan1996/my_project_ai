@@ -18,4 +18,5 @@ public interface CkInboundOrderItemService extends IService<InboundOrderItem> {
 
     public boolean deleteByOrderId(Long tenantId, Long orderId, Long userId);
 
+    List<InboundOrderItem> selectByProductIds(Long tenantId, List<Long> productIds);
 }

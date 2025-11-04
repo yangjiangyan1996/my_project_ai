@@ -1,13 +1,36 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.OutboundOrder;
 import com.example.mapper.CkOutboundOrderMapper;
 import com.example.service.CkOutboundOrderService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 // CkOutboundOrderServiceImpl.java
 @Service
 public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMapper, OutboundOrder> implements CkOutboundOrderService {
 
+    @Override
+    public List<OutboundOrder> selectByProductIds(Long tenantId, List<Long> productIds, Integer status) {
+        return baseMapper.selectList(
+                new QueryWrapper<OutboundOrder>()
+                        .eq("tenant_id", tenantId)
+                        .in("product_id", productIds)
+                        .eq("status", status)
+                        .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
+    public List<OutboundOrder> selectByInboundOrderIds(Long tenantId, List<Long> outboundOrderIds) {
+        return baseMapper.selectList(
+                new QueryWrapper<OutboundOrder>()
+                        .eq("tenant_id", tenantId)
+                        .in("id", outboundOrderIds)
+                        .eq("is_deleted", 0)
+        );
+    }
 }

@@ -18,6 +18,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -164,8 +165,8 @@ public class CKProductFacade {
         product.setCategoryCode(req.getCategoryCode());
         product.setUnitCode(req.getUnitCode());
         product.setOutUnitCode(req.getOutUnitCode());
-        product.setOutUnitPerNum(req.getOutUnitPerNum());
-        product.setWeightPerUnit(req.getWeightPerUnit());
+        product.setOutUnitPerNum(new BigDecimal(req.getOutUnitPerNum()));
+        product.setWeightPerUnit(new BigDecimal(req.getWeightPerUnit()));
         product.setColor(req.getColor());
         product.setMinStock(req.getMinStock());
         product.setRemark(req.getRemark());

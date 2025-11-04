@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 //产品表
 @Data
 @TableName("ck_product")
@@ -29,9 +31,9 @@ public class Product extends BaseModel {
     //出货单位（比如按箱子出货）
     private String outUnitCode;
     //出货单位数量，比如出货时一箱子多少货
-    private Long outUnitPerNum;
+    private BigDecimal outUnitPerNum;
     //单品重量(可选)
-    private Double weightPerUnit;
+    private BigDecimal weightPerUnit;
     //颜色
     private String color;
     //最低库存

@@ -5,9 +5,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.InboundOrder;
 import com.example.entity.cangku.req.InboundListPageReq;
 
+import java.util.List;
+
 // CkInboundOrderService.java
 public interface CkInboundOrderService extends IService<InboundOrder> {
     Page<InboundOrder> getPage(Page<InboundOrder> page, InboundListPageReq req);
 
     InboundOrder selectById(Long orderId, Long tenantId);
+
+    List<InboundOrder> selectByInboundOrderIds(Long tenantId, List<Long> inboundOrderIds);
 }

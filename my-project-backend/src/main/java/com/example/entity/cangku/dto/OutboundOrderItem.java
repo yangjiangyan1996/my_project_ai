@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 //出库单明细表
 @Data
 @TableName("ck_outbound_order_item")
@@ -19,7 +21,7 @@ public class OutboundOrderItem extends BaseModel {
     //产品ID
     private Long productId;
     //计划数量
-    private Integer quantity;
+    private BigDecimal quantity;
     //实际数量
     private Integer actualQuantity;
 }

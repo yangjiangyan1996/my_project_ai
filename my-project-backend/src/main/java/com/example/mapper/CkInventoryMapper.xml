@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.CkInventoryMapper">
+    <!-- 保持原有resultMap定义 -->
+    <resultMap id="baseResultMap" type="com.example.entity.cangku.dto.Inventory">
+        <id property="id" column="id" />
+        <result property="tenantId" column="tenant_id" />
+        <result property="warehouseId" column="warehouse_id" />
+        <result property="productId" column="product_id" />
+        <result property="quantity" column="quantity" />
+        <result property="lockedQuantity" column="locked_quantity" />
+    </resultMap>
+
+    <select id="selectPageList" resultMap="baseResultMap">
+        SELECT
+        ci.*
+        FROM ck_inventory ci
+        INNER JOIN (
+        SELECT
+        product_id,
+        MAX(created_at) as max_created_at
+        FROM ck_inventory
+        WHERE tenant_id = #{req.tenantId}
+        AND is_deleted = 0
+        <if test="req.warehouseId != null and req.warehouseId != ''">
+            AND warehouse_id = #{req.warehouseId}
+        </if>
+        <if test="req.productName != null and req.productName != ''">
+            AND product_id IN (
+            SELECT id FROM product
+            WHERE tenant_id = #{req.tenantId}
+            AND product_name LIKE CONCAT('%', #{req.productName}, '%')
+            )
+        </if>
+        <if test="req.productCode != null and req.productCode != ''">
+            AND product_id IN (
+            SELECT id FROM product
+            WHERE tenant_id = #{req.tenantId}
+            AND product_code LIKE CONCAT('%', #{req.productCode}, '%')
+            )
+        </if>
+        GROUP BY product_id
+        ) latest ON ci.product_id = latest.product_id
+        AND ci.created_at = latest.max_created_at
+        WHERE ci.tenant_id = #{req.tenantId}
+        AND ci.is_deleted = 0
+        <!-- 动态排序 -->
+        <choose>
+            <when test="req.sortField != null and req.sortField != '' and req.sortOrder != null and req.sortOrder != ''">
+                ORDER BY
+                <if test="req.sortField == 'created_at'">ci.created_at</if>
+                <if test="req.sortField == 'quantity'">ci.quantity</if>
+                <if test="req.sortField == 'product_name'">ci.product_id</if>
+                ${req.sortOrder}
+            </when>
+            <otherwise>
+                ORDER BY ci.created_at DESC
+            </otherwise>
+        </choose>
+        <!-- 分页 -->
+        <if test="page != null">
+            LIMIT #{page.size} OFFSET #{page.current}
+        </if>
+    </select>
+
+    <!-- 计数查询 -->
+    <select id="selectPageListCount" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT product_id)
+        FROM ck_inventory
+        WHERE tenant_id = #{req.tenantId}
+        AND is_deleted = 0
+        <if test="req.warehouseId != null and req.warehouseId != ''">
+            AND warehouse_id = #{req.warehouseId}
+        </if>
+        <if test="req.productName != null and req.productName != ''">
+            AND product_id IN (
+            SELECT id FROM product
+            WHERE tenant_id = #{req.tenantId}
+            AND product_name LIKE CONCAT('%', #{req.productName}, '%')
+            )
+        </if>
+        <if test="req.productCode != null and req.productCode != ''">
+            AND product_id IN (
+            SELECT id FROM product
+            WHERE tenant_id = #{req.tenantId}
+            AND product_code LIKE CONCAT('%', #{req.productCode}, '%')
+            )
+        </if>
+    </select>
+</mapper>

@@ -10,9 +10,20 @@ import com.example.service.CkInboundOrderService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 // CkInboundOrderServiceImpl.java
 @Service
 public class CkInboundOrderServiceImpl extends ServiceImpl<CkInboundOrderMapper, InboundOrder> implements CkInboundOrderService {
+
+    @Override
+    public List<InboundOrder> selectByInboundOrderIds(Long tenantId, List<Long> inboundOrderIds) {
+        return this.query()
+                .eq("tenant_id", tenantId)
+                .in("id", inboundOrderIds)
+                .eq("is_deleted", 0)
+                .list();
+    }
 
     @Override
     public InboundOrder selectById(Long orderId, Long tenantId) {

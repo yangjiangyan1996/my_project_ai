@@ -19,6 +19,13 @@ import java.util.List;
 @Service
 public class CkInboundOrderItemServiceImpl extends ServiceImpl<CkInboundOrderItemMapper, InboundOrderItem> implements CkInboundOrderItemService {
     @Override
+    public List<InboundOrderItem> selectByProductIds(Long tenantId, List<Long> productIds) {
+        return baseMapper.selectList(new QueryWrapper<InboundOrderItem>().eq("is_deleted", 0)
+                .in("product_id", productIds)
+                .eq("tenant_id", tenantId));
+    }
+
+    @Override
     public boolean deleteByOrderId(Long tenantId, Long orderId, Long userId) {
         InboundOrderItem inboundOrderItem = new InboundOrderItem();
         inboundOrderItem.setIsDeleted(1);
