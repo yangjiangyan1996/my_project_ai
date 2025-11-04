@@ -33,10 +33,10 @@
               style="width: 200px"
             />
           </el-form-item>
-          <el-form-item label="产品编码">
+          <el-form-item label="SKU">
             <el-input
-              v-model="filterForm.productCode"
-              placeholder="请输入产品编码"
+              v-model="filterForm.sku"
+              placeholder="请输入SKU"
               clearable
               style="width: 200px"
             />
@@ -151,11 +151,13 @@
           v-loading="loading"
           empty-text="暂无库存数据"
           class="inventory-table"
-          row-key="id"
+          row-key="productId"
           @sort-change="handleSortChange"
         >
           <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column label="产品信息" width="280" fixed="left">
+          
+          <!-- 产品信息 -->
+          <el-table-column label="产品信息" width="300" fixed="left">
             <template #default="{ row }">
               <div class="product-info">
                 <el-avatar :size="40" :src="row.productImage" class="product-image">
@@ -163,75 +165,123 @@
                 </el-avatar>
                 <div class="product-details">
                   <div class="product-name">{{ row.productName }}</div>
-                  <div class="product-code">编码: {{ row.productCode }}</div>
-                  <div class="product-spec">规格: {{ row.productSpec || '无' }}</div>
+                  <div class="product-sku">SKU: {{ row.sku || '--' }}</div>
+                  <div class="product-spec">
+                    <span v-if="row.spec">规格: {{ row.spec }}</span>
+                    <span v-if="row.color"> | 颜色: {{ row.color }}</span>
+                  </div>
+                  <div class="product-barcode" v-if="row.barcode">
+                    条码: {{ row.barcode }}
+                  </div>
                 </div>
               </div>
             </template>
           </el-table-column>
+
           <el-table-column label="产品分类" width="120">
             <template #default="{ row }">
               <span>{{ row.categoryName }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="仓库" width="120">
+
+          <!-- 总库存信息 -->
+          <el-table-column label="总库存" width="120" align="center" sortable="custom" prop="totalQuantityOfAllWarehouses">
             <template #default="{ row }">
-              <span>{{ row.warehouseName }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="当前库存" width="120" align="center" sortable="custom" prop="currentStock">
-            <template #default="{ row }">
-              <span :class="getStockClass(row.currentStock, row.minStock, row.maxStock)">
-                {{ row.currentStock }}
+              <span :class="getStockClass(row.totalQuantityOfAllWarehouses)">
+                {{ formatNumber(row.totalQuantityOfAllWarehouses) }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="可用库存" width="120" align="center" sortable="custom" prop="availableStock">
+
+          <el-table-column label="剩余库存" width="120" align="center">
             <template #default="{ row }">
-              <span>{{ row.availableStock }}</span>
+              <span :class="getStockClass(row.remainingStockQuantityOfAllWarehouses)">
+                {{ formatNumber(row.remainingStockQuantityOfAllWarehouses) }}
+              </span>
             </template>
           </el-table-column>
-          <el-table-column label="锁定库存" width="120" align="center">
-            <template #default="{ row }">
-              <span>{{ row.lockedStock || 0 }}</span>
-            </template>
-          </el-table-column>
+
           <el-table-column label="单位" width="80" align="center">
             <template #default="{ row }">
-              <span>{{ row.unit }}</span>
+              <span>{{ row.unitName }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="最低库存" width="120" align="center">
+
+          <!-- 出货信息 -->
+          <el-table-column label="出货单位" width="100" align="center">
             <template #default="{ row }">
-              <span>{{ row.minStock || 0 }}</span>
+              <span>{{ row.outUnitName || '--' }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="最高库存" width="120" align="center">
+
+          <el-table-column label="出货数量" width="120" align="center">
             <template #default="{ row }">
-              <span>{{ row.maxStock || '--' }}</span>
+              <span>{{ formatNumber(row.outUnitTotalNum) }}</span>
             </template>
           </el-table-column>
+
+          <!-- 价格信息 -->
+          <el-table-column label="单价(¥)" width="120" align="right">
+            <template #default="{ row }">
+              <span class="amount">{{ formatCurrency(row.priceRmb) }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="总价(¥)" width="120" align="right" sortable="custom" prop="totalPriceRmb">
+            <template #default="{ row }">
+              <span class="amount">{{ formatCurrency(row.totalPriceRmb) }}</span>
+            </template>
+          </el-table-column>
+
+          <!-- 物理信息 -->
+          <el-table-column label="总体积" width="100" align="center">
+            <template #default="{ row }">
+              <span>{{ formatNumber(row.volume) }} m³</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="总重量" width="100" align="center">
+            <template #default="{ row }">
+              <span>{{ formatNumber(row.weightAll) }} kg</span>
+            </template>
+          </el-table-column>
+
+          <!-- 仓库库存详情 -->
+          <el-table-column label="仓库库存详情" width="200">
+            <template #default="{ row }">
+              <div class="warehouse-inventory-list">
+                <div 
+                  v-for="warehouse in row.warehouseInventoryList" 
+                  :key="warehouse.warehouseId"
+                  class="warehouse-item"
+                >
+                  <div class="warehouse-name">{{ warehouse.warehouseName }}:</div>
+                  <div class="warehouse-quantity">
+                    <span class="total">{{ formatNumber(warehouse.quantity) }}</span>
+                    <span v-if="warehouse.lockedQuantity > 0" class="locked">
+                      (锁:{{ formatNumber(warehouse.lockedQuantity) }})
+                    </span>
+                  </div>
+                </div>
+                <div v-if="!row.warehouseInventoryList || row.warehouseInventoryList.length === 0" class="no-warehouse">
+                  无仓库库存
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+
           <el-table-column label="库存状态" width="100" align="center">
             <template #default="{ row }">
               <el-tag 
-                :type="getStockStatusTagType(row.currentStock, row.minStock)" 
+                :type="getStockStatusTagType(row.totalQuantityOfAllWarehouses)" 
                 size="small"
               >
-                {{ getStockStatusText(row.currentStock, row.minStock) }}
+                {{ getStockStatusText(row.totalQuantityOfAllWarehouses) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="库存金额" width="120" align="right" sortable="custom" prop="stockAmount">
-            <template #default="{ row }">
-              <span class="amount">¥{{ (row.stockAmount || 0).toFixed(2) }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="最后更新" width="160">
-            <template #default="{ row }">
-              <span>{{ formatTime(row.updatedAt) }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="150" fixed="right" align="center">
+
+          <el-table-column label="操作" width="180" fixed="right" align="center">
             <template #default="{ row }">
               <div class="action-buttons">
                 <el-button
@@ -257,6 +307,14 @@
                   @click="handleViewHistory(row)"
                 >
                   流水
+                </el-button>
+                <el-button
+                  type="success"
+                  link
+                  size="small"
+                  @click="handleWarehouseDetail(row)"
+                >
+                  仓库明细
                 </el-button>
               </div>
             </template>
@@ -295,6 +353,34 @@
         <el-empty description="数据加载失败" />
       </div>
     </el-dialog>
+
+    <!-- 仓库库存明细对话框 -->
+    <el-dialog
+      v-model="warehouseDetailVisible"
+      :title="`仓库库存明细 - ${currentInventory?.productName || '未知产品'}`"
+      width="60%"
+    >
+      <div v-if="currentInventory">
+        <el-table :data="currentInventory.warehouseInventoryList" empty-text="无仓库库存数据">
+          <el-table-column label="仓库名称" prop="warehouseName" width="150" />
+          <el-table-column label="库存数量" align="center" width="120">
+            <template #default="{ row }">
+              <span :class="getStockClass(row.quantity)">{{ formatNumber(row.quantity) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="锁定数量" align="center" width="120">
+            <template #default="{ row }">
+              <span>{{ formatNumber(row.lockedQuantity) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="可用数量" align="center" width="120">
+            <template #default="{ row }">
+              <span :class="getStockClass(row.availableQuantity)">{{ formatNumber(row.availableQuantity) }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -308,12 +394,13 @@ import { post, get } from '@/net';
 const router = useRouter();
 const loading = ref(false);
 const detailDialogVisible = ref(false);
+const warehouseDetailVisible = ref(false);
 const currentInventory = ref(null);
 
 // 筛选表单
 const filterForm = reactive({
   productName: '',
-  productCode: '',
+  sku: '',
   categoryId: '',
   warehouseId: '',
   stockStatus: ''
@@ -364,31 +451,13 @@ const loadInventoryList = async () => {
       sortOrder: sortInfo.order
     };
     
-    const res = await post('/api/auth/inventory/list', params);
+    const res = await post('/api/auth/inventory/pageList', params);
     if (res && res.records) {
       inventoryList.value = res.records.map(inventory => ({
-        id: inventory.id || '',
-        productId: inventory.productId || '',
-        productName: inventory.productName || '',
-        productCode: inventory.productCode || '',
-        productSpec: inventory.productSpec || '',
-        productImage: inventory.productImage || '/images/default-product.png',
-        categoryId: inventory.categoryId || '',
-        categoryName: inventory.categoryName || '',
-        warehouseId: inventory.warehouseId || '',
-        warehouseName: inventory.warehouseName || '',
-        currentStock: inventory.currentStock || 0,
-        availableStock: inventory.availableStock || 0,
-        lockedStock: inventory.lockedStock || 0,
-        unit: inventory.unit || '个',
-        minStock: inventory.minStock || 0,
-        maxStock: inventory.maxStock || null,
-        stockAmount: inventory.stockAmount || 0,
-        avgCost: inventory.avgCost || 0,
-        lastInboundTime: inventory.lastInboundTime || '',
-        lastOutboundTime: inventory.lastOutboundTime || '',
-        createdAt: inventory.createdAt || new Date().toISOString(),
-        updatedAt: inventory.updatedAt || new Date().toISOString()
+        ...inventory,
+        // 确保数组字段不为空
+        warehouseInventoryList: inventory.warehouseInventoryList || [],
+        outboundQuantityList: inventory.outboundQuantityList || []
       }));
       pagination.total = res.total || 0;
       
@@ -430,13 +499,13 @@ const loadCategoryList = async () => {
 const updateStats = () => {
   stats.totalProducts = inventoryList.value.length;
   stats.normalStock = inventoryList.value.filter(item => 
-    item.currentStock > (item.minStock || 0) * 1.2
+    item.totalQuantityOfAllWarehouses > 10 // 可以根据业务需求调整阈值
   ).length;
   stats.lowStock = inventoryList.value.filter(item => 
-    item.currentStock > 0 && item.currentStock <= (item.minStock || 0) * 1.2
+    item.totalQuantityOfAllWarehouses > 0 && item.totalQuantityOfAllWarehouses <= 10
   ).length;
   stats.outOfStock = inventoryList.value.filter(item => 
-    item.currentStock <= 0
+    item.totalQuantityOfAllWarehouses <= 0
   ).length;
 };
 
@@ -453,7 +522,7 @@ const handleSearch = () => {
 const handleReset = () => {
   Object.assign(filterForm, {
     productName: '',
-    productCode: '',
+    sku: '',
     categoryId: '',
     warehouseId: '',
     stockStatus: ''
@@ -494,57 +563,70 @@ const handleViewDetail = (inventory) => {
   detailDialogVisible.value = true;
 };
 
+const handleWarehouseDetail = (inventory) => {
+  currentInventory.value = inventory;
+  warehouseDetailVisible.value = true;
+};
+
 const handleAdjustStock = (inventory) => {
-  router.push(`/inventory/adjust/${inventory.id}`);
+  router.push(`/inventory/adjust/${inventory.productId}`);
 };
 
 const handleViewHistory = (inventory) => {
-  router.push(`/inventory/history/${inventory.id}`);
+  router.push(`/inventory/history/${inventory.productId}`);
 };
 
-const getStockClass = (currentStock, minStock, maxStock) => {
-  if (currentStock <= 0) {
+// 格式化数字显示
+const formatNumber = (value) => {
+  if (value === null || value === undefined) return '0';
+  const num = Number(value);
+  if (isNaN(num)) return '0';
+  // 如果是整数，不显示小数位
+  if (Number.isInteger(num)) {
+    return num.toString();
+  }
+  // 否则显示4位小数
+  return num.toFixed(4).replace(/\.?0+$/, '');
+};
+
+// 格式化货币显示
+const formatCurrency = (value) => {
+  if (value === null || value === undefined) return '0.00';
+  const num = Number(value);
+  if (isNaN(num)) return '0.00';
+  return num.toFixed(2);
+};
+
+const getStockClass = (quantity) => {
+  const num = Number(quantity) || 0;
+  if (num <= 0) {
     return 'stock-out';
-  } else if (currentStock <= (minStock || 0)) {
+  } else if (num <= 10) { // 可以根据业务需求调整低库存阈值
     return 'stock-low';
-  } else if (maxStock && currentStock > maxStock) {
-    return 'stock-over';
   }
   return 'stock-normal';
 };
 
-const getStockStatusText = (currentStock, minStock) => {
-  if (currentStock <= 0) {
+const getStockStatusText = (quantity) => {
+  const num = Number(quantity) || 0;
+  if (num <= 0) {
     return '缺货';
-  } else if (currentStock <= (minStock || 0)) {
+  } else if (num <= 10) {
     return '低库存';
   } else {
     return '正常';
   }
 };
 
-const getStockStatusTagType = (currentStock, minStock) => {
-  if (currentStock <= 0) {
+const getStockStatusTagType = (quantity) => {
+  const num = Number(quantity) || 0;
+  if (num <= 0) {
     return 'danger';
-  } else if (currentStock <= (minStock || 0)) {
+  } else if (num <= 10) {
     return 'warning';
   } else {
     return 'success';
   }
-};
-
-const formatTime = (timeString) => {
-  if (!timeString) return '--';
-  try {
-    const date = new Date(timeString);
-    return `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}`;
-  } catch {
-    return '--';
-  }
-};
-
-const padZero = (num) => {
-  return num < 10 ? `0${num}` : num;
 };
 
 onMounted(() => {
@@ -654,7 +736,7 @@ onMounted(() => {
 
 .product-info {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -679,15 +761,57 @@ onMounted(() => {
   text-overflow: ellipsis;
 }
 
-.product-code {
+.product-sku, .product-spec, .product-barcode {
   font-size: 12px;
   color: #909399;
   margin-bottom: 2px;
+  line-height: 1.4;
 }
 
-.product-spec {
+.warehouse-inventory-list {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.warehouse-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
   font-size: 12px;
+}
+
+.warehouse-item:last-child {
+  border-bottom: none;
+}
+
+.warehouse-name {
+  color: #606266;
+  flex-shrink: 0;
+}
+
+.warehouse-quantity {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.warehouse-quantity .total {
+  font-weight: bold;
+  color: #303133;
+}
+
+.warehouse-quantity .locked {
+  color: #E6A23C;
+  font-size: 11px;
+}
+
+.no-warehouse {
   color: #909399;
+  font-style: italic;
+  text-align: center;
+  padding: 8px;
 }
 
 .amount {
@@ -699,6 +823,7 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .pagination-section {
@@ -729,11 +854,6 @@ onMounted(() => {
 
 .stock-out {
   color: #F56C6C;
-  font-weight: bold;
-}
-
-.stock-over {
-  color: #9b59b6;
   font-weight: bold;
 }
 
@@ -771,6 +891,12 @@ onMounted(() => {
     flex-direction: column;
     text-align: center;
     gap: 8px;
+  }
+  
+  .warehouse-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
 }
 
