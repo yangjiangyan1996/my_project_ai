@@ -1,15 +1,16 @@
-package com.example.entity.cangku.dto;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
+package com.example.entity.cangku.resp;
+
 import lombok.Data;
 
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/10/30 22:31
+ */
 @Data
-@TableName("ck_customer")
-public class Customer extends BaseModel {
-    @TableId(type = IdType.AUTO)
+public class CustomerPageListResp {
     private Long id;
     //租户ID
     private Long tenantId;
@@ -43,4 +44,8 @@ public class Customer extends BaseModel {
     private String taxNumber;
     //备注
     private String remark;
+
+    //创建时间
+    private String createdAt;
+
 }

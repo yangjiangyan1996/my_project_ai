@@ -3,7 +3,9 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.InventoryListPageReq;
+import com.example.entity.cangku.resp.InventoryListResp;
 import com.example.entity.cangku.resp.InventoryPageListResp;
+import com.example.enums.CkCommonEnums;
 import com.example.enums.CkInventoryEnums;
 import com.example.service.*;
 import jakarta.annotation.Resource;
@@ -21,6 +23,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class CkInventoryFacade {
+    @Resource
+    CkInventoryWarehouseService inventoryWarehouseService;
     @Resource
     CkOutboundOrderItemService outboundOrderItemService;
     @Resource
@@ -73,13 +77,13 @@ public class CkInventoryFacade {
                 .collect(Collectors.toMap(Product::getId, v -> v));
 
         //入库的数据
-        List<InboundOrderItem> inboundOrderItems =inboundOrderItemService.selectByProductIds(req.getTenantId(), productIds);
+        List<InboundOrderItem> inboundOrderItems = inboundOrderItemService.selectByProductIds(req.getTenantId(), productIds);
         Map<Long, List<InboundOrderItem>> productId2InboundItemListMap = inboundOrderItems.stream().collect(Collectors.groupingBy(InboundOrderItem::getProductId));
         List<Long> inboundOrderIds = inboundOrderItems.stream()
                 .map(InboundOrderItem::getOrderId)
                 .distinct()
                 .collect(Collectors.toList());
-        List<InboundOrder>  inboundOrders= inboundOrderService.selectByInboundOrderIds(req.getTenantId(), inboundOrderIds);
+        List<InboundOrder> inboundOrders = inboundOrderService.selectByInboundOrderIds(req.getTenantId(), inboundOrderIds);
         Map<Long, InboundOrder> inboundOrderId2InfoMap = inboundOrders.stream()
                 .collect(Collectors.toMap(InboundOrder::getId, v -> v));
 
@@ -91,7 +95,7 @@ public class CkInventoryFacade {
                 .distinct()
                 .collect(Collectors.toList());
 
-        List<OutboundOrder>  outboundOrders= outboundOrderService.selectByInboundOrderIds(req.getTenantId(), outboundOrderIds);
+        List<OutboundOrder> outboundOrders = outboundOrderService.selectByInboundOrderIds(req.getTenantId(), outboundOrderIds);
         Map<Long, OutboundOrder> outboundOrderId2InfoMap = outboundOrders.stream()
                 .collect(Collectors.toMap(OutboundOrder::getId, v -> v));
 
@@ -109,7 +113,6 @@ public class CkInventoryFacade {
                 .filter(Objects::nonNull)   // 避免空值
                 .distinct()                  // 去重
                 .collect(Collectors.toMap(Unit::getUnitCode, v -> v));
-
 
 
         // 构建响应列表
@@ -152,7 +155,6 @@ public class CkInventoryFacade {
                         warehouse2InfoMap.put(warehouseId, w);
                     }
                     r.setWarehouseInventoryList(warehouse2InfoMap.values().stream().toList());
-
 
 
                     List<OutboundOrderItem> outboundList = productId2OutboundItemListMap.getOrDefault(productId, new ArrayList<>());
@@ -221,6 +223,55 @@ public class CkInventoryFacade {
         Page<InventoryPageListResp> result = Page.of(req.getPage() - 1, req.getSize());
         result.setTotal(list.getTotal());
         result.setRecords(resultList);
+        return result;
+    }
+
+
+    public List<InventoryListResp> List(Long warehouseId, Long tenantId) {
+        List<InventoryWarehouse> inventoryTransactionList = inventoryWarehouseService.selectByWarehourseId(warehouseId, tenantId);
+        if (inventoryTransactionList.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<Long, InventoryWarehouse> productId2InventoryWareHouseMap = inventoryTransactionList.stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v));
+
+        List<Long> productIds = productId2InventoryWareHouseMap.keySet().stream()
+                .distinct()
+                .collect(Collectors.toList());
+        List<Product> products = productService.selectByIds(tenantId, productIds);
+        Map<Long, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getId, v -> v));
+
+        List<Unit> units = unitService.selectByTenantId(tenantId, CkCommonEnums.Status.Enable.getCode());
+        Map<String, Unit> unitCode2UnitMap = units.stream()
+                .filter(Objects::nonNull)   // 避免空值
+                .distinct()                  // 去重
+                .collect(Collectors.toMap(Unit::getUnitCode, v -> v));
+
+
+        // 获取产品分类信息
+        List<ProductCategory> productCategories = productCategoryService.selectByTenantId(tenantId);
+        Map<String, ProductCategory> productCode2CategoryMap = productCategories.stream()
+                .collect(Collectors.toMap(ProductCategory::getCategoryCode, v -> v));
+        List<InventoryListResp> result = new ArrayList<>();
+        for (Long productId : productId2InventoryWareHouseMap.keySet()) {
+            InventoryWarehouse inventoryWarehouse = productId2InventoryWareHouseMap.get(productId);
+
+            InventoryListResp r = new InventoryListResp();
+            r.setProductId(productId);
+            r.setProductName(productMap.get(productId).getName());
+            r.setSku(productMap.get(productId).getSku());
+            r.setSpec(productMap.get(productId).getSpec());
+            r.setColor(productMap.get(productId).getColor());
+            r.setUnitName(unitCode2UnitMap.get(productMap.get(productId).getUnitCode()).getUnitName());
+            r.setAvailableQuantity(inventoryWarehouse.getQuantity().subtract(inventoryWarehouse.getLockedQuantity()));
+            r.setQuantity(inventoryWarehouse.getQuantity());
+            r.setLockedQuantity(inventoryWarehouse.getLockedQuantity());
+            r.setOutUnitName(unitCode2UnitMap.get(productMap.get(productId).getOutUnitCode()).getUnitName());
+            r.setOutUnitPerNum(productMap.get(productId).getOutUnitPerNum());
+            r.setCategoryName(productCode2CategoryMap.get(productMap.get(productId).getCategoryCode()).getCategoryName());
+            result.add(r);
+        }
+
         return result;
     }
 }

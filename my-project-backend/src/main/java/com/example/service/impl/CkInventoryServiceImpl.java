@@ -17,7 +17,7 @@ public class CkInventoryServiceImpl extends ServiceImpl<CkInventoryMapper, Inven
 
 
     @Override
-    public Inventory getByWarehouseAndProduct(Long productId, Long tenantId) {
+    public Inventory getByProduct(Long productId, Long tenantId) {
         return baseMapper.selectOne(new QueryWrapper<Inventory>()
                 .eq("product_id", productId)
                 .eq("tenant_id", tenantId)
@@ -25,6 +25,7 @@ public class CkInventoryServiceImpl extends ServiceImpl<CkInventoryMapper, Inven
     }
 
 
+    @Override
     public Page<Inventory> getPage(Page<Inventory> page, InventoryListPageReq req) {
         return baseMapper.selectPage(
                 page,

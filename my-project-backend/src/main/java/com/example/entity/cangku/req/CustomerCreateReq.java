@@ -1,18 +1,19 @@
-package com.example.entity.cangku.dto;
+
+package com.example.entity.cangku.req;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/10/30 22:31
+ */
 @Data
-@TableName("ck_customer")
-public class Customer extends BaseModel {
-    @TableId(type = IdType.AUTO)
+public class CustomerCreateReq {
     private Long id;
-    //租户ID
-    private Long tenantId;
     //客户编码
     private String customerCode;
     //客户名称
@@ -43,4 +44,7 @@ public class Customer extends BaseModel {
     private String taxNumber;
     //备注
     private String remark;
+
+    private Long tenantId;
+    private Long userId;
 }
