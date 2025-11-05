@@ -79,7 +79,7 @@
                 <el-option
                   v-for="customer in customerList"
                   :key="customer.id"
-                  :label="customer.name"
+                  :label="customer.customerName"
                   :value="customer.id"
                 />
               </el-select>
@@ -606,8 +606,8 @@ const validateForm = async () => {
 // 数据加载方法
 const loadWarehouseList = async () => {
   try {
-    const res = await get('/api/auth/warehouse/list');
-    warehouseList.value = res.records || [];
+    const res = await get('/api/auth/warehouse/listEnable');
+    warehouseList.value = res || [];
   } catch (error) {
     ElMessage.error('加载仓库列表失败');
   }
@@ -615,8 +615,8 @@ const loadWarehouseList = async () => {
 
 const loadCustomerList = async () => {
   try {
-    const res = await get('/api/auth/customer/list');
-    customerList.value = res.records || [];
+    const res = await get('/api/auth/customer/listEnable');
+    customerList.value = res || [];
   } catch (error) {
     ElMessage.error('加载客户列表失败');
   }
@@ -624,8 +624,8 @@ const loadCustomerList = async () => {
 
 const loadInventoryData = async (warehouseId) => {
   try {
-    const res = await get(`/api/auth/inventory/list?warehouseId=${warehouseId}`);
-    inventoryList.value = res.records || [];
+    const res = await get(`/api/auth/inventory/listOfWarehouse?warehouseId=${warehouseId}`);
+    inventoryList.value = res || [];
   } catch (error) {
     ElMessage.error('加载库存数据失败');
   }

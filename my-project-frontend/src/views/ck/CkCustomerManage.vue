@@ -272,7 +272,7 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <!-- <el-col :span="12">
             <el-form-item label="付款期限" prop="paymentTerm">
               <el-input-number
                 v-model="form.paymentTerm"
@@ -284,7 +284,7 @@
                 <template #append>天</template>
               </el-input-number>
             </el-form-item>
-          </el-col>
+          </el-col> -->
         </el-row>
 
         <el-row :gutter="20">
@@ -378,12 +378,12 @@
         <el-descriptions-item label="联系电话">{{ currentRow?.contactPhone || '-' }}</el-descriptions-item>
         <el-descriptions-item label="邮箱">{{ currentRow?.email || '-' }}</el-descriptions-item>
         <el-descriptions-item label="信用额度">{{ formatCurrency(currentRow?.creditLimit) }}</el-descriptions-item>
-        <el-descriptions-item label="欠款金额">
+        <!-- <el-descriptions-item label="欠款金额">
           <span :class="{ 'text-danger': currentRow?.arrearsAmount > 0 }">
             {{ formatCurrency(currentRow?.arrearsAmount) }}
           </span>
-        </el-descriptions-item>
-        <el-descriptions-item label="付款期限">{{ currentRow?.paymentTerm || 0 }} 天</el-descriptions-item>
+        </el-descriptions-item> -->
+        <!-- <el-descriptions-item label="付款期限">{{ currentRow?.paymentTerm || 0 }} 天</el-descriptions-item> -->
         <el-descriptions-item label="营业执照">{{ currentRow?.businessLicense || '-' }}</el-descriptions-item>
         <el-descriptions-item label="税号">{{ currentRow?.taxNumber || '-' }}</el-descriptions-item>
         <el-descriptions-item label="开户银行">{{ currentRow?.bankName || '-' }}</el-descriptions-item>
@@ -497,7 +497,7 @@ const form = reactive({
   email: '',
   address: '',
   creditLimit: 0,
-  paymentTerm: 30,
+  // paymentTerm: 30,
   businessLicense: '',
   taxNumber: '',
   bankName: '',
@@ -596,7 +596,7 @@ const handleEdit = (row) => {
     email: row.email,
     address: row.address,
     creditLimit: row.creditLimit,
-    paymentTerm: row.paymentTerm,
+    // paymentTerm: row.paymentTerm,
     businessLicense: row.businessLicense,
     taxNumber: row.taxNumber,
     bankName: row.bankName,
@@ -710,25 +710,26 @@ const handleSubmit = async () => {
 };
 
 const handleUpdateCredit = async () => {
-  if (!creditForm.newCreditLimit && creditForm.newCreditLimit !== 0) {
-    ElMessage.warning('请输入新的信用额度');
-    return;
-  }
+  ElMessage.error('功能未开发');
+  // if (!creditForm.newCreditLimit && creditForm.newCreditLimit !== 0) {
+  //   ElMessage.warning('请输入新的信用额度');
+  //   return;
+  // }
 
-  try {
-    await post('/api/auth/customer/updateCredit', {
-      id: currentRow.value.id,
-      newCreditLimit: creditForm.newCreditLimit,
-      reason: creditForm.reason
-    });
+  // try {
+  //   await post('/api/auth/customer/updateCredit', {
+  //     id: currentRow.value.id,
+  //     newCreditLimit: creditForm.newCreditLimit,
+  //     reason: creditForm.reason
+  //   });
     
-    ElMessage.success('信用额度更新成功');
-    creditDialogVisible.value = false;
-    loadCustomerList();
-  } catch (error) {
-    console.error('更新信用额度失败:', error);
-    ElMessage.error('更新失败');
-  }
+  //   ElMessage.success('信用额度更新成功');
+  //   creditDialogVisible.value = false;
+  //   loadCustomerList();
+  // } catch (error) {
+  //   console.error('更新信用额度失败:', error);
+  //   ElMessage.error('更新失败');
+  // }
 };
 
 const resetForm = () => {
@@ -742,7 +743,7 @@ const resetForm = () => {
     email: '',
     address: '',
     creditLimit: 0,
-    paymentTerm: 30,
+    // paymentTerm: 30,
     businessLicense: '',
     taxNumber: '',
     bankName: '',
@@ -820,7 +821,7 @@ const loadCustomerList = async () => {
       ...filterForm
     };
     
-    const res = await post('/api/auth/customer/list', params);
+    const res = await post('/api/auth/customer/pageList', params);
     customerList.value = res.records || [];
     pagination.total = res.total || 0;
   } catch (error) {

@@ -25,7 +25,7 @@
           
           <!-- 业务管理 -->
           <el-sub-menu index="business">
-            <template #title>业务管理</template>
+            <template #title>出入库管理</template>
             <el-menu-item index="inbound" @click="changeDisplayMode('inbound')">入库管理</el-menu-item>
             <el-menu-item index="outbound" @click="changeDisplayMode('outbound')">出库管理</el-menu-item>
             <el-menu-item index="transfer" @click="changeDisplayMode('transfer')">调拨管理</el-menu-item>
