@@ -17,7 +17,7 @@ public class Inventory extends BaseModel {
     //租户ID
     private Long tenantId;
     //仓库ID
-    private Long warehouseId;
+//    private Long warehouseId;
     //产品ID
     private Long productId;
     //当前库存数量

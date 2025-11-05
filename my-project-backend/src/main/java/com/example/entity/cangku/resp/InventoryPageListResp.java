@@ -31,11 +31,11 @@ public class InventoryPageListResp {
     //出库数量细节
     List<WarehouseInventory> outboundQuantityList;
 
-    //总库存
-    private BigDecimal totalQuantityOfAllWarehouses;
+    //总进货数量
+    private BigDecimal totalInQuantityOfAllWarehouses;
     //总出货数量
     private BigDecimal totalOutboundQuantityOfAllWarehouses;
-    //库存剩余
+    //总库存
     private BigDecimal remainingStockQuantityOfAllWarehouses;
 
     //出货单位（比如按箱子出货
@@ -70,6 +70,11 @@ public class InventoryPageListResp {
 
     //分类名称
     private String categoryName;
+
+    /**
+     * @link com.example.enums.CkInventoryEnums.InventoryStatus
+     */
+    private Integer inventoryStatus;
 
     @Data
     public static class WarehouseInventory {

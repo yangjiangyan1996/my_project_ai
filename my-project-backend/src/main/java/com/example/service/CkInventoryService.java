@@ -9,7 +9,7 @@ import java.util.List;
 
 // CkInventoryService.java
 public interface CkInventoryService extends IService<Inventory> {
-    Inventory getByWarehouseAndProduct(Long warehouseId, Long productId, Long tenantId);
+    Inventory getByWarehouseAndProduct(Long productId, Long tenantId);
 
     Page<Inventory> getPage(Page<Inventory> page, InventoryListPageReq req);
 

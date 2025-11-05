@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.InventoryListPageReq;
 import com.example.entity.cangku.resp.InventoryPageListResp;
+import com.example.enums.CkInventoryEnums;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -47,20 +48,26 @@ public class CkInventoryFacade {
             return Page.of(req.getPage() - 1, req.getSize());
         }
 
-        // 获取相关的仓库信息
-        List<Long> wareHouseIds = list.getRecords().stream()
-                .map(Inventory::getWarehouseId)
+        List<Long> productIds = list.getRecords().stream()
+                .map(Inventory::getProductId)
                 .distinct()
                 .collect(Collectors.toList());
+
+        //库存明细
+        List<InventoryTransaction> inventoryTransactionList = inventoryTransactionService.selectByProductIds(req.getTenantId(), productIds);
+
+        // 获取相关的仓库信息
+        List<Long> wareHouseIds = inventoryTransactionList.stream()
+                .map(InventoryTransaction::getWarehouseId)
+                .distinct()
+                .collect(Collectors.toList());
+
         List<Warehouse> warehouseList = wareHouseService.selectByTenantIdAndWareHouseIds(req.getTenantId(), wareHouseIds);
         Map<Long, Warehouse> warehouseMap = warehouseList.stream()
                 .collect(Collectors.toMap(Warehouse::getId, v -> v));
 
         // 获取相关的产品信息
-        List<Long> productIds = list.getRecords().stream()
-                .map(Inventory::getProductId)
-                .distinct()
-                .collect(Collectors.toList());
+
         List<Product> products = productService.selectByIds(req.getTenantId(), productIds);
         Map<Long, Product> productMap = products.stream()
                 .collect(Collectors.toMap(Product::getId, v -> v));
@@ -109,6 +116,7 @@ public class CkInventoryFacade {
         List<InventoryPageListResp> resultList = productInventoryMap.entrySet().stream()
                 .map(entry -> {
                     Long productId = entry.getKey();
+
                     // 获取产品信息
                     Product product = productMap.getOrDefault(productId, new Product());
 
@@ -146,6 +154,7 @@ public class CkInventoryFacade {
                     r.setWarehouseInventoryList(warehouse2InfoMap.values().stream().toList());
 
 
+
                     List<OutboundOrderItem> outboundList = productId2OutboundItemListMap.getOrDefault(productId, new ArrayList<>());
                     Map<Long, InventoryPageListResp.WarehouseInventory> outwarehouse2InfoMap = new HashMap<>();
                     for (OutboundOrderItem item : outboundList) {
@@ -174,13 +183,15 @@ public class CkInventoryFacade {
                     }
                     r.setOutboundQuantityList(outwarehouse2InfoMap.values().stream().toList());
 
-                    List<Inventory> inventories1 = productInventoryMap.get(productId);
-                    r.setTotalQuantityOfAllWarehouses(inventories1.stream()
+                    BigDecimal allCount = entry.getValue().stream()
                             .map(Inventory::getQuantity)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add));
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal inboundAllCount = warehouse2InfoMap.values().stream().map(v -> v.getQuantity()).reduce(BigDecimal.ZERO, BigDecimal::add);
+                    r.setTotalInQuantityOfAllWarehouses(inboundAllCount);
                     BigDecimal totalOutboundQuantityOfAllWarehouses = outwarehouse2InfoMap.values().stream().map(InventoryPageListResp.WarehouseInventory::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
                     r.setTotalOutboundQuantityOfAllWarehouses(totalOutboundQuantityOfAllWarehouses);
-                    r.setRemainingStockQuantityOfAllWarehouses(new BigDecimal(0));
+                    r.setRemainingStockQuantityOfAllWarehouses(allCount);
+                    r.setInventoryStatus(CkInventoryEnums.StockStatus.getCodeByCount(allCount, new BigDecimal(product.getMinStock())));
                     r.setOutUnitName(unitCode2UnitMap.getOrDefault(product.getOutUnitCode(), new Unit()).getUnitName());
                     r.setOutUnitPerNum(product.getOutUnitPerNum());
 
@@ -200,7 +211,7 @@ public class CkInventoryFacade {
                     BigDecimal priceRmb = new BigDecimal(1);
                     r.setPriceRmb(priceRmb);
                     //总价 = 单价 * 库存剩余
-                    r.setTotalPriceRmb(priceRmb.multiply(r.getTotalQuantityOfAllWarehouses()));
+                    r.setTotalPriceRmb(priceRmb.multiply(r.getTotalInQuantityOfAllWarehouses()));
                     r.setCategoryName(productCode2CategoryMap.get(product.getCategoryCode()).getCategoryName());
                     return r;
                 })

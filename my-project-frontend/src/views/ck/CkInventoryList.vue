@@ -56,7 +56,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="仓库">
+          <!-- <el-form-item label="仓库">
             <el-select
               v-model="filterForm.warehouseId"
               placeholder="全部仓库"
@@ -70,8 +70,8 @@
                 :value="warehouse.id"
               />
             </el-select>
-          </el-form-item>
-          <el-form-item label="库存状态">
+          </el-form-item> -->
+          <!-- <el-form-item label="库存状态">
             <el-select
               v-model="filterForm.stockStatus"
               placeholder="全部状态"
@@ -85,7 +85,7 @@
                 :value="item.value"
               />
             </el-select>
-          </el-form-item>
+          </el-form-item> -->
           <el-form-item>
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="handleReset">重置</el-button>
@@ -184,22 +184,32 @@
             </template>
           </el-table-column>
 
-          <!-- 总库存信息 -->
-          <el-table-column label="总库存" width="120" align="center" sortable="custom" prop="totalQuantityOfAllWarehouses">
-            <template #default="{ row }">
-              <span :class="getStockClass(row.totalQuantityOfAllWarehouses)">
-                {{ formatNumber(row.totalQuantityOfAllWarehouses) }}
-              </span>
-            </template>
-          </el-table-column>
-
-          <el-table-column label="剩余库存" width="120" align="center">
+          <el-table-column label="总库存" width="120" align="center">
             <template #default="{ row }">
               <span :class="getStockClass(row.remainingStockQuantityOfAllWarehouses)">
                 {{ formatNumber(row.remainingStockQuantityOfAllWarehouses) }}
               </span>
             </template>
           </el-table-column>
+
+          <!-- 总进货库存信息 -->
+          <el-table-column label="总进货库存" width="120" align="center" sortable="custom" prop="totalInQuantityOfAllWarehouses">
+            <template #default="{ row }">
+              <span :class="getStockClass(row.totalInQuantityOfAllWarehouses)">
+                {{ formatNumber(row.totalInQuantityOfAllWarehouses) }}
+              </span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="总出货数量" width="120" align="center" sortable="custom" prop="totalOutboundQuantityOfAllWarehouses">
+            <template #default="{ row }">
+              <span :class="getStockClass(row.totalOutboundQuantityOfAllWarehouses)">
+                {{ formatNumber(row.totalOutboundQuantityOfAllWarehouses) }}
+              </span>
+            </template>
+          </el-table-column>
+
+          
 
           <el-table-column label="单位" width="80" align="center">
             <template #default="{ row }">
@@ -273,10 +283,10 @@
           <el-table-column label="库存状态" width="100" align="center">
             <template #default="{ row }">
               <el-tag 
-                :type="getStockStatusTagType(row.totalQuantityOfAllWarehouses)" 
+                :type="getStockStatusTagType(row.inventoryStatus)" 
                 size="small"
               >
-                {{ getStockStatusText(row.totalQuantityOfAllWarehouses) }}
+                {{ getStockStatusText(row.inventoryStatus) }}
               </el-tag>
             </template>
           </el-table-column>
@@ -499,13 +509,13 @@ const loadCategoryList = async () => {
 const updateStats = () => {
   stats.totalProducts = inventoryList.value.length;
   stats.normalStock = inventoryList.value.filter(item => 
-    item.totalQuantityOfAllWarehouses > 10 // 可以根据业务需求调整阈值
+    item.remainingStockQuantityOfAllWarehouses > 10 // 可以根据业务需求调整阈值
   ).length;
   stats.lowStock = inventoryList.value.filter(item => 
-    item.totalQuantityOfAllWarehouses > 0 && item.totalQuantityOfAllWarehouses <= 10
+    item.remainingStockQuantityOfAllWarehouses > 0 && item.totalQuaremainingStockQuantityOfAllWarehousesntityOfAllWarehouses <= 10
   ).length;
   stats.outOfStock = inventoryList.value.filter(item => 
-    item.totalQuantityOfAllWarehouses <= 0
+    item.remainingStockQuantityOfAllWarehouses <= 0
   ).length;
 };
 
@@ -609,9 +619,9 @@ const getStockClass = (quantity) => {
 
 const getStockStatusText = (quantity) => {
   const num = Number(quantity) || 0;
-  if (num <= 0) {
+  if (num === 0) {
     return '缺货';
-  } else if (num <= 10) {
+  } else if (num === 10) {
     return '低库存';
   } else {
     return '正常';
@@ -620,9 +630,9 @@ const getStockStatusText = (quantity) => {
 
 const getStockStatusTagType = (quantity) => {
   const num = Number(quantity) || 0;
-  if (num <= 0) {
+  if (num === 0) {
     return 'danger';
-  } else if (num <= 10) {
+  } else if (num === 10) {
     return 'warning';
   } else {
     return 'success';

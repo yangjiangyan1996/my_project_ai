@@ -211,8 +211,7 @@ public class CkInboundFacade {
      */
     private void updateInventory(InboundCreateReq req, InboundOrderItem item) {
         // 查询现有库存
-        Inventory existingInventory = inventoryService.getByWarehouseAndProduct(
-                req.getWarehouseId(), item.getProductId(), req.getTenantId());
+        Inventory existingInventory = inventoryService.getByWarehouseAndProduct(item.getProductId(), req.getTenantId());
 
         if (existingInventory != null) {
             // 更新现有库存
@@ -228,7 +227,6 @@ public class CkInboundFacade {
         } else {
             // 创建新库存记录
             Inventory newInventory = new Inventory();
-            newInventory.setWarehouseId(req.getWarehouseId());
             newInventory.setProductId(item.getProductId());
             newInventory.setQuantity(item.getActualQuantity());
             newInventory.setLockedQuantity(BigDecimal.ZERO);
@@ -257,7 +255,7 @@ public class CkInboundFacade {
         transaction.setOrderId(orderId);
         transaction.setOrderItemId(item.getId());
         transaction.setChangeQuantity(item.getActualQuantity()); // 正数表示增加
-        transaction.setBalanceQuantity(getCurrentBalance(req.getWarehouseId(), item.getProductId(), req.getTenantId()));
+        transaction.setBalanceQuantity(getCurrentBalance(item.getProductId(), req.getTenantId()));
         transaction.setTransactionTime(new Date());
         transaction.setTenantId(req.getTenantId());
         transaction.setCreatedBy(req.getUserId());
@@ -275,8 +273,8 @@ public class CkInboundFacade {
     /**
      * 获取当前库存余额
      */
-    private BigDecimal getCurrentBalance(Long warehouseId, Long productId, Long tenantId) {
-        Inventory inventory = inventoryService.getByWarehouseAndProduct(warehouseId, productId, tenantId);
+    private BigDecimal getCurrentBalance( Long productId, Long tenantId) {
+        Inventory inventory = inventoryService.getByWarehouseAndProduct(productId, tenantId);
         return inventory != null ? inventory.getQuantity() : BigDecimal.ZERO;
     }
 
@@ -561,8 +559,7 @@ public class CkInboundFacade {
      * 回滚单个产品的库存
      */
     private void rollbackSingleInventory(InboundCreateReq req, InboundOrderItem oldItem) {
-        Inventory existingInventory = inventoryService.getByWarehouseAndProduct(
-                req.getWarehouseId(), oldItem.getProductId(), req.getTenantId());
+        Inventory existingInventory = inventoryService.getByWarehouseAndProduct(oldItem.getProductId(), req.getTenantId());
 
         if (existingInventory != null) {
             BigDecimal newQuantity = existingInventory.getQuantity().subtract(oldItem.getActualQuantity());
@@ -664,8 +661,7 @@ public class CkInboundFacade {
      */
     private void updateInventoryForApprove(InboundOrder inboundOrder, InboundOrderItem item, Long userId) {
         // 查询现有库存
-        Inventory existingInventory = inventoryService.getByWarehouseAndProduct(
-                inboundOrder.getWarehouseId(), item.getProductId(), inboundOrder.getTenantId());
+        Inventory existingInventory = inventoryService.getByWarehouseAndProduct(item.getProductId(), inboundOrder.getTenantId());
 
         if (existingInventory != null) {
             // 更新现有库存
@@ -681,7 +677,6 @@ public class CkInboundFacade {
         } else {
             // 创建新库存记录
             Inventory newInventory = new Inventory();
-            newInventory.setWarehouseId(inboundOrder.getWarehouseId());
             newInventory.setProductId(item.getProductId());
             newInventory.setQuantity(item.getActualQuantity());
             newInventory.setLockedQuantity(BigDecimal.ZERO);
@@ -710,7 +705,7 @@ public class CkInboundFacade {
         transaction.setOrderId(inboundOrder.getId());
         transaction.setOrderItemId(item.getId());
         transaction.setChangeQuantity(item.getActualQuantity()); // 正数表示增加
-        transaction.setBalanceQuantity(getCurrentBalanceForApprove(inboundOrder.getWarehouseId(), item.getProductId(), inboundOrder.getTenantId()));
+        transaction.setBalanceQuantity(getCurrentBalanceForApprove(item.getProductId(), inboundOrder.getTenantId()));
         transaction.setTransactionTime(new Date());
         transaction.setTenantId(inboundOrder.getTenantId());
         transaction.setCreatedBy(userId);
@@ -728,8 +723,8 @@ public class CkInboundFacade {
     /**
      * 获取当前库存余额（审核通过专用）
      */
-    private BigDecimal getCurrentBalanceForApprove(Long warehouseId, Long productId, Long tenantId) {
-        Inventory inventory = inventoryService.getByWarehouseAndProduct(warehouseId, productId, tenantId);
+    private BigDecimal getCurrentBalanceForApprove(Long productId, Long tenantId) {
+        Inventory inventory = inventoryService.getByWarehouseAndProduct(productId, tenantId);
         return inventory != null ? inventory.getQuantity() : BigDecimal.ZERO;
     }
 
