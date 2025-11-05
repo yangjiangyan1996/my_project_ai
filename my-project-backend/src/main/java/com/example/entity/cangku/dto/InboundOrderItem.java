@@ -30,4 +30,8 @@ public class InboundOrderItem extends BaseModel {
     private String batchNo;
     //备注
     private String remark;
+    //单价
+    private BigDecimal price;
+    //总价
+    private BigDecimal totalPrice;
 }

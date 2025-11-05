@@ -33,4 +33,8 @@ public class InventoryTransaction extends BaseModel {
     private BigDecimal balanceQuantity;
     //业务发生时间
     private Date transactionTime;
+    //单价
+    private BigDecimal price;
+    //总价
+    private BigDecimal totalPrice;
 }

@@ -22,6 +22,8 @@ public class OutboundOrderItem extends BaseModel {
     private Long productId;
     //计划数量
     private BigDecimal quantity;
-    //实际数量
-    private Integer actualQuantity;
+    //单价
+    private BigDecimal price;
+    //总价
+    private BigDecimal totalPrice;
 }
