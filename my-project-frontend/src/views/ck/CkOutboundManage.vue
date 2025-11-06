@@ -429,7 +429,7 @@ const loadOutboundList = async () => {
       params.endDate = filterForm.dateRange[1];
     }
     
-    const res = await post('/api/auth/outbound/list', params);
+    const res = await post('/api/auth/outbound/pageList', params);
     if (res && res.records) {
       outboundList.value = res.records.map(outbound => ({
         id: outbound.id || '',
@@ -546,6 +546,7 @@ const handleEdit = (outbound) => {
   router.push(`/outbound/edit/${outbound.id}`);
 };
 
+
 const handleSubmit = async (outbound) => {
   try {
     await ElMessageBox.confirm(
@@ -554,7 +555,7 @@ const handleSubmit = async (outbound) => {
       { type: 'warning' }
     );
     
-    const res = await post('/api/auth/outbound/submit', {
+    const res = await post('/api/auth/outbound/approveOk', {
       id: outbound.id
     });
     
