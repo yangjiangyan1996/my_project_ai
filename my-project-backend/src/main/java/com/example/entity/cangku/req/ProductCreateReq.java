@@ -3,6 +3,8 @@ package com.example.entity.cangku.req;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 /**
  * @Author YangJian
  * @Description
@@ -27,9 +29,9 @@ public class ProductCreateReq {
     //出货单位（比如按箱子出货）
     private String outUnitCode;
     //出货单位数量，比如出货时一箱子多少货
-    private Long outUnitPerNum;
+    private BigDecimal outUnitPerNum;
     //单品重量(可选)
-    private Double weightPerUnit;
+    private BigDecimal weightPerUnit;
     //颜色
     private String color;
     //最低库存

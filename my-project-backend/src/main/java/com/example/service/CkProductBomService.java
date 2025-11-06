@@ -14,4 +14,8 @@ import java.util.List;
 public interface CkProductBomService extends IService<ProductBom> {
     ProductBom selectByBomId(Long bomId, Long tenantId);
     List<ProductBom> selectByBomIds(List<Long> bomIds, Long tenantId);
+
+    Boolean deltedbyproductid(Long productId, Long userId, Long tenantId);
+
+    ProductBom selectByProduectId(Long productId, Long tenantId);
 }

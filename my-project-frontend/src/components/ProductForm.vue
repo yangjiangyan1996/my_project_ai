@@ -2,7 +2,7 @@
   <div class="product-form">
     <el-form
       ref="formRef"
-      :model="formData"
+      :model="formModel"
       :rules="formRules"
       label-width="100px"
     >
@@ -10,7 +10,7 @@
         <el-col :span="12">
           <el-form-item label="SKU编码" prop="sku">
             <el-input
-              v-model="formData.sku"
+              v-model="formModel.sku"
               placeholder="请输入SKU编码"
               :disabled="isEdit"
             />
@@ -19,7 +19,7 @@
         <el-col :span="12">
           <el-form-item label="条形码">
             <el-input
-              v-model="formData.barcode"
+              v-model="formModel.barcode"
               placeholder="请输入条形码"
             />
           </el-form-item>
@@ -28,7 +28,7 @@
 
       <el-form-item label="产品名称" prop="name">
         <el-input
-          v-model="formData.name"
+          v-model="formModel.name"
           placeholder="请输入产品名称"
           maxlength="50"
           show-word-limit
@@ -39,7 +39,7 @@
         <el-col :span="12">
           <el-form-item label="规格型号" prop="spec">
             <el-input
-              v-model="formData.spec"
+              v-model="formModel.spec"
               placeholder="请输入规格型号"
             />
           </el-form-item>
@@ -47,7 +47,7 @@
         <el-col :span="12">
           <el-form-item label="颜色">
             <el-input
-              v-model="formData.color"
+              v-model="formModel.color"
               placeholder="请输入颜色"
             />
           </el-form-item>
@@ -56,7 +56,7 @@
 
       <el-form-item label="产品分类" prop="categoryCode">
         <el-select
-          v-model="formData.categoryCode"
+          v-model="formModel.categoryCode"
           placeholder="请选择产品分类"
           style="width: 100%"
           filterable
@@ -84,7 +84,7 @@
         <el-col :span="12">
           <el-form-item label="基础单位" prop="unitCode">
             <el-select
-              v-model="formData.unitCode"
+              v-model="formModel.unitCode"
               placeholder="请选择基础单位"
               style="width: 100%"
               filterable
@@ -101,7 +101,7 @@
         <el-col :span="12">
           <el-form-item label="出货单位">
             <el-select
-              v-model="formData.outUnitCode"
+              v-model="formModel.outUnitCode"
               placeholder="请选择出货单位"
               style="width: 100%"
               clearable
@@ -118,11 +118,11 @@
         </el-col>
       </el-row>
 
-      <el-row :gutter="20" v-if="formData.outUnitCode">
+      <el-row :gutter="20" v-if="formModel.outUnitCode">
         <el-col :span="12">
           <el-form-item label="单品重量">
             <el-input-number
-              v-model="formData.weightPerUnit"
+              v-model="formModel.weightPerUnit"
               :min="0"
               :precision="2"
               controls-position="right"
@@ -135,14 +135,14 @@
         <el-col :span="12">
           <el-form-item label="出货单位包含基础单位数量">
             <el-input-number
-              v-model="formData.outUnitPerNum"
+              v-model="formModel.outUnitPerNum"
               :min="1"
               :max="1000"
               controls-position="right"
               style="width: 100%"
             >
-              <template #prepend>1{{ getUnitName(formData.outUnitCode) }} =</template>
-              <template #append>{{ getUnitName(formData.unitCode) }}</template>
+              <template #prepend>1{{ getUnitName(formModel.outUnitCode) }} =</template>
+              <template #append>{{ getUnitName(formModel.unitCode) }}</template>
             </el-input-number>
           </el-form-item>
         </el-col>
@@ -150,7 +150,7 @@
 
       <el-form-item label="最低库存">
         <el-input-number
-          v-model="formData.minStock"
+          v-model="formModel.minStock"
           :min="0"
           controls-position="right"
           style="width: 100%"
@@ -169,7 +169,7 @@
           </div>
           
           <el-table
-            :data="formData.bomDetails"
+            :data="formModel.bomDetails"
             border
             class="bom-table"
             empty-text="暂无配件，请添加"
@@ -256,12 +256,12 @@
           </el-table>
 
           <!-- 配方统计 -->
-          <div class="bom-summary" v-if="formData.bomDetails.length > 0">
+          <div class="bom-summary" v-if="formModel.bomDetails.length > 0">
             <el-row :gutter="20">
               <el-col :span="8">
                 <div class="summary-item">
                   <span class="label">配件种类：</span>
-                  <span class="value">{{ formData.bomDetails.length }} 种</span>
+                  <span class="value">{{ formModel.bomDetails.length }} 种</span>
                 </div>
               </el-col>
               <el-col :span="8">
@@ -276,7 +276,7 @@
       </el-form-item>
 
       <el-form-item label="状态" prop="status">
-        <el-radio-group v-model="formData.status">
+        <el-radio-group v-model="formModel.status">
           <el-radio :label="1">启用</el-radio>
           <el-radio :label="0">禁用</el-radio>
         </el-radio-group>
@@ -284,7 +284,7 @@
 
       <el-form-item label="备注">
         <el-input
-          v-model="formData.remark"
+          v-model="formModel.remark"
           type="textarea"
           :rows="3"
           placeholder="请输入备注信息"
@@ -369,7 +369,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch, watchEffect } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Plus, Delete } from '@element-plus/icons-vue';
 import { get, post } from '@/net';
@@ -412,10 +412,60 @@ const categoryForm = ref({
   status: 1
 });
 
-// 初始化表单数据，确保bomDetails存在
-if (!props.formData.bomDetails) {
-  props.formData.bomDetails = [];
-}
+// 响应式表单模型 - 关键修改：使用 reactive 替代 computed
+const formModel = reactive({
+  id: '',
+  sku: '',
+  barcode: '',
+  name: '',
+  spec: '',
+  categoryCode: '',
+  unitCode: '',
+  outUnitCode: '',
+  outUnitPerNum: 1,
+  weightPerUnit: 0,
+  color: '',
+  minStock: 0,
+  remark: '',
+  status: 1,
+  bomDetails: []
+});
+
+// 监听 props.formData 的变化，更新 formModel
+watchEffect(() => {
+  if (props.formData) {
+    const formData = { ...props.formData };
+    
+    // 统一处理 BOM 数据字段
+    if (!formData.bomDetails) {
+      if (formData.bomData && Array.isArray(formData.bomData)) {
+        // 将 bomData 转换为 bomDetails 格式
+        formData.bomDetails = formData.bomData.map(item => ({
+          componentProductId: item.componentProductId,
+          componentProductName: item.componentProductName,
+          componentProductSku: item.componentProductSku,
+          componentProductSpec: item.componentProductSpec,
+          componentProductUnit: item.componentProductUnit,
+          quantity: item.quantity,
+          lossRate: item.lossRate,
+          remark: item.remark,
+          sortOrder: item.sortOrder
+        }));
+      } else {
+        formData.bomDetails = [];
+      }
+    }
+    
+    // 更新 formModel
+    Object.keys(formModel).forEach(key => {
+      if (formData[key] !== undefined) {
+        formModel[key] = formData[key];
+      }
+    });
+    
+    console.log('表单数据初始化:', formModel);
+  }
+});
 
 const formRules = {
   sku: [
@@ -482,7 +532,7 @@ const availableComponentProducts = computed(() => {
 
 // 计算属性 - 配件总数量
 const totalComponentQuantity = computed(() => {
-  return props.formData.bomDetails.reduce((sum, item) => {
+  return formModel.bomDetails.reduce((sum, item) => {
     return sum + (parseFloat(item.quantity) || 0);
   }, 0).toFixed(4);
 });
@@ -495,7 +545,7 @@ const getUnitName = (unitCode) => {
 
 // 方法 - 检查配件是否已被选择
 const isComponentSelected = (productId) => {
-  return props.formData.bomDetails.some(item => item.componentProductId === productId);
+  return formModel.bomDetails.some(item => item.componentProductId === productId);
 };
 
 // 方法
@@ -551,7 +601,7 @@ const filterParentCategory = (query) => {
 
 // BOM相关方法
 const handleAddComponent = () => {
-  props.formData.bomDetails.push({
+  formModel.bomDetails.push({
     componentProductId: null,
     componentProductName: '',
     componentProductSku: '',
@@ -560,14 +610,14 @@ const handleAddComponent = () => {
     quantity: 1,
     lossRate: 0,
     remark: '',
-    sortOrder: props.formData.bomDetails.length
+    sortOrder: formModel.bomDetails.length
   });
 };
 
 const handleRemoveComponent = (index) => {
-  props.formData.bomDetails.splice(index, 1);
+  formModel.bomDetails.splice(index, 1);
   // 重新排序
-  props.formData.bomDetails.forEach((item, idx) => {
+  formModel.bomDetails.forEach((item, idx) => {
     item.sortOrder = idx;
   });
 };
@@ -575,7 +625,7 @@ const handleRemoveComponent = (index) => {
 const handleComponentChange = (productId, index) => {
   const product = componentProductList.value.find(p => p.id === productId);
   if (product) {
-    const detail = props.formData.bomDetails[index];
+    const detail = formModel.bomDetails[index];
     detail.componentProductName = product.name;
     detail.componentProductSku = product.sku;
     detail.componentProductSpec = product.spec;
@@ -638,9 +688,9 @@ const handleSubmit = async () => {
     await formRef.value.validate();
     
     // 验证BOM数据
-    if (props.formData.bomDetails.length > 0) {
-      for (let i = 0; i < props.formData.bomDetails.length; i++) {
-        const detail = props.formData.bomDetails[i];
+    if (formModel.bomDetails.length > 0) {
+      for (let i = 0; i < formModel.bomDetails.length; i++) {
+        const detail = formModel.bomDetails[i];
         if (!detail.componentProductId) {
           ElMessage.warning(`请选择第 ${i + 1} 行的配件产品`);
           return;
@@ -653,28 +703,31 @@ const handleSubmit = async () => {
     }
     
     loading.value = true;
+    console.log('提交数据:', formModel);
     
     const submitData = {
-      sku: props.formData.sku,
-      barcode: props.formData.barcode,
-      name: props.formData.name,
-      spec: props.formData.spec,
-      categoryCode: props.formData.categoryCode,
-      color: props.formData.color,
-      minStock: props.formData.minStock,
-      remark: props.formData.remark,
-      status: props.formData.status,
-      unitCode: props.formData.unitCode,
-      outUnitCode: props.formData.outUnitCode,
-      outUnitPerNum: props.formData.outUnitPerNum,
-      weightPerUnit: props.formData.weightPerUnit,
+      // 编辑时带上 ID
+      id: formModel.id,
+      sku: formModel.sku,
+      barcode: formModel.barcode,
+      name: formModel.name,
+      spec: formModel.spec,
+      categoryCode: formModel.categoryCode,
+      color: formModel.color,
+      minStock: formModel.minStock,
+      remark: formModel.remark,
+      status: formModel.status,
+      unitCode: formModel.unitCode,
+      outUnitCode: formModel.outUnitCode,
+      outUnitPerNum: formModel.outUnitPerNum,
+      weightPerUnit: formModel.weightPerUnit,
       // ✅ 只传 bomData
-      bomData: props.formData.bomDetails.length > 0 ? {
-        bomCode: `${props.formData.sku}_BOM`,
+      bomData: formModel.bomDetails.length > 0 ? {
+        bomCode: `${formModel.sku}_BOM`,
         version: 'V1.0',
         status: 1,
-        remark: `${props.formData.name}的默认配方`,
-        details: props.formData.bomDetails.map(detail => ({
+        remark: `${formModel.name}的默认配方`,
+        details: formModel.bomDetails.map(detail => ({
           componentProductId: detail.componentProductId,
           quantity: detail.quantity,
           lossRate: detail.lossRate,
@@ -684,6 +737,7 @@ const handleSubmit = async () => {
       } : null
     };
 
+    console.log('最终提交数据:', submitData);
     
     const url = props.isEdit ? '/api/auth/product/update' : '/api/auth/product/create';
     const res = await post(url, submitData);
@@ -704,9 +758,9 @@ const handleSubmit = async () => {
 };
 
 // 监听器
-watch(() => props.formData.outUnitCode, (newVal) => {
-  if (newVal && !props.formData.outUnitPerNum) {
-    props.formData.outUnitPerNum = 1;
+watch(() => formModel.outUnitCode, (newVal) => {
+  if (newVal && !formModel.outUnitPerNum) {
+    formModel.outUnitPerNum = 1;
   }
 });
 

@@ -56,7 +56,7 @@ public class CkProductServiceImpl extends ServiceImpl<CkProductMapper, Product> 
                         .like(StringUtils.isNotBlank(req.getSku()) , "sku", req.getSku())
                         .eq( "tenant_id", req.getTenantId())
                         .eq("is_deleted",0)
-                        .orderByAsc("created_by")
+                        .orderByAsc("created_at")
         );
     }
 }

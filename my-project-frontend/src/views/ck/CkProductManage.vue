@@ -287,8 +287,6 @@
         v-if="editDialogVisible"
         :form-data="currentProduct"
         :is-edit="isEdit"
-        :category-tree="categoryTree"
-        :unit-list="unitList"
         @success="handleFormSuccess"
         @cancel="editDialogVisible = false"
       />
@@ -443,6 +441,7 @@ const loadProductList = async () => {
         imageUrl: product.imageUrl || '',
         createdAt: product.createdAt || new Date().toISOString(),
         updatedAt: product.updatedAt || new Date().toISOString(),
+        bomData: product.bomData || [] // 确保 bomData 字段存在
       }));
       pagination.total = res.total || 0;
       
@@ -466,6 +465,8 @@ const loadCategoryTree = async () => {
     const res = await get('/api/auth/product/categoryList');
     if (res && Array.isArray(res)) {
       categoryTree.value = res;
+      // 更新分类统计
+      stats.categories = countCategories(res);
     }
   } catch (error) {
     console.error('加载分类树失败:', error);
@@ -496,8 +497,6 @@ const loadUnitList = async () => {
     unitList.value = [];
   }
 };
-
-
 
 const updateStats = () => {
   stats.total = productList.value.length;
@@ -556,14 +555,38 @@ const handleCreate = () => {
     color: '',
     minStock: 0,
     remark: '',
-    status: 1
+    status: 1,
+    bomDetails: [] // 确保创建时也有 bomDetails 字段
   };
   editDialogVisible.value = true;
 };
 
 const handleEdit = (product) => {
   isEdit.value = true;
-  currentProduct.value = { ...product };
+  
+  // 转换 BOM 数据格式 - 关键修改
+  const formData = { 
+    ...product,
+    // 将 bomData 转换为 bomDetails
+    bomDetails: product.bomData && Array.isArray(product.bomData) ? product.bomData.map(item => ({
+      componentProductId: item.componentProductId,
+      componentProductName: item.componentProductName,
+      componentProductSku: item.componentProductSku,
+      componentProductSpec: item.componentProductSpec,
+      componentProductUnit: item.componentProductUnit,
+      quantity: item.quantity,
+      lossRate: item.lossRate,
+      remark: item.remark,
+      sortOrder: item.sortOrder
+    })) : []
+  };
+  
+  console.log('编辑产品数据转换:', {
+    原始数据: product.bomData,
+    转换后数据: formData.bomDetails
+  });
+  
+  currentProduct.value = formData;
   editDialogVisible.value = true;
 };
 

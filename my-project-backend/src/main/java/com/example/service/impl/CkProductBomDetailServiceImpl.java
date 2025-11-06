@@ -8,6 +8,7 @@ import com.example.mapper.CkProductBomDetailMapper;
 import com.example.service.CkProductBomDetailService;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -24,6 +25,21 @@ public class CkProductBomDetailServiceImpl extends ServiceImpl<CkProductBomDetai
                 .eq("bom_id", bomId)
                 .eq("tenant_id", tenantId)
                 .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete));
+    }
+
+    @Override
+    public Boolean deletedByBomId(Long bomId, Long userId,  Long tenantId) {
+        ProductBomDetail productBom = new ProductBomDetail();
+        productBom.setModifiedAt(new Date());
+        productBom.setModifiedBy(userId);
+        productBom.setIsDeleted(CkCommonEnums.IsDeleted.Delete.getCode());
+
+
+        return baseMapper.update(
+                productBom,
+                new QueryWrapper<ProductBomDetail>()
+                        .eq("bom_id", bomId)
+                        .eq("tenant_id", tenantId)) > 0;
     }
 
     @Override

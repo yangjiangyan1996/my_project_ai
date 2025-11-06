@@ -169,8 +169,8 @@ public class CKProductFacade {
         product.setCategoryCode(req.getCategoryCode());
         product.setUnitCode(req.getUnitCode());
         product.setOutUnitCode(req.getOutUnitCode());
-        product.setOutUnitPerNum(new BigDecimal(req.getOutUnitPerNum()));
-        product.setWeightPerUnit(new BigDecimal(req.getWeightPerUnit()));
+        product.setOutUnitPerNum(req.getOutUnitPerNum());
+        product.setWeightPerUnit(req.getWeightPerUnit());
         product.setColor(req.getColor());
         product.setMinStock(req.getMinStock());
         product.setRemark(req.getRemark());
@@ -301,6 +301,7 @@ public class CKProductFacade {
         return result;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Boolean update(ProductCreateReq req) {
         Product p = productService.getById(req.getId());
         if (p == null) {
@@ -311,7 +312,63 @@ public class CKProductFacade {
         BeanUtils.copyProperties(req, save);
         save.setModifiedAt(new Date());
         save.setModifiedBy(req.getUserId());
-        return productService.updateById(save);
+        boolean updateP = productService.updateById(save);
+        if (!updateP) {
+            throw new ValidationException("更新商品失败");
+        }
+        if (Objects.nonNull(req.getBomData())) {
+            ProductBom pb = productBomService.selectByProduectId(save.getId(), req.getTenantId());
+            if (!Objects.isNull(pb)) {
+                Boolean deltedbyproductid = productBomService.deltedbyproductid(save.getId(), req.getUserId(), req.getTenantId());
+                if (!deltedbyproductid) {
+                    throw new ValidationException("删除商品BOM失败");
+                }
+                Boolean deletedByProdectId = productBomDetailService.deletedByBomId(pb.getId(), req.getUserId(), req.getTenantId());
+                if (!deletedByProdectId) {
+                    throw new ValidationException("删除商品BOM明细失败");
+                }
+
+            }
+
+
+            ProductBomReq bomReq = req.getBomData();
+            ProductBom bom = new ProductBom();
+            bom.setProductId(save.getId());
+            bom.setTenantId(req.getTenantId());
+            bom.setBomCode(bomReq.getBomCode());
+            bom.setVersion(bomReq.getVersion());
+            bom.setStatus(bomReq.getStatus());
+            bom.setRemark(bomReq.getRemark());
+            bom.setCreatedAt(new Date());
+            bom.setCreatedBy(req.getUserId());
+            bom.setModifiedAt(new Date());
+            bom.setModifiedBy(req.getUserId());
+            boolean saveBom = productBomService.save(bom);
+            if (!saveBom) {
+                throw new ValidationException("保存配件失败");
+            }
+            List<ProductBomDetail> bomDetailList = bomReq.getDetails().stream().map(v -> {
+                ProductBomDetail detail = new ProductBomDetail();
+                detail.setBomId(bom.getId());
+                detail.setTenantId(req.getTenantId());
+                detail.setComponentProductId(v.getComponentProductId());
+                detail.setQuantity(new BigDecimal(v.getQuantity()));
+                detail.setLossRate(new BigDecimal(v.getLossRate()));
+                detail.setRemark(v.getRemark());
+                detail.setSortOrder(v.getSortOrder());
+                detail.setCreatedAt(new Date());
+                detail.setCreatedBy(req.getUserId());
+                detail.setModifiedAt(new Date());
+                detail.setModifiedBy(req.getUserId());
+                return detail;
+            }).collect(Collectors.toList());
+
+            boolean saveBomDetail = productBomDetailService.saveBatch(bomDetailList);
+            if (!saveBomDetail) {
+                throw new ValidationException("保存配件明细失败");
+            }
+        }
+        return true;
     }
 
     public Boolean updateStatus(ProductUpdateStatusReq req) {
