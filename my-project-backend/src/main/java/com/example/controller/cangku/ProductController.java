@@ -6,6 +6,7 @@ import com.example.Facade.CKProductFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
+import com.example.entity.cangku.resp.BomDetailListResp;
 import com.example.entity.cangku.resp.ProductCategoryResp;
 import com.example.entity.cangku.resp.ProductPageListResp;
 import com.example.entity.cangku.resp.UnitResp;
@@ -176,6 +177,22 @@ public class ProductController {
         try {
             UserInfo user = UserUtil.getCurrentUser();
             List<ProductPageListResp> result = CKProductFacade.listEnable(user);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProductController#listEnable,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#listEnable,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    //获取可用商品列表
+    @GetMapping("/bom/detail")
+    public RespBean<List<BomDetailListResp>> bomDetail(@RequestParam("bomId") Long bomId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<BomDetailListResp> result = CKProductFacade.bomDetail(bomId, user.getTenantId());
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ProductController#listEnable,req:{}", e);

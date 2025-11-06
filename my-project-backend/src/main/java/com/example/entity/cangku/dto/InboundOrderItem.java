@@ -31,7 +31,7 @@ public class InboundOrderItem extends BaseModel {
     //备注
     private String remark;
     //单价
-    private BigDecimal price;
+    private BigDecimal priceUnit;
     //总价
-    private BigDecimal totalPrice;
+    private BigDecimal priceTotal;
 }

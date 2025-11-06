@@ -150,6 +150,7 @@ public class CkInboundFacade {
         order.setStatus(req.getStatus());
         order.setTotalQuantity(new BigDecimal(req.getTotalQuantity()));
         order.setTenantId(req.getTenantId());
+        order.setTotalAmount(req.getTotalAmount());
         order.setCreatedBy(req.getUserId());
         order.setModifiedBy(req.getUserId());
         order.setCreatedAt(new Date());
@@ -172,6 +173,8 @@ public class CkInboundFacade {
             orderItem.setRemark(item.getRemark());
             orderItem.setBatchNo(item.getBatchNo());
             orderItem.setTenantId(req.getTenantId());
+            orderItem.setPriceUnit(item.getPriceUnit());
+            orderItem.setPriceTotal(item.getPriceTotal());
             orderItem.setCreatedBy(req.getUserId());
             orderItem.setModifiedBy(req.getUserId());
             orderItem.setCreatedAt(new Date());
@@ -300,6 +303,8 @@ public class CkInboundFacade {
         transaction.setBalanceQuantity(getCurrentBalance(item.getProductId(), req.getTenantId()));
         transaction.setTransactionTime(new Date());
         transaction.setTenantId(req.getTenantId());
+        transaction.setPriceUnit(item.getPriceUnit());
+        transaction.setPriceTotal(item.getPriceTotal());
         transaction.setCreatedBy(req.getUserId());
         transaction.setModifiedBy(req.getUserId());
         transaction.setCreatedAt(new Date());
@@ -789,6 +794,8 @@ public class CkInboundFacade {
         transaction.setBalanceQuantity(getCurrentBalanceForApprove(item.getProductId(), inboundOrder.getTenantId()));
         transaction.setTransactionTime(new Date());
         transaction.setTenantId(inboundOrder.getTenantId());
+        transaction.setPriceUnit(item.getPriceUnit());
+        transaction.setPriceTotal(item.getPriceTotal());
         transaction.setCreatedBy(userId);
         transaction.setModifiedBy(userId);
         transaction.setCreatedAt(new Date());

@@ -31,6 +31,9 @@ public class InboundOrder extends BaseModel {
     private Integer status;
     //总数量
     private BigDecimal totalQuantity;
+    //总金额
+    private BigDecimal totalAmount;
     //备注
     private String remark;
+
 }

@@ -171,7 +171,30 @@
                 :step="1"
                 controls-position="right"
                 style="width: 100%"
+                @change="() => calculateItemTotal($index)"
               />
+            </template>
+          </el-table-column>
+          <!-- 新增：单价列 -->
+          <el-table-column label="单价" width="120">
+            <template #default="{ row, $index }">
+              <el-input-number
+                v-model="row.priceUnit"
+                :min="0"
+                :precision="4"
+                :step="0.01"
+                controls-position="right"
+                style="width: 100%"
+                @change="() => calculateItemTotal($index)"
+              >
+                <template #prefix>¥</template>
+              </el-input-number>
+            </template>
+          </el-table-column>
+          <!-- 新增：总价列 -->
+          <el-table-column label="总价" width="120" align="right">
+            <template #default="{ row }">
+              <span class="price-total">¥ {{ (row.priceTotal || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="批次号" width="150">
@@ -240,6 +263,12 @@
                 <span class="value">{{ totalActualQuantity }} </span>
               </div>
             </el-col>
+            <el-col :span="6">
+              <div class="summary-item">
+                <span class="label">总金额：</span>
+                <span class="value">¥ {{ totalAmount.toFixed(2) }}</span>
+              </div>
+            </el-col>
           </el-row>
         </div>
       </div>
@@ -298,6 +327,13 @@ const showSupplier = computed(() => {
 
 const totalActualQuantity = computed(() => {
   return formData.items.reduce((sum, item) => sum + (parseFloat(item.actualQuantity) || 0), 0).toFixed(4);
+});
+
+// 新增：计算总金额
+const totalAmount = computed(() => {
+  return formData.items.reduce((sum, item) => {
+    return sum + (parseFloat(item.priceTotal) || 0);
+  }, 0);
 });
 
 // 获取货架位置显示标签
@@ -376,6 +412,8 @@ const handleAddProduct = () => {
     unit: '',
     quantity: 1,
     actualQuantity: 0,
+    priceUnit: 0, // 新增：单价字段
+    priceTotal: 0, // 新增：总价字段
     shelfLocationId: null,
     batchNo: '',
     remark: ''
@@ -394,7 +432,17 @@ const handleProductChange = (productId, index) => {
     item.sku = product.sku;
     item.spec = product.spec;
     item.unit = product.unitName;
+    // 可以在这里设置默认单价，如果有的话
+    // item.priceUnit = product.defaultPrice || 0;
   }
+};
+
+// 新增：计算单个产品的总价
+const calculateItemTotal = (index) => {
+  const item = formData.items[index];
+  const quantity = parseFloat(item.actualQuantity) || 0;
+  const priceUnit = parseFloat(item.priceUnit) || 0;
+  item.priceTotal = quantity * priceUnit;
 };
 
 const validateBatchNo = (batchNo, index) => {
@@ -437,6 +485,8 @@ const loadInboundDetail = async (id) => {
           unit: item.unit || '',
           quantity: item.quantity || 1,
           actualQuantity: item.actualQuantity || 0,
+          priceUnit: item.priceUnit || 0, // 新增：单价
+          priceTotal: item.priceTotal || 0, // 新增：总价
           shelfLocationId: item.shelfLocationId, // 这里使用数字ID，与下拉框value对应
           batchNo: item.batchNo || '',
           remark: item.remark || ''
@@ -490,7 +540,8 @@ const handleSaveDraft = async () => {
     const submitData = {
       ...formData,
       status: 0, // 待提交状态
-      totalQuantity: parseFloat(totalActualQuantity.value)
+      totalQuantity: parseFloat(totalActualQuantity.value),
+      totalAmount: totalAmount.value // 新增：总金额
     };
     
     const url = isEditMode.value ? '/api/auth/inbound/update' : '/api/auth/inbound/create';
@@ -520,7 +571,8 @@ const handleSubmit = async () => {
       ...formData,
       // status: 1, // 审核中状态 TODO yang 等审核流程加了后
       status: 2, // 已通过状态
-      totalQuantity: parseFloat(totalActualQuantity.value)
+      totalQuantity: parseFloat(totalActualQuantity.value),
+      totalAmount: totalAmount.value // 新增：总金额
     };
     
     const url = isEditMode.value ? '/api/auth/inbound/update' : '/api/auth/inbound/create';
@@ -551,6 +603,11 @@ const validateForm = async () => {
       }
       if (!item.actualQuantity || item.actualQuantity <= 0) {
         ElMessage.warning(`请输入第 ${i + 1} 行产品的有效数量`);
+        return false;
+      }
+      // 新增：验证单价
+      if (item.priceUnit < 0) {
+        ElMessage.warning(`第 ${i + 1} 行产品的单价不能为负数`);
         return false;
       }
     }
@@ -726,6 +783,12 @@ watch(
 
 .summary-item .value.negative {
   color: #f56c6c;
+}
+
+/* 新增：总价样式 */
+.price-total {
+  font-weight: bold;
+  color: #409eff;
 }
 
 :deep(.el-table) {

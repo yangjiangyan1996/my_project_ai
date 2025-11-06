@@ -1,0 +1,18 @@
+package com.example.entity.cangku.req;
+
+import lombok.Data;
+
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/11/6 01:03
+ */
+@Data
+public class ProductBomDetailReq {
+    private Long componentProductId;
+    private Double lossRate;
+    private Double quantity;
+    private String remark;
+    private Integer sortOrder;
+}

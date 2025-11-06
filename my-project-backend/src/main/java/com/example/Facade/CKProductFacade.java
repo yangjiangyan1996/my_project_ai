@@ -2,20 +2,19 @@ package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.base.UserInfo;
-import com.example.entity.cangku.dto.Product;
-import com.example.entity.cangku.dto.ProductCategory;
-import com.example.entity.cangku.dto.Unit;
+import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.*;
+import com.example.entity.cangku.resp.BomDetailListResp;
 import com.example.entity.cangku.resp.ProductCategoryResp;
 import com.example.entity.cangku.resp.ProductPageListResp;
 import com.example.entity.cangku.resp.UnitResp;
-import com.example.service.CkProductCategoryService;
-import com.example.service.CkProductService;
-import com.example.service.CkUnitService;
+import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
@@ -33,6 +32,10 @@ import java.util.stream.Stream;
 @Service
 public class CKProductFacade {
 
+    @Resource
+    CkProductBomService productBomService;
+    @Resource
+    CkProductBomDetailService productBomDetailService;
     @Resource
     CkProductService productService;
     @Resource
@@ -120,7 +123,7 @@ public class CKProductFacade {
             return false;
         }
         ProductCategory save = new ProductCategory();
-        if (req.getParentCode() != null) {
+        if (StringUtils.isNotBlank(req.getParentCode())) {
             ProductCategory pc = productCategoryService.selectByTenantIdAndCode(req.getTenantId(), req.getParentCode());
             if (pc == null) {
                 throw new ValidationException("父级分类不存在");
@@ -147,6 +150,7 @@ public class CKProductFacade {
         return productCategoryService.save(save);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Boolean productCreate(ProductCreateReq req) {
         if (req == null || req.getTenantId() == null) {
             throw new ValidationException("参数错误");
@@ -175,7 +179,49 @@ public class CKProductFacade {
         product.setModifiedBy(req.getUserId());
         product.setCreatedAt(new Date());
         product.setCreatedBy(req.getUserId());
-        return productService.save(product);
+        boolean save = productService.save(product);
+        if (!save) {
+            throw new ValidationException("保存商品失败");
+        }
+        if (Objects.nonNull(req.getBomData())) {
+            ProductBomReq bomReq = req.getBomData();
+            ProductBom bom = new ProductBom();
+            bom.setProductId(product.getId());
+            bom.setTenantId(req.getTenantId());
+            bom.setBomCode(bomReq.getBomCode());
+            bom.setVersion(bomReq.getVersion());
+            bom.setStatus(bomReq.getStatus());
+            bom.setRemark(bomReq.getRemark());
+            bom.setCreatedAt(new Date());
+            bom.setCreatedBy(req.getUserId());
+            bom.setModifiedAt(new Date());
+            bom.setModifiedBy(req.getUserId());
+            boolean saveBom = productBomService.save(bom);
+            if (!saveBom) {
+                throw new ValidationException("保存配件失败");
+            }
+            List<ProductBomDetail> bomDetailList = bomReq.getDetails().stream().map(v -> {
+                ProductBomDetail detail = new ProductBomDetail();
+                detail.setBomId(bom.getId());
+                detail.setTenantId(req.getTenantId());
+                detail.setComponentProductId(v.getComponentProductId());
+                detail.setQuantity(new BigDecimal(v.getQuantity()));
+                detail.setLossRate(new BigDecimal(v.getLossRate()));
+                detail.setRemark(v.getRemark());
+                detail.setSortOrder(v.getSortOrder());
+                detail.setCreatedAt(new Date());
+                detail.setCreatedBy(req.getUserId());
+                detail.setModifiedAt(new Date());
+                detail.setModifiedBy(req.getUserId());
+                return detail;
+            }).collect(Collectors.toList());
+
+            boolean saveBomDetail = productBomDetailService.saveBatch(bomDetailList);
+            if (!saveBomDetail) {
+                throw new ValidationException("保存配件明细失败");
+            }
+        }
+        return true;
     }
 
     public Page<ProductPageListResp> pageList(Page<Product> page, ProductListPageReq req) {
@@ -201,14 +247,51 @@ public class CKProductFacade {
                 .collect(Collectors.toMap(Unit::getUnitCode, Function.identity()));
 
 
+        List<Long> productIds = list.getRecords().stream().map(v -> v.getId()).collect(Collectors.toList());
+        List<ProductBom> boms = productBomService.selectByBomIds(productIds, req.getTenantId());
+        Map<Long, ProductBom> bomId2BomMap = new HashMap<>();
+        Map<Long, List<ProductBomDetail>> bomId2BomDetailListMap = new HashMap<>();
+        Map<Long, Product> productId2ProductMap = new HashMap<>();
+        if (!boms.isEmpty()) {
+            bomId2BomMap = boms.stream().collect(Collectors.toMap(ProductBom::getProductId, v -> v));
+            List<Long> bomIds = boms.stream().map(v -> v.getId()).collect(Collectors.toList());
+            List<ProductBomDetail> bomDetails = productBomDetailService.selectByBomIds(bomIds, req.getTenantId());
+            bomId2BomDetailListMap = bomDetails.stream().collect(Collectors.groupingBy(ProductBomDetail::getBomId));
 
+            List<Long> compontProductIds = bomDetails.stream().map(v -> v.getComponentProductId()).distinct().collect(Collectors.toList());
+            List<Product> products = productService.selectByIds(req.getTenantId(), compontProductIds);
+            productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+        }
+
+
+        Map<Long, ProductBom> finalBomId2BomMap = bomId2BomMap;
+        Map<Long, List<ProductBomDetail>> finalBomId2BomDetailListMap = bomId2BomDetailListMap;
+        Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
         List<ProductPageListResp> collect = list.getRecords().stream().map(v -> {
             ProductPageListResp p = new ProductPageListResp();
             BeanUtils.copyProperties(v, p);
 
+            ProductBom bom = finalBomId2BomMap.getOrDefault(v.getId(), new ProductBom());
+            List<ProductBomDetail> bomdetailList = finalBomId2BomDetailListMap.getOrDefault(bom.getId(), new ArrayList<>());
+
+            List<BomDetailListResp> detail = bomdetailList.stream().map(z -> {
+                BomDetailListResp d = new BomDetailListResp();
+                d.setComponentProductId(z.getComponentProductId());
+                d.setComponentProductName(finalProductId2ProductMap.get(z.getComponentProductId()).getName());
+                d.setComponentProductSku(finalProductId2ProductMap.get(z.getComponentProductId()).getSku());
+                d.setComponentProductSpec(finalProductId2ProductMap.get(z.getComponentProductId()).getSpec());
+                d.setComponentProductUnit(finalProductId2ProductMap.get(z.getComponentProductId()).getUnitCode());
+                d.setQuantity(z.getQuantity());
+                d.setLossRate(z.getLossRate());
+                d.setRemark(z.getRemark());
+                d.setSortOrder(z.getSortOrder());
+                return d;
+            }).sorted(Comparator.comparingInt(BomDetailListResp::getSortOrder)).collect(Collectors.toList());
+
             p.setCategoryName(whMap.get(v.getCategoryCode()).getCategoryName());
             p.setUnitName(unitMap.get(v.getUnitCode()).getUnitName());
             p.setOutUnitName(unitMap.get(v.getOutUnitCode()).getUnitName());
+            p.setBomData( detail);
             return p;
         }).collect(Collectors.toList());
 
@@ -280,4 +363,26 @@ public class CKProductFacade {
             return p;
         }).collect(Collectors.toList());
     }
+
+    public List<BomDetailListResp> bomDetail(Long bomId, Long tenantId) {
+        if (bomId == null || tenantId == null) {
+            throw new ValidationException("参数错误");
+        }
+        ProductBom bom = productBomService.selectByBomId(bomId, tenantId);
+        if (bom == null) {
+            throw new ValidationException("BOM不存在");
+        }
+
+        List<ProductBomDetail> details = productBomDetailService.selectByBomId(bomId, tenantId);
+        if (details.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return  details.stream().map(v -> {
+            BomDetailListResp r = new BomDetailListResp();
+            BeanUtils.copyProperties(v, r);
+            return r;
+        }).collect(Collectors.toList());
+    }
+
 }

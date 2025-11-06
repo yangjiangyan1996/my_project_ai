@@ -442,7 +442,7 @@ const loadProductList = async () => {
         status: product.status ,
         imageUrl: product.imageUrl || '',
         createdAt: product.createdAt || new Date().toISOString(),
-        updatedAt: product.updatedAt || new Date().toISOString()
+        updatedAt: product.updatedAt || new Date().toISOString(),
       }));
       pagination.total = res.total || 0;
       

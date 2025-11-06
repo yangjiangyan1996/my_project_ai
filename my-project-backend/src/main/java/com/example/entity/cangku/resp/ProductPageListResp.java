@@ -3,6 +3,8 @@ package com.example.entity.cangku.resp;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -42,4 +44,5 @@ public class ProductPageListResp {
     //状态：0-禁用，1-启用
     private Integer status;
 
+    List<BomDetailListResp> bomData;
 }
