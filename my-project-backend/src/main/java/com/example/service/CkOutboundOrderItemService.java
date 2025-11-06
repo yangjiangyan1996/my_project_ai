@@ -15,4 +15,8 @@ import java.util.List;
 
 public interface CkOutboundOrderItemService extends IService<OutboundOrderItem> {
     List<OutboundOrderItem> selectByProductIds(Long tenantId, List<Long> productIds);
+
+    List<OutboundOrderItem> selectByTenantIdAndOutboundOrderIds(Long tenantId, List<Long> outboundOrderIds);
+
+    List<OutboundOrderItem> selectByOrderId(Long id, Long tenantId);
 }

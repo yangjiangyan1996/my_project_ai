@@ -1,18 +1,17 @@
-package com.example.entity.cangku.dto;
+package com.example.entity.cangku.resp;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
-//出库单主表
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/11/7 01:42
+ */
 @Data
-@TableName("ck_outbound_order")
-public class OutboundOrder extends BaseModel {
-    @TableId(type = IdType.AUTO)
+public class OutboundListPageResp {
     private Long id;
     //租户ID
     private Long tenantId;
@@ -33,5 +32,9 @@ public class OutboundOrder extends BaseModel {
     private BigDecimal totalAmount;
     //备注
     private String remark;
+
+    String customerName;
+    String warehouseName;
+    Integer itemCount;
 
 }

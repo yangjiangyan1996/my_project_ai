@@ -39,6 +39,8 @@ public class CkInboundFacade {
     @Resource
     private CkInventoryTransactionService inventoryTransactionService;
     @Resource
+    CkInventoryBatchService inventoryBatchService;
+    @Resource
     CkInventoryWarehouseService inventoryWarehouseService;
     @Resource
     private CkInventoryService inventoryService;
@@ -210,6 +212,9 @@ public class CkInboundFacade {
             // 更新仓库库存
             updateWarehouseInventory(req, item);
 
+            // 创建批次库存
+            createInventoryBatch(req, item);
+
             // 记录库存流水
             createInventoryTransaction(req, orderId, item);
         }
@@ -285,6 +290,47 @@ public class CkInboundFacade {
             boolean saved = inventoryWarehouseService.save(newInventory);
             if (!saved) {
                 throw new ValidationException("仓库库存创建失败，产品ID: " + item.getProductId());
+            }
+        }
+    }
+
+
+    private void createInventoryBatch(InboundCreateReq req, InboundOrderItem item) {
+        // 查询现有库存
+        InventoryBatch ib = inventoryBatchService.selectByBatchNoAndProductId(item.getBatchNo(), item.getProductId(), req.getTenantId());
+
+        if (ib != null) {
+            // 更新现有库存
+            BigDecimal newQuantity = ib.getQuantity().add(item.getActualQuantity());
+            ib.setQuantity(newQuantity);
+            ib.setModifiedBy(req.getUserId());
+            ib.setModifiedAt(new Date());
+
+            boolean updated = inventoryBatchService.updateById(ib);
+            if (!updated) {
+                throw new ValidationException("批次库存更新失败，产品ID: " + item.getProductId());
+            }
+        } else {
+            // 创建新库存记录
+            InventoryBatch newInventory = new InventoryBatch();
+            newInventory.setTenantId(req.getTenantId());
+            newInventory.setProductId(item.getProductId());
+            newInventory.setBatchNo(item.getBatchNo());
+            newInventory.setWarehouseId(req.getWarehouseId());
+            newInventory.setQuantity(item.getActualQuantity());
+            newInventory.setLockedQuantity(BigDecimal.ZERO);
+            newInventory.setInboundOrderId(item.getOrderId());
+            newInventory.setInboundItemId(item.getId());
+            newInventory.setProductionDate(new Date());
+            newInventory.setCreatedBy(req.getUserId());
+            newInventory.setModifiedBy(req.getUserId());
+            newInventory.setCreatedAt(new Date());
+            newInventory.setModifiedAt(new Date());
+            newInventory.setIsDeleted(0);
+
+            boolean saved = inventoryBatchService.save(newInventory);
+            if (!saved) {
+                throw new ValidationException("批次库存创建失败，产品ID: " + item.getProductId());
             }
         }
     }
@@ -701,8 +747,51 @@ public class CkInboundFacade {
             // 更新仓库库存
             updateWarehouseInventoryForApprove(inboundOrder, item, userId);
 
+            // 创建库存批次
+            updateInventoryBatchApprove(inboundOrder, item, userId);
+
             // 记录库存流水
             createInventoryTransactionForApprove(inboundOrder, item, userId);
+        }
+    }
+
+    private void updateInventoryBatchApprove(InboundOrder inboundOrder, InboundOrderItem item, Long userId) {
+        // 查询现有库存
+        InventoryBatch ib = inventoryBatchService.selectByBatchNoAndProductId(item.getBatchNo(), item.getProductId(), inboundOrder.getTenantId());
+
+        if (ib != null) {
+            // 更新现有库存
+            BigDecimal newQuantity = ib.getQuantity().add(item.getActualQuantity());
+            ib.setQuantity(newQuantity);
+            ib.setModifiedBy(userId);
+            ib.setModifiedAt(new Date());
+
+            boolean updated = inventoryBatchService.updateById(ib);
+            if (!updated) {
+                throw new ValidationException("批次库存更新失败，产品ID: " + item.getProductId());
+            }
+        } else {
+            // 创建新库存记录
+            InventoryBatch newInventory = new InventoryBatch();
+            newInventory.setTenantId(inboundOrder.getTenantId());
+            newInventory.setProductId(item.getProductId());
+            newInventory.setBatchNo(item.getBatchNo());
+            newInventory.setWarehouseId(inboundOrder.getWarehouseId());
+            newInventory.setQuantity(item.getActualQuantity());
+            newInventory.setLockedQuantity(BigDecimal.ZERO);
+            newInventory.setInboundOrderId(item.getOrderId());
+            newInventory.setInboundItemId(item.getId());
+            newInventory.setProductionDate(new Date());
+            newInventory.setCreatedBy(userId);
+            newInventory.setModifiedBy(userId);
+            newInventory.setCreatedAt(new Date());
+            newInventory.setModifiedAt(new Date());
+            newInventory.setIsDeleted(0);
+
+            boolean saved = inventoryBatchService.save(newInventory);
+            if (!saved) {
+                throw new ValidationException("批次库存创建失败，产品ID: " + item.getProductId());
+            }
         }
     }
 

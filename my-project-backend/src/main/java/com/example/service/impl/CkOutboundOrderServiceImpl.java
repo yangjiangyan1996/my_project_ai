@@ -1,8 +1,11 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.OutboundOrder;
+import com.example.entity.cangku.req.OutboundListPageReq;
+import com.example.enums.CkCommonEnums;
 import com.example.mapper.CkOutboundOrderMapper;
 import com.example.service.CkOutboundOrderService;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,15 @@ public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMappe
                         .in("product_id", productIds)
                         .eq("status", status)
                         .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
+    public Page<OutboundOrder> getPage(Page<OutboundOrder> page, OutboundListPageReq req) {
+        return baseMapper.selectPage(page,
+                new QueryWrapper<OutboundOrder>()
+                        .eq("tenant_id", req.getTenantId())
+                        .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
         );
     }
 

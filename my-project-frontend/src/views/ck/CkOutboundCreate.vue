@@ -24,6 +24,7 @@
         label-width="120px"
         class="outbound-form"
       >
+        <!-- 基本信息表单项保持不变 -->
         <el-row :gutter="24">
           <el-col :xs="24" :sm="12" :lg="8">
             <el-form-item label="出库单号" prop="orderNo">
@@ -176,30 +177,40 @@
               <el-input-number
                 v-model="row.quantity"
                 :min="1"
-                :max="row.currentStock || 0"
+                :max="getMaxQuantity(row)"
                 controls-position="right"
                 style="width: 100%"
-                @change="() => calculateTotal()"
-                :disabled="!row.currentStock"
+                @change="() => handleQuantityChange($index)"
+                :disabled="!row.currentStock || row.currentStock <= 0"
               />
             </template>
           </el-table-column>
-          <el-table-column label="批次号" width="150">
-            <template #default="{ row }">
-              <el-select
-                v-model="row.batchNo"
-                placeholder="选择批次"
-                style="width: 100%"
-                :disabled="!row.productId"
-                @change="(value) => handleBatchChange(value, $index)"
-              >
-                <el-option
-                  v-for="batch in row.availableBatches"
-                  :key="batch.batchNo"
-                  :label="`${batch.batchNo} (${batch.quantity}个)`"
-                  :value="batch.batchNo"
-                />
-              </el-select>
+          <!-- 修改批次选择列 -->
+          <el-table-column label="批次分配" min-width="200">
+            <template #default="{ row, $index }">
+              <div class="batch-allocation">
+                <el-button 
+                  type="primary" 
+                  link 
+                  @click="openBatchDialog($index)"
+                  :disabled="!row.productId"
+                >
+                  分配批次
+                </el-button>
+                <div v-if="row.batchAllocations && row.batchAllocations.length > 0" class="batch-summary">
+                  <el-tag
+                    v-for="allocation in row.batchAllocations"
+                    :key="allocation.batchNo"
+                    size="small"
+                    class="batch-tag"
+                  >
+                    {{ allocation.batchNo }}: {{ allocation.quantity }}个
+                  </el-tag>
+                </div>
+                <div v-else class="batch-empty">
+                  <span class="empty-text">未分配批次</span>
+                </div>
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="单价" width="120">
@@ -306,6 +317,75 @@
         </el-upload>
       </div>
     </el-card>
+
+    <!-- 批次分配对话框 -->
+    <el-dialog
+      v-model="batchDialog.visible"
+      :title="`批次分配 - ${batchDialog.productName}`"
+      width="600px"
+      destroy-on-close
+    >
+      <div class="batch-dialog-content">
+        <div class="batch-info">
+          <div class="info-item">
+            <span class="label">总出库数量：</span>
+            <span class="value">{{ batchDialog.totalQuantity }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">已分配数量：</span>
+            <span class="value" :class="batchDialog.allocatedQuantity >= batchDialog.totalQuantity ? 'success' : 'warning'">
+              {{ batchDialog.allocatedQuantity }}
+            </span>
+          </div>
+          <div class="info-item">
+            <span class="label">剩余数量：</span>
+            <span class="value">{{ batchDialog.remainingQuantity }}</span>
+          </div>
+        </div>
+
+        <el-table :data="batchDialog.batches" border class="batch-table">
+          <el-table-column label="批次号" prop="batchNo" width="150" />
+          <el-table-column label="可用数量" width="100" align="center">
+            <template #default="{ row }">
+              <span>{{ row.quantity }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="分配数量" width="150">
+            <template #default="{ row, $index }">
+              <el-input-number
+                v-model="row.allocated"
+                :min="0"
+                :max="row.maxAllocatable"
+                controls-position="right"
+                style="width: 100%"
+                @change="() => handleBatchAllocationChange($index)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="80" align="center">
+            <template #default="{ row, $index }">
+              <el-button
+                type="danger"
+                link
+                @click="clearBatchAllocation($index)"
+                :disabled="!row.allocated"
+              >
+                清空
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="batch-actions">
+          <el-button @click="autoAllocateBatches" :disabled="batchDialog.remainingQuantity <= 0">
+            自动分配
+          </el-button>
+          <el-button type="primary" @click="confirmBatchAllocation">
+            确认分配
+          </el-button>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -333,6 +413,17 @@ const formData = reactive({
   attachments: []
 });
 
+// 批次分配对话框数据
+const batchDialog = reactive({
+  visible: false,
+  productIndex: -1,
+  productName: '',
+  totalQuantity: 0,
+  batches: [],
+  allocatedQuantity: 0,
+  remainingQuantity: 0
+});
+
 // 选项数据
 const warehouseList = ref([]);
 const customerList = ref([]);
@@ -350,20 +441,21 @@ const orderTypeOptions = [
 
 // 计算属性
 const showCustomer = computed(() => {
-  return formData.orderType === 1; // 只有销售出库显示客户
+  return formData.orderType === 1;
 });
 
 const availableProducts = computed(() => {
   if (!formData.warehouseId) return [];
+  
   return inventoryList.value
-    .filter(item => item.warehouseId === formData.warehouseId && item.quantity > 0)
+    .filter(item => item.availableQuantity > 0)
     .map(item => ({
       id: item.productId,
-      sku: item.productSku,
+      sku: item.sku,
       name: item.productName,
-      spec: item.productSpec,
-      unit: item.productUnit,
-      quantity: item.quantity
+      spec: item.spec,
+      unit: item.unitName,
+      quantity: item.availableQuantity
     }));
 });
 
@@ -380,11 +472,16 @@ const totalAmount = computed(() => {
 });
 
 const hasInsufficientStock = computed(() => {
-  return formData.items.some(item => (item.quantity || 0) > (item.currentStock || 0));
+  return formData.items.some(item => {
+    const allocatedQuantity = item.batchAllocations 
+      ? item.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0)
+      : 0;
+    return (item.quantity || 0) > allocatedQuantity;
+  });
 });
 
 const stockStatusText = computed(() => {
-  return hasInsufficientStock.value ? '库存不足' : '库存充足';
+  return hasInsufficientStock.value ? '批次分配不足' : '分配完成';
 });
 
 const stockStatusClass = computed(() => {
@@ -428,6 +525,11 @@ const generateOrderNo = () => {
   formData.orderNo = `CK${year}${month}${day}${random}`;
 };
 
+const getMaxQuantity = (row) => {
+  const currentStock = row.currentStock || 0;
+  return currentStock > 0 ? currentStock : 1;
+};
+
 const handleOrderTypeChange = (value) => {
   if (value !== 1) {
     formData.customerId = null;
@@ -437,7 +539,6 @@ const handleOrderTypeChange = (value) => {
 const handleWarehouseChange = async (warehouseId) => {
   if (warehouseId) {
     await loadInventoryData(warehouseId);
-    // 清空已选择的产品
     formData.items = [];
   }
 };
@@ -452,7 +553,7 @@ const handleAddProduct = () => {
     currentStock: 0,
     quantity: 1,
     price: 0,
-    batchNo: '',
+    batchAllocations: [], // 改为批次分配数组
     availableBatches: [],
     remark: ''
   });
@@ -460,47 +561,134 @@ const handleAddProduct = () => {
 
 const handleRemoveProduct = (index) => {
   formData.items.splice(index, 1);
-  calculateTotal();
 };
 
-const handleProductChange = (productId, index) => {
+const handleProductChange = async (productId, index) => {
   const product = availableProducts.value.find(p => p.id === productId);
   if (product) {
     const item = formData.items[index];
+    item.productId = product.id;
     item.productName = product.name;
     item.sku = product.sku;
     item.spec = product.spec;
     item.unit = product.unit;
-    item.currentStock = product.quantity;
+    item.currentStock = product.quantity || 0;
     item.quantity = 1;
     item.price = 0;
+    item.batchAllocations = []; // 重置批次分配
     
     // 加载批次信息
-    loadBatchInfo(productId, formData.warehouseId, index);
+    await loadBatchInfo(productId, formData.warehouseId, index);
   }
 };
 
-const handleBatchChange = (batchNo, index) => {
+const handleQuantityChange = (index) => {
   const item = formData.items[index];
-  const batch = item.availableBatches.find(b => b.batchNo === batchNo);
-  if (batch) {
-    item.currentStock = batch.quantity;
-    // 如果当前数量超过批次库存，自动调整
-    if (item.quantity > batch.quantity) {
-      item.quantity = batch.quantity;
+  // 如果数量减少，需要调整批次分配
+  if (item.batchAllocations && item.batchAllocations.length > 0) {
+    const totalAllocated = item.batchAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
+    if (item.quantity < totalAllocated) {
+      ElMessage.warning('出库数量小于已分配批次数量，请重新分配批次');
+      item.batchAllocations = [];
     }
   }
 };
 
 const getStockClass = (currentStock, quantity) => {
-  if (!currentStock) return 'stock-none';
+  if (!currentStock || currentStock <= 0) return 'stock-none';
   if (quantity > currentStock) return 'stock-insufficient';
   if (currentStock < 10) return 'stock-low';
   return 'stock-sufficient';
 };
 
-const calculateTotal = () => {
-  // 触发响应式更新
+// 批次分配相关方法
+const openBatchDialog = async (index) => {
+  const item = formData.items[index];
+  if (!item.productId) {
+    ElMessage.warning('请先选择产品');
+    return;
+  }
+
+  batchDialog.productIndex = index;
+  batchDialog.productName = item.productName;
+  batchDialog.totalQuantity = item.quantity;
+  
+  // 准备批次数据
+  batchDialog.batches = item.availableBatches.map(batch => ({
+    ...batch,
+    allocated: 0,
+    maxAllocatable: batch.quantity
+  }));
+
+  // 恢复已分配的批次数据
+  if (item.batchAllocations && item.batchAllocations.length > 0) {
+    item.batchAllocations.forEach(allocation => {
+      const batch = batchDialog.batches.find(b => b.batchNo === allocation.batchNo);
+      if (batch) {
+        batch.allocated = allocation.quantity;
+      }
+    });
+  }
+
+  updateBatchDialogCalculations();
+  batchDialog.visible = true;
+};
+
+const handleBatchAllocationChange = () => {
+  updateBatchDialogCalculations();
+};
+
+const clearBatchAllocation = (batchIndex) => {
+  batchDialog.batches[batchIndex].allocated = 0;
+  updateBatchDialogCalculations();
+};
+
+const updateBatchDialogCalculations = () => {
+  batchDialog.allocatedQuantity = batchDialog.batches.reduce((sum, batch) => sum + (batch.allocated || 0), 0);
+  batchDialog.remainingQuantity = batchDialog.totalQuantity - batchDialog.allocatedQuantity;
+};
+
+const autoAllocateBatches = () => {
+  let remaining = batchDialog.remainingQuantity;
+  
+  // 按批次顺序自动分配
+  for (const batch of batchDialog.batches) {
+    if (remaining <= 0) break;
+    
+    const available = batch.maxAllocatable - (batch.allocated || 0);
+    const allocate = Math.min(available, remaining);
+    
+    if (allocate > 0) {
+      batch.allocated = (batch.allocated || 0) + allocate;
+      remaining -= allocate;
+    }
+  }
+  
+  updateBatchDialogCalculations();
+  
+  if (remaining > 0) {
+    ElMessage.warning(`库存不足，仍有 ${remaining} 个无法分配`);
+  }
+};
+
+const confirmBatchAllocation = () => {
+  if (batchDialog.allocatedQuantity !== batchDialog.totalQuantity) {
+    ElMessage.warning(`分配数量 (${batchDialog.allocatedQuantity}) 与出库数量 (${batchDialog.totalQuantity}) 不一致`);
+    return;
+  }
+
+  // 保存批次分配
+  const item = formData.items[batchDialog.productIndex];
+  item.batchAllocations = batchDialog.batches
+    .filter(batch => batch.allocated > 0)
+    .map(batch => ({
+      batchNo: batch.batchNo,
+      quantity: batch.allocated,
+      price: item.price || 0
+    }));
+
+  batchDialog.visible = false;
+  ElMessage.success('批次分配完成');
 };
 
 const handleReset = () => {
@@ -522,15 +710,15 @@ const handleSaveDraft = async () => {
   try {
     const submitData = {
       ...formData,
-      status: 0, // 草稿状态
+      status: 0,
       totalQuantity: totalQuantity.value,
       totalAmount: totalAmount.value
     };
     
-    const res = await post('/api/auth/outbound/saveDraft', submitData);
+    const res = await post('/api/auth/outbound/create', submitData);
     if (res) {
       ElMessage.success('保存草稿成功');
-      router.push('/outbound/list');
+      router.push('/index/CkOutboundManage/');
     }
   } catch (error) {
     ElMessage.error('保存草稿失败');
@@ -547,8 +735,16 @@ const handleSubmit = async () => {
     return;
   }
   
-  if (hasInsufficientStock.value) {
-    ElMessage.warning('存在库存不足的产品，请调整出库数量');
+  // 检查批次分配
+  const hasUnallocatedItems = formData.items.some(item => {
+    const allocatedQuantity = item.batchAllocations 
+      ? item.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0)
+      : 0;
+    return (item.quantity || 0) !== allocatedQuantity;
+  });
+  
+  if (hasUnallocatedItems) {
+    ElMessage.warning('存在未完成批次分配的产品，请完成批次分配后再提交');
     return;
   }
   
@@ -556,7 +752,7 @@ const handleSubmit = async () => {
   try {
     const submitData = {
       ...formData,
-      status: 1, // 待审核状态
+      status: 1,
       totalQuantity: totalQuantity.value,
       totalAmount: totalAmount.value
     };
@@ -579,7 +775,6 @@ const validateForm = async () => {
   try {
     await formRef.value.validate();
     
-    // 验证产品明细
     for (let i = 0; i < formData.items.length; i++) {
       const item = formData.items[i];
       if (!item.productId) {
@@ -634,14 +829,14 @@ const loadInventoryData = async (warehouseId) => {
 const loadBatchInfo = async (productId, warehouseId, index) => {
   try {
     const res = await get(`/api/auth/inventory/batches?productId=${productId}&warehouseId=${warehouseId}`);
-    formData.items[index].availableBatches = res.records || [];
+    formData.items[index].availableBatches = res || [];
   } catch (error) {
     console.error('加载批次信息失败:', error);
     formData.items[index].availableBatches = [];
   }
 };
 
-// 文件上传相关
+// 文件上传相关方法保持不变
 const handleExceed = () => {
   ElMessage.warning('最多只能上传5个文件');
 };
@@ -793,6 +988,82 @@ onMounted(() => {
   margin-top: 30px;
 }
 
+/* 批次分配样式 */
+.batch-allocation {
+  min-height: 40px;
+}
+
+.batch-summary {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.batch-tag {
+  margin: 2px;
+}
+
+.batch-empty {
+  margin-top: 8px;
+}
+
+.empty-text {
+  color: #909399;
+  font-size: 12px;
+}
+
+/* 批次对话框样式 */
+.batch-dialog-content {
+  padding: 0 10px;
+}
+
+.batch-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.info-item .label {
+  font-size: 12px;
+  color: #606266;
+  margin-bottom: 4px;
+}
+
+.info-item .value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.info-item .value.success {
+  color: #67C23A;
+}
+
+.info-item .value.warning {
+  color: #E6A23C;
+}
+
+.batch-table {
+  margin: 16px 0;
+}
+
+.batch-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
 :deep(.el-upload) {
   margin-right: 12px;
 }
@@ -838,6 +1109,16 @@ onMounted(() => {
   
   .summary-info .el-col {
     margin-bottom: 8px;
+  }
+  
+  .batch-info {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .info-item {
+    flex-direction: row;
+    justify-content: space-between;
   }
 }
 </style>

@@ -21,4 +21,6 @@ public interface CkCustomerService extends IService<Customer> {
     Page<Customer> getPage(Page<Customer> page, CustomerListPageReq req);
 
     List<Customer> listEnable(Long tenantId);
+
+    List<Customer> selectByTenantIdAndCustomerIds(Long tenantId, List<Long> customerIds);
 }

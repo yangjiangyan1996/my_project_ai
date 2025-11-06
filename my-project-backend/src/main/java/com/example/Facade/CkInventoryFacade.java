@@ -3,6 +3,7 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.InventoryListPageReq;
+import com.example.entity.cangku.resp.InventoryBatchResp;
 import com.example.entity.cangku.resp.InventoryListResp;
 import com.example.entity.cangku.resp.InventoryPageListResp;
 import com.example.enums.CkCommonEnums;
@@ -10,6 +11,7 @@ import com.example.enums.CkInventoryEnums;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -37,6 +39,8 @@ public class CkInventoryFacade {
     CkProductService productService;
     @Resource
     CkWareHouseService wareHouseService;
+    @Resource
+    CkInventoryBatchService inventoryBatchService;
     @Resource
     CkInventoryService inventoryService;
     @Resource
@@ -273,5 +277,18 @@ public class CkInventoryFacade {
         }
 
         return result;
+    }
+
+    public List<InventoryBatchResp> batches(Long warehouseId, Long productId, Long tenantId) {
+        List<InventoryBatch> inventoryBatches = inventoryBatchService.selectByWarehouseIdAndProductId(warehouseId, productId, tenantId);
+        if (CollectionUtils.isEmpty(inventoryBatches)) {
+            return Collections.emptyList();
+        }
+        return inventoryBatches.stream().map(c->{
+            InventoryBatchResp resp = new InventoryBatchResp();
+            resp.setQuantity(c.getQuantity());
+            resp.setBatchNo(c.getBatchNo());
+            return resp;
+        }).collect(Collectors.toList());
     }
 }

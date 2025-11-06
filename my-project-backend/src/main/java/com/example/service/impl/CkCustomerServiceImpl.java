@@ -52,6 +52,15 @@ public class CkCustomerServiceImpl extends ServiceImpl<CkCustomerMapper, Custome
     }
 
     @Override
+    public List<Customer> selectByTenantIdAndCustomerIds(Long tenantId, List<Long> customerIds) {
+        return baseMapper.selectList(new QueryWrapper<Customer>()
+                .eq("is_deleted", 0)
+                .eq("tenant_id", tenantId)
+                .in("id", customerIds)
+        );
+    }
+
+    @Override
     public List<Customer> listEnable(Long tenantId) {
         return baseMapper.selectList(new QueryWrapper<Customer>()
                 .eq("tenant_id", tenantId)

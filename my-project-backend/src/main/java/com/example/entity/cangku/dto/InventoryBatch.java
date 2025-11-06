@@ -7,27 +7,30 @@ import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.Date;
 
-//出库单明细表
+//库存表
 @Data
-@TableName("ck_outbound_order_item")
-public class OutboundOrderItem extends BaseModel {
+@TableName("ck_inventory_batch")
+public class InventoryBatch extends BaseModel {
     @TableId(type = IdType.AUTO)
     private Long id;
     //租户ID
     private Long tenantId;
-    //出库单ID
-    private Long orderId;
     //产品ID
     private Long productId;
-    //批次 ID
-    String batchNo;
-    //备注
-    String remark;
-    //计划数量
+    //批次号
+    private String batchNo;
+    //仓库ID
+    private Long warehouseId;
+    //当前库存数量
     private BigDecimal quantity;
-    //单价
-    private BigDecimal priceUnit;
-    //总价
-    private BigDecimal priceTotal;
+    //锁定数量
+    private BigDecimal lockedQuantity;
+    //来源入库单ID
+    private Long inboundOrderId;
+    //来源入库明细ID
+    private Long inboundItemId;
+    //生产日期
+    private Date productionDate;
 }

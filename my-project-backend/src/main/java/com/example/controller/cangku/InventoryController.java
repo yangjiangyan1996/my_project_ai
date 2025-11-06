@@ -5,6 +5,7 @@ import com.example.Facade.CkInventoryFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.InventoryListPageReq;
+import com.example.entity.cangku.resp.InventoryBatchResp;
 import com.example.entity.cangku.resp.InventoryListResp;
 import com.example.entity.cangku.resp.InventoryPageListResp;
 import com.example.filter.UserUtil;
@@ -60,6 +61,23 @@ public class InventoryController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("InventoryController#listOfWarehouse,req:{}",warehouseId, e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+    @GetMapping("/batches")
+    public RespBean<List<InventoryBatchResp>> batches(@RequestParam("productId") Long productId,
+                                                      @RequestParam("warehouseId") Long warehouseId) {
+        try {
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            List<InventoryBatchResp> result = inventoryFacade.batches(warehouseId,productId,tenantId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("InventoryController#batches,req:{}",warehouseId, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#batches,req:{}",warehouseId, e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
