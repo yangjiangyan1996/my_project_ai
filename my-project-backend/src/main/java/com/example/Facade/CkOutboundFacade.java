@@ -6,6 +6,7 @@ import com.example.entity.cangku.req.OutboundApproveOkReq;
 import com.example.entity.cangku.req.OutboundCreateReq;
 import com.example.entity.cangku.req.OutboundListPageReq;
 import com.example.entity.cangku.resp.OutboundListPageResp;
+import com.example.entity.dto.Account;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -50,6 +51,9 @@ public class CkOutboundFacade {
 
     @Resource
     CkCustomerService customerService;
+
+    @Resource
+    AccountService accountService;
 
     @Resource
     CkWareHouseService warehouseService;
@@ -410,6 +414,9 @@ public class CkOutboundFacade {
         List<Warehouse> warehouseList = warehouseService.selectByTenantIdAndWareHouseIds(req.getTenantId(), warehouseIds);
         Map<Long, Warehouse> warehouseId2WarehouseMap = warehouseList.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
 
+        List<Long> accountIds = list.getRecords().stream().map(v -> v.getCreatedBy()).collect(Collectors.toList());
+        List<Account> accounts = accountService.selectByIds(accountIds);
+        Map<Long, Account> accountId2AccountMap = accounts.stream().collect(Collectors.toMap(Account::getId, v -> v));
         List<OutboundListPageResp> collect = list.getRecords().stream().map(v -> {
             OutboundListPageResp p = new OutboundListPageResp();
             BeanUtils.copyProperties(v, p);
@@ -417,6 +424,8 @@ public class CkOutboundFacade {
             p.setCustomerName(customerId2CustomerMap.getOrDefault(v.getCustomerId(), new Customer()).getCustomerName());
             p.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(v.getWarehouseId(), new Warehouse()).getName());
             p.setItemCount(orderId2ItemListMap.getOrDefault(v.getId(), new ArrayList<>()).size());
+            p.setApplicantName(accountId2AccountMap.getOrDefault(v.getCreatedBy(), new Account()).getUsername());
+            p.setApplicantAvatar(accountId2AccountMap.getOrDefault(v.getCreatedBy(), new Account()).getAvatarUrl());
             return p;
         }).collect(Collectors.toList());
 

@@ -11,6 +11,13 @@ import lombok.Data;
  */
 @Data
 public class OutboundListPageReq extends PageReq {
+    private String endDate;
+    private String startDate;
+    private Integer orderType;
+    private String orderNo;
+    private Integer status;
+    private Long customerId;
+    private Long warehouseId;
 
     Long userId;
     Long tenantId;

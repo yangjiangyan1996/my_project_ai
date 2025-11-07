@@ -37,4 +37,9 @@ public class OutboundListPageResp {
     String warehouseName;
     Integer itemCount;
 
+    //申请人
+    private String applicantName;
+    //申请人头像
+    private String applicantAvatar;
+
 }

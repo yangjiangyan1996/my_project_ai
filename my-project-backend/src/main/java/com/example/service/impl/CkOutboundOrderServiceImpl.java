@@ -8,6 +8,7 @@ import com.example.entity.cangku.req.OutboundListPageReq;
 import com.example.enums.CkCommonEnums;
 import com.example.mapper.CkOutboundOrderMapper;
 import com.example.service.CkOutboundOrderService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -31,6 +32,13 @@ public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMappe
     public Page<OutboundOrder> getPage(Page<OutboundOrder> page, OutboundListPageReq req) {
         return baseMapper.selectPage(page,
                 new QueryWrapper<OutboundOrder>()
+                        .eq(req.getWarehouseId()!= null, "warehouse_id", req.getWarehouseId())
+                        .eq(req.getCustomerId()!=null, "customer_id", req.getCustomerId())
+                        .eq(req.getStatus()!=null, "status", req.getStatus())
+                        .eq(req.getOrderType()!=null, "order_type", req.getOrderType())
+                        .gt(req.getStartDate()!=null, "created_at", req.getStartDate())
+                        .lt(req.getEndDate()!=null, "created_at", req.getEndDate())
+                        .like(StringUtils.isNotBlank(req.getOrderNo()), "order_no", req.getOrderNo())
                         .eq("tenant_id", req.getTenantId())
                         .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
         );

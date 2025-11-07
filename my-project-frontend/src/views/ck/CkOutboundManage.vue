@@ -74,7 +74,7 @@
               <el-option
                 v-for="customer in customerList"
                 :key="customer.id"
-                :label="customer.name"
+                :label="customer.customerName"
                 :value="customer.id"
               />
             </el-select>
@@ -471,7 +471,7 @@ const loadOutboundList = async () => {
 const loadWarehouseList = async () => {
   try {
     const res = await get('/api/auth/warehouse/list');
-    warehouseList.value = res.records || [];
+    warehouseList.value = res || [];
   } catch (error) {
     console.error('加载仓库列表失败:', error);
     warehouseList.value = [];
@@ -480,8 +480,8 @@ const loadWarehouseList = async () => {
 
 const loadCustomerList = async () => {
   try {
-    const res = await get('/api/auth/customer/list');
-    customerList.value = res.records || [];
+    const res = await get('/api/auth/customer/listEnable');
+    customerList.value = res || [];
   } catch (error) {
     console.error('加载客户列表失败:', error);
     customerList.value = [];
