@@ -208,12 +208,6 @@ const router = createRouter({
             meta: { requiresAuth: false }
         },
         {
-            path: '/index/CkOutboundManage/',
-            name: 'ckOutboundManage',
-            component: () => import('@/views/ck/CkOutboundManage.vue'),
-            meta: { requiresAuth: false }
-        },
-        {
             path: '/index/ckTransferManage/',
             name: 'ckTransferManage',
             component: () => import('@/views/ck/CkTransferManage.vue'),
@@ -248,6 +242,12 @@ const router = createRouter({
             path: '/index/ckUser/',
             name: 'ckUser',
             component: () => import('@/views/ck/CkUser.vue'),
+            meta: { requiresAuth: false }
+        },       
+         {
+            path: '/index/CkOutboundManage/',
+            name: 'ckOutboundManage',
+            component: () => import('@/views/ck/CkOutboundManage.vue'),
             meta: { requiresAuth: false }
         },
     ]
