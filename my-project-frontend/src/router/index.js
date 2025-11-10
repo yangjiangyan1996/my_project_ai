@@ -250,8 +250,6 @@ const router = createRouter({
             component: () => import('@/views/ck/CkUser.vue'),
             meta: { requiresAuth: false }
         },
-
-
     ]
 })
 
