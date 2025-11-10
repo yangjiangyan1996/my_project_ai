@@ -9,6 +9,7 @@ import com.example.entity.cangku.resp.ProductCategoryResp;
 import com.example.entity.cangku.resp.ProductPageListResp;
 import com.example.entity.cangku.resp.UnitResp;
 import com.example.service.*;
+import com.example.utils.ExcelUtils;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import org.apache.commons.lang3.StringUtils;
@@ -16,12 +17,15 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static com.example.utils.SmartSkuGenerator.generateSmartSku;
 
 /**
  * @Author YangJian
@@ -175,6 +179,9 @@ public class CKProductFacade {
         product.setMinStock(req.getMinStock());
         product.setRemark(req.getRemark());
         product.setStatus(req.getStatus());
+        product.setOutUnitHeight(req.getOutUnitHeight());
+        product.setOutUnitLength(req.getOutUnitLength());
+        product.setOutUnitWidth(req.getOutUnitWidth());
         product.setModifiedAt(new Date());
         product.setModifiedBy(req.getUserId());
         product.setCreatedAt(new Date());
@@ -291,7 +298,7 @@ public class CKProductFacade {
             p.setCategoryName(whMap.get(v.getCategoryCode()).getCategoryName());
             p.setUnitName(unitMap.get(v.getUnitCode()).getUnitName());
             p.setOutUnitName(unitMap.get(v.getOutUnitCode()).getUnitName());
-            p.setBomData( detail);
+            p.setBomData(detail);
             return p;
         }).collect(Collectors.toList());
 
@@ -308,7 +315,7 @@ public class CKProductFacade {
             throw new ValidationException("商品不存在");
         }
 
-        Product save= new Product();
+        Product save = new Product();
         BeanUtils.copyProperties(req, save);
         save.setModifiedAt(new Date());
         save.setModifiedBy(req.getUserId());
@@ -407,7 +414,7 @@ public class CKProductFacade {
 
         Map<String, Unit> unitCode2UnitMap = new HashMap<>();
         List<Unit> units = unitService.selectByTenantId(user.getTenantId(), 1);
-        if (!CollectionUtils.isEmpty( units)) {
+        if (!CollectionUtils.isEmpty(units)) {
             unitCode2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
         }
 
@@ -435,11 +442,83 @@ public class CKProductFacade {
             return new ArrayList<>();
         }
 
-        return  details.stream().map(v -> {
+        return details.stream().map(v -> {
             BomDetailListResp r = new BomDetailListResp();
             BeanUtils.copyProperties(v, r);
             return r;
         }).collect(Collectors.toList());
     }
 
+    public Boolean importProduct(MultipartFile file, Long tenantId, Long userId) {
+
+        List<Product> products = productService.listWareHouseEnable(tenantId);
+        //把products处理成map, key是名称_规格_颜色, value是Product
+        Map<String, Product> productNameSpecColor2ProductMap = products.stream().collect(Collectors.toMap(v -> v.getName() + "_" + v.getSpec() + "_" + v.getColor(), v -> v));
+
+
+        // 1. 读取Excel
+        List<ProductImportDto> plist = ExcelUtils.readExcel(file, ProductImportDto.class);
+
+        List<ProductImportDto> productList = plist.subList(2, plist.size());
+
+        List<Unit> units = unitService.selectByTenantId(tenantId, 1);
+        Map<String, Unit> unitName2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitName, v -> v));
+
+        List<Product> batchSaveProductList = new ArrayList<>();
+        List<InboundOrder> batchSaveInboundList = new ArrayList<>();
+
+        for (ProductImportDto pi : productList) {
+            Product p = new Product();
+            if(productNameSpecColor2ProductMap.containsKey(pi.getName() + "_" + pi.getSpec() + "_" + pi.getColor())) {
+                //入库数据
+
+            } else {
+                p.setSku(generateSmartSku(pi.getName(), pi.getColor(), pi.getSpec()));
+                p.setTenantId(tenantId);
+                //p.setBarcode();
+                p.setName(pi.getName());
+                p.setSpec(pi.getSpec());
+                //p.setCategoryCode();
+                p.setUnitCode(unitName2UnitMap.get("件").getUnitCode());
+                p.setOutUnitCode(unitName2UnitMap.get("箱").getUnitCode());
+                p.setOutUnitPerNum(StringUtils.isNotBlank(pi.getQuantityPerBox()) ?new BigDecimal(pi.getQuantityPerBox()):null);
+                p.setWeightPerUnit(StringUtils.isNotBlank(pi.getWeightPerUnit()) ?new BigDecimal(pi.getWeightPerUnit()):null);
+                p.setColor(pi.getColor());
+                p.setMinStock(100L);
+                p.setRemark(pi.getRemark());
+                p.setStatus(1);
+                p.setOutUnitHeight(StringUtils.isNotBlank(pi.getBoxHeight()) ?new BigDecimal(pi.getBoxHeight()):null);
+                p.setOutUnitLength(StringUtils.isNotBlank(pi.getBoxLength()) ?new BigDecimal(pi.getBoxLength()):null);
+                p.setOutUnitWidth(StringUtils.isNotBlank(pi.getBoxWidth()) ?new BigDecimal(pi.getBoxWidth()):null);
+                batchSaveProductList.add(p);
+            }
+
+        }
+
+        return true;
+    }
+
+    private void validateData(List<ProductImportDto> list) {
+        // 校验SKU重复、分类是否存在、单位是否合法等
+    }
+
+
+//    private Product convertToEntity(ProductImportDto dto) {
+//        Product entity = new Product();
+//        entity.setTenantId(CurrentUser.getTenantId());
+//        entity.setSku(dto.getSku());
+//        entity.setName(dto.getName());
+//        entity.setSpec(dto.getSpec());
+//        entity.setCategoryCode(categoryMapper.findCodeByName(dto.getCategoryName()));
+//        entity.setUnitCode(unitMapper.findCodeByName(dto.getUnitName()));
+//        entity.setOutUnitCode(unitMapper.findCodeByName(dto.getOutUnitName()));
+//        entity.setOutUnitPerNum(dto.getOutUnitPerNum());
+//        entity.setWeightPerUnit(dto.getWeightPerUnit());
+//        entity.setColor(dto.getColor());
+//        entity.setMinStock(dto.getMinStock());
+//        entity.setRemark(dto.getRemark());
+//        entity.setStatus(1);
+//        entity.setCreatedBy(CurrentUser.getUserId());
+//        return entity;
+//    }
 }

@@ -45,5 +45,12 @@ public class ProductPageListResp {
     //状态：0-禁用，1-启用
     private Integer status;
 
+    //出货单位的体积：高度
+    private BigDecimal outUnitHeight;
+    //出货单位的体积：长度
+    private BigDecimal outUnitLength;
+    //出货单位的体积：宽度
+    private BigDecimal outUnitWidth;
+
     List<BomDetailListResp> bomData;
 }

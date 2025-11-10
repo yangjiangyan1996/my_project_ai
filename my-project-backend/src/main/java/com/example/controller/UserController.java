@@ -5,6 +5,7 @@ import com.example.Facade.UserFacade;
 import com.example.annotations.TaskProgress;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
+import com.example.entity.cangku.resp.UserResp;
 import com.example.entity.req.SearchUserReq;
 import com.example.entity.req.UpdateUserInfoReq;
 import com.example.entity.resp.UserAllInfo;
@@ -93,6 +94,21 @@ public class UserController {
         }
     }
 
+    @GetMapping("/info")
+    public RespBean<UserResp> info() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            UserResp r = userFacade.getUserInfo(user.getId());
+            return RespBean.success(r);
+        } catch (ValidationException e) {
+            log.error("ProjectController#info,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#info,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     @GetMapping("/getSecrecyIdUserInfo")
     public RespBean<UserInfo> getCurrentUserInfo(@RequestParam(value = "secrecyId", required = false) Long secrecyId) {
         try {
@@ -112,4 +128,5 @@ public class UserController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
 }

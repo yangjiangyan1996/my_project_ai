@@ -11,7 +11,7 @@ const router = createRouter({
             component: () => import('@/views/WelcomeView.vue'),
             children: [
                 {
-                    path: '',
+                    path: '/login',
                     name: 'welcome-login',
                     component: () => import('@/views/welcome/LoginPage.vue')
                 }, {
@@ -25,7 +25,7 @@ const router = createRouter({
                 }
             ]
         }, {
-            path: '/',
+            path: '/views/IndexView',
             name: 'index',
             component: () => import('@/views/IndexView.vue'),
             meta: { requiresAuth: false },
@@ -124,7 +124,7 @@ const router = createRouter({
             meta: { requiresAuth: true }
         },
         {
-            path: '/index/ckIndex',
+            path: '/',
             name: 'ckIndex',
             component: () => import('@/views/ck/CkIndex.vue'),
             meta: { requiresAuth: false } //TODO yang 这里后面都要改成true
@@ -242,6 +242,12 @@ const router = createRouter({
             path: '/index/ckShelfManage/',
             name: 'ckShelfManage',
             component: () => import('@/views/ck/CkShelfManage.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckUser/',
+            name: 'ckUser',
+            component: () => import('@/views/ck/CkUser.vue'),
             meta: { requiresAuth: false }
         },
 

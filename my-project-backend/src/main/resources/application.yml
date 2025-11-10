@@ -7,8 +7,10 @@ spring:
 # 公共配置（所有环境共享）
   servlet:
     multipart:
+      enabled: true
       max-file-size: 5MB
       max-request-size: 10MB
+      file-size-threshold: 2KB
   web:
     verify:
       mail-limit: 60

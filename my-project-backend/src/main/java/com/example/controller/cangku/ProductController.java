@@ -15,6 +15,7 @@ import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -26,11 +27,37 @@ import java.util.List;
  */
 @RestController
 @Slf4j
-@RequestMapping("/api/auth/product/")
+@RequestMapping("/api/auth/product")
 public class ProductController {
 
     @Resource
     CKProductFacade CKProductFacade;
+
+    @PostMapping("/import")
+    public RespBean<Boolean> importProduct(@RequestParam("file") MultipartFile file) {
+        try {
+            log.info("=== 导入产品接口开始 ===");
+            log.info("接收到文件: {}", file.getOriginalFilename());
+            log.info("文件大小: {} bytes", file.getSize());
+            log.info("文件类型: {}", file.getContentType());
+
+            Long userId = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            log.info("用户ID: {}, 租户ID: {}", userId, tenantId);
+
+            Boolean result = CKProductFacade.importProduct(file, tenantId, userId);
+            log.info("导入结果: {}", result);
+            log.info("=== 导入产品接口结束 ===");
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("ProductController#import", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#import,", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
 
     @PostMapping("/delete")
     public RespBean<Boolean> delete(@RequestBody ProductDeleteReq req) {

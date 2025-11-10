@@ -1,5 +1,6 @@
 package com.example.Facade;
 
+import com.example.entity.cangku.resp.UserResp;
 import com.example.entity.dto.Account;
 import com.example.entity.req.UpdateUserInfoReq;
 import com.example.entity.resp.UserAllInfo;
@@ -43,5 +44,12 @@ public class UserFacade {
         account.setCounty(req.getCounty());
         account.setIndustryCode(req.getIndustryCode());
         return accountService.updateById(account);
+    }
+
+    public UserResp getUserInfo(Long id) {
+        Account account = accountService.selectById(id);
+        UserResp resp = new UserResp();
+        BeanUtils.copyProperties(account, resp);
+        return resp;
     }
 }

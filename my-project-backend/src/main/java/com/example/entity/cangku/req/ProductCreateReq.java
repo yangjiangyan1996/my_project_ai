@@ -43,6 +43,13 @@ public class ProductCreateReq {
 
     ProductBomReq bomData;
 
+    //出货单位的体积：高度
+    private  BigDecimal outUnitHeight;
+    //出货单位的体积：长度
+    private  BigDecimal outUnitLength;
+    //出货单位的体积：宽度
+    private  BigDecimal outUnitWidth;
+
     private Long tenantId;
     private Long userId;
 }

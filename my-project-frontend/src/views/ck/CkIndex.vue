@@ -15,20 +15,20 @@
           <!-- 工作台 -->
           <el-menu-item index="dashboard" @click="changeDisplayMode('dashboard')">工作台</el-menu-item>
           
-          <!-- 库存管理 -->
-          <el-sub-menu index="inventory">
+          <!-- 库存管理 TODO yang 待开发-->
+          <!-- <el-sub-menu index="inventory">
             <template #title>库存管理</template>
             <el-menu-item index="inventory-list" @click="changeDisplayMode('inventory-list')">库存查询</el-menu-item>
             <el-menu-item index="inventory-transaction" @click="changeDisplayMode('inventory-transaction')">库存流水</el-menu-item>
             <el-menu-item index="stock-take" @click="changeDisplayMode('stock-take')">库存盘点</el-menu-item>
-          </el-sub-menu>
+          </el-sub-menu> -->
           
           <!-- 业务管理 -->
           <el-sub-menu index="business">
             <template #title>出入库管理</template>
             <el-menu-item index="inbound" @click="changeDisplayMode('inbound')">入库管理</el-menu-item>
             <el-menu-item index="outbound" @click="changeDisplayMode('outbound')">出库管理</el-menu-item>
-            <el-menu-item index="transfer" @click="changeDisplayMode('transfer')">调拨管理</el-menu-item>
+            <!-- <el-menu-item index="transfer" @click="changeDisplayMode('transfer')">调拨管理</el-menu-item>  TODO yang 待开发 -->
           </el-sub-menu>
           
           <!-- 基础数据 -->
@@ -38,7 +38,7 @@
             <!-- <el-menu-item index="warehouse" @click="changeDisplayMode('warehouse')">仓库管理</el-menu-item> -->
             <el-menu-item index="supplier" @click="changeDisplayMode('supplier')">供应商管理</el-menu-item>
             <el-menu-item index="customer" @click="changeDisplayMode('customer')">客户管理</el-menu-item>
-            <el-menu-item index="approveManager" @click="changeDisplayMode('approveManager')">审批管理</el-menu-item>
+            <!-- <el-menu-item index="approveManager" @click="changeDisplayMode('approveManager')">审批管理</el-menu-item> TODO yang 待开发 -->
           </el-sub-menu>
 
           <el-sub-menu index="product">
@@ -145,7 +145,7 @@
         <!-- 用户头像下拉菜单 -->
         <el-dropdown class="avatar-dropdown" trigger="click" @command="handleUserCommand">
           <div class="avatar-wrapper">
-            <el-avatar :src="userInfo.avatar || '/images/default-avatar.png'" />
+            <el-avatar :src="userInfo.avatarUrl || '/images/default-avatar.png'" />
             <span class="user-name">{{ userInfo.realName || userInfo.username }}</span>
             <el-icon><ArrowDown /></el-icon>
           </div>
@@ -385,6 +385,8 @@
     <CkInventoryTransaction v-if="displayMode === 'inventory-transaction'" />
     <CkStockTake v-if="displayMode === 'stock-take'" />
     <CkShelfManage v-if="displayMode === 'shelf'" />
+    <CkUser v-if="displayMode === 'profile'" />
+
   </div>
 </template>
 
@@ -396,7 +398,7 @@ import { post, get } from '@/net';
 import { logout } from '@/net';
 import { 
   Bell, CircleCheck, ArrowDown, User, Setting, SwitchButton,
-  Box, OfficeBuilding, TrendCharts, Clock, Warning,
+  Box, OfficeBuilding,   TrendCharts, Clock, Warning,
   Plus, Minus, Refresh, DocumentChecked, Finished
 } from '@element-plus/icons-vue';
 
@@ -413,6 +415,7 @@ import CkInventoryList from '@/views/ck/CkInventoryList.vue';
 import CkStockTake from '@/views/ck/CkStockTake.vue';
 import CkInventoryTransaction from '@/views/ck/CkInventoryTransaction.vue';
 import CkShelfManage from '@/views/ck/CkShelfManage.vue';
+import CkUser from '@/views/ck/CkUser.vue';
 
 
 
@@ -430,7 +433,7 @@ const userInfo = ref({
   id: null,
   username: '',
   realName: '',
-  avatar: '',
+  avatarUrl: '',
   role: ''
 });
 
@@ -554,6 +557,7 @@ const padZero = (num) => {
 };
 
 const handleUserCommand = (command) => {
+  console.log('用户操作:', command);
   switch (command) {
     case 'profile':
       changeDisplayMode('profile');
