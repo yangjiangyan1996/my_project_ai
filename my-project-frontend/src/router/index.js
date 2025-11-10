@@ -210,7 +210,7 @@ const router = createRouter({
         {
             path: '/index/CkOutboundManage/',
             name: 'ckOutboundManage',
-            component: () => import('@/views/ck/ckOutboundManage.vue'),
+            component: () => import('@/views/ck/CkOutboundManage.vue'),
             meta: { requiresAuth: false }
         },
         {
