@@ -118,15 +118,17 @@
         </el-col>
       </el-row>
 
-      <el-row :gutter="20" v-if="formModel.outUnitCode">
+      <!-- 单品重量和出货单位包含数量 - 一直显示 -->
+      <el-row :gutter="20">
         <el-col :span="12">
-          <el-form-item label="单品重量">
+          <el-form-item label="单品重量（kg）">
             <el-input-number
               v-model="formModel.weightPerUnit"
               :min="0"
               :precision="2"
               controls-position="right"
               style="width: 100%"
+              placeholder="请输入单品重量"
             >
               <template #append>kg</template>
             </el-input-number>
@@ -140,10 +142,75 @@
               :max="1000"
               controls-position="right"
               style="width: 100%"
+              :disabled="!formModel.outUnitCode"
             >
               <template #prepend>1{{ getUnitName(formModel.outUnitCode) }} =</template>
               <template #append>{{ getUnitName(formModel.unitCode) }}</template>
             </el-input-number>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- 出货单位体积（长宽高） -->
+      <el-row :gutter="20" v-if="formModel.outUnitCode">
+        <el-col :span="8">
+          <el-form-item label="长度(cm)">
+            <el-input-number
+              v-model="formModel.outUnitLength"
+              :min="0"
+              :precision="2"
+              controls-position="right"
+              style="width: 100%"
+              placeholder="长度"
+            >
+              <template #append>cm</template>
+            </el-input-number>
+          </el-form-item>
+        </el-col>
+        <el-col :span="8">
+          <el-form-item label="宽度(cm)">
+            <el-input-number
+              v-model="formModel.outUnitWidth"
+              :min="0"
+              :precision="2"
+              controls-position="right"
+              style="width: 100%"
+              placeholder="宽度"
+            >
+              <template #append>cm</template>
+            </el-input-number>
+          </el-form-item>
+        </el-col>
+        <el-col :span="8">
+          <el-form-item label="高度(cm)">
+            <el-input-number
+              v-model="formModel.outUnitHeight"
+              :min="0"
+              :precision="2"
+              controls-position="right"
+              style="width: 100%"
+              placeholder="高度"
+            >
+              <template #append>cm</template>
+            </el-input-number>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- 体积计算结果 -->
+      <el-row :gutter="20" v-if="formModel.outUnitCode && (formModel.outUnitLength || formModel.outUnitWidth || formModel.outUnitHeight)">
+        <el-col :span="24">
+          <el-form-item label="总体积">
+            <el-input
+              :value="calculateVolume"
+              readonly
+              style="width: 100%"
+            >
+              <template #append>cm³</template>
+            </el-input>
+            <div class="volume-tip" v-if="calculateVolume > 0">
+              <span class="tip-text">约 {{ formatVolume(calculateVolume) }}</span>
+            </div>
           </el-form-item>
         </el-col>
       </el-row>
@@ -412,7 +479,7 @@ const categoryForm = ref({
   status: 1
 });
 
-// 响应式表单模型 - 关键修改：使用 reactive 替代 computed
+// 响应式表单模型
 const formModel = reactive({
   id: '',
   sku: '',
@@ -424,6 +491,10 @@ const formModel = reactive({
   outUnitCode: '',
   outUnitPerNum: 1,
   weightPerUnit: 0,
+  // 出货单位体积字段
+  outUnitLength: 0,
+  outUnitWidth: 0,
+  outUnitHeight: 0,
   color: '',
   minStock: 0,
   remark: '',
@@ -536,6 +607,24 @@ const totalComponentQuantity = computed(() => {
     return sum + (parseFloat(item.quantity) || 0);
   }, 0).toFixed(4);
 });
+
+// 计算属性 - 计算体积
+const calculateVolume = computed(() => {
+  const length = parseFloat(formModel.outUnitLength) || 0;
+  const width = parseFloat(formModel.outUnitWidth) || 0;
+  const height = parseFloat(formModel.outUnitHeight) || 0;
+  return length * width * height;
+});
+
+// 方法 - 格式化体积显示
+const formatVolume = (volume) => {
+  if (volume >= 1000000) {
+    return `${(volume / 1000000).toFixed(2)} m³`;
+  } else if (volume >= 1000) {
+    return `${(volume / 1000).toFixed(2)} L`;
+  }
+  return `${volume.toFixed(2)} cm³`;
+};
 
 // 计算属性
 const getUnitName = (unitCode) => {
@@ -721,6 +810,10 @@ const handleSubmit = async () => {
       outUnitCode: formModel.outUnitCode,
       outUnitPerNum: formModel.outUnitPerNum,
       weightPerUnit: formModel.weightPerUnit,
+      // 出货单位体积字段
+      outUnitLength: formModel.outUnitLength,
+      outUnitWidth: formModel.outUnitWidth,
+      outUnitHeight: formModel.outUnitHeight,
       // ✅ 只传 bomData
       bomData: formModel.bomDetails.length > 0 ? {
         bomCode: `${formModel.sku}_BOM`,
@@ -834,6 +927,17 @@ onMounted(() => {
   color: #303133;
   font-weight: bold;
   font-size: 14px;
+}
+
+/* 体积提示样式 */
+.volume-tip {
+  margin-top: 4px;
+}
+
+.tip-text {
+  font-size: 12px;
+  color: #909399;
+  font-style: italic;
 }
 
 :deep(.el-input-number) {

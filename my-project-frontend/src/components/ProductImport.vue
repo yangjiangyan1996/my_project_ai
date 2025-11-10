@@ -36,12 +36,11 @@
           ref="uploadRef"
           class="upload-demo"
           drag
-          action="/api/auth/product/import"
+          :auto-upload="false"
           :multiple="false"
           :file-list="fileList"
           :before-upload="beforeUpload"
-          :on-success="handleSuccess"
-          :on-error="handleError"
+          :on-change="handleFileChange"
           :on-remove="handleRemove"
           accept=".xlsx,.xls"
         >
@@ -55,6 +54,22 @@
             </div>
           </template>
         </el-upload>
+        
+        <!-- 手动上传按钮 -->
+        <div class="upload-actions" v-if="fileList.length > 0">
+          <el-button 
+            type="primary" 
+            @click="handleManualUpload" 
+            :loading="uploading"
+            size="large"
+          >
+            <el-icon><Upload /></el-icon>
+            开始导入
+          </el-button>
+          <el-button @click="handleClear" :disabled="uploading">
+            清空文件
+          </el-button>
+        </div>
       </div>
     </el-card>
 
@@ -149,10 +164,11 @@
       <el-button @click="$emit('cancel')">取消</el-button>
       <el-button 
         type="primary" 
-        @click="handleConfirm"
-        :disabled="!fileList.length"
+        @click="handleManualUpload"
+        :disabled="fileList.length === 0 || uploading"
+        :loading="uploading"
       >
-        开始导入
+        {{ uploading ? '导入中...' : '开始导入' }}
       </el-button>
     </div>
   </div>
@@ -161,14 +177,16 @@
 <script setup>
 import { ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { UploadFilled, Download, InfoFilled } from '@element-plus/icons-vue';
+import { UploadFilled, Download, InfoFilled, Upload } from '@element-plus/icons-vue';
+import { post } from '@/net';
 
 const emit = defineEmits(['success', 'cancel']);
 
 const uploadRef = ref();
 const fileList = ref([]);
 const importResult = ref(null);
-const loading = ref(false);
+const uploading = ref(false);
+const currentFile = ref(null);
 
 // 方法
 const handleDownloadTemplate = () => {
@@ -179,7 +197,9 @@ const handleDownloadTemplate = () => {
 
 const beforeUpload = (file) => {
   const isExcel = file.type === 'application/vnd.ms-excel' || 
-                  file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                  file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                  file.name.endsWith('.xlsx') || 
+                  file.name.endsWith('.xls');
   const isLt10M = file.size / 1024 / 1024 < 10;
 
   if (!isExcel) {
@@ -193,58 +213,74 @@ const beforeUpload = (file) => {
   return true;
 };
 
-const handleSuccess = (response, file) => {
-  loading.value = false;
-  importResult.value = response;
-  
-  if (response.success) {
-    ElMessage.success(`导入成功！成功${response.successCount}条，失败${response.errorCount}条`);
-    emit('success');
-  } else {
-    ElMessage.error('导入失败，请检查数据格式');
-  }
+const handleFileChange = (file) => {
+  // 这里 file 参数是 UploadFile 对象，我们需要获取原始文件
+  currentFile.value = file.raw;
+  // 更新文件列表显示，确保只有一个文件
+  fileList.value = [file];
+  console.log('文件已选择:', file.name, '文件列表:', fileList.value);
 };
 
-const handleError = (error, file) => {
-  loading.value = false;
-  ElMessage.error('文件上传失败');
-  console.error('上传失败:', error);
-};
-
-const handleRemove = (file) => {
-  fileList.value = fileList.value.filter(item => item.uid !== file.uid);
-  importResult.value = null;
-};
-
-const handleConfirm = () => {
-  if (fileList.value.length === 0) {
+const handleManualUpload = async () => {
+  if (!currentFile.value) {
     ElMessage.warning('请先选择要导入的文件');
     return;
   }
   
-  loading.value = true;
-  ElMessage.info('开始导入数据...');
+  uploading.value = true;
   
-  // 在实际项目中，这里会触发上传组件的提交
-  // uploadRef.value.submit();
-  
-  // 模拟导入成功
-  setTimeout(() => {
-    loading.value = false;
+  try {
+    const formData = new FormData();
+    formData.append('file', currentFile.value);
+    
+    ElMessage.info('开始导入数据，请稍候...');
+    
+    const result = await post('/api/auth/product/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    // 处理导入结果
+    if (result && result.success) {
+      importResult.value = result;
+      ElMessage.success(`导入成功！成功${result.successCount}条，失败${result.errorCount}条`);
+      emit('success');
+    } else {
+      ElMessage.error(result?.message || '导入失败，请检查数据格式');
+    }
+  } catch (error) {
+    console.error('导入失败:', error);
+    ElMessage.error('导入失败: ' + (error.message || '未知错误'));
+    
+    // 模拟错误结果用于演示
     importResult.value = {
-      success: true,
-      total: 25,
-      successCount: 23,
-      errorCount: 2,
+      success: false,
+      total: 0,
+      successCount: 0,
+      errorCount: 1,
       importTime: new Date().toISOString(),
       errors: [
-        { row: 3, sku: 'SKU003', message: 'SKU编码已存在' },
-        { row: 15, sku: 'SKU015', message: '分类编码不存在' }
+        { row: 1, sku: '', message: error.message || '系统错误' }
       ]
     };
-    ElMessage.success(`导入成功！成功23条，失败2条`);
-    emit('success');
-  }, 2000);
+  } finally {
+    uploading.value = false;
+  }
+};
+
+const handleRemove = (file) => {
+  fileList.value = fileList.value.filter(item => item.uid !== file.uid);
+  if (fileList.value.length === 0) {
+    currentFile.value = null;
+  }
+  importResult.value = null;
+};
+
+const handleClear = () => {
+  fileList.value = [];
+  currentFile.value = null;
+  importResult.value = null;
 };
 
 const formatTime = (timeString) => {
@@ -294,6 +330,14 @@ const padZero = (num) => {
 
 .upload-content {
   padding: 20px;
+}
+
+.upload-actions {
+  margin-top: 16px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
 }
 
 .instruction-content {
@@ -363,5 +407,16 @@ const padZero = (num) => {
 
 :deep(.el-descriptions) {
   margin-top: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .upload-actions {
+    flex-direction: column;
+  }
+  
+  .upload-actions .el-button {
+    width: 100%;
+  }
 }
 </style>

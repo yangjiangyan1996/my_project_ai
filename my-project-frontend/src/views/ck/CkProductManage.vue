@@ -433,6 +433,9 @@ const loadProductList = async () => {
         outUnitName: product.outUnitName || '',
         outUnitPerNum: product.outUnitPerNum || 0,
         weightPerUnit: product.weightPerUnit || 0,
+        outUnitLength: product.outUnitLength || 0,
+        outUnitWidth: product.outUnitWidth || 0,
+        outUnitHeight: product.outUnitHeight || 0,
         color: product.color || '',
         minStock: product.minStock || 0,
         currentStock: product.currentStock || 0,
@@ -578,12 +581,16 @@ const handleEdit = (product) => {
       lossRate: item.lossRate,
       remark: item.remark,
       sortOrder: item.sortOrder
-    })) : []
+    })) : [],
+    // 确保出货单位体积字段有值
+    outUnitLength: product.outUnitLength || 0,
+    outUnitWidth: product.outUnitWidth || 0,
+    outUnitHeight: product.outUnitHeight || 0
   };
   
   console.log('编辑产品数据转换:', {
-    原始数据: product.bomData,
-    转换后数据: formData.bomDetails
+    原始数据: product,
+    转换后数据: formData
   });
   
   currentProduct.value = formData;
