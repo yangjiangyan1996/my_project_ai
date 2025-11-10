@@ -460,7 +460,6 @@ public class CKProductFacade {
         List<ProductImportDto> plist = ExcelUtils.readExcel(file, ProductImportDto.class);
 
         List<ProductImportDto> productList = plist.subList(2, plist.size());
-
         List<Unit> units = unitService.selectByTenantId(tenantId, 1);
         Map<String, Unit> unitName2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitName, v -> v));
 
