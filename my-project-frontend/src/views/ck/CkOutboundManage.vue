@@ -323,19 +323,181 @@
     <el-dialog
       v-model="detailDialogVisible"
       :title="`出库单详情 - ${currentOutbound?.orderNo || '未知单号'}`"
-      width="90%"
+      width="95%"
       top="5vh"
+      class="detail-dialog"
     >
-      <div v-if="currentOutbound">
-        <OutboundDetail
-          :outbound-data="currentOutbound"
-          @close="detailDialogVisible = false"
-          @refresh="refreshList"
-        />
+      <div v-if="currentOutbound" class="detail-content">
+        <!-- 基本信息 -->
+        <el-card class="detail-section" shadow="never">
+          <template #header>
+            <div class="section-header">
+              <span class="section-title">基本信息</span>
+            </div>
+          </template>
+          <el-descriptions :column="4" border>
+            <el-descriptions-item label="出库单号">{{ currentOutbound.orderNo }}</el-descriptions-item>
+            <el-descriptions-item label="出库类型">{{ getTypeText(currentOutbound.orderType) }}</el-descriptions-item>
+            <el-descriptions-item label="仓库">{{ currentOutbound.warehouseName }}</el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :type="getStatusTagType(currentOutbound.status)" size="small">
+                {{ getStatusText(currentOutbound.status) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="客户">{{ currentOutbound.customerName || '--' }}</el-descriptions-item>
+            <el-descriptions-item label="关联单号">{{ currentOutbound.relatedOrderNo || '--' }}</el-descriptions-item>
+            <el-descriptions-item label="预计出库日期">{{ currentOutbound.expectedDate || '--' }}</el-descriptions-item>
+            <el-descriptions-item label="产品种类">{{ currentOutbound.itemCount }} 种</el-descriptions-item>
+            <el-descriptions-item label="总数量">{{ currentOutbound.totalQuantity }}</el-descriptions-item>
+            <el-descriptions-item label="总金额">¥{{ (currentOutbound.totalAmount || 0).toFixed(2) }}</el-descriptions-item>
+            <el-descriptions-item label="申请人">{{ currentOutbound.applicantName || '--' }}</el-descriptions-item>
+            <el-descriptions-item label="创建时间">{{ formatTime(currentOutbound.createdAt) }}</el-descriptions-item>
+            <el-descriptions-item label="更新时间">{{ formatTime(currentOutbound.updatedAt) }}</el-descriptions-item>
+            <el-descriptions-item label="备注" :span="2">{{ currentOutbound.remark || '--' }}</el-descriptions-item>
+          </el-descriptions>
+        </el-card>
+
+        <!-- 产品明细 -->
+        <el-card class="detail-section" shadow="never" v-if="currentOutbound.items && currentOutbound.items.length > 0">
+          <template #header>
+            <div class="section-header">
+              <span class="section-title">产品明细</span>
+              <span class="section-subtitle">共 {{ currentOutbound.items.length }} 个产品</span>
+            </div>
+          </template>
+          <el-table :data="currentOutbound.items" border style="width: 100%">
+            <el-table-column type="index" label="序号" width="60" align="center" />
+            <el-table-column label="产品信息" min-width="200">
+              <template #default="{ row }">
+                <div class="product-info">
+                  <div class="product-name">{{ row.productName }}</div>
+                  <div class="product-sku">SKU: {{ row.sku }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="规格型号" width="120" prop="spec" />
+            <el-table-column label="单位" width="80" align="center" prop="unit" />
+            <el-table-column label="出库数量" width="100" align="center">
+              <template #default="{ row }">
+                <span>{{ row.quantity }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="单价" width="120" align="right">
+              <template #default="{ row }">
+                <span>¥{{ (row.priceUnit || 0).toFixed(4) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="金额" width="120" align="right">
+              <template #default="{ row }">
+                <span class="price-total">¥{{ (row.priceTotal).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="批次分配" min-width="200">
+              <template #default="{ row }">
+                <div v-if="row.batchAllocations && row.batchAllocations.length > 0" class="batch-summary">
+                  <el-tag
+                    v-for="allocation in row.batchAllocations"
+                    :key="allocation.batchNo"
+                    size="small"
+                    class="batch-tag"
+                  >
+                    {{ allocation.batchNo }}: {{ allocation.quantity }}个
+                  </el-tag>
+                </div>
+                <div v-else class="batch-empty">
+                  <span class="empty-text">未分配批次</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="备注" min-width="150" prop="remark">
+              <template #default="{ row }">
+                <span>{{ row.remark || '--' }}</span>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 产品统计 -->
+          <div class="product-summary">
+            <el-row :gutter="20">
+              <el-col :span="6">
+                <div class="summary-item">
+                  <span class="label">产品种类：</span>
+                  <span class="value">{{ currentOutbound.items.length }} 种</span>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="summary-item">
+                  <span class="label">总数量：</span>
+                  <span class="value">{{ currentOutbound.totalQuantity }}</span>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="summary-item">
+                  <span class="label">总金额：</span>
+                  <span class="value">¥{{ (currentOutbound.totalAmount || 0).toFixed(2) }}</span>
+                </div>
+              </el-col>
+            </el-row>
+          </div>
+        </el-card>
+
+        <!-- 附件信息 -->
+        <el-card class="detail-section" shadow="never" v-if="currentOutbound.attachments && currentOutbound.attachments.length > 0">
+          <template #header>
+            <div class="section-header">
+              <span class="section-title">附件信息</span>
+              <span class="section-subtitle">共 {{ currentOutbound.attachments.length }} 个文件</span>
+            </div>
+          </template>
+          <el-table :data="currentOutbound.attachments" border style="width: 100%">
+            <el-table-column type="index" label="序号" width="60" align="center" />
+            <el-table-column label="文件名称" prop="fileName" />
+            <el-table-column label="文件大小" width="120" align="center">
+              <template #default="{ row }">
+                <span>{{ formatFileSize(row.fileSize) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="文件类型" width="120" align="center" prop="fileType" />
+            <el-table-column label="操作" width="120" align="center">
+              <template #default="{ row }">
+                <el-button type="primary" link @click="handleDownload(row)">下载</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+
+        <!-- 原始数据展示（用于调试） -->
+        <!-- <el-card class="detail-section" shadow="never" v-if="showRawData">
+          <template #header>
+            <div class="section-header">
+              <span class="section-title">原始数据</span>
+              <el-button type="text" @click="showRawData = !showRawData">
+                {{ showRawData ? '隐藏' : '显示' }}原始数据
+              </el-button>
+            </div>
+          </template>
+          <pre class="raw-data">{{ JSON.stringify(currentOutbound, null, 2) }}</pre>
+        </el-card> -->
       </div>
       <div v-else class="no-data">
         <el-empty description="数据加载失败" />
       </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <!-- <el-button @click="showRawData = !showRawData" type="info" link>
+            {{ showRawData ? '隐藏原始数据' : '显示原始数据' }}
+          </el-button> -->
+          <el-button @click="detailDialogVisible = false">关闭</el-button>
+          <el-button 
+            type="primary" 
+            @click="handleEdit(currentOutbound)"
+            v-if="currentOutbound && (currentOutbound.status === 0 || currentOutbound.status === 4)"
+          >
+            编辑
+          </el-button>
+        </div>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -351,6 +513,7 @@ const router = useRouter();
 const loading = ref(false);
 const detailDialogVisible = ref(false);
 const currentOutbound = ref(null);
+const showRawData = ref(false);
 
 // 筛选表单
 const filterForm = reactive({
@@ -385,9 +548,9 @@ const customerList = ref([]);
 // 选项数据
 const orderTypeOptions = [
   { value: 1, label: '销售出库' },
-  { value: 2, label: '退货出库' },
-  { value: 3, label: '调拨出库' },
-  { value: 4, label: '领用出库' },
+  { value: 2, label: '生产领料' },
+  { value: 3, label: '退货出库' },
+  { value: 4, label: '调拨出库' },
   { value: 5, label: '其他出库' }
 ];
 
@@ -399,6 +562,116 @@ const statusOptions = [
   { value: 4, label: '已拒绝' },
   { value: 9, label: '已取消' }
 ];
+
+// 加载出库单详情
+const loadOutboundDetail = async (id) => {
+  try {
+    const res = await get(`/api/auth/outbound/detail?orderId=${id}`);
+    console.log('出库单详情响应:', res);
+    
+    if (res && res.code === 200) {
+      // 如果接口返回了标准响应格式
+      const detailData = res.data || res;
+      return {
+        // 基本信息
+        id: detailData.id,
+        orderNo: detailData.orderNo,
+        orderType: detailData.orderType,
+        warehouseId: detailData.warehouseId,
+        warehouseName: detailData.warehouseName,
+        customerId: detailData.customerId,
+        customerName: detailData.customerName,
+        relatedOrderNo: detailData.relatedOrderNo,
+        expectedDate: detailData.expectedDate,
+        remark: detailData.remark,
+        status: detailData.status,
+        itemCount: detailData.itemCount,
+        totalQuantity: detailData.totalQuantity,
+        totalAmount: detailData.totalAmount,
+        applicantId: detailData.applicantId,
+        applicantName: detailData.applicantName,
+        applicantAvatar: detailData.applicantAvatar,
+        isUrgent: detailData.isUrgent || false,
+        createdAt: detailData.createdAt,
+        updatedAt: detailData.updatedAt,
+        
+        // 扩展字段，保留所有原始数据
+        ...detailData,
+        
+        // 产品明细
+        items: detailData.items ? detailData.items.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          productName: item.productName,
+          sku: item.sku,
+          spec: item.spec,
+          unit: item.unit,
+          quantity: item.quantity,
+          price: item.price,
+          batchAllocations: item.batchAllocations || [],
+          remark: item.remark,
+          // 保留所有原始字段
+          ...item
+        })) : [],
+        
+        // 附件信息
+        attachments: detailData.attachments || []
+      };
+    } else if (res) {
+      // 如果接口直接返回数据对象
+      return {
+        // 基本信息
+        id: res.id,
+        orderNo: res.orderNo,
+        orderType: res.orderType,
+        warehouseId: res.warehouseId,
+        warehouseName: res.warehouseName,
+        customerId: res.customerId,
+        customerName: res.customerName,
+        relatedOrderNo: res.relatedOrderNo,
+        expectedDate: res.expectedDate,
+        remark: res.remark,
+        status: res.status,
+        itemCount: res.itemCount,
+        totalQuantity: res.totalQuantity,
+        totalAmount: res.totalAmount,
+        applicantId: res.applicantId,
+        applicantName: res.applicantName,
+        applicantAvatar: res.applicantAvatar,
+        isUrgent: res.isUrgent || false,
+        createdAt: res.createdAt,
+        updatedAt: res.updatedAt,
+        
+        // 扩展字段，保留所有原始数据
+        ...res,
+        
+        // 产品明细
+        items: res.items ? res.items.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          productName: item.productName,
+          sku: item.sku,
+          spec: item.spec,
+          unit: item.unit,
+          quantity: item.quantity,
+          price: item.price,
+          batchAllocations: item.batchAllocations || [],
+          remark: item.remark,
+          // 保留所有原始字段
+          ...item
+        })) : [],
+        
+        // 附件信息
+        attachments: res.attachments || []
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('加载出库单详情失败:', error);
+    ElMessage.error('加载详情失败: ' + (error.message || '未知错误'));
+    return null;
+  }
+};
 
 // 计算属性
 const pendingOutbounds = computed(() => {
@@ -537,15 +810,30 @@ const handleCreate = () => {
   router.push('/index/ckOutboundCreate');
 };
 
-const handleView = (outbound) => {
-  currentOutbound.value = outbound;
+const handleView = async (outbound) => {
+  loading.value = true;
   detailDialogVisible.value = true;
+  try {
+    const detail = await loadOutboundDetail(outbound.id);
+    if (detail) {
+      currentOutbound.value = detail;
+      ElMessage.success('详情加载成功');
+    } else {
+      ElMessage.error('获取出库单详情失败');
+      detailDialogVisible.value = false;
+    }
+  } catch (error) {
+    ElMessage.error('获取出库单详情失败');
+    detailDialogVisible.value = false;
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleEdit = (outbound) => {
-  router.push(`/outbound/edit/${outbound.id}`);
+  // 跳转到编辑页面，传递出库单ID
+  router.push(`/index/ckOutboundCreate/${outbound.id}`);
 };
-
 
 const handleSubmit = async (outbound) => {
   try {
@@ -641,6 +929,19 @@ const handleComplete = async (outbound) => {
       ElMessage.error('完成失败');
     }
   }
+};
+
+const handleDownload = (file) => {
+  // 文件下载逻辑
+  ElMessage.info(`下载文件: ${file.fileName}`);
+};
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 const getTypeText = (orderType) => {
@@ -844,6 +1145,119 @@ onMounted(() => {
   border-top: 1px solid #ebeef5;
 }
 
+/* 详情对话框样式 */
+.detail-dialog {
+  max-width: 1200px;
+}
+
+.detail-content {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.section-subtitle {
+  font-size: 14px;
+  color: #909399;
+}
+
+.product-info {
+  line-height: 1.4;
+}
+
+.product-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.product-sku {
+  font-size: 12px;
+  color: #909399;
+}
+
+.price-total {
+  font-weight: bold;
+  color: #409eff;
+}
+
+.batch-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.batch-tag {
+  margin: 2px;
+}
+
+.batch-empty {
+  margin-top: 8px;
+}
+
+.empty-text {
+  color: #909399;
+  font-size: 12px;
+}
+
+.product-summary {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-item .label {
+  color: #606266;
+  font-size: 14px;
+}
+
+.summary-item .value {
+  color: #303133;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.raw-data {
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .no-data {
   display: flex;
   align-items: center;
@@ -885,6 +1299,15 @@ onMounted(() => {
     flex-direction: column;
     gap: 4px;
     text-align: center;
+  }
+  
+  .detail-dialog {
+    width: 95% !important;
+  }
+  
+  .dialog-footer {
+    flex-direction: column;
+    gap: 12px;
   }
 }
 

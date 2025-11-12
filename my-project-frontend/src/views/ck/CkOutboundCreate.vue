@@ -3,14 +3,24 @@
     <el-card class="form-card" shadow="never">
       <template #header>
         <div class="card-header">
-          <span class="card-title">新建出库单</span>
+          <span class="card-title">{{ isEditMode ? '编辑出库单' : '新建出库单' }}</span>
           <div class="header-actions">
             <el-button @click="handleReset">重置</el-button>
-            <el-button type="primary" @click="handleSaveDraft" :loading="loading">
+            <el-button 
+              type="primary" 
+              @click="handleSaveDraft" 
+              :loading="loading"
+              v-if="!isEditMode || (isEditMode && formData.status === 0)"
+            >
               保存草稿
             </el-button>
-            <el-button type="primary" @click="handleSubmit" :loading="loading">
-              提交审核
+            <el-button 
+              type="primary" 
+              @click="handleSubmit" 
+              :loading="loading"
+              v-if="!isEditMode || (isEditMode && (formData.status === 0 || formData.status === 4))"
+            >
+              {{ isEditMode ? '更新提交' : '提交审核' }}
             </el-button>
           </div>
         </div>
@@ -24,7 +34,6 @@
         label-width="120px"
         class="outbound-form"
       >
-        <!-- 基本信息表单项保持不变 -->
         <el-row :gutter="24">
           <el-col :xs="24" :sm="12" :lg="8">
             <el-form-item label="出库单号" prop="orderNo">
@@ -123,7 +132,11 @@
       <div class="product-section">
         <div class="section-header">
           <h3>产品明细</h3>
-          <el-button type="primary" @click="handleAddProduct">
+          <el-button 
+            type="primary" 
+            @click="handleAddProduct"
+            :disabled="!formData.warehouseId"
+          >
             <el-icon><Plus /></el-icon>
             添加产品
           </el-button>
@@ -149,7 +162,7 @@
                 <el-option
                   v-for="product in availableProducts"
                   :key="product.id"
-                  :label="`${product.sku} - ${product.name} (库存: ${product.quantity})`"
+                  :label="`${product.sku} - ${product.name} (库存: ${productStockMap[product.id] || 0})`"
                   :value="product.id"
                 />
               </el-select>
@@ -167,8 +180,8 @@
           </el-table-column>
           <el-table-column label="当前库存" width="100" align="center">
             <template #default="{ row }">
-              <span :class="getStockClass(row.currentStock, row.quantity)">
-                {{ row.currentStock || 0 }}
+              <span :class="getStockClass(getCurrentStock(row), row.quantity)">
+                {{ getCurrentStock(row) }}
               </span>
             </template>
           </el-table-column>
@@ -181,11 +194,10 @@
                 controls-position="right"
                 style="width: 100%"
                 @change="() => handleQuantityChange($index)"
-                :disabled="!row.currentStock || row.currentStock <= 0"
+                :disabled="!getCurrentStock(row) || getCurrentStock(row) <= 0"
               />
             </template>
           </el-table-column>
-          <!-- 修改批次选择列 -->
           <el-table-column label="批次分配" min-width="200">
             <template #default="{ row, $index }">
               <div class="batch-allocation">
@@ -390,18 +402,25 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Delete, Upload } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
 const router = useRouter();
+const route = useRoute();
 const formRef = ref();
 const loading = ref(false);
 
+// 判断是否是编辑模式
+const isEditMode = computed(() => {
+  return !!route.params.id;
+});
+
 // 表单数据
 const formData = reactive({
+  id: null,
   orderNo: '',
   orderType: 1,
   warehouseId: null,
@@ -409,6 +428,7 @@ const formData = reactive({
   expectedDate: '',
   relatedOrderNo: '',
   remark: '',
+  status: 0,
   items: [],
   attachments: []
 });
@@ -429,6 +449,9 @@ const warehouseList = ref([]);
 const customerList = ref([]);
 const inventoryList = ref([]);
 const fileList = ref([]);
+
+// 产品库存映射表
+const productStockMap = ref({});
 
 // 出库类型选项
 const orderTypeOptions = [
@@ -515,6 +538,101 @@ const formRules = {
   ]
 };
 
+// 加载出库单详情
+const loadOutboundDetail = async (id) => {
+  loading.value = true;
+  try {
+    const res = await get(`/api/auth/outbound/detail?orderId=${id}`);
+    console.log('出库单详情响应:', res);
+    
+    if (res) {
+      const detailData = res.data || res;
+      
+      // 设置基本数据
+      Object.assign(formData, {
+        id: detailData.id,
+        orderNo: detailData.orderNo,
+        orderType: detailData.orderType,
+        warehouseId: detailData.warehouseId,
+        customerId: detailData.customerId,
+        expectedDate: detailData.expectedDate,
+        relatedOrderNo: detailData.relatedOrderNo || '',
+        remark: detailData.remark || '',
+        status: detailData.status
+      });
+
+      // 如果仓库有值，先加载对应的库存数据
+      if (detailData.warehouseId) {
+        await loadInventoryData(detailData.warehouseId);
+      }
+
+      // 设置产品明细数据
+      if (detailData.items && detailData.items.length > 0) {
+        formData.items = detailData.items.map(item => {
+          // 使用库存映射中的数据，如果不存在则使用原始数据
+          const currentStock = productStockMap.value[item.productId] || item.currentStock || 0;
+          
+          return {
+            productId: item.productId,
+            productName: item.productName || '',
+            sku: item.sku || '',
+            spec: item.spec || '',
+            unit: item.unit || '',
+            currentStock: currentStock, // 使用正确的库存数据
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            batchAllocations: item.batchAllocations || [],
+            availableBatches: item.availableBatches || [],
+            remark: item.remark || ''
+          };
+        });
+
+        // 为每个产品加载批次信息
+        for (let i = 0; i < formData.items.length; i++) {
+          const item = formData.items[i];
+          if (item.productId && formData.warehouseId) {
+            await loadBatchInfo(item.productId, formData.warehouseId, i);
+          }
+        }
+      } else {
+        formData.items = [];
+      }
+
+      // 设置附件数据
+      if (detailData.attachments && detailData.attachments.length > 0) {
+        fileList.value = detailData.attachments.map(att => ({
+          name: att.fileName,
+          url: att.filePath,
+          status: 'success'
+        }));
+        formData.attachments = detailData.attachments;
+      }
+      
+      ElMessage.success('数据加载成功');
+    }
+  } catch (error) {
+    console.error('加载出库单详情失败:', error);
+    ElMessage.error('加载数据失败');
+    router.back();
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 获取当前库存数量
+const getCurrentStock = (row) => {
+  if (row.productId && productStockMap.value[row.productId] !== undefined) {
+    return productStockMap.value[row.productId];
+  }
+  return row.currentStock || 0;
+};
+
+// 获取最大可出库数量
+const getMaxQuantity = (row) => {
+  const currentStock = getCurrentStock(row);
+  return currentStock > 0 ? currentStock : 1;
+};
+
 // 方法
 const generateOrderNo = () => {
   const date = new Date();
@@ -523,11 +641,6 @@ const generateOrderNo = () => {
   const day = String(date.getDate()).padStart(2, '0');
   const random = String(Math.random()).substr(2, 6);
   formData.orderNo = `CK${year}${month}${day}${random}`;
-};
-
-const getMaxQuantity = (row) => {
-  const currentStock = row.currentStock || 0;
-  return currentStock > 0 ? currentStock : 1;
 };
 
 const handleOrderTypeChange = (value) => {
@@ -539,7 +652,10 @@ const handleOrderTypeChange = (value) => {
 const handleWarehouseChange = async (warehouseId) => {
   if (warehouseId) {
     await loadInventoryData(warehouseId);
-    formData.items = [];
+    // 如果不是编辑模式，清空产品列表
+    if (!isEditMode.value) {
+      formData.items = [];
+    }
   }
 };
 
@@ -553,7 +669,7 @@ const handleAddProduct = () => {
     currentStock: 0,
     quantity: 1,
     price: 0,
-    batchAllocations: [], // 改为批次分配数组
+    batchAllocations: [],
     availableBatches: [],
     remark: ''
   });
@@ -572,10 +688,12 @@ const handleProductChange = async (productId, index) => {
     item.sku = product.sku;
     item.spec = product.spec;
     item.unit = product.unit;
-    item.currentStock = product.quantity || 0;
-    item.quantity = 1;
-    item.price = 0;
-    item.batchAllocations = []; // 重置批次分配
+    
+    // 统一从库存映射中获取库存数量
+    item.currentStock = productStockMap.value[productId] || 0;
+    item.quantity = item.quantity || 1;
+    item.price = item.price || 0;
+    item.batchAllocations = [];
     
     // 加载批次信息
     await loadBatchInfo(productId, formData.warehouseId, index);
@@ -692,14 +810,24 @@ const confirmBatchAllocation = () => {
 };
 
 const handleReset = () => {
-  ElMessageBox.confirm('确定要重置表单吗？所有输入的数据将会丢失。', '重置确认', {
-    type: 'warning'
-  }).then(() => {
-    formRef.value?.resetFields();
-    formData.items = [];
-    fileList.value = [];
-    generateOrderNo();
-    ElMessage.success('表单已重置');
+  ElMessageBox.confirm(
+    `确定要${isEditMode.value ? '重置' : '清空'}表单吗？所有输入的数据将会丢失。`, 
+    `${isEditMode.value ? '重置' : '清空'}确认`, 
+    {
+      type: 'warning'
+    }
+  ).then(() => {
+    if (isEditMode.value) {
+      // 编辑模式下重新加载数据
+      loadOutboundDetail(route.params.id);
+    } else {
+      // 创建模式下清空表单
+      formRef.value?.resetFields();
+      formData.items = [];
+      fileList.value = [];
+      generateOrderNo();
+      ElMessage.success('表单已重置');
+    }
   });
 };
 
@@ -715,13 +843,14 @@ const handleSaveDraft = async () => {
       totalAmount: totalAmount.value
     };
     
-    const res = await post('/api/auth/outbound/create', submitData);
+    const url = isEditMode.value ? '/api/auth/outbound/update' : '/api/auth/outbound/create';
+    const res = await post(url, submitData);
     if (res) {
-      ElMessage.success('保存草稿成功');
-      router.push('/index/CkOutboundManage/');
+      ElMessage.success(isEditMode.value ? '更新草稿成功' : '保存草稿成功');
+      router.push('/index/ckOutboundManage');
     }
   } catch (error) {
-    ElMessage.error('保存草稿失败');
+    ElMessage.error(isEditMode.value ? '更新草稿失败' : '保存草稿失败');
   } finally {
     loading.value = false;
   }
@@ -757,13 +886,14 @@ const handleSubmit = async () => {
       totalAmount: totalAmount.value
     };
     
-    const res = await post('/api/auth/outbound/submit', submitData);
+    const url = isEditMode.value ? '/api/auth/outbound/update' : '/api/auth/outbound/create';
+    const res = await post(url, submitData);
     if (res) {
-      ElMessage.success('提交成功，等待审核');
-      router.push('/outbound/list');
+      ElMessage.success(isEditMode.value ? '更新成功' : '提交成功，等待审核');
+      router.push('/index/ckOutboundManage');
     }
   } catch (error) {
-    ElMessage.error('提交失败');
+    ElMessage.error(isEditMode.value ? '更新失败' : '提交失败');
   } finally {
     loading.value = false;
   }
@@ -785,8 +915,10 @@ const validateForm = async () => {
         ElMessage.warning(`请输入第 ${i + 1} 行产品的有效数量`);
         return false;
       }
-      if (item.quantity > item.currentStock) {
-        ElMessage.warning(`第 ${i + 1} 行产品出库数量超过库存`);
+      
+      const currentStock = getCurrentStock(item);
+      if (item.quantity > currentStock) {
+        ElMessage.warning(`第 ${i + 1} 行产品出库数量超过库存 (当前库存: ${currentStock})`);
         return false;
       }
     }
@@ -821,6 +953,14 @@ const loadInventoryData = async (warehouseId) => {
   try {
     const res = await get(`/api/auth/inventory/listOfWarehouse?warehouseId=${warehouseId}`);
     inventoryList.value = res || [];
+    
+    // 构建产品库存映射
+    productStockMap.value = {};
+    inventoryList.value.forEach(item => {
+      productStockMap.value[item.productId] = item.availableQuantity;
+    });
+    
+    console.log('库存映射表:', productStockMap.value);
   } catch (error) {
     ElMessage.error('加载库存数据失败');
   }
@@ -836,7 +976,7 @@ const loadBatchInfo = async (productId, warehouseId, index) => {
   }
 };
 
-// 文件上传相关方法保持不变
+// 文件上传相关方法
 const handleExceed = () => {
   ElMessage.warning('最多只能上传5个文件');
 };
@@ -867,10 +1007,54 @@ const handleRemoveFile = (file) => {
 };
 
 onMounted(() => {
-  generateOrderNo();
+  if (isEditMode.value) {
+    // 编辑模式，加载数据
+    loadOutboundDetail(route.params.id);
+  } else {
+    // 创建模式，生成单号
+    generateOrderNo();
+  }
   loadWarehouseList();
   loadCustomerList();
 });
+
+// 监听路由变化，处理直接通过URL进入的情况
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId) {
+      loadOutboundDetail(newId);
+    } else {
+      // 从编辑模式切换到创建模式
+      Object.assign(formData, {
+        id: null,
+        orderNo: '',
+        orderType: 1,
+        warehouseId: null,
+        customerId: null,
+        expectedDate: '',
+        relatedOrderNo: '',
+        remark: '',
+        status: 0,
+        items: [],
+        attachments: []
+      });
+      fileList.value = [];
+      productStockMap.value = {};
+      generateOrderNo();
+    }
+  }
+);
+
+// 监听仓库变化，重新加载库存数据
+watch(
+  () => formData.warehouseId,
+  (newWarehouseId) => {
+    if (newWarehouseId) {
+      loadInventoryData(newWarehouseId);
+    }
+  }
+);
 </script>
 
 <style scoped>
