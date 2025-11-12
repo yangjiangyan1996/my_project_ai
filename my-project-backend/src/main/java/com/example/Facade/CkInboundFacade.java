@@ -31,7 +31,8 @@ public class CkInboundFacade {
     CkUnitService unitService;
     @Resource
     CkProductService productService;
-
+    @Resource
+    CkShelfService shelfService;
     @Resource
     CkWareHouseService warehouseService;
     @Resource
@@ -453,6 +454,24 @@ public class CkInboundFacade {
             unitCode2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
         }
 
+        Map<Long, Warehouse> warehouseId2WarehouseMap = new HashMap<>();
+        List<Warehouse> warehouses = warehouseService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(warehouses)) {
+            warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
+        }
+
+        Map<Long, Supplier> supplierId2SupplierMap = new HashMap<>();
+        List<Supplier> suppliers = supplierService.listWareHouseEnable(tenantId);
+        if (!CollectionUtils.isEmpty(suppliers)) {
+            supplierId2SupplierMap = suppliers.stream().collect(Collectors.toMap(Supplier::getId, v -> v));
+        }
+
+        Map<Long, WarehouseShelf> shelfId2ShelfMap = new HashMap<>();
+        List<WarehouseShelf> shelves = shelfService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(shelves)) {
+            shelfId2ShelfMap = shelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        }
+
 
         InboundDetailResp resp = new InboundDetailResp();
         resp.setId(inboundOrder.getId());
@@ -462,17 +481,29 @@ public class CkInboundFacade {
         resp.setRemark(inboundOrder.getRemark());
         resp.setStatus(inboundOrder.getStatus());
         resp.setSupplierId(inboundOrder.getSupplierId());
-        resp.setTotalQuantity(inboundOrder.getTotalQuantity().doubleValue());
+        resp.setTotalQuantity(inboundOrder.getTotalQuantity());
+        resp.setTotalAmount(inboundOrder.getTotalAmount());
         resp.setWarehouseId(inboundOrder.getWarehouseId());
+        resp.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(inboundOrder.getWarehouseId(), new Warehouse()).getName());
+        resp.setSupplierName(supplierId2SupplierMap.getOrDefault(inboundOrder.getSupplierId(), new Supplier()).getSupplierName());
+        resp.setCreatedAt(inboundOrder.getCreatedAt());
+        resp.setModifiedAt(inboundOrder.getModifiedAt());
         Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
         Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
+        Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
         resp.setItems(items.stream().map(item -> {
             InboundDetailResp.InboundDetailCreateReq req = new InboundDetailResp.InboundDetailCreateReq();
-            req.setActualQuantity(item.getActualQuantity().doubleValue());
+            req.setItemId(item.getId());
+            req.setActualQuantity(item.getActualQuantity());
             req.setProductId(item.getProductId());
+            req.setProductName(finalProductId2ProductMap.getOrDefault(item.getProductId(), new Product()).getName());
+            req.setSku(finalProductId2ProductMap.getOrDefault(item.getProductId(), new Product()).getSku());
             req.setBatchNo(item.getBatchNo());
             req.setShelfLocationId(item.getShelfLocationId());
+            req.setShelfLocationName(finalShelfId2ShelfMap.getOrDefault(item.getShelfLocationId(), new WarehouseShelf()).getShelfName());
             req.setRemark(item.getRemark());
+            req.setPriceUnit(item.getPriceUnit());
+            req.setPriceTotal(item.getPriceTotal());
             Product product = finalProductId2ProductMap.getOrDefault(item.getProductId(), null);
             if (product.getId() != null) {
                 req.setSpec(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSpec());
@@ -480,6 +511,7 @@ public class CkInboundFacade {
             }
             return req;
         }).collect(Collectors.toList()));
+        resp.setItemCount(CollectionUtils.isEmpty(resp.getItems()) ? 0 : resp.getItems().size());
         return resp;
     }
 
