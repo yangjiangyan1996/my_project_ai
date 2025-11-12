@@ -63,8 +63,11 @@ public class CkWarehouseFacade {
             BeanUtils.copyProperties(v, p);
 
             p.setManagerId(v.getManagerId());
-            p.setManagerName(userInfoMap.get(v.getManagerId()).getNickname());
-            p.setManagerAvatar(userInfoMap.get(v.getManagerId()).getAvatarUrl());
+            if (userInfoMap != null && userInfoMap.containsKey(v.getManagerId()) ) {
+                p.setManagerName(userInfoMap.get(v.getManagerId()).getNickname());
+                p.setManagerAvatar(userInfoMap.get(v.getManagerId()).getAvatarUrl());
+            }
+
             return p;
         }).collect(Collectors.toList());
 
@@ -158,8 +161,10 @@ public class CkWarehouseFacade {
             BeanUtils.copyProperties(v, p);
 
             p.setManagerId(v.getManagerId());
-            p.setManagerName(userInfoMap.get(v.getManagerId()).getNickname());
-            p.setManagerAvatar(userInfoMap.get(v.getManagerId()).getAvatarUrl());
+            if(userInfoMap != null && userInfoMap.containsKey(v.getManagerId())) {
+                p.setManagerName(userInfoMap.get(v.getManagerId()).getNickname());
+                p.setManagerAvatar(userInfoMap.get(v.getManagerId()).getAvatarUrl());
+            }
             return p;
         }).collect(Collectors.toList());
     }
