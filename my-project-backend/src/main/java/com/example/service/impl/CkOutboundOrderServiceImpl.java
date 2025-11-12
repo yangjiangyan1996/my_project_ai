@@ -29,6 +29,14 @@ public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMappe
     }
 
     @Override
+    public OutboundOrder selectById(Long orderId, Long tenantId) {
+        return baseMapper.selectOne(new QueryWrapper<OutboundOrder>()
+                .eq("id", orderId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode()));
+    }
+
+    @Override
     public Page<OutboundOrder> getPage(Page<OutboundOrder> page, OutboundListPageReq req) {
         return baseMapper.selectPage(page,
                 new QueryWrapper<OutboundOrder>()
@@ -41,6 +49,7 @@ public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMappe
                         .like(StringUtils.isNotBlank(req.getOrderNo()), "order_no", req.getOrderNo())
                         .eq("tenant_id", req.getTenantId())
                         .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+                        .orderByDesc("created_at")
         );
     }
 

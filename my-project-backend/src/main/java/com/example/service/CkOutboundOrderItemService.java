@@ -19,4 +19,6 @@ public interface CkOutboundOrderItemService extends IService<OutboundOrderItem> 
     List<OutboundOrderItem> selectByTenantIdAndOutboundOrderIds(Long tenantId, List<Long> outboundOrderIds);
 
     List<OutboundOrderItem> selectByOrderId(Long id, Long tenantId);
+
+    int deleteByOrderId(Long orderId, Long tenantId, Long userId);
 }

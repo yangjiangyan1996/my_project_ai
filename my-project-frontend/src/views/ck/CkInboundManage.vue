@@ -206,6 +206,11 @@
               <span>{{ row.totalQuantity }}</span>
             </template>
           </el-table-column>
+          <el-table-column label="总金额" width="120" align="center">
+            <template #default="{ row }">
+              <span>¥{{ (row.totalAmount || 0).toFixed(2) }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="状态" width="100" align="center">
             <template #default="{ row }">
               <el-tag 
@@ -310,19 +315,152 @@
     <el-dialog
       v-model="detailDialogVisible"
       :title="`入库单详情 - ${currentInbound?.orderNo || '未知单号'}`"
-      width="90%"
+      width="95%"
       top="5vh"
+      class="detail-dialog"
     >
-      <div v-if="currentInbound">
-        <InboundDetail
-          :inbound-data="currentInbound"
-          @close="detailDialogVisible = false"
-          @refresh="refreshList"
-        />
+      <div v-if="currentInbound" class="detail-content">
+        <!-- 基本信息 -->
+        <el-card class="detail-section" shadow="never">
+          <template #header>
+            <div class="section-header">
+              <span class="section-title">基本信息</span>
+            </div>
+          </template>
+          <el-descriptions :column="4" border>
+            <el-descriptions-item label="入库单号">{{ currentInbound.orderNo }}</el-descriptions-item>
+            <el-descriptions-item label="入库类型">{{ getTypeText(currentInbound.orderType) }}</el-descriptions-item>
+            <el-descriptions-item label="仓库">{{ currentInbound.warehouseName }}</el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :type="getStatusTagType(currentInbound.status)" size="small">
+                {{ getStatusText(currentInbound.status) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="供应商">{{ currentInbound.supplierName || '--' }}</el-descriptions-item>
+            <el-descriptions-item label="关联单号">{{ currentInbound.relatedOrderNo || '--' }}</el-descriptions-item>
+            <el-descriptions-item label="产品种类">{{ currentInbound.itemCount }} 种</el-descriptions-item>
+            <el-descriptions-item label="总数量">{{ currentInbound.totalQuantity }}</el-descriptions-item>
+            <el-descriptions-item label="总金额">¥{{ (currentInbound.totalAmount || 0).toFixed(2) }}</el-descriptions-item>
+            <el-descriptions-item label="创建时间">{{ formatTime(currentInbound.createdAt) }}</el-descriptions-item>
+            <el-descriptions-item label="更新时间">{{ formatTime(currentInbound.modifiedAt) }}</el-descriptions-item>
+            <el-descriptions-item label="备注" :span="2">{{ currentInbound.remark || '--' }}</el-descriptions-item>
+          </el-descriptions>
+        </el-card>
+
+        <!-- 产品明细 -->
+        <el-card class="detail-section" shadow="never" v-if="currentInbound.items && currentInbound.items.length > 0">
+          <template #header>
+            <div class="section-header">
+              <span class="section-title">产品明细</span>
+              <span class="section-subtitle">共 {{ currentInbound.items.length }} 个产品</span>
+            </div>
+          </template>
+          <el-table :data="currentInbound.items" border style="width: 100%">
+            <el-table-column type="index" label="序号" width="60" align="center" />
+            <el-table-column label="产品信息" min-width="200">
+              <template #default="{ row }">
+                <div class="product-info">
+                  <div class="product-name">{{ row.productName }}</div>
+                  <div class="product-sku">SKU: {{ row.sku }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="规格型号" width="120" prop="spec" />
+            <el-table-column label="单位" width="80" align="center" prop="unit" />
+            <!-- <el-table-column label="数量" width="100" align="center">
+              <template #default="{ row }">
+                <span>{{ row.quantity }}</span>
+              </template>
+            </el-table-column> -->
+            <el-table-column label="实际数量" width="100" align="center">
+              <template #default="{ row }">
+                <span>{{ row.actualQuantity }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="单价" width="120" align="right">
+              <template #default="{ row }">
+                <span>¥{{ (row.priceUnit || 0).toFixed(4) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="总价" width="120" align="right">
+              <template #default="{ row }">
+                <span class="price-total">¥{{ (row.priceTotal || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="批次号" width="150" prop="batchNo">
+              <template #default="{ row }">
+                <span>{{ row.batchNo || '--' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="货架位置" width="150">
+              <template #default="{ row }">
+                <span>{{ row.shelfLocationName || '--' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="备注" min-width="150" prop="remark">
+              <template #default="{ row }">
+                <span>{{ row.remark || '--' }}</span>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 产品统计 -->
+          <div class="product-summary">
+            <el-row :gutter="20">
+              <el-col :span="6">
+                <div class="summary-item">
+                  <span class="label">产品种类：</span>
+                  <span class="value">{{ currentInbound.items.length }} 种</span>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="summary-item">
+                  <span class="label">总数量：</span>
+                  <span class="value">{{ currentInbound.totalQuantity }}</span>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="summary-item">
+                  <span class="label">总金额：</span>
+                  <span class="value">¥{{ (currentInbound.totalAmount || 0).toFixed(2) }}</span>
+                </div>
+              </el-col>
+            </el-row>
+          </div>
+        </el-card>
+
+        <!-- 原始数据展示（用于调试） -->
+        <!-- <el-card class="detail-section" shadow="never" v-if="showRawData">
+          <template #header>
+            <div class="section-header">
+              <span class="section-title">原始数据</span>
+              <el-button type="text" @click="showRawData = !showRawData">
+                {{ showRawData ? '隐藏' : '显示' }}原始数据
+              </el-button>
+            </div>
+          </template>
+          <pre class="raw-data">{{ JSON.stringify(currentInbound, null, 2) }}</pre>
+        </el-card> -->
       </div>
       <div v-else class="no-data">
         <el-empty description="数据加载失败" />
       </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <!-- <el-button @click="showRawData = !showRawData" type="info" link>
+            {{ showRawData ? '隐藏原始数据' : '显示原始数据' }}
+          </el-button> -->
+          <el-button @click="detailDialogVisible = false">关闭</el-button>
+          <el-button 
+            type="primary" 
+            @click="handleEdit(currentInbound)"
+            v-if="currentInbound && (currentInbound.status === 0 || currentInbound.status === 4)"
+          >
+            编辑
+          </el-button>
+        </div>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -338,10 +476,11 @@ const router = useRouter();
 const loading = ref(false);
 const detailDialogVisible = ref(false);
 const currentInbound = ref(null);
+const showRawData = ref(false);
 
 // 筛选表单
 const filterForm = reactive({
-  orderNo: '',
+  relatedOrderNo: '',
   orderType: '',
   warehouseId: '',
   supplierId: '',
@@ -386,6 +525,108 @@ const statusOptions = [
   { value: 9, label: '已取消' }
 ];
 
+// 加载入库单详情
+const loadInboundDetail = async (id) => {
+  try {
+    const res = await get(`/api/auth/inbound/detail?orderId=${id}`);
+    console.log('入库单详情响应:', res); // 调试日志
+    
+    if (res && res.code === 200) {
+      // 如果接口返回了标准响应格式
+      const detailData = res.data || res;
+      return {
+        // 基本信息
+        id: detailData.id,
+        orderNo: detailData.orderNo,
+        orderType: detailData.orderType,
+        warehouseId: detailData.warehouseId,
+        warehouseName: detailData.warehouseName,
+        supplierId: detailData.supplierId,
+        supplierName: detailData.supplierName,
+        relatedOrderNo: detailData.relatedOrderNo,
+        remark: detailData.remark,
+        status: detailData.status,
+        itemCount: detailData.itemCount,
+        totalQuantity: detailData.totalQuantity,
+        totalAmount: detailData.totalAmount,
+        createdAt: detailData.createdAt,
+        modifiedAt: detailData.modifiedAt,
+        
+        // 扩展字段，保留所有原始数据
+        ...detailData,
+        
+        // 产品明细
+        items: detailData.items ? detailData.items.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          productName: item.productName,
+          sku: item.sku,
+          spec: item.spec,
+          unit: item.unit,
+          quantity: item.quantity,
+          actualQuantity: item.actualQuantity,
+          priceUnit: item.priceUnit,
+          priceTotal: item.priceTotal,
+          shelfLocationId: item.shelfLocationId,
+          shelfLocationName: item.shelfLocationName,
+          batchNo: item.batchNo,
+          remark: item.remark,
+          // 保留所有原始字段
+          ...item
+        })) : []
+      };
+    } else if (res) {
+      // 如果接口直接返回数据对象
+      return {
+        // 基本信息
+        id: res.id,
+        orderNo: res.orderNo,
+        orderType: res.orderType,
+        warehouseId: res.warehouseId,
+        warehouseName: res.warehouseName,
+        supplierId: res.supplierId,
+        supplierName: res.supplierName,
+        relatedOrderNo: res.relatedOrderNo,
+        remark: res.remark,
+        status: res.status,
+        itemCount: res.itemCount,
+        totalQuantity: res.totalQuantity,
+        totalAmount: res.totalAmount,
+        createdAt: res.createdAt,
+        modifiedAt: res.modifiedAt,
+        
+        // 扩展字段，保留所有原始数据
+        ...res,
+        
+        // 产品明细
+        items: res.items ? res.items.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          productName: item.productName,
+          sku: item.sku,
+          spec: item.spec,
+          unit: item.unit,
+          quantity: item.quantity,
+          actualQuantity: item.actualQuantity,
+          priceUnit: item.priceUnit,
+          priceTotal: item.priceTotal,
+          shelfLocationId: item.shelfLocationId,
+          shelfLocationName: item.shelfLocationName,
+          batchNo: item.batchNo,
+          remark: item.remark,
+          // 保留所有原始字段
+          ...item
+        })) : []
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('加载入库单详情失败:', error);
+    ElMessage.error('加载详情失败: ' + (error.message || '未知错误'));
+    return null;
+  }
+};
+
 // 方法
 const loadInboundList = async () => {
   loading.value = true;
@@ -414,6 +655,7 @@ const loadInboundList = async () => {
         supplierName: inbound.supplierName || '',
         itemCount: inbound.itemCount || 0,
         totalQuantity: inbound.totalQuantity || 0,
+        totalAmount: inbound.totalAmount || 0,
         status: inbound.status || 0,
         remark: inbound.remark || '',
         createdAt: inbound.createdAt || new Date().toISOString(),
@@ -475,7 +717,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   Object.assign(filterForm, {
-    orderNo: '',
+    relatedOrderNo: '',
     orderType: '',
     warehouseId: '',
     supplierId: '',
@@ -501,9 +743,24 @@ const handleCreate = () => {
   router.push('/index/ckInboundCreate');
 };
 
-const handleView = (inbound) => {
-  currentInbound.value = inbound;
+const handleView = async (inbound) => {
+  loading.value = true;
   detailDialogVisible.value = true;
+  try {
+    const detail = await loadInboundDetail(inbound.id);
+    if (detail) {
+      currentInbound.value = detail;
+      ElMessage.success('详情加载成功');
+    } else {
+      ElMessage.error('获取入库单详情失败');
+      detailDialogVisible.value = false;
+    }
+  } catch (error) {
+    ElMessage.error('获取入库单详情失败');
+    detailDialogVisible.value = false;
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleEdit = (inbound) => {
@@ -520,7 +777,7 @@ const handleSubmit = async (inbound) => {
     
     const res = await post('/api/auth/inbound/approveOk', {
       orderId: inbound.id,
-      status: 2 // 已通过 TODO yang 等审核业务写完后，把这个接口的逻辑，放到审核成功后的回调中
+      status: 2
     });
     
     if (res) {
@@ -533,7 +790,6 @@ const handleSubmit = async (inbound) => {
     }
   }
 };
-
 
 const handleApprove = async (inbound) => {
   ElMessage.success('审核功能暂未开发');
@@ -576,7 +832,7 @@ const handleCancel = async (inbound) => {
     
     const res = await post('/api/auth/inbound/updateStatus', {
       id: inbound.id,
-      status: 9 // 已取消
+      status: 9
     });
     
     if (res) {
@@ -600,7 +856,7 @@ const handleComplete = async (inbound) => {
     
     const res = await post('/api/auth/inbound/updateStatus', {
       id: inbound.id,
-      status: 3 // 已完成
+      status: 3
     });
     
     if (res) {
@@ -636,12 +892,12 @@ const getStatusText = (status) => {
 
 const getStatusTagType = (status) => {
   const types = {
-    0: 'info',      // 待提交
-    1: 'warning',   // 审核中
-    2: 'success',   // 已通过
-    3: '',          // 已完成
-    4: 'danger',    // 已拒绝
-    9: 'info'       // 已取消
+    0: 'info',
+    1: 'warning',
+    2: 'success',
+    3: '',
+    4: 'danger',
+    9: 'info'
   };
   return types[status] || '';
 };
@@ -791,6 +1047,100 @@ onMounted(() => {
   border-top: 1px solid #ebeef5;
 }
 
+/* 详情对话框样式 */
+.detail-dialog {
+  max-width: 1200px;
+}
+
+.detail-content {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.section-subtitle {
+  font-size: 14px;
+  color: #909399;
+}
+
+.product-info {
+  line-height: 1.4;
+}
+
+.product-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.product-sku {
+  font-size: 12px;
+  color: #909399;
+}
+
+.price-total {
+  font-weight: bold;
+  color: #409eff;
+}
+
+.product-summary {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-item .label {
+  color: #606266;
+  font-size: 14px;
+}
+
+.summary-item .value {
+  color: #303133;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.raw-data {
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .no-data {
   display: flex;
   align-items: center;
@@ -826,6 +1176,15 @@ onMounted(() => {
   .action-buttons {
     flex-direction: column;
     gap: 4px;
+  }
+  
+  .detail-dialog {
+    width: 95% !important;
+  }
+  
+  .dialog-footer {
+    flex-direction: column;
+    gap: 12px;
   }
 }
 

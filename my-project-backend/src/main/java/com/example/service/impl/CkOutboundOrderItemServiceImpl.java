@@ -8,6 +8,7 @@ import com.example.mapper.CkOutboundOrderItemMapper;
 import com.example.service.CkOutboundOrderItemService;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -18,6 +19,18 @@ import java.util.List;
  */
 @Service
 public class CkOutboundOrderItemServiceImpl extends ServiceImpl<CkOutboundOrderItemMapper, OutboundOrderItem> implements CkOutboundOrderItemService {
+    @Override
+    public int deleteByOrderId(Long orderId, Long tenantId ,Long userId) {
+        OutboundOrderItem item = new OutboundOrderItem();
+        item.setIsDeleted(1);
+        item.setModifiedBy(userId);
+        item.setModifiedAt(new Date());
+        return this.baseMapper.update(item, new QueryWrapper<OutboundOrderItem>()
+                .eq("order_id", orderId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", 0));
+    }
+
     @Override
     public List<OutboundOrderItem> selectByOrderId(Long id, Long tenantId) {
         return baseMapper.selectList(new QueryWrapper<OutboundOrderItem>().eq("order_id", id)

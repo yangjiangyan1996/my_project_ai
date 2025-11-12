@@ -1,25 +1,27 @@
 package com.example.Facade;
 
+import com.alibaba.fastjson2.util.DateUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.OutboundApproveOkReq;
 import com.example.entity.cangku.req.OutboundCreateReq;
+import com.example.entity.cangku.req.OutboundDeleteReq;
 import com.example.entity.cangku.req.OutboundListPageReq;
+import com.example.entity.cangku.resp.OutboundDetailResp;
 import com.example.entity.cangku.resp.OutboundListPageResp;
 import com.example.entity.dto.Account;
 import com.example.service.*;
+import com.google.common.collect.Lists;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -53,6 +55,10 @@ public class CkOutboundFacade {
     CkCustomerService customerService;
 
     @Resource
+    CkProductService productService;
+    @Resource
+    CkUnitService unitService;
+    @Resource
     AccountService accountService;
 
     @Resource
@@ -84,6 +90,148 @@ public class CkOutboundFacade {
         }
 
         return true;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean update(OutboundCreateReq req) {
+        // 1. 参数校验
+        validateUpdateReq(req);
+
+        // 2. 查询现有出库单
+        OutboundOrder existingOrder = outboundOrderService.getById(req.getId());
+        if (existingOrder == null) {
+            throw new ValidationException("出库单不存在");
+        }
+
+        // 3. 校验状态：只有草稿和已拒绝状态可以编辑
+        if (existingOrder.getStatus() != 0 && existingOrder.getStatus() != 4) {
+            throw new ValidationException("只有草稿和已拒绝状态的出库单可以编辑");
+        }
+
+        // 4. 构建更新后的出库单主表实体
+        OutboundOrder updatedOrder = buildUpdatedOutboundOrder(req, existingOrder);
+
+        // 5. 更新出库单主表
+        boolean orderUpdated = outboundOrderService.updateById(updatedOrder);
+        if (!orderUpdated) {
+            throw new ValidationException("出库单主表更新失败");
+        }
+
+        // 6. 删除原有的出库单明细
+        int itemsDeleted = outboundOrderItemService.deleteByOrderId(req.getId(), req.getTenantId(),req.getUserId());
+        if (itemsDeleted < 0) {
+            throw new ValidationException("原有出库单明细删除失败");
+        }
+
+        // 7. 插入新的出库单明细
+        List<OutboundOrderItem> orderItems = buildOutboundOrderItems(req, req.getId());
+        boolean itemsSaved = outboundOrderItemService.saveBatch(orderItems);
+        if (!itemsSaved) {
+            throw new ValidationException("出库单明细保存失败");
+        }
+
+        // 8. 如果是已完成状态，更新库存和流水
+        if (req.getStatus() == 3) { // 已完成状态
+            updateInventoryAndTransaction(req, req.getId(), orderItems);
+        }
+
+        return true;
+    }
+
+    /**
+     * 更新参数校验
+     */
+    private void validateUpdateReq(OutboundCreateReq req) {
+        if (req == null) {
+            throw new ValidationException("出库单更新请求不能为空");
+        }
+
+        // ID校验
+        if (req.getId() == null) {
+            throw new ValidationException("出库单ID不能为空");
+        }
+
+        // 基础字段校验
+        if (StringUtils.isBlank(req.getOrderNo())) {
+            throw new ValidationException("出库单号不能为空");
+        }
+        if (req.getOrderType() == null || req.getOrderType() < 1 || req.getOrderType() > 4) {
+            throw new ValidationException("出库类型不正确");
+        }
+        if (req.getWarehouseId() == null) {
+            throw new ValidationException("仓库ID不能为空");
+        }
+        if (req.getStatus() == null || req.getStatus() < 0 || req.getStatus() > 9) {
+            throw new ValidationException("状态值不正确");
+        }
+        if (req.getTenantId() == null) {
+            throw new ValidationException("租户ID不能为空");
+        }
+        if (req.getUserId() == null) {
+            throw new ValidationException("用户ID不能为空");
+        }
+
+        // 销售出库必须要有客户
+        if (req.getOrderType() == 1 && req.getCustomerId() == null) {
+            throw new ValidationException("销售出库必须选择客户");
+        }
+
+        // 明细校验
+        if (req.getItems() == null || req.getItems().isEmpty()) {
+            throw new ValidationException("出库单明细不能为空");
+        }
+
+        // 校验总数量与明细数量一致性
+        BigDecimal totalQuantity = req.getItems().stream()
+                .map(item -> item.getQuantity())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (req.getTotalQuantity() == null ||
+                req.getTotalQuantity().compareTo(totalQuantity) != 0) {
+            throw new ValidationException("总数量与明细数量之和不一致");
+        }
+
+        // 校验明细数据
+        for (int i = 0; i < req.getItems().size(); i++) {
+            OutboundCreateReq.ProductInfoInner item = req.getItems().get(i);
+            if (item.getProductId() == null) {
+                throw new ValidationException("第" + (i + 1) + "行产品ID不能为空");
+            }
+            if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("第" + (i + 1) + "行出库数量必须大于0");
+            }
+
+            // 校验批次分配
+            validateBatchAllocation(item, i, req.getTenantId());
+        }
+    }
+
+    /**
+     * 构建更新后的出库单主表实体
+     */
+    private OutboundOrder buildUpdatedOutboundOrder(OutboundCreateReq req, OutboundOrder existingOrder) {
+        OutboundOrder order = new OutboundOrder();
+        order.setId(req.getId());
+        order.setOrderNo(req.getOrderNo());
+        order.setOrderType(req.getOrderType());
+        order.setWarehouseId(req.getWarehouseId());
+        order.setCustomerId(req.getCustomerId());
+        order.setRelatedOrderNo(req.getRelatedOrderNo());
+        order.setRemark(req.getRemark());
+        order.setStatus(req.getStatus());
+        order.setTotalQuantity(req.getTotalQuantity());
+        order.setTotalAmount(req.getTotalAmount());
+        order.setTenantId(req.getTenantId());
+        order.setModifiedBy(req.getUserId());
+        order.setModifiedAt(new Date());
+        order.setExpectedDate(DateUtils.parseDate(req.getExpectedDate()));
+
+        // 保留原有创建信息
+        order.setCreatedBy(existingOrder.getCreatedBy());
+        order.setCreatedAt(existingOrder.getCreatedAt());
+        order.setIsDeleted(existingOrder.getIsDeleted());
+
+        return order;
     }
 
     /**
@@ -209,7 +357,7 @@ public class CkOutboundFacade {
         order.setCreatedAt(new Date());
         order.setModifiedAt(new Date());
         order.setIsDeleted(0);
-
+        order.setExpectedDate(DateUtils.parseDate(req.getExpectedDate()));
         return order;
     }
 
@@ -492,5 +640,118 @@ public class CkOutboundFacade {
             // 记录库存流水
             createInventoryTransaction(req, orderId, item);
         }
+    }
+
+    public OutboundDetailResp detail(Long orderId, Long tenantId) {
+        OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);
+        if (outboundOrder == null) {
+            throw new ValidationException("出库单不存在");
+        }
+        List<OutboundOrderItem> items = outboundOrderItemService.selectByOrderId(orderId,tenantId);
+        Map<Long, List<OutboundOrderItem>> productId2OutItemListMap = items.stream().collect(Collectors.groupingBy(OutboundOrderItem::getProductId));
+
+        Map<Long, Product> productId2ProductMap = new HashMap<>();
+        List<Long> productIds = items.stream().map(v -> v.getProductId()).distinct().collect(Collectors.toList());
+        List<Product> products = productService.selectByIds(tenantId, productIds);
+        if (!CollectionUtils.isEmpty(products)) {
+            productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+        }
+
+        Map<String, Unit> unitCode2UnitMap = new HashMap<>();
+        List<Unit> units = unitService.selectByTenantId(tenantId, 1);
+        if (!CollectionUtils.isEmpty(units)) {
+            unitCode2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
+        }
+
+        Map<Long, Warehouse> warehouseId2WarehouseMap = new HashMap<>();
+        List<Warehouse> warehouses = warehouseService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(warehouses)) {
+            warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
+        }
+
+        Map<Long, Customer> customerId2CustomerMap = new HashMap<>();
+        List<Customer> customers = customerService.listEnable(tenantId);
+        if (!CollectionUtils.isEmpty(customers)) {
+            customerId2CustomerMap = customers.stream().collect(Collectors.toMap(Customer::getId, v -> v));
+        }
+
+        Map<Long, Account> accountId2AccountMap = new HashMap<>();
+        List<Account> accounts = accountService.selectByIds(Lists.newArrayList(outboundOrder.getCreatedBy(), outboundOrder.getModifiedBy()));
+        if (!CollectionUtils.isEmpty(accounts)) {
+            accountId2AccountMap = accounts.stream().collect(Collectors.toMap(Account::getId, v -> v));
+        }
+
+        OutboundDetailResp resp = new OutboundDetailResp();
+        resp.setId(outboundOrder.getId());
+        resp.setOrderNo(outboundOrder.getOrderNo());
+        resp.setOrderType(outboundOrder.getOrderType());
+        resp.setRelatedOrderNo(outboundOrder.getRelatedOrderNo());
+        resp.setRemark(outboundOrder.getRemark());
+        resp.setStatus(outboundOrder.getStatus());
+        resp.setCustomerId(outboundOrder.getCustomerId());
+        resp.setCustomerName(customerId2CustomerMap.getOrDefault(outboundOrder.getCustomerId(), new Customer()).getCustomerName());
+        resp.setTotalQuantity(outboundOrder.getTotalQuantity());
+        resp.setTotalAmount(outboundOrder.getTotalAmount());
+        resp.setWarehouseId(outboundOrder.getWarehouseId());
+        resp.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(outboundOrder.getWarehouseId(), new Warehouse()).getName());
+        resp.setExpectedDate(DateUtils.format(outboundOrder.getExpectedDate()));
+        resp.setApplicantName(accountId2AccountMap.getOrDefault(outboundOrder.getCreatedBy(), new Account()).getUsername());
+        resp.setCreatedAt(outboundOrder.getCreatedAt());
+        resp.setUpdatedAt(outboundOrder.getModifiedAt());
+        Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
+        Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
+
+        List<OutboundDetailResp.ProductInfoInner> innerList = new ArrayList<>();
+
+        for (Long productId : productId2OutItemListMap.keySet()) {
+            List<OutboundOrderItem> outItemList = productId2OutItemListMap.get(productId);
+            if (!CollectionUtils.isEmpty(outItemList)) {
+                OutboundDetailResp.ProductInfoInner req = new OutboundDetailResp.ProductInfoInner();
+                req.setProductId(productId);
+                Product product = finalProductId2ProductMap.getOrDefault(productId, null);
+                if (product.getId() != null) {
+                    req.setProductName(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getName());
+                    req.setSku(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSku());
+                    req.setSpec(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSpec());
+                    req.setUnit(finalUnitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
+                }
+
+                //将outItemList 中的getQuantity求和
+                BigDecimal quantity = outItemList.stream().map(OutboundOrderItem::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+                req.setQuantity(quantity);
+                BigDecimal totalAmount = outItemList.stream().map(OutboundOrderItem::getPriceTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+                req.setPriceTotal(totalAmount);
+                req.setPriceUnit(outItemList.get(0).getPriceUnit());
+                req.setRemark(outItemList.get(0).getRemark());
+
+                List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v->{
+                    OutboundDetailResp.ProductInventoryBatchInner i = new OutboundDetailResp.ProductInventoryBatchInner();
+                    i.setItemId(v.getId());
+                    i.setBatchNo(v.getBatchNo());
+                    i.setQuantity(v.getQuantity());
+                    return i;
+                }).collect(Collectors.toList());
+                req.setBatchAllocations(batchAllocations);
+                innerList.add(req);
+            }
+        }
+        resp.setItems(innerList);
+        resp.setItemCount(CollectionUtils.isEmpty(innerList) ? 0 :innerList.size());
+        return resp;
+    }
+
+
+    public Boolean delete(OutboundDeleteReq req) {
+        OutboundOrder p = outboundOrderService.getById(req.getId());
+        if (p == null) {
+            throw new ValidationException("出库单不存在");
+        }
+
+        OutboundOrder save = new OutboundOrder();
+        save.setId(req.getId());
+        save.setIsDeleted(1);
+        save.setModifiedAt(new Date());
+        save.setModifiedBy(req.getUserId());
+        return outboundOrderService.updateById(save);
     }
 }

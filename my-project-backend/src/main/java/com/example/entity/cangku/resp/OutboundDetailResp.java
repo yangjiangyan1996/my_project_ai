@@ -1,4 +1,4 @@
-package com.example.entity.cangku.req;
+package com.example.entity.cangku.resp;
 
 import lombok.Data;
 
@@ -12,12 +12,14 @@ import java.util.List;
  * @Date 2025/11/7 01:06
  */
 @Data
-public class OutboundCreateReq {
+public class OutboundDetailResp {
+    // 主键
     private Long id;
     // 附件
     private List<String> attachments;
     // 客户
     private Long customerId;
+    private String customerName;
     // 预计出库时间
     private String expectedDate;
     // 订单号
@@ -37,24 +39,38 @@ public class OutboundCreateReq {
     // 仓库id
     private Long warehouseId;
 
+    private String warehouseName;
+
     private List<ProductInfoInner> items;
 
+
+    private java.util.Date createdAt;
+    private java.util.Date updatedAt;
+    private String applicantName;
     private Long userId;
     private Long tenantId;
+    private Integer itemCount;
 
     // 商品信息
     @Data
     public static class ProductInfoInner {
         // 商品id
         private Long productId;
+        private String productName;
+        private String sku;
+        private String batchNo;
+        private String spec;
+        private String unit;
+        private String color;
         // 数量
         private BigDecimal quantity;
-        // 价格
-        private BigDecimal price;
-        // 金额
-        private BigDecimal amount;
+        //单价
+        private BigDecimal priceUnit;
+        //总价
+        private BigDecimal priceTotal;
         // 备注
         private String remark;
+
 
         // 批次数量
         List<ProductInventoryBatchInner> availableBatches;
@@ -66,6 +82,7 @@ public class OutboundCreateReq {
     // 分配批次信息
     @Data
     public static class ProductInventoryBatchInner {
+        private Long itemId;
         private String batchNo;
         private BigDecimal quantity;
     }

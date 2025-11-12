@@ -25,4 +25,5 @@ public interface CkCustomerService extends IService<Customer> {
     List<Customer> selectByTenantIdAndCustomerIds(Long tenantId, List<Long> customerIds);
 
     Customer selectByTenantIdAndCustomerName(Long tenantId, String name);
+
 }
