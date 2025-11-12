@@ -3,6 +3,7 @@ package com.example.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CommonFacade;
 import com.example.Facade.ProjectFacade;
+import com.example.annotations.TaskProgress;
 import com.example.config.AsyncTaskUtil;
 import com.example.config.QqMailService;
 import com.example.entity.RestBean;
@@ -14,6 +15,7 @@ import com.example.entity.req.ProjectListReq;
 import com.example.entity.req.ProjectShowListReq;
 import com.example.entity.req.ShowHotProjectListPageReq;
 import com.example.entity.resp.*;
+import com.example.entity.vo.request.EmailRegisterVO;
 import com.example.enums.CommonEnum;
 import com.example.filter.UserUtil;
 import com.example.service.AccountService;
@@ -21,6 +23,7 @@ import com.example.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -74,6 +78,35 @@ public class UnauthProjectController {
             return RestBean.failure(400, "发送失败");
         }
         return RestBean.success();
+    }
+
+    /**
+     * 进行用户注册操作，需要先请求邮件验证码
+     *
+     * @param vo 注册信息
+     * @return 是否注册成功
+     */
+    @TaskProgress(category = {"denglu"})
+    @PostMapping("/register")
+    @Operation(summary = "用户注册操作")
+    public RestBean<Void> register(@RequestBody @Valid EmailRegisterVO vo) {
+        return this.messageHandle(() ->
+                accountService.registerEmailAccount(vo));
+    }
+
+    /**
+     * 针对于返回值为String作为错误信息的方法进行统一处理
+     *
+     * @param action 具体操作
+     * @param <T>    响应结果类型
+     * @return 响应结果
+     */
+    private <T> RestBean<T> messageHandle(Supplier<String> action) {
+        String message = action.get();
+        if (message == null)
+            return RestBean.success();
+        else
+            return RestBean.failure(400, message);
     }
 
     /**

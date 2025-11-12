@@ -16,4 +16,5 @@ public interface CkInventoryService extends IService<Inventory> {
     List<Inventory> selectByProductIds(Long tenantId, List<Long> productIds);
 
     Long selectPageListCount(InventoryListPageReq req);
+
 }

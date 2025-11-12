@@ -32,6 +32,13 @@ public class CkShelfServiceImpl extends ServiceImpl<CkShelfMapper, WarehouseShel
     }
 
     @Override
+    public List<WarehouseShelf> selectByTenantId(Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<WarehouseShelf>()
+                .eq("is_deleted", 0)
+                .eq("tenant_id", tenantId));
+    }
+
+    @Override
     public List<WarehouseShelf> listWareHouseEnable(Long tenantId, Long warehouseId) {
         return baseMapper.selectList(new QueryWrapper<WarehouseShelf>()
                 .eq("is_deleted", 0)

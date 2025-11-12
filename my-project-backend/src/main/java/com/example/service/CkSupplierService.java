@@ -23,4 +23,6 @@ public interface CkSupplierService extends IService<Supplier> {
     List<Supplier> listWareHouseEnable(Long tenantId);
 
     List<Supplier> selectByTenantIdAndSupplierIds(Long tenantId, List<Long> supplierIds);
+
+    Supplier selectByTenantIdAndSupplierName(Long tenantId, String supplierName);
 }

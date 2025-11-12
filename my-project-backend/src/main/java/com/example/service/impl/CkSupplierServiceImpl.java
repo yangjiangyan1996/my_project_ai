@@ -29,6 +29,15 @@ public class CkSupplierServiceImpl extends ServiceImpl<CkSupplierMapper, Supplie
     }
 
     @Override
+    public Supplier selectByTenantIdAndSupplierName(Long tenantId, String supplierName) {
+        return baseMapper.selectOne(new QueryWrapper<Supplier>()
+                .eq("tenant_id", tenantId)
+                .eq("status", 1)
+                .eq("is_deleted", 0)
+                .eq("supplier_name", supplierName));
+    }
+
+    @Override
     public List<Supplier> selectByTenantIdAndSupplierIds(Long tenantId, List<Long> supplierIds) {
         if (supplierIds == null || supplierIds.isEmpty()) {
             return new ArrayList<>();

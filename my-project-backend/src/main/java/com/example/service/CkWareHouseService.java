@@ -25,4 +25,6 @@ public interface CkWareHouseService extends IService<Warehouse> {
     List<Warehouse> listWareHouseEnable(Long tenantId);
 
     List<Warehouse> selectByTenantIdAndWareHouseIds(Long tenantId, List<Long> wareHouseIds);
+
+    List<Warehouse> selectByTenantId(Long tenantId);
 }

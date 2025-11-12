@@ -140,7 +140,7 @@ const onValidate = (prop, isValid) => {
 const register = () => {
     formRef.value.validate((isValid) => {
         if(isValid) {
-            post('/api/auth/register', {
+            post('/api/unauth/project/register', {
                 username: form.username,
                 password: form.password,
                 phone: form.phone,

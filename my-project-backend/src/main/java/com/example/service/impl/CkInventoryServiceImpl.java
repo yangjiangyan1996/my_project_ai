@@ -44,6 +44,7 @@ public class CkInventoryServiceImpl extends ServiceImpl<CkInventoryMapper, Inven
                 .eq("is_deleted", 0));
     }
 
+
     @Override
     public Long selectPageListCount(InventoryListPageReq req) {
         return baseMapper.selectPageListCount(req);

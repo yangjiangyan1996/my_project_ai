@@ -14,4 +14,6 @@ public interface CkShelfService extends IService<WarehouseShelf> {
     Page<WarehouseShelf> getPage(Page<WarehouseShelf> page, ShelfListPageReq req);
 
     List<WarehouseShelf> listWareHouseEnable(Long tenantId, Long warehouseId);
+
+    List<WarehouseShelf> selectByTenantId(Long tenantId);
 }
