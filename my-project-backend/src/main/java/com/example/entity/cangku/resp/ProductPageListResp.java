@@ -53,4 +53,5 @@ public class ProductPageListResp {
     private BigDecimal outUnitWidth;
 
     List<BomDetailListResp> bomData;
+
 }

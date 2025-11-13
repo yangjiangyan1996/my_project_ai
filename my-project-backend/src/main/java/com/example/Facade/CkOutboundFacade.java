@@ -414,13 +414,17 @@ public class CkOutboundFacade {
     /**
      * 更新库存
      */
-    private void updateInventory(OutboundCreateReq req, OutboundOrderItem item) {
+    private void updateInventory(OutboundCreateReq req, OutboundOrderItem item , Long orderId) {
         // 查询现有库存
         Inventory existingInventory = inventoryService.getByProduct(item.getProductId(), req.getTenantId());
 
+        BigDecimal newQuantity = BigDecimal.ZERO;
+        BigDecimal oldQuantity = BigDecimal.ZERO;
+
         if (existingInventory != null) {
             // 更新现有库存（减少）
-            BigDecimal newQuantity = existingInventory.getQuantity().subtract(item.getQuantity());
+            newQuantity = existingInventory.getQuantity().subtract(item.getQuantity());
+            oldQuantity = existingInventory.getQuantity();
 
             if (newQuantity.compareTo(BigDecimal.ZERO) < 0) {
                 throw new ValidationException("库存不足，产品ID: " + item.getProductId() +
@@ -438,6 +442,31 @@ public class CkOutboundFacade {
             }
         } else {
             throw new ValidationException("库存记录不存在，产品ID: " + item.getProductId());
+        }
+
+        InventoryTransaction transaction = new InventoryTransaction();
+        transaction.setWarehouseId(req.getWarehouseId());
+        transaction.setProductId(item.getProductId());
+        transaction.setOrderType(2); // 2-出库单
+        transaction.setOrderId(orderId);
+        transaction.setOrderItemId(item.getId());
+        transaction.setChangeQuantity(item.getQuantity().negate()); // 负数表示减少
+        transaction.setBalanceQuantity(newQuantity);
+        transaction.setBeforBalanceQuantity(oldQuantity);
+        transaction.setTransactionTime(new Date());
+        transaction.setTenantId(req.getTenantId());
+        transaction.setPriceUnit(item.getPriceUnit());
+        transaction.setPriceTotal(item.getPriceTotal());
+        //transaction.setRemark(item.getRemark());
+        transaction.setCreatedBy(req.getUserId());
+        transaction.setModifiedBy(req.getUserId());
+        transaction.setCreatedAt(new Date());
+        transaction.setModifiedAt(new Date());
+        transaction.setIsDeleted(0);
+
+        boolean saved = inventoryTransactionService.save(transaction);
+        if (!saved) {
+            throw new ValidationException("库存流水记录创建失败");
         }
     }
 
@@ -508,29 +537,7 @@ public class CkOutboundFacade {
      * 创建库存流水记录
      */
     private void createInventoryTransaction(OutboundCreateReq req, Long orderId, OutboundOrderItem item) {
-        InventoryTransaction transaction = new InventoryTransaction();
-        transaction.setWarehouseId(req.getWarehouseId());
-        transaction.setProductId(item.getProductId());
-        transaction.setOrderType(2); // 2-出库单
-        transaction.setOrderId(orderId);
-        transaction.setOrderItemId(item.getId());
-        transaction.setChangeQuantity(item.getQuantity().negate()); // 负数表示减少
-        transaction.setBalanceQuantity(getCurrentBalance(item.getProductId(), req.getTenantId()));
-        transaction.setTransactionTime(new Date());
-        transaction.setTenantId(req.getTenantId());
-        transaction.setPriceUnit(item.getPriceUnit());
-        transaction.setPriceTotal(item.getPriceTotal());
-        //transaction.setRemark(item.getRemark());
-        transaction.setCreatedBy(req.getUserId());
-        transaction.setModifiedBy(req.getUserId());
-        transaction.setCreatedAt(new Date());
-        transaction.setModifiedAt(new Date());
-        transaction.setIsDeleted(0);
 
-        boolean saved = inventoryTransactionService.save(transaction);
-        if (!saved) {
-            throw new ValidationException("库存流水记录创建失败");
-        }
     }
 
     /**
@@ -632,7 +639,7 @@ public class CkOutboundFacade {
     private void updateInventoryAndTransaction(OutboundCreateReq req, Long orderId, List<OutboundOrderItem> orderItems) {
         for (OutboundOrderItem item : orderItems) {
             // 更新库存
-            updateInventory(req, item);
+            updateInventory(req, item, orderId);
             // 更新仓库库存
             updateWarehouseInventory(req, item);
             // 更新批次库存

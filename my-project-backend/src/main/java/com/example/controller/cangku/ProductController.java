@@ -214,6 +214,21 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/detail")
+    public RespBean<ProductPageListResp> detail(@RequestParam("productId") Long productId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            ProductPageListResp result = CKProductFacade.detail(productId, user);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProductController#detail,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#detail,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     //获取可用商品列表
     @GetMapping("/bom/detail")
     public RespBean<List<BomDetailListResp>> bomDetail(@RequestParam("bomId") Long bomId) {

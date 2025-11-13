@@ -19,10 +19,35 @@ import java.util.List;
 @Service
 public class CkInventoryWarehouseServiceImpl  extends ServiceImpl<CkInventoryWarehouseMapper, InventoryWarehouse> implements CkInventoryWarehouseService {
     @Override
+    public List<InventoryWarehouse> selectByProductId(Long productId, Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<InventoryWarehouse>()
+                .eq("product_id", productId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode()));
+    }
+
+    @Override
     public List<InventoryWarehouse> selectByWarehourseId(Long warehouseId, Long tenantId) {
         return baseMapper.selectList(new QueryWrapper<InventoryWarehouse>()
                 .eq("warehouse_id", warehouseId)
                 .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode()));
+    }
+
+    @Override
+    public List<InventoryWarehouse> getByProductIdsAndWarehouseIds(Long tenantId, List<Long> productIds, List<Long> warehouseIds) {
+        return baseMapper.selectList(new QueryWrapper<InventoryWarehouse>()
+                .eq("tenant_id", tenantId)
+                .in("product_id", productIds)
+                .in("warehouse_id", warehouseIds)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode()));
+    }
+
+    @Override
+    public List<InventoryWarehouse> getByProductIds(Long tenantId, List<Long> productIds) {
+        return baseMapper.selectList(new QueryWrapper<InventoryWarehouse>()
+                .eq("tenant_id", tenantId)
+                .in("product_id", productIds)
                 .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode()));
     }
 

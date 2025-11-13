@@ -324,8 +324,8 @@ public class CKProductFacade {
             }).sorted(Comparator.comparingInt(BomDetailListResp::getSortOrder)).collect(Collectors.toList());
 
             p.setCategoryName(whMap.get(v.getCategoryCode()).getCategoryName());
-            p.setUnitName(unitMap.get(v.getUnitCode()).getUnitName());
-            p.setOutUnitName(unitMap.get(v.getOutUnitCode()).getUnitName());
+            p.setUnitName(unitMap.getOrDefault(v.getUnitCode(), new Unit()).getUnitName());
+            p.setOutUnitName(unitMap.getOrDefault(v.getOutUnitCode(), new Unit()).getUnitName());
             p.setBomData(detail);
             return p;
         }).collect(Collectors.toList());
@@ -434,6 +434,25 @@ public class CKProductFacade {
         return productService.updateById(save);
     }
 
+    public ProductPageListResp detail(Long productId, UserInfo user) {
+        Product p = productService.selectById(user.getTenantId(), productId);
+        if (p == null) {
+            throw new ValidationException("商品不存在");
+        }
+
+        Map<String, Unit> unitCode2UnitMap = new HashMap<>();
+        List<Unit> units = unitService.selectByTenantId(user.getTenantId(), 1);
+        if (!CollectionUtils.isEmpty(units)) {
+            unitCode2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
+        }
+
+        ProductPageListResp result = new ProductPageListResp();
+        BeanUtils.copyProperties(p, result);
+        result.setUnitName(unitCode2UnitMap.getOrDefault(p.getUnitCode(), new Unit()).getUnitName());
+        result.setOutUnitName(unitCode2UnitMap.getOrDefault(p.getOutUnitCode(), new Unit()).getUnitName());
+        return result;
+    }
+
     public List<ProductPageListResp> listEnable(UserInfo user) {
         List<Product> list = productService.listWareHouseEnable(user.getTenantId());
         if (list.isEmpty()) {
@@ -450,8 +469,8 @@ public class CKProductFacade {
         return list.stream().map(v -> {
             ProductPageListResp p = new ProductPageListResp();
             BeanUtils.copyProperties(v, p);
-            p.setUnitName(finalUnitCode2UnitMap.get(v.getUnitCode()).getUnitName());
-            p.setOutUnitName(finalUnitCode2UnitMap.get(v.getOutUnitCode()).getUnitName());
+            p.setUnitName(finalUnitCode2UnitMap.getOrDefault(v.getUnitCode(), new Unit()).getUnitName());
+            p.setOutUnitName(finalUnitCode2UnitMap.getOrDefault(v.getOutUnitCode(), new Unit()).getUnitName());
             return p;
         }).collect(Collectors.toList());
     }
@@ -1001,9 +1020,11 @@ public class CKProductFacade {
     private void updateInventoryForInbound(Long tenantId, Long userId, Long productId, Long warehouseId,
                                            BigDecimal quantity, String batchNo, Long orderId, Long itemId, BigDecimal unitPrice) {
 
+        BigDecimal oldQuantity = BigDecimal.ZERO;
         // 1. 更新库存表
         Inventory inventory = inventoryService.getByProduct(productId, tenantId);
         if (inventory != null) {
+            oldQuantity = inventory.getQuantity();
             inventory.setQuantity(inventory.getQuantity().add(quantity));
             inventory.setModifiedBy(userId);
             inventory.setModifiedAt(new Date());
@@ -1077,6 +1098,7 @@ public class CKProductFacade {
         inventoryTransaction.setOrderItemId(itemId);
         inventoryTransaction.setChangeQuantity(quantity);
         inventoryTransaction.setBalanceQuantity(inventory.getQuantity());
+        inventoryTransaction.setBeforBalanceQuantity(oldQuantity);
         inventoryTransaction.setTransactionTime(new Date());
         inventoryTransaction.setPriceUnit(unitPrice);
         inventoryTransaction.setPriceTotal(quantity.multiply(unitPrice));
@@ -1093,9 +1115,11 @@ public class CKProductFacade {
     private void updateInventoryForOutbound(Long tenantId, Long userId, Long productId, Long warehouseId,
                                             BigDecimal quantity, String batchNo, Long orderId, Long itemId, BigDecimal unitPrice) {
 
+        BigDecimal oldInventoryQuantity  = BigDecimal.ZERO;
         // 1. 更新库存表
         Inventory inventory = inventoryService.getByProduct(productId, tenantId);
         if (inventory != null) {
+            oldInventoryQuantity = inventory.getQuantity();
             inventory.setQuantity(inventory.getQuantity().subtract(quantity));
             inventory.setModifiedBy(userId);
             inventory.setModifiedAt(new Date());
@@ -1169,6 +1193,7 @@ public class CKProductFacade {
         inventoryTransaction.setOrderItemId(itemId);
         inventoryTransaction.setChangeQuantity(quantity.negate()); // 出库数量为负
         inventoryTransaction.setBalanceQuantity(inventory.getQuantity());
+        inventoryTransaction.setBeforBalanceQuantity(oldInventoryQuantity);
         inventoryTransaction.setTransactionTime(new Date());
         inventoryTransaction.setPriceUnit(unitPrice);
         inventoryTransaction.setPriceTotal(quantity.multiply(unitPrice));
@@ -1262,6 +1287,7 @@ public class CKProductFacade {
     private String buildProductKey(String name, String spec, String color) {
         return name + "_" + spec + "_" + color;
     }
+
 
     /**
      * 数据持有类，用于传递初始化数据

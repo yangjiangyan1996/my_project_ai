@@ -13,6 +13,11 @@ import java.util.List;
  */
 public interface CkInventoryWarehouseService extends IService<InventoryWarehouse> {
     List<InventoryWarehouse> selectByWarehourseId(Long warehouseId, Long tenantId);
+    List<InventoryWarehouse> selectByProductId(Long productId, Long tenantId);
 
     InventoryWarehouse getByWarehouseAndProduct(Long warehouseId, Long productId, Long tenantId);
+
+    List<InventoryWarehouse> getByProductIdsAndWarehouseIds(Long tenantId, List<Long> productIds, List<Long> warehouseIds);
+
+    List<InventoryWarehouse> getByProductIds(Long tenantId, List<Long> productIds);
 }

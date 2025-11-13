@@ -46,6 +46,13 @@ public class CkInventoryServiceImpl extends ServiceImpl<CkInventoryMapper, Inven
 
 
     @Override
+    public List<Inventory> selectByTenantId(Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<Inventory>()
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
     public Long selectPageListCount(InventoryListPageReq req) {
         return baseMapper.selectPageListCount(req);
     }

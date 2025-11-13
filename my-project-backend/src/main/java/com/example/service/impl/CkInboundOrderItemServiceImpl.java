@@ -7,6 +7,7 @@ import com.example.mapper.CkInboundOrderItemMapper;
 import com.example.service.CkInboundOrderItemService;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -46,4 +47,15 @@ public class CkInboundOrderItemServiceImpl extends ServiceImpl<CkInboundOrderIte
                 .in("order_id", inboundOrderIds)
                 .eq("tenant_id", tenantId));
     }
+
+    @Override
+    public List<InboundOrderItem> selectByOrderItemIds(Long tenantId, List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return baseMapper.selectList(new QueryWrapper<InboundOrderItem>().eq("is_deleted", 0)
+                .in("id", ids)
+                .eq("tenant_id", tenantId));
+    }
 }
+

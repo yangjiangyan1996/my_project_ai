@@ -29,6 +29,16 @@ public class CkProductServiceImpl extends ServiceImpl<CkProductMapper, Product> 
     }
 
     @Override
+    public Product selectById(Long tenantId, Long productId) {
+        return baseMapper.selectOne(
+                new QueryWrapper<Product>()
+                        .eq("tenant_id", tenantId)
+                        .eq("id", productId)
+                        .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
     public List<Product> selectByIds(Long tenantId, List<Long> productIds) {
         return baseMapper.selectList(
                 new QueryWrapper<Product>()

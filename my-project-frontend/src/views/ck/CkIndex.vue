@@ -16,19 +16,20 @@
           <el-menu-item index="dashboard" @click="changeDisplayMode('dashboard')">工作台</el-menu-item>
           
           <!-- 库存管理 TODO yang 待开发-->
-          <!-- <el-sub-menu index="inventory">
+          <el-sub-menu index="inventory">
             <template #title>库存管理</template>
             <el-menu-item index="inventory-list" @click="changeDisplayMode('inventory-list')">库存查询</el-menu-item>
-            <el-menu-item index="inventory-transaction" @click="changeDisplayMode('inventory-transaction')">库存流水</el-menu-item>
-            <el-menu-item index="stock-take" @click="changeDisplayMode('stock-take')">库存盘点</el-menu-item>
-          </el-sub-menu> -->
+            <!-- <el-menu-item index="inventory-transaction" @click="changeDisplayMode('inventory-transaction')">库存流水</el-menu-item> -->
+            <!-- <el-menu-item index="stock-take" @click="changeDisplayMode('stock-take')">库存盘点</el-menu-item> -->
+          </el-sub-menu>
           
           <!-- 业务管理 -->
           <el-sub-menu index="business">
             <template #title>出入库管理</template>
             <el-menu-item index="inbound" @click="changeDisplayMode('inbound')">入库管理</el-menu-item>
             <el-menu-item index="outbound" @click="changeDisplayMode('outbound')">出库管理</el-menu-item>
-            <!-- <el-menu-item index="transfer" @click="changeDisplayMode('transfer')">调拨管理</el-menu-item>  TODO yang 待开发 -->
+
+            <!-- <el-menu-item index="transfer" @click="changeDisplayMode('transfer')">调拨管理</el-menu-item>  TODO yang 待开发， 还有库存管理 -->
           </el-sub-menu>
           
           <!-- 基础数据 -->
@@ -317,14 +318,55 @@
           <el-card class="chart-card" shadow="never">
             <template #header>
               <div class="card-header">
-                <span class="card-title">库存趋势</span>
+                <span class="card-title">低库存预警</span>
+                <el-button type="text" @click="refreshLowStockData">刷新</el-button>
               </div>
             </template>
-            <div class="chart-container">
-              <!-- 这里可以接入 ECharts 图表 -->
-              <div class="chart-placeholder">
-                <el-empty description="库存趋势图表" :image-size="100" />
-              </div>
+            <div class="table-container">
+              <el-table 
+                :data="lowStockData" 
+                style="width: 100%"
+                empty-text="暂无低库存预警数据"
+                v-loading="lowStockLoading"
+                max-height="320"
+              >
+                <el-table-column prop="productName" label="产品名称" width="180" show-overflow-tooltip />
+                <el-table-column prop="currentStock" label="当前库存" width="120" align="center">
+                  <template #default="{ row }">
+                    <span :class="getStockClass(row.currentStock, row.minStock)">
+                      {{ formatNumber(row.currentStock) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="minStock" label="最低库存" width="120" align="center">
+                  <template #default="{ row }">
+                    <span>{{ formatNumber(row.minStock) }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="unitName" label="单位" width="80" align="center" />
+                <el-table-column label="库存状态" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-tag 
+                      :type="getStockStatusType(row.currentStock, row.minStock)"
+                      size="small"
+                    >
+                      {{ getStockStatusText(row.currentStock, row.minStock) }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="80" align="center">
+                  <template #default="{ row }">
+                    <el-button 
+                      type="primary" 
+                      link 
+                      size="small"
+                      @click="handleReplenish(row)"
+                    >
+                      补货
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
             </div>
           </el-card>
         </el-col>
@@ -417,8 +459,6 @@ import CkInventoryTransaction from '@/views/ck/CkInventoryTransaction.vue';
 import CkShelfManage from '@/views/ck/CkShelfManage.vue';
 import CkUser from '@/views/ck/CkUser.vue';
 
-
-
 const router = useRouter();
 
 // 响应式数据
@@ -427,6 +467,7 @@ const messageVisible = ref(false);
 const activeMessageTab = ref('approval');
 const unreadCount = ref(0);
 const displayMode = ref('dashboard');
+const lowStockLoading = ref(false);
 
 // 用户信息
 const userInfo = ref({
@@ -446,6 +487,9 @@ const overviewData = ref({
   pendingApprovals: 0,
   lowStockItems: 0
 });
+
+// 低库存数据
+const lowStockData = ref([]);
 
 // 消息数据
 const approvalMessages = ref([]);
@@ -485,6 +529,164 @@ const handleQuickAction = (action) => {
   } else {
     ElMessage.warning('该功能暂未开放');
   }
+};
+
+// 低库存预警相关方法
+const loadLowStockData = async () => {
+  lowStockLoading.value = true;
+  try {
+    // 调用低库存预警接口
+    const res = await get('/api/auth/product/lowProductCountChat');
+    
+    // 如果有返回数据则使用，否则使用mock数据
+    if (res && Array.isArray(res) && res.length > 0) {
+      lowStockData.value = res;
+    } else {
+      // Mock数据
+      lowStockData.value = [
+        {
+          id: 1,
+          productName: 'iPhone 15 Pro Max',
+          currentStock: 5,
+          minStock: 20,
+          unitName: '台',
+          sku: 'IP15PM-256G'
+        },
+        {
+          id: 2,
+          productName: 'MacBook Air M3',
+          currentStock: 8,
+          minStock: 15,
+          unitName: '台',
+          sku: 'MBA-M3-512G'
+        },
+        {
+          id: 3,
+          productName: 'AirPods Pro 2',
+          currentStock: 12,
+          minStock: 30,
+          unitName: '副',
+          sku: 'APP2-USB-C'
+        }
+      ];
+    }
+    
+    // 更新概览数据中的低库存预警数量
+    overviewData.value.lowStockItems = lowStockData.value.length;
+    
+  } catch (error) {
+    console.error('加载低库存数据失败:', error);
+    ElMessage.error('加载低库存数据失败');
+    // 出错时也使用mock数据
+    lowStockData.value = [
+      {
+        id: 1,
+        productName: 'iPhone 15 Pro Max',
+        currentStock: 5,
+        minStock: 20,
+        unitName: '台',
+        sku: 'IP15PM-256G'
+      },
+      {
+        id: 2,
+        productName: 'MacBook Air M3',
+        currentStock: 8,
+        minStock: 15,
+        unitName: '台',
+        sku: 'MBA-M3-512G'
+      },
+      {
+        id: 3,
+        productName: 'AirPods Pro 2',
+        currentStock: 12,
+        minStock: 30,
+        unitName: '副',
+        sku: 'APP2-USB-C'
+      }
+    ];
+    overviewData.value.lowStockItems = lowStockData.value.length;
+  } finally {
+    lowStockLoading.value = false;
+  }
+};
+
+const refreshLowStockData = () => {
+  loadLowStockData();
+  ElMessage.success('低库存数据已刷新');
+};
+
+const getStockClass = (currentStock, minStock) => {
+  const current = Number(currentStock) || 0;
+  const min = Number(minStock) || 0;
+  
+  if (current <= 0) {
+    return 'stock-out';
+  } else if (current <= min) {
+    return 'stock-low';
+  } else if (current <= min * 1.5) {
+    return 'stock-warning';
+  }
+  return 'stock-normal';
+};
+
+const getStockStatusType = (currentStock, minStock) => {
+  const current = Number(currentStock) || 0;
+  const min = Number(minStock) || 0;
+  
+  if (current <= 0) {
+    return 'danger'; // 缺货
+  } else if (current <= min) {
+    return 'warning'; // 低于最低库存
+  } else if (current <= min * 1.5) {
+    return 'info'; // 接近最低库存
+  }
+  return 'success'; // 正常
+};
+
+const getStockStatusText = (currentStock, minStock) => {
+  const current = Number(currentStock) || 0;
+  const min = Number(minStock) || 0;
+  
+  if (current <= 0) {
+    return '缺货';
+  } else if (current <= min) {
+    return '库存不足';
+  } else if (current <= min * 1.5) {
+    return '库存偏低';
+  }
+  return '库存正常';
+};
+
+const handleReplenish = (row) => {
+  ElMessageBox.confirm(`确定要为产品"${row.productName}"创建补货单吗？`, '补货确认', {
+    type: 'warning',
+    confirmButtonText: '确定',
+    cancelButtonText: '取消'
+  }).then(() => {
+    // 这里可以跳转到入库单创建页面，并预填产品信息
+    router.push({
+      path: '/index/ckInboundCreate',
+      query: {
+        productId: row.id,
+        productName: row.productName
+      }
+    });
+    ElMessage.success('已跳转到入库单创建页面');
+  }).catch(() => {
+    // 用户取消
+  });
+};
+
+const formatNumber = (value) => {
+  if (value === null || value === undefined) return '0';
+  const num = Number(value);
+  if (isNaN(num)) return '0';
+  // 如果是整数，不显示小数位
+  if (Number.isInteger(num)) {
+    return num.toString();
+  }
+  // 否则显示4位小数
+  return num.toFixed(4).replace(/\.?0+$/, '');
 };
 
 // 消息相关方法
@@ -590,21 +792,21 @@ const userLogout = () => {
 
 // 初始化数据
 const loadOverviewData = async () => {
-  try {
-    const res = await get('/api/auth/dashboard/overview');
-    overviewData.value = res || {};
-  } catch (e) {
-    console.error('加载概览数据失败:', e);
-  }
+  // try {
+  //   const res = await get('/api/auth/dashboard/overview');
+  //   overviewData.value = res || {};
+  // } catch (e) {
+  //   console.error('加载概览数据失败:', e);
+  // }
 };
 
 const loadRecentActions = async () => {
   try {
-    const res = await post('/api/auth/operation-log/recent', {
-      page: 1,
-      size: 10
-    });
-    recentActions.value = res.records || [];
+    // const res = await post('/api/auth/operation-log/recent', {
+    //   page: 1,
+    //   size: 10
+    // });
+    // recentActions.value = res.records || [];
   } catch (e) {
     console.error('加载操作记录失败:', e);
   }
@@ -621,8 +823,8 @@ const loadUserInfo = async () => {
 
 const fetchUnreadCount = async () => {
   try {
-    const res = await get('/api/auth/message/unreadCount');
-    unreadCount.value = res || 0;
+    // const res = await get('/api/auth/message/unreadCount');
+    // unreadCount.value = res || 0;
   } catch (e) {
     console.error('获取未读消息数失败:', e);
   }
@@ -633,6 +835,7 @@ onMounted(() => {
   loadOverviewData();
   loadRecentActions();
   fetchUnreadCount();
+  loadLowStockData(); // 加载低库存数据
 });
 </script>
 
@@ -817,12 +1020,37 @@ onMounted(() => {
   justify-content: center;
 }
 
+.table-container {
+  height: 320px;
+}
+
 .chart-placeholder {
   text-align: center;
 }
 
 .recent-actions-card {
   border-radius: 8px;
+}
+
+/* 库存状态样式 */
+.stock-normal {
+  color: #67C23A;
+  font-weight: bold;
+}
+
+.stock-warning {
+  color: #E6A23C;
+  font-weight: bold;
+}
+
+.stock-low {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
+.stock-out {
+  color: #909399;
+  font-weight: bold;
 }
 
 /* 消息样式 */

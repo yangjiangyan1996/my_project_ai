@@ -207,8 +207,8 @@ public class CkInboundFacade {
      */
     private void updateInventoryAndTransaction(InboundCreateReq req, Long orderId, List<InboundOrderItem> orderItems) {
         for (InboundOrderItem item : orderItems) {
-            // 更新库存
-            updateInventory(req, item);
+            // 更新库存, 库存流水
+            updateInventory(req, item, orderId);
 
             // 更新仓库库存
             updateWarehouseInventory(req, item);
@@ -217,20 +217,25 @@ public class CkInboundFacade {
             createInventoryBatch(req, item);
 
             // 记录库存流水
-            createInventoryTransaction(req, orderId, item);
+            //createInventoryTransaction(req, orderId, item, oldInventoryQuantity);
         }
     }
 
     /**
      * 更新库存
+     * @return 旧的库存数量
      */
-    private void updateInventory(InboundCreateReq req, InboundOrderItem item) {
+    private BigDecimal updateInventory(InboundCreateReq req, InboundOrderItem item, Long orderId) {
         // 查询现有库存
         Inventory existingInventory = inventoryService.getByProduct(item.getProductId(), req.getTenantId());
 
+        BigDecimal oldQuantity = BigDecimal.ZERO;
+        BigDecimal newQuantity = BigDecimal.ZERO;
         if (existingInventory != null) {
             // 更新现有库存
-            BigDecimal newQuantity = existingInventory.getQuantity().add(item.getActualQuantity());
+            newQuantity = existingInventory.getQuantity().add(item.getActualQuantity());
+            oldQuantity = existingInventory.getQuantity();
+
             existingInventory.setQuantity(newQuantity);
             existingInventory.setModifiedBy(req.getUserId());
             existingInventory.setModifiedAt(new Date());
@@ -241,9 +246,12 @@ public class CkInboundFacade {
             }
         } else {
             // 创建新库存记录
+            newQuantity = item.getActualQuantity();
+            oldQuantity = BigDecimal.ZERO;
+
             Inventory newInventory = new Inventory();
             newInventory.setProductId(item.getProductId());
-            newInventory.setQuantity(item.getActualQuantity());
+            newInventory.setQuantity(newQuantity);
             newInventory.setLockedQuantity(BigDecimal.ZERO);
             newInventory.setTenantId(req.getTenantId());
             newInventory.setCreatedBy(req.getUserId());
@@ -257,6 +265,31 @@ public class CkInboundFacade {
                 throw new ValidationException("库存创建失败，产品ID: " + item.getProductId());
             }
         }
+
+        InventoryTransaction transaction = new InventoryTransaction();
+        transaction.setWarehouseId(req.getWarehouseId());
+        transaction.setProductId(item.getProductId());
+        transaction.setOrderType(1); // 1-入库单
+        transaction.setOrderId(orderId);
+        transaction.setOrderItemId(item.getId());
+        transaction.setChangeQuantity(item.getActualQuantity()); // 正数表示增加
+        transaction.setBalanceQuantity(newQuantity);
+        transaction.setBeforBalanceQuantity(oldQuantity);
+        transaction.setTransactionTime(new Date());
+        transaction.setTenantId(req.getTenantId());
+        transaction.setPriceUnit(item.getPriceUnit());
+        transaction.setPriceTotal(item.getPriceTotal());
+        transaction.setCreatedBy(req.getUserId());
+        transaction.setModifiedBy(req.getUserId());
+        transaction.setCreatedAt(new Date());
+        transaction.setModifiedAt(new Date());
+        transaction.setIsDeleted(0);
+
+        boolean saved = inventoryTransactionService.save(transaction);
+        if (!saved) {
+            throw new ValidationException("库存流水记录创建失败");
+        }
+        return oldQuantity;
     }
 
     private void updateWarehouseInventory(InboundCreateReq req, InboundOrderItem item) {
@@ -340,28 +373,7 @@ public class CkInboundFacade {
      * 创建库存流水记录
      */
     private void createInventoryTransaction(InboundCreateReq req, Long orderId, InboundOrderItem item) {
-        InventoryTransaction transaction = new InventoryTransaction();
-        transaction.setWarehouseId(req.getWarehouseId());
-        transaction.setProductId(item.getProductId());
-        transaction.setOrderType(1); // 1-入库单
-        transaction.setOrderId(orderId);
-        transaction.setOrderItemId(item.getId());
-        transaction.setChangeQuantity(item.getActualQuantity()); // 正数表示增加
-        transaction.setBalanceQuantity(getCurrentBalance(item.getProductId(), req.getTenantId()));
-        transaction.setTransactionTime(new Date());
-        transaction.setTenantId(req.getTenantId());
-        transaction.setPriceUnit(item.getPriceUnit());
-        transaction.setPriceTotal(item.getPriceTotal());
-        transaction.setCreatedBy(req.getUserId());
-        transaction.setModifiedBy(req.getUserId());
-        transaction.setCreatedAt(new Date());
-        transaction.setModifiedAt(new Date());
-        transaction.setIsDeleted(0);
 
-        boolean saved = inventoryTransactionService.save(transaction);
-        if (!saved) {
-            throw new ValidationException("库存流水记录创建失败");
-        }
     }
 
     /**
@@ -834,9 +846,15 @@ public class CkInboundFacade {
         // 查询现有库存
         Inventory existingInventory = inventoryService.getByProduct(item.getProductId(), inboundOrder.getTenantId());
 
+        BigDecimal oldQuantity = BigDecimal.ZERO;
+        BigDecimal newQuantity = BigDecimal.ZERO;
+
         if (existingInventory != null) {
             // 更新现有库存
-            BigDecimal newQuantity = existingInventory.getQuantity().add(item.getActualQuantity());
+            newQuantity = existingInventory.getQuantity().add(item.getActualQuantity());
+            oldQuantity = existingInventory.getQuantity();
+
+
             existingInventory.setQuantity(newQuantity);
             existingInventory.setModifiedBy(userId);
             existingInventory.setModifiedAt(new Date());
@@ -847,9 +865,12 @@ public class CkInboundFacade {
             }
         } else {
             // 创建新库存记录
+            oldQuantity = BigDecimal.ZERO;
+            newQuantity = item.getActualQuantity();
+
             Inventory newInventory = new Inventory();
             newInventory.setProductId(item.getProductId());
-            newInventory.setQuantity(item.getActualQuantity());
+            newInventory.setQuantity(newQuantity);
             newInventory.setLockedQuantity(BigDecimal.ZERO);
             newInventory.setTenantId(inboundOrder.getTenantId());
             newInventory.setCreatedBy(userId);
@@ -862,6 +883,30 @@ public class CkInboundFacade {
             if (!saved) {
                 throw new ValidationException("库存创建失败，产品ID: " + item.getProductId());
             }
+        }
+
+        InventoryTransaction transaction = new InventoryTransaction();
+        transaction.setWarehouseId(inboundOrder.getWarehouseId());
+        transaction.setProductId(item.getProductId());
+        transaction.setOrderType(1); // 1-入库单
+        transaction.setOrderId(inboundOrder.getId());
+        transaction.setOrderItemId(item.getId());
+        transaction.setChangeQuantity(item.getActualQuantity()); // 正数表示增加
+        transaction.setBalanceQuantity(newQuantity);
+        transaction.setBeforBalanceQuantity(oldQuantity);
+        transaction.setTransactionTime(new Date());
+        transaction.setTenantId(inboundOrder.getTenantId());
+        transaction.setPriceUnit(item.getPriceUnit());
+        transaction.setPriceTotal(item.getPriceTotal());
+        transaction.setCreatedBy(userId);
+        transaction.setModifiedBy(userId);
+        transaction.setCreatedAt(new Date());
+        transaction.setModifiedAt(new Date());
+        transaction.setIsDeleted(0);
+
+        boolean saved = inventoryTransactionService.save(transaction);
+        if (!saved) {
+            throw new ValidationException("库存流水记录创建失败");
         }
     }
 
@@ -905,28 +950,7 @@ public class CkInboundFacade {
      * 审核通过时创建库存流水记录
      */
     private void createInventoryTransactionForApprove(InboundOrder inboundOrder, InboundOrderItem item, Long userId) {
-        InventoryTransaction transaction = new InventoryTransaction();
-        transaction.setWarehouseId(inboundOrder.getWarehouseId());
-        transaction.setProductId(item.getProductId());
-        transaction.setOrderType(1); // 1-入库单
-        transaction.setOrderId(inboundOrder.getId());
-        transaction.setOrderItemId(item.getId());
-        transaction.setChangeQuantity(item.getActualQuantity()); // 正数表示增加
-        transaction.setBalanceQuantity(getCurrentBalanceForApprove(item.getProductId(), inboundOrder.getTenantId()));
-        transaction.setTransactionTime(new Date());
-        transaction.setTenantId(inboundOrder.getTenantId());
-        transaction.setPriceUnit(item.getPriceUnit());
-        transaction.setPriceTotal(item.getPriceTotal());
-        transaction.setCreatedBy(userId);
-        transaction.setModifiedBy(userId);
-        transaction.setCreatedAt(new Date());
-        transaction.setModifiedAt(new Date());
-        transaction.setIsDeleted(0);
 
-        boolean saved = inventoryTransactionService.save(transaction);
-        if (!saved) {
-            throw new ValidationException("库存流水记录创建失败");
-        }
     }
 
     /**

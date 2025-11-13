@@ -294,22 +294,22 @@
           <el-table-column label="操作" width="180" fixed="right" align="center">
             <template #default="{ row }">
               <div class="action-buttons">
-                <el-button
+                <!-- <el-button
                   type="primary"
                   link
                   size="small"
                   @click="handleViewDetail(row)"
                 >
                   详情
-                </el-button>
-                <el-button
+                </el-button> -->
+                <!-- <el-button
                   type="warning"
                   link
                   size="small"
                   @click="handleAdjustStock(row)"
                 >
                   调整
-                </el-button>
+                </el-button> -->
                 <el-button
                   type="info"
                   link
@@ -498,8 +498,8 @@ const loadWarehouseList = async () => {
 
 const loadCategoryList = async () => {
   try {
-    const res = await get('/api/auth/category/list');
-    categoryList.value = res.records || [];
+    const res = await get('/api/auth/product/categoryList');
+    categoryList.value = res || [];
   } catch (error) {
     console.error('加载分类列表失败:', error);
     categoryList.value = [];
@@ -583,7 +583,8 @@ const handleAdjustStock = (inventory) => {
 };
 
 const handleViewHistory = (inventory) => {
-  router.push(`/inventory/history/${inventory.productId}`);
+  console.log("查看历史记录", inventory.productId);
+  router.push(`/index/ckInventoryHistory/${inventory.productId}`);
 };
 
 // 格式化数字显示

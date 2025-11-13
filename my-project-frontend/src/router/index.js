@@ -233,6 +233,15 @@ const router = createRouter({
             meta: { requiresAuth: false }
         },
         {
+            path: '/index/ckInventoryHistory/:id',
+            name: 'ckInventoryHistory',
+            component: () => import('@/views/ck/CkInventoryHistory.vue'),
+            meta: { requiresAuth: false }
+        },
+
+
+
+        {
             path: '/index/ckInventoryTransaction/',
             name: 'ckInventoryTransaction',
             component: () => import('@/views/ck/CkInventoryTransaction.vue'),

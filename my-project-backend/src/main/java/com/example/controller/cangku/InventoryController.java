@@ -5,9 +5,8 @@ import com.example.Facade.CkInventoryFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.InventoryListPageReq;
-import com.example.entity.cangku.resp.InventoryBatchResp;
-import com.example.entity.cangku.resp.InventoryListResp;
-import com.example.entity.cangku.resp.InventoryPageListResp;
+import com.example.entity.cangku.req.InventoryTransactionListPageReq;
+import com.example.entity.cangku.resp.*;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -24,11 +23,26 @@ import java.util.List;
  */
 @RestController
 @Slf4j
-@RequestMapping("/api/auth/inventory/")
+@RequestMapping("/api/auth/inventory")
 public class InventoryController {
     @Resource
     private CkInventoryFacade inventoryFacade;
 
+
+    @GetMapping("/productInventoryDetail")
+    public RespBean<InventoryProductDetailResp> productInventoryDetail(@RequestParam("productId") Long productId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            InventoryProductDetailResp result = inventoryFacade.productInventoryDetail(productId, user);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("InventoryController#productInventoryDetail,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#productInventoryDetail,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
     @PostMapping("/pageList")
     public RespBean<Page<InventoryPageListResp>> pageList(@RequestBody InventoryListPageReq req) {
@@ -45,6 +59,25 @@ public class InventoryController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("InventoryController#pageList,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @PostMapping("/transaction/pageList")
+    public RespBean<Page<InventoryComprehensiveHistoryResp>> transactionPageList(@RequestBody InventoryTransactionListPageReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            req.setTenantId(tenantId);
+            req.setUserId(user.getId());
+
+            Page<InventoryComprehensiveHistoryResp> result = inventoryFacade.comprehensiveHistory(Page.of(req.getPage() - 1, req.getSize()), req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("InventoryController#transactionPageList,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#transactionPageList,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -81,4 +114,22 @@ public class InventoryController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+    ///lowProductCountChat
+
+    @GetMapping("/lowProductCountChat")
+    public RespBean<List<InventoryBatchResp>> lowProductCountChat() {
+        try {
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            List<InventoryBatchResp> result = inventoryFacade.lowProductCountChat(tenantId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("InventoryController#lowProductCountChat", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#lowProductCountChat", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
 }

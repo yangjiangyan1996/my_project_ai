@@ -10,6 +10,7 @@ import com.example.service.CkInboundOrderService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 
 // CkInboundOrderServiceImpl.java
@@ -18,6 +19,9 @@ public class CkInboundOrderServiceImpl extends ServiceImpl<CkInboundOrderMapper,
 
     @Override
     public List<InboundOrder> selectByInboundOrderIds(Long tenantId, List<Long> inboundOrderIds) {
+        if (inboundOrderIds == null || inboundOrderIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         return this.query()
                 .eq("tenant_id", tenantId)
                 .in("id", inboundOrderIds)

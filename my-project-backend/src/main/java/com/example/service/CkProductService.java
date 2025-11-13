@@ -21,4 +21,5 @@ public interface CkProductService extends IService<Product> {
     List<Product> listWareHouseEnable(Long tenantId);
 
     List<Product> selectByIds(Long tenantId, List<Long> productIds);
+    Product selectById(Long tenantId, Long productId);
 }

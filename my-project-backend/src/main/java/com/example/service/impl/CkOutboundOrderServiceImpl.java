@@ -11,6 +11,7 @@ import com.example.service.CkOutboundOrderService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 
 // CkOutboundOrderServiceImpl.java
@@ -24,6 +25,19 @@ public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMappe
                         .eq("tenant_id", tenantId)
                         .in("product_id", productIds)
                         .eq("status", status)
+                        .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
+    public List<OutboundOrder> selectByOutboundOrderIds(Long tenantId, List<Long> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return baseMapper.selectList(
+                new QueryWrapper<OutboundOrder>()
+                        .eq("tenant_id", tenantId)
+                        .in("id", orderIds)
                         .eq("is_deleted", 0)
         );
     }
