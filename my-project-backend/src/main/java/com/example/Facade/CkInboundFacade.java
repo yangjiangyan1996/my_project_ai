@@ -6,9 +6,11 @@ import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.InboundDetailResp;
 import com.example.entity.cangku.resp.InboundListPageResp;
 import com.example.enums.CkInOutboundEnums;
+import com.example.holder.InventoryHolder;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -25,8 +27,11 @@ import java.util.stream.Collectors;
  * @Email 1776080295@qq.com
  * @Date 2025/11/2 00:04
  */
+@Slf4j
 @Service
 public class CkInboundFacade {
+    @Resource
+    InventoryHolder inventoryHolder;
     @Resource
     CkUnitService unitService;
     @Resource
@@ -41,6 +46,8 @@ public class CkInboundFacade {
     private CkInventoryTransactionService inventoryTransactionService;
     @Resource
     CkInventoryBatchService inventoryBatchService;
+    @Resource
+    CkInventoryShelfService inventoryShelfService;
     @Resource
     CkInventoryWarehouseService inventoryWarehouseService;
     @Resource
@@ -167,25 +174,29 @@ public class CkInboundFacade {
      * 构建入库单明细实体列表
      */
     private List<InboundOrderItem> buildInboundOrderItems(InboundCreateReq req, Long orderId) {
-        return req.getItems().stream().map(item -> {
-            InboundOrderItem orderItem = new InboundOrderItem();
-            orderItem.setOrderId(orderId);
-            orderItem.setProductId(item.getProductId());
-            orderItem.setActualQuantity(new BigDecimal(item.getActualQuantity())); // 入库时计划数量=实际数量
-            orderItem.setShelfLocationId(parseShelfLocationId(item.getShelfLocationId()));
-            orderItem.setRemark(item.getRemark());
-            orderItem.setBatchNo(item.getBatchNo());
-            orderItem.setTenantId(req.getTenantId());
-            orderItem.setPriceUnit(item.getPriceUnit());
-            orderItem.setPriceTotal(item.getPriceTotal());
-            orderItem.setCreatedBy(req.getUserId());
-            orderItem.setModifiedBy(req.getUserId());
-            orderItem.setCreatedAt(new Date());
-            orderItem.setModifiedAt(new Date());
-            orderItem.setIsDeleted(0);
-
-            return orderItem;
-        }).collect(Collectors.toList());
+        List<InboundOrderItem> orderItems = new ArrayList<>();
+        for (InboundCreateReq.InboundDetailCreateReq item : req.getItems()) {
+            for (InboundCreateReq.ShelfDetailCreateReq shelf : item.getShelfAllocations()) {
+                InboundOrderItem orderItem = new InboundOrderItem();
+                orderItem.setOrderId(orderId);
+                orderItem.setProductId(item.getProductId());
+                orderItem.setActualQuantity(new BigDecimal(shelf.getQuantity())); // 入库时计划数量=实际数量
+                orderItem.setShelfLocationId(shelf.getShelfLocationId());
+                orderItem.setRemark(item.getRemark());
+                orderItem.setBatchNo(item.getBatchNo());
+                orderItem.setTenantId(req.getTenantId());
+                orderItem.setPriceUnit(item.getPriceUnit());
+                orderItem.setPriceTotal(item.getPriceTotal());
+                orderItem.setProductType(CkInOutboundEnums.ProductType.Product.getCode());
+                orderItem.setCreatedBy(req.getUserId());
+                orderItem.setModifiedBy(req.getUserId());
+                orderItem.setCreatedAt(new Date());
+                orderItem.setModifiedAt(new Date());
+                orderItem.setIsDeleted(0);
+                orderItems.add(orderItem) ;
+            }
+        }
+        return orderItems;
     }
 
     /**
@@ -206,6 +217,7 @@ public class CkInboundFacade {
      * 更新库存和流水记录
      */
     private void updateInventoryAndTransaction(InboundCreateReq req, Long orderId, List<InboundOrderItem> orderItems) {
+        log.info("更新库存和流水记录,看看这个方法能被调用到不， 如果调用不到，要删掉");
         for (InboundOrderItem item : orderItems) {
             // 更新库存, 库存流水
             updateInventory(req, item, orderId);
@@ -223,6 +235,7 @@ public class CkInboundFacade {
 
     /**
      * 更新库存
+     *
      * @return 旧的库存数量
      */
     private BigDecimal updateInventory(InboundCreateReq req, InboundOrderItem item, Long orderId) {
@@ -737,6 +750,7 @@ public class CkInboundFacade {
 
     @Transactional(rollbackFor = Exception.class)
     public Boolean approveOk(InboundApproveOkReq req) {
+
         // 1. 参数校验
         if (req == null || req.getOrderId() == null) {
             throw new ValidationException("审核请求参数不能为空");
@@ -758,7 +772,7 @@ public class CkInboundFacade {
         }
 
         // 5. 更新库存和流水记录
-        updateInventoryAndTransactionForApprove(inboundOrder, orderItems, req.getUserId());
+        inventoryHolder.updateAddInventoryForApprove(inboundOrder, orderItems, req.getUserId());
 
         // 6. 更新入库单状态为已完成 3-入库已完成
         boolean statusUpdated = updateInboundOrderStatus(inboundOrder.getId(), CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.getCode(), req.getUserId());
@@ -766,8 +780,63 @@ public class CkInboundFacade {
             throw new ValidationException("更新入库单状态失败");
         }
 
+//        CkInOutboundEnums.InBoundType inBoundType = CkInOutboundEnums.InBoundType.getByCode(inboundOrder.getOrderType());
+//        switch (inBoundType) {
+//            case PurchaseInbound:
+//                processPurchaseInbound(req, inboundOrder);
+//                break;
+//            case ProductionInbound:
+//                processProductionInbound(req, inboundOrder);
+//                break;
+//            default:
+//                throw new ValidationException("入库单类型错误");
+//        }
         return true;
     }
+
+//    private void processProductionInbound(InboundApproveOkReq req, InboundOrder inboundOrder) {
+//        // 4. 查询入库单明细
+//        List<InboundOrderItem> orderItems = inboundOrderItemService.selectByInboundOrderId(req.getTenantId(), req.getOrderId());
+//        if (CollectionUtils.isEmpty(orderItems)) {
+//            throw new ValidationException("入库单明细不能为空");
+//        }
+//
+//        // 5. 更新库存和流水记录
+//        Map<Integer, List<InboundOrderItem>> productType2ItemListMap = orderItems.stream().collect(Collectors.groupingBy(InboundOrderItem::getProductType));
+//        for (Integer puductType : productType2ItemListMap.keySet()) {
+//            List<InboundOrderItem> productItems = productType2ItemListMap.get(puductType);
+//            if (!CollectionUtils.isEmpty(productItems)) {
+//                if (puductType.equals(CkInOutboundEnums.ProductType.Product.getCode())) {
+//                    inventoryHolder.updateAddInventoryForApprove(inboundOrder, productItems, req.getUserId());
+//                }
+//            }
+//
+//        }
+//
+//        // 6. 更新入库单状态为已完成 3-入库已完成
+//        boolean statusUpdated = updateInboundOrderStatus(inboundOrder.getId(), CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.getCode(), req.getUserId());
+//        if (!statusUpdated) {
+//            throw new ValidationException("更新入库单状态失败");
+//        }
+//    }
+
+//    private void processPurchaseInbound(InboundApproveOkReq req, InboundOrder inboundOrder) {
+//        // 4. 查询入库单明细
+//        List<InboundOrderItem> orderItems = inboundOrderItemService.selectByInboundOrderId(req.getTenantId(), req.getOrderId());
+//        if (CollectionUtils.isEmpty(orderItems)) {
+//            throw new ValidationException("入库单明细不能为空");
+//        }
+//
+//        // 5. 更新库存和流水记录
+//        inventoryHolder.updateAddInventoryForApprove(inboundOrder, orderItems, req.getUserId());
+//
+//        // 6. 更新入库单状态为已完成 3-入库已完成
+//        boolean statusUpdated = updateInboundOrderStatus(inboundOrder.getId(), CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.getCode(), req.getUserId());
+//        if (!statusUpdated) {
+//            throw new ValidationException("更新入库单状态失败");
+//        }
+//
+//    }
 
     /**
      * 检查订单状态是否允许审核通过
@@ -780,178 +849,6 @@ public class CkInboundFacade {
 //        }
     }
 
-    /**
-     * 审核通过时更新库存和流水记录
-     */
-    private void updateInventoryAndTransactionForApprove(InboundOrder inboundOrder, List<InboundOrderItem> orderItems, Long userId) {
-        for (InboundOrderItem item : orderItems) {
-            // 更新库存
-            updateInventoryForApprove(inboundOrder, item, userId);
-
-            // 更新仓库库存
-            updateWarehouseInventoryForApprove(inboundOrder, item, userId);
-
-            // 创建库存批次
-            updateInventoryBatchApprove(inboundOrder, item, userId);
-
-            // 记录库存流水
-            createInventoryTransactionForApprove(inboundOrder, item, userId);
-        }
-    }
-
-    private void updateInventoryBatchApprove(InboundOrder inboundOrder, InboundOrderItem item, Long userId) {
-        // 查询现有库存
-        InventoryBatch ib = inventoryBatchService.selectByBatchNoAndProductId(item.getBatchNo(), item.getProductId(), inboundOrder.getTenantId());
-
-        if (ib != null) {
-            // 更新现有库存
-            BigDecimal newQuantity = ib.getQuantity().add(item.getActualQuantity());
-            ib.setQuantity(newQuantity);
-            ib.setModifiedBy(userId);
-            ib.setModifiedAt(new Date());
-
-            boolean updated = inventoryBatchService.updateById(ib);
-            if (!updated) {
-                throw new ValidationException("批次库存更新失败，产品ID: " + item.getProductId());
-            }
-        } else {
-            // 创建新库存记录
-            InventoryBatch newInventory = new InventoryBatch();
-            newInventory.setTenantId(inboundOrder.getTenantId());
-            newInventory.setProductId(item.getProductId());
-            newInventory.setBatchNo(item.getBatchNo());
-            newInventory.setWarehouseId(inboundOrder.getWarehouseId());
-            newInventory.setQuantity(item.getActualQuantity());
-            newInventory.setLockedQuantity(BigDecimal.ZERO);
-            newInventory.setInboundOrderId(item.getOrderId());
-            newInventory.setInboundItemId(item.getId());
-            newInventory.setProductionDate(new Date());
-            newInventory.setCreatedBy(userId);
-            newInventory.setModifiedBy(userId);
-            newInventory.setCreatedAt(new Date());
-            newInventory.setModifiedAt(new Date());
-            newInventory.setIsDeleted(0);
-
-            boolean saved = inventoryBatchService.save(newInventory);
-            if (!saved) {
-                throw new ValidationException("批次库存创建失败，产品ID: " + item.getProductId());
-            }
-        }
-    }
-
-    /**
-     * 审核通过时更新库存
-     */
-    private void updateInventoryForApprove(InboundOrder inboundOrder, InboundOrderItem item, Long userId) {
-        // 查询现有库存
-        Inventory existingInventory = inventoryService.getByProduct(item.getProductId(), inboundOrder.getTenantId());
-
-        BigDecimal oldQuantity = BigDecimal.ZERO;
-        BigDecimal newQuantity = BigDecimal.ZERO;
-
-        if (existingInventory != null) {
-            // 更新现有库存
-            newQuantity = existingInventory.getQuantity().add(item.getActualQuantity());
-            oldQuantity = existingInventory.getQuantity();
-
-
-            existingInventory.setQuantity(newQuantity);
-            existingInventory.setModifiedBy(userId);
-            existingInventory.setModifiedAt(new Date());
-
-            boolean updated = inventoryService.updateById(existingInventory);
-            if (!updated) {
-                throw new ValidationException("库存更新失败，产品ID: " + item.getProductId());
-            }
-        } else {
-            // 创建新库存记录
-            oldQuantity = BigDecimal.ZERO;
-            newQuantity = item.getActualQuantity();
-
-            Inventory newInventory = new Inventory();
-            newInventory.setProductId(item.getProductId());
-            newInventory.setQuantity(newQuantity);
-            newInventory.setLockedQuantity(BigDecimal.ZERO);
-            newInventory.setTenantId(inboundOrder.getTenantId());
-            newInventory.setCreatedBy(userId);
-            newInventory.setModifiedBy(userId);
-            newInventory.setCreatedAt(new Date());
-            newInventory.setModifiedAt(new Date());
-            newInventory.setIsDeleted(0);
-
-            boolean saved = inventoryService.save(newInventory);
-            if (!saved) {
-                throw new ValidationException("库存创建失败，产品ID: " + item.getProductId());
-            }
-        }
-
-        InventoryTransaction transaction = new InventoryTransaction();
-        transaction.setWarehouseId(inboundOrder.getWarehouseId());
-        transaction.setProductId(item.getProductId());
-        transaction.setOrderType(1); // 1-入库单
-        transaction.setOrderId(inboundOrder.getId());
-        transaction.setOrderItemId(item.getId());
-        transaction.setChangeQuantity(item.getActualQuantity()); // 正数表示增加
-        transaction.setBalanceQuantity(newQuantity);
-        transaction.setBeforBalanceQuantity(oldQuantity);
-        transaction.setTransactionTime(new Date());
-        transaction.setTenantId(inboundOrder.getTenantId());
-        transaction.setPriceUnit(item.getPriceUnit());
-        transaction.setPriceTotal(item.getPriceTotal());
-        transaction.setCreatedBy(userId);
-        transaction.setModifiedBy(userId);
-        transaction.setCreatedAt(new Date());
-        transaction.setModifiedAt(new Date());
-        transaction.setIsDeleted(0);
-
-        boolean saved = inventoryTransactionService.save(transaction);
-        if (!saved) {
-            throw new ValidationException("库存流水记录创建失败");
-        }
-    }
-
-    private void updateWarehouseInventoryForApprove(InboundOrder inboundOrder, InboundOrderItem item, Long userId) {
-        // 查询现有库存
-        InventoryWarehouse existingInventory = inventoryWarehouseService.getByWarehouseAndProduct(inboundOrder.getWarehouseId() ,item.getProductId(), inboundOrder.getTenantId());
-
-        if (existingInventory != null) {
-            // 更新现有库存
-            BigDecimal newQuantity = existingInventory.getQuantity().add(item.getActualQuantity());
-            existingInventory.setQuantity(newQuantity);
-            existingInventory.setModifiedBy(userId);
-            existingInventory.setModifiedAt(new Date());
-
-            boolean updated = inventoryWarehouseService.updateById(existingInventory);
-            if (!updated) {
-                throw new ValidationException("库存更新失败，产品ID: " + item.getProductId());
-            }
-        } else {
-            // 创建新库存记录
-            InventoryWarehouse newInventory = new InventoryWarehouse();
-            newInventory.setProductId(item.getProductId());
-            newInventory.setWarehouseId(inboundOrder.getWarehouseId());
-            newInventory.setQuantity(item.getActualQuantity());
-            newInventory.setLockedQuantity(BigDecimal.ZERO);
-            newInventory.setTenantId(inboundOrder.getTenantId());
-            newInventory.setCreatedBy(userId);
-            newInventory.setModifiedBy(userId);
-            newInventory.setCreatedAt(new Date());
-            newInventory.setModifiedAt(new Date());
-            newInventory.setIsDeleted(0);
-
-            boolean saved = inventoryWarehouseService.save(newInventory);
-            if (!saved) {
-                throw new ValidationException("库存创建失败，产品ID: " + item.getProductId());
-            }
-        }
-    }
-
-    /**
-     * 审核通过时创建库存流水记录
-     */
-    private void createInventoryTransactionForApprove(InboundOrder inboundOrder, InboundOrderItem item, Long userId) {
-
-    }
 
     /**
      * 获取当前库存余额（审核通过专用）

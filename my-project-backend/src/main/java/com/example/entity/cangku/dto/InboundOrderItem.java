@@ -20,6 +20,8 @@ public class InboundOrderItem extends BaseModel {
     private Long orderId;
     //产品ID
     private Long productId;
+    //关联产品ID(生产入库，则是成品的ID)
+    private Long relationProductId;
     //实际数量
     private BigDecimal actualQuantity;
     //货架位置ID
@@ -34,4 +36,9 @@ public class InboundOrderItem extends BaseModel {
     private BigDecimal priceUnit;
     //总价
     private BigDecimal priceTotal;
+    /**
+     * 产品类型
+     * {@link com.example.enums.CkInOutboundEnums.ProductType}
+     */
+    private Integer productType;
 }

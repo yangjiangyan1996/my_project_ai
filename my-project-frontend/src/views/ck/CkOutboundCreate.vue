@@ -142,7 +142,9 @@
           </el-button>
         </div>
 
+        <!-- 销售出库的产品表格 -->
         <el-table
+          v-if="formData.orderType === 1"
           :data="formData.items"
           border
           class="product-table"
@@ -212,11 +214,11 @@
                 <div v-if="row.batchAllocations && row.batchAllocations.length > 0" class="batch-summary">
                   <el-tag
                     v-for="allocation in row.batchAllocations"
-                    :key="allocation.batchNo"
+                    :key="`${allocation.batchNo}-${allocation.shelfId}`"
                     size="small"
                     class="batch-tag"
                   >
-                    {{ allocation.batchNo }}: {{ allocation.quantity }}个
+                    {{ allocation.batchNo }}({{ allocation.shelfName }}): {{ allocation.quantity }}个
                   </el-tag>
                 </div>
                 <div v-else class="batch-empty">
@@ -266,6 +268,204 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 生产领料的产品表格 -->
+        <el-table
+          v-if="formData.orderType === 2"
+          :data="formData.items"
+          border
+          class="product-table"
+          empty-text="请添加产品明细"
+        >
+          <el-table-column type="index" label="序号" width="60" align="center" />
+          <el-table-column label="产品信息" min-width="200">
+            <template #default="{ row, $index }">
+              <el-select
+                v-model="row.productId"
+                placeholder="选择产品"
+                style="width: 100%"
+                filterable
+                @change="(value) => handleProductChange(value, $index)"
+              >
+                <el-option
+                  v-for="product in productionProducts"
+                  :key="product.id"
+                  :label="`${product.sku} - ${product.name}`"
+                  :value="product.id"
+                />
+              </el-select>
+            </template>
+          </el-table-column>
+          <el-table-column label="规格型号" width="120">
+            <template #default="{ row }">
+              <span>{{ row.spec || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="单位" width="80" align="center">
+            <template #default="{ row }">
+              <span>{{ row.unit || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="领料数量" width="120">
+            <template #default="{ row, $index }">
+              <el-input-number
+                v-model="row.quantity"
+                :min="1"
+                controls-position="right"
+                style="width: 100%"
+                @change="() => handleQuantityChange($index)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="单价" width="120">
+            <template #default="{ row }">
+              <el-input-number
+                v-model="row.price"
+                :min="0"
+                :precision="2"
+                controls-position="right"
+                style="width: 100%"
+              >
+                <template #prefix>¥</template>
+              </el-input-number>
+            </template>
+          </el-table-column>
+          <el-table-column label="金额" width="120" align="right">
+            <template #default="{ row }">
+              <span>¥ {{ ((row.price || 0) * (row.quantity || 0)).toFixed(2) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="备注" min-width="150">
+            <template #default="{ row }">
+              <el-input
+                v-model="row.remark"
+                placeholder="产品备注"
+                maxlength="100"
+                show-word-limit
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="80" fixed="right" align="center">
+            <template #default="{ $index }">
+              <el-button
+                type="danger"
+                link
+                @click="handleRemoveProduct($index)"
+              >
+                <el-icon><Delete /></el-icon>
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- BOM原料分配（仅生产领料显示） -->
+        <div class="bom-section" v-if="formData.orderType === 2 && hasBomData">
+          <div class="section-header">
+            <h3>原料分配</h3>
+            <span class="bom-tip">根据产品BOM自动计算所需原料</span>
+          </div>
+          
+          <div class="bom-content" v-for="(item, itemIndex) in formData.items" :key="itemIndex">
+            <div class="bom-item-header" v-if="getBomData(item.productId)?.length">
+              <h4>{{ item.productName }} ({{ item.quantity || 0 }} {{ item.unit }}) 所需原料:</h4>
+              <div class="allocation-summary">
+                <span v-for="bomItem in getBomData(item.productId)" :key="bomItem.componentProductId" 
+                      class="summary-item" :class="{ 'insufficient': isInsufficient(itemIndex, bomItem) }">
+                  {{ bomItem.componentProductName }}: 
+                  已分配 {{ getAllocatedQuantityForComponent(itemIndex, bomItem.componentProductId) }} / 
+                  总需求 {{ calculateRequiredQuantity(bomItem.quantity, item.quantity) }}
+                  <span v-if="isInsufficient(itemIndex, bomItem)" class="insufficient-tip">
+                    (不足 {{ calculateShortage(itemIndex, bomItem) }})
+                  </span>
+                </span>
+              </div>
+            </div>
+            
+            <el-table
+              :data="getBomData(item.productId)"
+              border
+              class="bom-table"
+              v-if="getBomData(item.productId)?.length"
+            >
+              <el-table-column type="index" label="序号" width="60" align="center" />
+              <el-table-column label="原料信息" min-width="100">
+                <template #default="{ row }">
+                  <div>
+                    <div>{{ row.componentProductName }}</div>
+                    <div class="sku-text">{{ row.componentProductSku }}</div>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column label="规格" width="120">
+                <template #default="{ row }">
+                  <span>{{ row.componentProductSpec || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="单位" width="80" align="center">
+                <template #default="{ row }">
+                  <span>{{ row.componentProductUnit || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="单件用量" width="100" align="center">
+                <template #default="{ row }">
+                  <span>{{ row.quantity }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="总需求量" width="120" align="center">
+                <template #default="{ row }">
+                  <span class="required-quantity">{{ calculateRequiredQuantity(row.quantity, item.quantity) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="原料分配" min-width="300">
+                <template #default="{ row }">
+                  <div class="allocation-container">
+                    <div v-for="(warehouse, whIndex) in row.warehouseQuantityList" :key="warehouse.warehouseId" class="warehouse-allocation">
+                      <div class="warehouse-info">
+                        <strong>{{ warehouse.warehouseName }}</strong>
+                        <span>可用: {{ warehouse.warehouseAvailableQuantity }}</span>
+                      </div>
+                      <div class="shelf-allocation" v-if="warehouse.shelfQuantityList">
+                        <div v-for="shelf in warehouse.shelfQuantityList" :key="shelf.shelfId" class="shelf-item">
+                          <div class="shelf-info">
+                            <span>货架 {{ shelf.shelfName }}</span>
+                            <span>可用: {{ shelf.shelfAvailableQuantity }}</span>
+                          </div>
+                          <el-input-number
+                            :model-value="getAllocationQuantity(itemIndex, row.componentProductId, warehouse.warehouseId, shelf.shelfId)"
+                            @update:model-value="(value) => updateAllocationQuantity(value, itemIndex, row, warehouse, shelf)"
+                            :min="0"
+                            :max="getMaxAllocation(itemIndex, row, warehouse, shelf)"
+                            :precision="4"
+                            :step="1"
+                            controls-position="right"
+                            size="small"
+                            placeholder="使用数量"
+                            class="allocation-input"
+                          />
+                        </div>
+                      </div>
+                      <div v-else class="no-shelf-allocation">
+                        <el-input-number
+                          :model-value="getAllocationQuantity(itemIndex, row.componentProductId, warehouse.warehouseId, null)"
+                          @update:model-value="(value) => updateAllocationQuantity(value, itemIndex, row, warehouse, null)"
+                          :min="0"
+                          :max="getMaxAllocation(itemIndex, row, warehouse, null)"
+                          :precision="4"
+                          :step="1"
+                          controls-position="right"
+                          size="small"
+                          placeholder="使用数量"
+                          class="allocation-input"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
 
         <!-- 统计信息 -->
         <div class="summary-info" v-if="formData.items.length > 0">
@@ -330,12 +530,13 @@
       </div>
     </el-card>
 
-    <!-- 批次分配对话框 -->
+    <!-- 批次分配对话框（销售出库使用） -->
     <el-dialog
       v-model="batchDialog.visible"
       :title="`批次分配 - ${batchDialog.productName}`"
-      width="600px"
+      width="800px"
       destroy-on-close
+      v-if="formData.orderType === 1"
     >
       <div class="batch-dialog-content">
         <div class="batch-info">
@@ -345,7 +546,7 @@
           </div>
           <div class="info-item">
             <span class="label">已分配数量：</span>
-            <span class="value" :class="batchDialog.allocatedQuantity >= batchDialog.totalQuantity ? 'success' : 'warning'">
+            <span class="value" :class="batchDialog.allocatedQuantity === batchDialog.totalQuantity ? 'success' : 'warning'">
               {{ batchDialog.allocatedQuantity }}
             </span>
           </div>
@@ -355,32 +556,54 @@
           </div>
         </div>
 
+        <!-- 批次分配表格 -->
         <el-table :data="batchDialog.batches" border class="batch-table">
-          <el-table-column label="批次号" prop="batchNo" width="150" />
-          <el-table-column label="可用数量" width="100" align="center">
+          <el-table-column label="批次号" prop="batchNo" width="120" fixed="left" />
+          <el-table-column label="总可用数量" width="100" align="center">
             <template #default="{ row }">
               <span>{{ row.quantity }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="分配数量" width="150">
-            <template #default="{ row, $index }">
-              <el-input-number
-                v-model="row.allocated"
-                :min="0"
-                :max="row.maxAllocatable"
-                controls-position="right"
-                style="width: 100%"
-                @change="() => handleBatchAllocationChange($index)"
-              />
+          <el-table-column label="货架分配" min-width="400">
+            <template #default="{ row, $index: batchIndex }">
+              <div class="shelf-allocation-container">
+                <div v-if="row.shelfList && row.shelfList.length > 0" class="shelf-list">
+                  <div v-for="(shelf, shelfIndex) in row.shelfList" :key="shelf.shelfId" class="shelf-item">
+                    <div class="shelf-info">
+                      <span class="shelf-name">货架 {{ shelf.shelfName }}</span>
+                      <span class="shelf-quantity">可用: {{ shelf.quantity }}</span>
+                    </div>
+                    <el-input-number
+                      v-model="shelf.allocated"
+                      :min="0"
+                      :max="getShelfMaxAllocation(row, shelf)"
+                      :precision="0"
+                      controls-position="right"
+                      size="small"
+                      placeholder="分配数量"
+                      class="shelf-input"
+                      @change="(value) => handleShelfAllocationChange(batchIndex, shelfIndex, value)"
+                    />
+                  </div>
+                </div>
+                <div v-else class="no-shelf">
+                  <span class="no-shelf-text">无货架信息</span>
+                </div>
+              </div>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="80" align="center">
+          <el-table-column label="批次分配总数" width="120" align="center">
+            <template #default="{ row }">
+              <span :class="getBatchAllocationClass(row)">{{ getBatchAllocatedTotal(row) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" fixed="right" align="center">
             <template #default="{ row, $index }">
               <el-button
                 type="danger"
                 link
                 @click="clearBatchAllocation($index)"
-                :disabled="!row.allocated"
+                :disabled="getBatchAllocatedTotal(row) === 0"
               >
                 清空
               </el-button>
@@ -392,7 +615,7 @@
           <el-button @click="autoAllocateBatches" :disabled="batchDialog.remainingQuantity <= 0">
             自动分配
           </el-button>
-          <el-button type="primary" @click="confirmBatchAllocation">
+          <el-button type="primary" @click="confirmBatchAllocation" :disabled="batchDialog.remainingQuantity !== 0">
             确认分配
           </el-button>
         </div>
@@ -430,7 +653,9 @@ const formData = reactive({
   remark: '',
   status: 0,
   items: [],
-  attachments: []
+  attachments: [],
+  // 新增：BOM分配数据
+  bomAllocations: []
 });
 
 // 批次分配对话框数据
@@ -448,6 +673,7 @@ const batchDialog = reactive({
 const warehouseList = ref([]);
 const customerList = ref([]);
 const inventoryList = ref([]);
+const productionProductList = ref([]);
 const fileList = ref([]);
 
 // 产品库存映射表
@@ -467,6 +693,7 @@ const showCustomer = computed(() => {
   return formData.orderType === 1;
 });
 
+// 销售出库可用产品
 const availableProducts = computed(() => {
   if (!formData.warehouseId) return [];
   
@@ -482,6 +709,18 @@ const availableProducts = computed(() => {
     }));
 });
 
+// 生产领料可用产品
+const productionProducts = computed(() => {
+  return productionProductList.value.map(product => ({
+    id: product.id,
+    sku: product.sku,
+    name: product.name,
+    spec: product.spec,
+    unit: product.unitName,
+    bomData: product.bomData || []
+  }));
+});
+
 const totalQuantity = computed(() => {
   return formData.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
 });
@@ -494,22 +733,199 @@ const totalAmount = computed(() => {
   }, 0);
 });
 
-const hasInsufficientStock = computed(() => {
+// 新增：是否有BOM数据
+const hasBomData = computed(() => {
   return formData.items.some(item => {
-    const allocatedQuantity = item.batchAllocations 
-      ? item.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0)
-      : 0;
-    return (item.quantity || 0) > allocatedQuantity;
+    const product = productionProductList.value.find(p => p.id === item.productId);
+    return product?.bomData?.length > 0;
   });
 });
 
+const hasInsufficientStock = computed(() => {
+  // 销售出库检查批次分配
+  if (formData.orderType === 1) {
+    return formData.items.some(item => {
+      const allocatedQuantity = item.batchAllocations 
+        ? item.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0)
+        : 0;
+      return (item.quantity || 0) !== allocatedQuantity;
+    });
+  }
+  
+  // 生产领料检查BOM分配
+  if (formData.orderType === 2) {
+    const validationResult = validateBomAllocations();
+    return !validationResult.valid;
+  }
+  
+  return false;
+});
+
 const stockStatusText = computed(() => {
-  return hasInsufficientStock.value ? '批次分配不足' : '分配完成';
+  if (formData.orderType === 1) {
+    return hasInsufficientStock.value ? '批次分配不足' : '分配完成';
+  } else if (formData.orderType === 2) {
+    return hasInsufficientStock.value ? '原料分配不足' : '分配完成';
+  }
+  return '库存充足';
 });
 
 const stockStatusClass = computed(() => {
   return hasInsufficientStock.value ? 'status-warning' : 'status-success';
 });
+
+// 获取产品的BOM数据
+const getBomData = (productId) => {
+  const product = productionProductList.value.find(p => p.id === productId);
+  return product?.bomData || [];
+};
+
+// 计算总需求量
+const calculateRequiredQuantity = (unitQuantity, productQuantity) => {
+  const unitQty = parseFloat(unitQuantity) || 0;
+  const productQty = parseFloat(productQuantity) || 0;
+  return (unitQty * productQty).toFixed(4);
+};
+
+// 获取分配数量
+const getAllocationQuantity = (itemIndex, componentProductId, warehouseId, shelfId) => {
+  const allocation = formData.bomAllocations.find(a => 
+    a.itemIndex === itemIndex &&
+    a.componentProductId === componentProductId &&
+    a.warehouseId === warehouseId &&
+    a.shelfId === shelfId
+  );
+  return allocation ? parseFloat(allocation.quantity) : 0;
+};
+
+// 获取某个原料的总分配数量
+const getAllocatedQuantityForComponent = (itemIndex, componentProductId) => {
+  return formData.bomAllocations
+    .filter(a => a.itemIndex === itemIndex && a.componentProductId === componentProductId)
+    .reduce((sum, a) => sum + (parseFloat(a.quantity) || 0), 0)
+    .toFixed(4);
+};
+
+// 检查原料是否不足
+const isInsufficient = (itemIndex, bomItem) => {
+  const requiredQuantity = parseFloat(calculateRequiredQuantity(bomItem.quantity, formData.items[itemIndex].quantity));
+  const allocatedQuantity = parseFloat(getAllocatedQuantityForComponent(itemIndex, bomItem.componentProductId));
+  return allocatedQuantity < requiredQuantity;
+};
+
+// 计算不足数量
+const calculateShortage = (itemIndex, bomItem) => {
+  const requiredQuantity = parseFloat(calculateRequiredQuantity(bomItem.quantity, formData.items[itemIndex].quantity));
+  const allocatedQuantity = parseFloat(getAllocatedQuantityForComponent(itemIndex, bomItem.componentProductId));
+  return (requiredQuantity - allocatedQuantity).toFixed(4);
+};
+
+// 获取最大分配数量（考虑总需求量和已分配数量）
+const getMaxAllocation = (itemIndex, bomRow, warehouse, shelf) => {
+  const requiredQuantity = parseFloat(calculateRequiredQuantity(bomRow.quantity, formData.items[itemIndex].quantity));
+  const currentAllocated = parseFloat(getAllocatedQuantityForComponent(itemIndex, bomRow.componentProductId));
+  const currentInputValue = getAllocationQuantity(itemIndex, bomRow.componentProductId, warehouse.warehouseId, shelf ? shelf.shelfId : null);
+  
+  // 剩余可分配数量 = 总需求量 - (当前已分配总量 - 当前输入框的值)
+  const remainingAllocation = requiredQuantity - (currentAllocated - currentInputValue);
+  
+  // 物理库存限制
+  const physicalMax = shelf ? 
+    parseFloat(shelf.shelfAvailableQuantity) : 
+    parseFloat(warehouse.warehouseAvailableQuantity);
+  
+  // 取两者中的较小值
+  return Math.min(remainingAllocation, physicalMax);
+};
+
+// 更新分配数量
+const updateAllocationQuantity = (value, itemIndex, bomRow, warehouse, shelf) => {
+  const quantity = parseFloat(value) || 0;
+  const allocationIndex = formData.bomAllocations.findIndex(a => 
+    a.itemIndex === itemIndex &&
+    a.componentProductId === bomRow.componentProductId &&
+    a.warehouseId === warehouse.warehouseId &&
+    a.shelfId === (shelf ? shelf.shelfId : null)
+  );
+
+  // 检查是否超过总需求量
+  const requiredQuantity = parseFloat(calculateRequiredQuantity(bomRow.quantity, formData.items[itemIndex].quantity));
+  const currentAllocated = parseFloat(getAllocatedQuantityForComponent(itemIndex, bomRow.componentProductId));
+  const currentInputValue = getAllocationQuantity(itemIndex, bomRow.componentProductId, warehouse.warehouseId, shelf ? shelf.shelfId : null);
+  
+  const newTotalAllocated = currentAllocated - currentInputValue + quantity;
+  
+  if (newTotalAllocated > requiredQuantity) {
+    // 如果超过总需求量，自动调整为剩余可分配数量
+    const adjustedQuantity = Math.max(0, requiredQuantity - (currentAllocated - currentInputValue));
+    ElMessage.warning(`分配数量不能超过总需求量 ${requiredQuantity}，已自动调整为 ${adjustedQuantity}`);
+    
+    if (adjustedQuantity > 0) {
+      if (allocationIndex >= 0) {
+        formData.bomAllocations[allocationIndex].quantity = adjustedQuantity;
+      } else {
+        formData.bomAllocations.push({
+          itemIndex,
+          componentProductId: bomRow.componentProductId,
+          componentProductName: bomRow.componentProductName,
+          componentProductSku: bomRow.componentProductSku,
+          warehouseId: warehouse.warehouseId,
+          warehouseName: warehouse.warehouseName,
+          shelfId: shelf ? shelf.shelfId : null,
+          shelfName: shelf ? shelf.shelfName : null,
+          quantity: adjustedQuantity
+        });
+      }
+    } else if (allocationIndex >= 0) {
+      formData.bomAllocations.splice(allocationIndex, 1);
+    }
+    return;
+  }
+
+  if (quantity > 0) {
+    if (allocationIndex >= 0) {
+      formData.bomAllocations[allocationIndex].quantity = quantity;
+    } else {
+      formData.bomAllocations.push({
+        itemIndex,
+        componentProductId: bomRow.componentProductId,
+        componentProductName: bomRow.componentProductName,
+        componentProductSku: bomRow.componentProductSku,
+        warehouseId: warehouse.warehouseId,
+        warehouseName: warehouse.warehouseName,
+        shelfId: shelf ? shelf.shelfId : null,
+        shelfName: shelf ? shelf.shelfName : null,
+        quantity: quantity
+      });
+    }
+  } else if (allocationIndex >= 0) {
+    formData.bomAllocations.splice(allocationIndex, 1);
+  }
+};
+
+// 验证BOM分配
+const validateBomAllocations = () => {
+  for (let i = 0; i < formData.items.length; i++) {
+    const item = formData.items[i];
+    const bomData = getBomData(item.productId);
+    
+    if (bomData.length > 0) {
+      for (const bomItem of bomData) {
+        const requiredQuantity = calculateRequiredQuantity(bomItem.quantity, item.quantity);
+        const allocatedQuantity = getAllocatedQuantityForComponent(i, bomItem.componentProductId);
+        
+        if (parseFloat(allocatedQuantity) < parseFloat(requiredQuantity)) {
+          return {
+            valid: false,
+            message: `${item.productName} 所需的原料 ${bomItem.componentProductName} 分配数量不足，需要 ${requiredQuantity}，已分配 ${allocatedQuantity}`
+          };
+        }
+      }
+    }
+  }
+  
+  return { valid: true };
+};
 
 // 表单验证规则
 const formRules = {
@@ -558,19 +974,24 @@ const loadOutboundDetail = async (id) => {
         expectedDate: detailData.expectedDate,
         relatedOrderNo: detailData.relatedOrderNo || '',
         remark: detailData.remark || '',
-        status: detailData.status
+        status: detailData.status,
+        bomAllocations: detailData.bomAllocations || []
       });
 
-      // 如果仓库有值，先加载对应的库存数据
+      // 如果仓库有值，先加载对应的数据
       if (detailData.warehouseId) {
-        await loadInventoryData(detailData.warehouseId);
+        if (detailData.orderType === 1) {
+          await loadInventoryData(detailData.warehouseId);
+        }
       }
 
       // 设置产品明细数据
       if (detailData.items && detailData.items.length > 0) {
         formData.items = detailData.items.map(item => {
-          // 使用库存映射中的数据，如果不存在则使用原始数据
-          const currentStock = productStockMap.value[item.productId] || item.currentStock || 0;
+          let currentStock = 0;
+          if (detailData.orderType === 1) {
+            currentStock = productStockMap.value[item.productId] || item.currentStock || 0;
+          }
           
           return {
             productId: item.productId,
@@ -578,7 +999,7 @@ const loadOutboundDetail = async (id) => {
             sku: item.sku || '',
             spec: item.spec || '',
             unit: item.unit || '',
-            currentStock: currentStock, // 使用正确的库存数据
+            currentStock: currentStock,
             quantity: item.quantity || 1,
             price: item.price || 0,
             batchAllocations: item.batchAllocations || [],
@@ -587,11 +1008,13 @@ const loadOutboundDetail = async (id) => {
           };
         });
 
-        // 为每个产品加载批次信息
-        for (let i = 0; i < formData.items.length; i++) {
-          const item = formData.items[i];
-          if (item.productId && formData.warehouseId) {
-            await loadBatchInfo(item.productId, formData.warehouseId, i);
+        // 为销售出库的产品加载批次信息
+        if (detailData.orderType === 1) {
+          for (let i = 0; i < formData.items.length; i++) {
+            const item = formData.items[i];
+            if (item.productId && formData.warehouseId) {
+              await loadBatchInfo(item.productId, formData.warehouseId, i);
+            }
           }
         }
       } else {
@@ -647,11 +1070,24 @@ const handleOrderTypeChange = (value) => {
   if (value !== 1) {
     formData.customerId = null;
   }
+  
+  // 清空产品列表和分配数据
+  formData.items = [];
+  formData.bomAllocations = [];
+  
+  // 重新加载产品数据
+  if (value === 1 && formData.warehouseId) {
+    loadInventoryData(formData.warehouseId);
+  } else if (value === 2) {
+    loadProductionProducts();
+  }
 };
 
 const handleWarehouseChange = async (warehouseId) => {
   if (warehouseId) {
-    await loadInventoryData(warehouseId);
+    if (formData.orderType === 1) {
+      await loadInventoryData(warehouseId);
+    }
     // 如果不是编辑模式，清空产品列表
     if (!isEditMode.value) {
       formData.items = [];
@@ -677,10 +1113,24 @@ const handleAddProduct = () => {
 
 const handleRemoveProduct = (index) => {
   formData.items.splice(index, 1);
+  // 同时移除相关的BOM分配数据
+  formData.bomAllocations = formData.bomAllocations.filter(a => a.itemIndex !== index);
+  // 更新后续项的索引
+  formData.bomAllocations.forEach(a => {
+    if (a.itemIndex > index) {
+      a.itemIndex--;
+    }
+  });
 };
 
 const handleProductChange = async (productId, index) => {
-  const product = availableProducts.value.find(p => p.id === productId);
+  let product;
+  if (formData.orderType === 1) {
+    product = availableProducts.value.find(p => p.id === productId);
+  } else {
+    product = productionProducts.value.find(p => p.id === productId);
+  }
+  
   if (product) {
     const item = formData.items[index];
     item.productId = product.id;
@@ -689,26 +1139,80 @@ const handleProductChange = async (productId, index) => {
     item.spec = product.spec;
     item.unit = product.unit;
     
-    // 统一从库存映射中获取库存数量
-    item.currentStock = productStockMap.value[productId] || 0;
-    item.quantity = item.quantity || 1;
-    item.price = item.price || 0;
-    item.batchAllocations = [];
-    
-    // 加载批次信息
-    await loadBatchInfo(productId, formData.warehouseId, index);
+    if (formData.orderType === 1) {
+      // 统一从库存映射中获取库存数量
+      item.currentStock = productStockMap.value[productId] || 0;
+      item.quantity = item.quantity || 1;
+      item.price = item.price || 0;
+      item.batchAllocations = [];
+      
+      // 加载批次信息
+      await loadBatchInfo(productId, formData.warehouseId, index);
+    } else {
+      item.quantity = item.quantity || 1;
+      item.price = item.price || 0;
+    }
   }
+  
+  // 清空该产品相关的BOM分配数据
+  formData.bomAllocations = formData.bomAllocations.filter(a => a.itemIndex !== index);
 };
 
 const handleQuantityChange = (index) => {
   const item = formData.items[index];
-  // 如果数量减少，需要调整批次分配
-  if (item.batchAllocations && item.batchAllocations.length > 0) {
-    const totalAllocated = item.batchAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
-    if (item.quantity < totalAllocated) {
-      ElMessage.warning('出库数量小于已分配批次数量，请重新分配批次');
-      item.batchAllocations = [];
+  
+  if (formData.orderType === 1) {
+    // 如果数量减少，需要调整批次分配
+    if (item.batchAllocations && item.batchAllocations.length > 0) {
+      const totalAllocated = item.batchAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
+      if (item.quantity < totalAllocated) {
+        ElMessage.warning('出库数量小于已分配批次数量，请重新分配批次');
+        item.batchAllocations = [];
+      }
     }
+  } else if (formData.orderType === 2) {
+    // 生产领料时检查原料可用性
+    checkMaterialAvailability(index);
+  }
+};
+
+// 检查原料可用性
+const checkMaterialAvailability = (itemIndex) => {
+  const item = formData.items[itemIndex];
+  if (!item.productId || !item.quantity) return;
+  
+  const bomData = getBomData(item.productId);
+  if (!bomData.length) return;
+  
+  let insufficientMaterials = [];
+  
+  bomData.forEach(bomItem => {
+    const requiredQuantity = parseFloat(calculateRequiredQuantity(bomItem.quantity, item.quantity));
+    const totalAvailable = bomItem.warehouseQuantityList.reduce((sum, warehouse) => {
+      return sum + parseFloat(warehouse.warehouseAvailableQuantity);
+    }, 0);
+    
+    if (totalAvailable < requiredQuantity) {
+      const shortage = (requiredQuantity - totalAvailable).toFixed(4);
+      insufficientMaterials.push({
+        name: bomItem.componentProductName,
+        required: requiredQuantity,
+        available: totalAvailable,
+        shortage: shortage
+      });
+    }
+  });
+  
+  if (insufficientMaterials.length > 0) {
+    const message = insufficientMaterials.map(m => 
+      `原料 ${m.name} 不足：需要 ${m.required}，可用 ${m.available}，缺少 ${m.shortage}`
+    ).join('；');
+    
+    ElMessage.warning({
+      message: message,
+      duration: 10000,
+      showClose: true
+    });
   }
 };
 
@@ -719,7 +1223,7 @@ const getStockClass = (currentStock, quantity) => {
   return 'stock-sufficient';
 };
 
-// 批次分配相关方法
+// 批次分配相关方法（销售出库使用）
 const openBatchDialog = async (index) => {
   const item = formData.items[index];
   if (!item.productId) {
@@ -731,19 +1235,26 @@ const openBatchDialog = async (index) => {
   batchDialog.productName = item.productName;
   batchDialog.totalQuantity = item.quantity;
   
-  // 准备批次数据
+  // 准备批次数据，包含货架信息
   batchDialog.batches = item.availableBatches.map(batch => ({
     ...batch,
-    allocated: 0,
-    maxAllocatable: batch.quantity
+    // 为每个货架添加分配数量字段
+    shelfList: batch.shelfList ? batch.shelfList.map(shelf => ({
+      ...shelf,
+      allocated: 0,
+      maxAllocatable: shelf.quantity
+    })) : []
   }));
 
   // 恢复已分配的批次数据
   if (item.batchAllocations && item.batchAllocations.length > 0) {
     item.batchAllocations.forEach(allocation => {
       const batch = batchDialog.batches.find(b => b.batchNo === allocation.batchNo);
-      if (batch) {
-        batch.allocated = allocation.quantity;
+      if (batch && batch.shelfList) {
+        const shelf = batch.shelfList.find(s => s.shelfId === allocation.shelfId);
+        if (shelf) {
+          shelf.allocated = allocation.quantity;
+        }
       }
     });
   }
@@ -752,33 +1263,92 @@ const openBatchDialog = async (index) => {
   batchDialog.visible = true;
 };
 
-const handleBatchAllocationChange = () => {
+const handleShelfAllocationChange = (batchIndex, shelfIndex, newValue) => {
+  const batch = batchDialog.batches[batchIndex];
+  const shelf = batch.shelfList[shelfIndex];
+  
+  // 确保输入的是正整数
+  if (newValue !== null && newValue !== undefined) {
+    newValue = Math.max(0, Math.floor(newValue));
+  } else {
+    newValue = 0;
+  }
+  
+  // 检查是否超过货架最大可用数量
+  const maxAllocation = getShelfMaxAllocation(batch, shelf);
+  if (newValue > maxAllocation) {
+    newValue = maxAllocation;
+    ElMessage.warning(`分配数量不能超过货架可用数量 ${maxAllocation}`);
+  }
+  
+  shelf.allocated = newValue;
+  
+  // 重新计算批次分配总数和剩余数量
   updateBatchDialogCalculations();
 };
 
+const getShelfMaxAllocation = (batch, shelf) => {
+  // 货架最大可分配数量 = 货架可用数量
+  return shelf.quantity;
+};
+
+const getBatchAllocatedTotal = (batch) => {
+  if (!batch.shelfList || batch.shelfList.length === 0) return 0;
+  return batch.shelfList.reduce((sum, shelf) => sum + (shelf.allocated || 0), 0);
+};
+
+const getBatchAllocationClass = (batch) => {
+  const allocated = getBatchAllocatedTotal(batch);
+  const batchTotal = batch.quantity;
+  
+  if (allocated === 0) return 'allocation-zero';
+  if (allocated > batchTotal) return 'allocation-exceed';
+  return 'allocation-normal';
+};
+
 const clearBatchAllocation = (batchIndex) => {
-  batchDialog.batches[batchIndex].allocated = 0;
+  const batch = batchDialog.batches[batchIndex];
+  if (batch.shelfList) {
+    batch.shelfList.forEach(shelf => {
+      shelf.allocated = 0;
+    });
+  }
   updateBatchDialogCalculations();
 };
 
 const updateBatchDialogCalculations = () => {
-  batchDialog.allocatedQuantity = batchDialog.batches.reduce((sum, batch) => sum + (batch.allocated || 0), 0);
+  // 计算总分配数量
+  batchDialog.allocatedQuantity = batchDialog.batches.reduce((sum, batch) => {
+    return sum + getBatchAllocatedTotal(batch);
+  }, 0);
+  
   batchDialog.remainingQuantity = batchDialog.totalQuantity - batchDialog.allocatedQuantity;
 };
 
 const autoAllocateBatches = () => {
   let remaining = batchDialog.remainingQuantity;
   
-  // 按批次顺序自动分配
+  if (remaining <= 0) {
+    ElMessage.warning('已全部分配完成');
+    return;
+  }
+  
+  // 按批次和货架顺序自动分配
   for (const batch of batchDialog.batches) {
     if (remaining <= 0) break;
     
-    const available = batch.maxAllocatable - (batch.allocated || 0);
-    const allocate = Math.min(available, remaining);
-    
-    if (allocate > 0) {
-      batch.allocated = (batch.allocated || 0) + allocate;
-      remaining -= allocate;
+    if (batch.shelfList && batch.shelfList.length > 0) {
+      for (const shelf of batch.shelfList) {
+        if (remaining <= 0) break;
+        
+        const available = shelf.quantity - (shelf.allocated || 0);
+        const allocate = Math.min(available, remaining);
+        
+        if (allocate > 0) {
+          shelf.allocated = (shelf.allocated || 0) + allocate;
+          remaining -= allocate;
+        }
+      }
     }
   }
   
@@ -786,27 +1356,56 @@ const autoAllocateBatches = () => {
   
   if (remaining > 0) {
     ElMessage.warning(`库存不足，仍有 ${remaining} 个无法分配`);
+  } else {
+    ElMessage.success('自动分配完成');
   }
 };
 
 const confirmBatchAllocation = () => {
-  if (batchDialog.allocatedQuantity !== batchDialog.totalQuantity) {
-    ElMessage.warning(`分配数量 (${batchDialog.allocatedQuantity}) 与出库数量 (${batchDialog.totalQuantity}) 不一致`);
+  if (batchDialog.remainingQuantity !== 0) {
+    ElMessage.warning(`分配数量 (${batchDialog.allocatedQuantity}) 与出库数量 (${batchDialog.totalQuantity}) 不一致，请完成分配`);
     return;
   }
 
-  // 保存批次分配
+  // 保存批次分配数据（包含货架信息）
   const item = formData.items[batchDialog.productIndex];
-  item.batchAllocations = batchDialog.batches
-    .filter(batch => batch.allocated > 0)
-    .map(batch => ({
-      batchNo: batch.batchNo,
-      quantity: batch.allocated,
-      price: item.price || 0
-    }));
+  item.batchAllocations = [];
+  
+  batchDialog.batches.forEach(batch => {
+    if (batch.shelfList) {
+      batch.shelfList.forEach(shelf => {
+        if (shelf.allocated > 0) {
+          item.batchAllocations.push({
+            batchNo: batch.batchNo,
+            shelfId: shelf.shelfId,
+            shelfName: shelf.shelfName,
+            quantity: shelf.allocated,
+            price: item.price || 0
+          });
+        }
+      });
+    }
+  });
 
   batchDialog.visible = false;
   ElMessage.success('批次分配完成');
+};
+
+// 修改批次信息加载方法
+const loadBatchInfo = async (productId, warehouseId, index) => {
+  try {
+    const res = await get(`/api/auth/inventory/batches?productId=${productId}&warehouseId=${warehouseId}`);
+    console.log('批次信息响应:', res);
+    
+    if (res && Array.isArray(res)) {
+      formData.items[index].availableBatches = res;
+    } else {
+      formData.items[index].availableBatches = [];
+    }
+  } catch (error) {
+    console.error('加载批次信息失败:', error);
+    formData.items[index].availableBatches = [];
+  }
 };
 
 const handleReset = () => {
@@ -824,6 +1423,7 @@ const handleReset = () => {
       // 创建模式下清空表单
       formRef.value?.resetFields();
       formData.items = [];
+      formData.bomAllocations = [];
       fileList.value = [];
       generateOrderNo();
       ElMessage.success('表单已重置');
@@ -840,7 +1440,8 @@ const handleSaveDraft = async () => {
       ...formData,
       status: 0,
       totalQuantity: totalQuantity.value,
-      totalAmount: totalAmount.value
+      totalAmount: totalAmount.value,
+      bomAllocations: formData.bomAllocations
     };
     
     const url = isEditMode.value ? '/api/auth/outbound/update' : '/api/auth/outbound/create';
@@ -864,17 +1465,28 @@ const handleSubmit = async () => {
     return;
   }
   
-  // 检查批次分配
-  const hasUnallocatedItems = formData.items.some(item => {
-    const allocatedQuantity = item.batchAllocations 
-      ? item.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0)
-      : 0;
-    return (item.quantity || 0) !== allocatedQuantity;
-  });
+  // 销售出库：检查批次分配
+  if (formData.orderType === 1) {
+    const hasUnallocatedItems = formData.items.some(item => {
+      const allocatedQuantity = item.batchAllocations 
+        ? item.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0)
+        : 0;
+      return (item.quantity || 0) !== allocatedQuantity;
+    });
+    
+    if (hasUnallocatedItems) {
+      ElMessage.warning('存在未完成批次分配的产品，请完成批次分配后再提交');
+      return;
+    }
+  }
   
-  if (hasUnallocatedItems) {
-    ElMessage.warning('存在未完成批次分配的产品，请完成批次分配后再提交');
-    return;
+  // 生产领料：验证BOM分配
+  if (formData.orderType === 2) {
+    const validationResult = validateBomAllocations();
+    if (!validationResult.valid) {
+      ElMessage.warning(validationResult.message);
+      return;
+    }
   }
   
   loading.value = true;
@@ -883,7 +1495,8 @@ const handleSubmit = async () => {
       ...formData,
       status: 1,
       totalQuantity: totalQuantity.value,
-      totalAmount: totalAmount.value
+      totalAmount: totalAmount.value,
+      bomAllocations: formData.bomAllocations
     };
     
     const url = isEditMode.value ? '/api/auth/outbound/update' : '/api/auth/outbound/create';
@@ -916,10 +1529,13 @@ const validateForm = async () => {
         return false;
       }
       
-      const currentStock = getCurrentStock(item);
-      if (item.quantity > currentStock) {
-        ElMessage.warning(`第 ${i + 1} 行产品出库数量超过库存 (当前库存: ${currentStock})`);
-        return false;
+      // 销售出库：验证库存
+      if (formData.orderType === 1) {
+        const currentStock = getCurrentStock(item);
+        if (item.quantity > currentStock) {
+          ElMessage.warning(`第 ${i + 1} 行产品出库数量超过库存 (当前库存: ${currentStock})`);
+          return false;
+        }
       }
     }
     
@@ -966,13 +1582,14 @@ const loadInventoryData = async (warehouseId) => {
   }
 };
 
-const loadBatchInfo = async (productId, warehouseId, index) => {
+const loadProductionProducts = async () => {
   try {
-    const res = await get(`/api/auth/inventory/batches?productId=${productId}&warehouseId=${warehouseId}`);
-    formData.items[index].availableBatches = res || [];
+    const res = await get('/api/auth/product/listEnable');
+    productionProductList.value = res?.data || res || [];
+    console.log('生产产品列表:', productionProductList.value);
   } catch (error) {
-    console.error('加载批次信息失败:', error);
-    formData.items[index].availableBatches = [];
+    console.error('加载生产产品列表失败:', error);
+    productionProductList.value = [];
   }
 };
 
@@ -1016,6 +1633,7 @@ onMounted(() => {
   }
   loadWarehouseList();
   loadCustomerList();
+  loadProductionProducts();
 });
 
 // 监听路由变化，处理直接通过URL进入的情况
@@ -1037,7 +1655,8 @@ watch(
         remark: '',
         status: 0,
         items: [],
-        attachments: []
+        attachments: [],
+        bomAllocations: []
       });
       fileList.value = [];
       productStockMap.value = {};
@@ -1050,8 +1669,18 @@ watch(
 watch(
   () => formData.warehouseId,
   (newWarehouseId) => {
-    if (newWarehouseId) {
+    if (newWarehouseId && formData.orderType === 1) {
       loadInventoryData(newWarehouseId);
+    }
+  }
+);
+
+// 监听出库类型变化，加载对应的产品数据
+watch(
+  () => formData.orderType,
+  (newOrderType) => {
+    if (newOrderType === 2) {
+      loadProductionProducts();
     }
   }
 );
@@ -1114,8 +1743,126 @@ watch(
   color: #909399;
 }
 
+.bom-tip {
+  font-size: 14px;
+  color: #909399;
+}
+
 .product-table {
   margin-bottom: 16px;
+}
+
+/* BOM相关样式 */
+.bom-section {
+  margin: 30px 0;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+
+.bom-content {
+  padding: 16px;
+}
+
+.bom-item-header {
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #dcdfe6;
+}
+
+.bom-item-header h4 {
+  margin: 0;
+  color: #409eff;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.allocation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.summary-item {
+  padding: 4px 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.summary-item.insufficient {
+  background-color: #fef0f0;
+  color: #f56c6c;
+  border: 1px solid #fbc4c4;
+}
+
+.insufficient-tip {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.bom-table {
+  margin-bottom: 16px;
+}
+
+.allocation-container {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.warehouse-allocation {
+  margin-bottom: 12px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.warehouse-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.shelf-allocation {
+  margin-left: 12px;
+}
+
+.shelf-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  background-color: white;
+  border-radius: 2px;
+  gap: 12px;
+}
+
+.shelf-info {
+  display: flex;
+  justify-content: space-between;
+  flex: 6;
+  font-size: 12px;
+}
+
+.allocation-input {
+  flex: 4;
+  min-width: 100px;
+}
+
+.no-shelf-allocation {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sku-text {
+  font-size: 12px;
+  color: #909399;
+}
+
+.required-quantity {
+  color: #e6a23c;
+  font-weight: bold;
 }
 
 .summary-info {
@@ -1241,11 +1988,81 @@ watch(
   margin: 16px 0;
 }
 
+/* 货架分配样式 */
+.shelf-allocation-container {
+  padding: 8px 0;
+}
+
+.shelf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shelf-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.shelf-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.shelf-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.shelf-quantity {
+  font-size: 12px;
+  color: #909399;
+}
+
+.shelf-input {
+  width: 120px;
+}
+
+.no-shelf {
+  text-align: center;
+  padding: 16px;
+}
+
+.no-shelf-text {
+  color: #909399;
+  font-size: 13px;
+}
+
+/* 分配数量样式 */
+.allocation-zero {
+  color: #909399;
+}
+
+.allocation-normal {
+  color: #67C23A;
+  font-weight: bold;
+}
+
+.allocation-exceed {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
 .batch-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
 }
 
 :deep(.el-upload) {
@@ -1293,6 +2110,26 @@ watch(
   
   .summary-info .el-col {
     margin-bottom: 8px;
+  }
+  
+  .shelf-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .shelf-info {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 6px;
+  }
+  
+  .allocation-input {
+    width: 100%;
+  }
+  
+  .allocation-summary {
+    font-size: 11px;
   }
   
   .batch-info {

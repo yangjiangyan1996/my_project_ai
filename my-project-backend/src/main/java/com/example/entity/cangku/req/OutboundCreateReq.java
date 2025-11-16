@@ -39,6 +39,9 @@ public class OutboundCreateReq {
 
     private List<ProductInfoInner> items;
 
+    //生产入库时子产品明细
+    List<BomAllocationCreateReq> bomAllocations;
+
     private Long userId;
     private Long tenantId;
 
@@ -57,17 +60,36 @@ public class OutboundCreateReq {
         private String remark;
 
         // 批次数量
-        List<ProductInventoryBatchInner> availableBatches;
+        List<ProductInventoryAllBatchInner> availableBatches;
         // 分配的批次数量
         List<ProductInventoryBatchInner> batchAllocations;
     }
 
 
-    // 分配批次信息
+    // 批次数量信息
+    @Data
+    public static class ProductInventoryAllBatchInner {
+        private String batchNo;
+        private BigDecimal quantity;
+        // 货架分配
+        private List<ShelfDetailCreateReq> shelfList;
+    }
+
+
+    //分配的批次数量
     @Data
     public static class ProductInventoryBatchInner {
         private String batchNo;
         private BigDecimal quantity;
+        private Long shelfId;
+    }
+
+
+    @Data
+    public static class ShelfDetailCreateReq {
+        private Long shelfId;
+        private String shelfName;
+        private Double quantity;
     }
 
 }

@@ -19,8 +19,6 @@
           <el-sub-menu index="inventory">
             <template #title>库存管理</template>
             <el-menu-item index="inventory-list" @click="changeDisplayMode('inventory-list')">库存查询</el-menu-item>
-            <!-- <el-menu-item index="inventory-transaction" @click="changeDisplayMode('inventory-transaction')">库存流水</el-menu-item> -->
-            <!-- <el-menu-item index="stock-take" @click="changeDisplayMode('stock-take')">库存盘点</el-menu-item> -->
           </el-sub-menu>
           
           <!-- 业务管理 -->
@@ -28,26 +26,19 @@
             <template #title>出入库管理</template>
             <el-menu-item index="inbound" @click="changeDisplayMode('inbound')">入库管理</el-menu-item>
             <el-menu-item index="outbound" @click="changeDisplayMode('outbound')">出库管理</el-menu-item>
-
-            <!-- <el-menu-item index="transfer" @click="changeDisplayMode('transfer')">调拨管理</el-menu-item>  TODO yang 待开发， 还有库存管理 -->
           </el-sub-menu>
           
           <!-- 基础数据 -->
           <el-sub-menu index="base">
             <template #title>基础数据</template>
-            <!-- <el-menu-item index="product" @click="changeDisplayMode('product')">产品管理</el-menu-item> -->
-            <!-- <el-menu-item index="warehouse" @click="changeDisplayMode('warehouse')">仓库管理</el-menu-item> -->
             <el-menu-item index="supplier" @click="changeDisplayMode('supplier')">供应商管理</el-menu-item>
             <el-menu-item index="customer" @click="changeDisplayMode('customer')">客户管理</el-menu-item>
-            <!-- <el-menu-item index="approveManager" @click="changeDisplayMode('approveManager')">审批管理</el-menu-item> TODO yang 待开发 -->
           </el-sub-menu>
 
           <el-sub-menu index="product">
             <template #title>产品管理</template>
             <el-menu-item index="product" @click="changeDisplayMode('product')">产品管理</el-menu-item>
             <el-menu-item index="warehouse" @click="changeDisplayMode('warehouse')">仓库管理</el-menu-item>
-            <!-- <el-menu-item index="supplier" @click="changeDisplayMode('supplier')">供应商管理</el-menu-item> -->
-            <!-- <el-menu-item index="customer" @click="changeDisplayMode('customer')">客户管理</el-menu-item> -->
             <el-menu-item index="shelf" @click="changeDisplayMode('shelf')">货架管理</el-menu-item>
           </el-sub-menu>
           
@@ -318,55 +309,27 @@
           <el-card class="chart-card" shadow="never">
             <template #header>
               <div class="card-header">
-                <span class="card-title">低库存预警</span>
-                <el-button type="text" @click="refreshLowStockData">刷新</el-button>
+                <span class="card-title">库存预警监控</span>
+                <div class="chart-actions">
+                  <el-button type="text" @click="refreshLowStockChart">刷新</el-button>
+                  <el-select 
+                    v-model="selectedProduct" 
+                    placeholder="选择产品" 
+                    style="width: 150px; margin-left: 10px;"
+                    @change="handleProductChange"
+                  >
+                    <el-option
+                      v-for="product in productList"
+                      :key="product.id"
+                      :label="product.productName"
+                      :value="product.id"
+                    />
+                  </el-select>
+                </div>
               </div>
             </template>
-            <div class="table-container">
-              <el-table 
-                :data="lowStockData" 
-                style="width: 100%"
-                empty-text="暂无低库存预警数据"
-                v-loading="lowStockLoading"
-                max-height="320"
-              >
-                <el-table-column prop="productName" label="产品名称" width="180" show-overflow-tooltip />
-                <el-table-column prop="currentStock" label="当前库存" width="120" align="center">
-                  <template #default="{ row }">
-                    <span :class="getStockClass(row.currentStock, row.minStock)">
-                      {{ formatNumber(row.currentStock) }}
-                    </span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="minStock" label="最低库存" width="120" align="center">
-                  <template #default="{ row }">
-                    <span>{{ formatNumber(row.minStock) }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="unitName" label="单位" width="80" align="center" />
-                <el-table-column label="库存状态" width="100" align="center">
-                  <template #default="{ row }">
-                    <el-tag 
-                      :type="getStockStatusType(row.currentStock, row.minStock)"
-                      size="small"
-                    >
-                      {{ getStockStatusText(row.currentStock, row.minStock) }}
-                    </el-tag>
-                  </template>
-                </el-table-column>
-                <el-table-column label="操作" width="80" align="center">
-                  <template #default="{ row }">
-                    <el-button 
-                      type="primary" 
-                      link 
-                      size="small"
-                      @click="handleReplenish(row)"
-                    >
-                      补货
-                    </el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
+            <div class="chart-container">
+              <div ref="lowStockChart" style="width: 100%; height: 320px;"></div>
             </div>
           </el-card>
         </el-col>
@@ -433,11 +396,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { post, get } from '@/net';
 import { logout } from '@/net';
+import * as echarts from 'echarts';
 import { 
   Bell, CircleCheck, ArrowDown, User, Setting, SwitchButton,
   Box, OfficeBuilding,   TrendCharts, Clock, Warning,
@@ -467,7 +431,9 @@ const messageVisible = ref(false);
 const activeMessageTab = ref('approval');
 const unreadCount = ref(0);
 const displayMode = ref('dashboard');
-const lowStockLoading = ref(false);
+const lowStockChart = ref(null);
+const selectedProduct = ref('');
+const productList = ref([]);
 
 // 用户信息
 const userInfo = ref({
@@ -488,15 +454,15 @@ const overviewData = ref({
   lowStockItems: 0
 });
 
-// 低库存数据
-const lowStockData = ref([]);
-
 // 消息数据
 const approvalMessages = ref([]);
 const systemMessages = ref([]);
 
 // 最近操作记录
 const recentActions = ref([]);
+
+// 图表实例
+let chartInstance = null;
 
 // 计算属性
 const userInitial = computed(() => {
@@ -531,162 +497,255 @@ const handleQuickAction = (action) => {
   }
 };
 
-// 低库存预警相关方法
-const loadLowStockData = async () => {
-  lowStockLoading.value = true;
-  try {
-    // 调用低库存预警接口
-    const res = await get('/api/auth/product/lowProductCountChat');
-    
-    // 如果有返回数据则使用，否则使用mock数据
-    if (res && Array.isArray(res) && res.length > 0) {
-      lowStockData.value = res;
-    } else {
-      // Mock数据
-      lowStockData.value = [
-        {
-          id: 1,
-          productName: 'iPhone 15 Pro Max',
-          currentStock: 5,
-          minStock: 20,
-          unitName: '台',
-          sku: 'IP15PM-256G'
-        },
-        {
-          id: 2,
-          productName: 'MacBook Air M3',
-          currentStock: 8,
-          minStock: 15,
-          unitName: '台',
-          sku: 'MBA-M3-512G'
-        },
-        {
-          id: 3,
-          productName: 'AirPods Pro 2',
-          currentStock: 12,
-          minStock: 30,
-          unitName: '副',
-          sku: 'APP2-USB-C'
+// 库存预警图表相关方法
+const initLowStockChart = () => {
+  if (!lowStockChart.value) return;
+  
+  chartInstance = echarts.init(lowStockChart.value);
+  
+  // 模拟数据
+  const dates = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月'];
+  const stockData = [45, 38, 52, 48, 25, 18, 32, 28]; // 当前库存数据
+  const minStockThreshold = 30; // 最低库存阈值
+  
+  const option = {
+    title: {
+      text: '库存趋势与预警',
+      left: 'center',
+      textStyle: {
+        fontSize: 16,
+        fontWeight: 'bold'
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(params) {
+        let result = `${params[0].axisValue}<br/>`;
+        params.forEach(param => {
+          const value = param.value;
+          let status = '';
+          let color = '#333';
+          
+          if (param.seriesName === '当前库存') {
+            if (value < minStockThreshold) {
+              status = '⚠️ 低于安全库存';
+              color = '#F56C6C';
+            } else if (value < minStockThreshold * 1.5) {
+              status = '⚠️ 接近安全库存';
+              color = '#E6A23C';
+            } else {
+              status = '✅ 库存充足';
+              color = '#67C23A';
+            }
+          }
+          
+          result += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${param.color}"></span>`;
+          result += `${param.seriesName}: <span style="color:${color};font-weight:bold">${value}</span>`;
+          if (param.seriesName === '当前库存') {
+            result += ` <span style="color:${color}">${status}</span>`;
+          }
+          result += '<br/>';
+        });
+        return result;
+      }
+    },
+    legend: {
+      data: ['当前库存', '安全库存线', '预警区域'],
+      top: 30
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      top: '15%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: dates,
+      axisLine: {
+        lineStyle: {
+          color: '#999'
         }
-      ];
-    }
-    
-    // 更新概览数据中的低库存预警数量
-    overviewData.value.lowStockItems = lowStockData.value.length;
-    
-  } catch (error) {
-    console.error('加载低库存数据失败:', error);
-    ElMessage.error('加载低库存数据失败');
-    // 出错时也使用mock数据
-    lowStockData.value = [
+      }
+    },
+    yAxis: {
+      type: 'value',
+      name: '库存数量',
+      min: 0,
+      axisLine: {
+        lineStyle: {
+          color: '#999'
+        }
+      },
+      splitLine: {
+        lineStyle: {
+          type: 'dashed',
+          color: '#eee'
+        }
+      }
+    },
+    series: [
       {
-        id: 1,
-        productName: 'iPhone 15 Pro Max',
-        currentStock: 5,
-        minStock: 20,
-        unitName: '台',
-        sku: 'IP15PM-256G'
+        name: '当前库存',
+        type: 'line',
+        data: stockData,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        lineStyle: {
+          width: 3,
+          color: '#5470C6'
+        },
+        itemStyle: {
+          color: '#5470C6',
+          borderWidth: 2,
+          borderColor: '#fff'
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(84, 112, 198, 0.3)' },
+            { offset: 1, color: 'rgba(84, 112, 198, 0.1)' }
+          ])
+        },
+        markPoint: {
+          data: [
+            { type: 'max', name: '最大值' },
+            { type: 'min', name: '最小值' }
+          ],
+          label: {
+            color: '#fff',
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            borderRadius: 4,
+            padding: [4, 8]
+          }
+        }
       },
       {
-        id: 2,
-        productName: 'MacBook Air M3',
-        currentStock: 8,
-        minStock: 15,
-        unitName: '台',
-        sku: 'MBA-M3-512G'
+        name: '安全库存线',
+        type: 'line',
+        data: Array(dates.length).fill(minStockThreshold),
+        lineStyle: {
+          type: 'dashed',
+          width: 2,
+          color: '#E6A23C'
+        },
+        symbol: 'none',
+        markLine: {
+          data: [
+            {
+              yAxis: minStockThreshold,
+              name: '安全库存',
+              lineStyle: {
+                type: 'dashed',
+                color: '#E6A23C'
+              },
+              label: {
+                position: 'end',
+                formatter: '安全库存: {c}'
+              }
+            }
+          ]
+        }
       },
       {
-        id: 3,
-        productName: 'AirPods Pro 2',
-        currentStock: 12,
-        minStock: 30,
-        unitName: '副',
-        sku: 'APP2-USB-C'
+        name: '预警区域',
+        type: 'line',
+        data: Array(dates.length).fill(0),
+        lineStyle: {
+          width: 0
+        },
+        stack: '预警',
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(245, 108, 108, 0.3)' },
+            { offset: 1, color: 'rgba(245, 108, 108, 0.1)' }
+          ])
+        },
+        markArea: {
+          itemStyle: {
+            color: 'rgba(245, 108, 108, 0.1)'
+          },
+          data: [
+            [
+              { yAxis: 0 },
+              { yAxis: minStockThreshold }
+            ]
+          ]
+        }
       }
-    ];
-    overviewData.value.lowStockItems = lowStockData.value.length;
-  } finally {
-    lowStockLoading.value = false;
-  }
-};
-
-const refreshLowStockData = () => {
-  loadLowStockData();
-  ElMessage.success('低库存数据已刷新');
-};
-
-const getStockClass = (currentStock, minStock) => {
-  const current = Number(currentStock) || 0;
-  const min = Number(minStock) || 0;
-  
-  if (current <= 0) {
-    return 'stock-out';
-  } else if (current <= min) {
-    return 'stock-low';
-  } else if (current <= min * 1.5) {
-    return 'stock-warning';
-  }
-  return 'stock-normal';
-};
-
-const getStockStatusType = (currentStock, minStock) => {
-  const current = Number(currentStock) || 0;
-  const min = Number(minStock) || 0;
-  
-  if (current <= 0) {
-    return 'danger'; // 缺货
-  } else if (current <= min) {
-    return 'warning'; // 低于最低库存
-  } else if (current <= min * 1.5) {
-    return 'info'; // 接近最低库存
-  }
-  return 'success'; // 正常
-};
-
-const getStockStatusText = (currentStock, minStock) => {
-  const current = Number(currentStock) || 0;
-  const min = Number(minStock) || 0;
-  
-  if (current <= 0) {
-    return '缺货';
-  } else if (current <= min) {
-    return '库存不足';
-  } else if (current <= min * 1.5) {
-    return '库存偏低';
-  }
-  return '库存正常';
-};
-
-const handleReplenish = (row) => {
-  ElMessageBox.confirm(`确定要为产品"${row.productName}"创建补货单吗？`, '补货确认', {
-    type: 'warning',
-    confirmButtonText: '确定',
-    cancelButtonText: '取消'
-  }).then(() => {
-    // 这里可以跳转到入库单创建页面，并预填产品信息
-    router.push({
-      path: '/index/ckInboundCreate',
-      query: {
-        productId: row.id,
-        productName: row.productName
+    ],
+    dataZoom: [
+      {
+        type: 'inside',
+        start: 0,
+        end: 100
       }
-    });
-    ElMessage.success('已跳转到入库单创建页面');
-  }).catch(() => {
-    // 用户取消
+    ]
+  };
+  
+  chartInstance.setOption(option);
+  
+  // 响应式调整
+  window.addEventListener('resize', () => {
+    chartInstance?.resize();
   });
 };
 
-const formatNumber = (value) => {
-  if (value === null || value === undefined) return '0';
-  const num = Number(value);
-  if (isNaN(num)) return '0';
-  // 如果是整数，不显示小数位
-  if (Number.isInteger(num)) {
-    return num.toString();
+const refreshLowStockChart = () => {
+  if (chartInstance) {
+    chartInstance.dispose();
   }
-  // 否则显示4位小数
-  return num.toFixed(4).replace(/\.?0+$/, '');
+  nextTick(() => {
+    initLowStockChart();
+  });
+  ElMessage.success('图表数据已刷新');
+};
+
+const handleProductChange = (productId) => {
+  // 当选择不同产品时，重新加载该产品的库存数据
+  loadProductStockData(productId);
+};
+
+const loadProductStockData = async (productId) => {
+  try {
+    // 这里调用API获取具体产品的库存历史数据
+    // const res = await get(`/api/auth/product/stockHistory?productId=${productId}`);
+    // 暂时使用模拟数据
+    ElMessage.info(`已切换到产品 ${productId} 的库存数据`);
+  } catch (error) {
+    console.error('加载产品库存数据失败:', error);
+  }
+};
+
+const loadProductList = async () => {
+  try {
+    // 调用接口获取产品列表
+    // const res = await get('/api/auth/product/list?page=1&size=100');
+    // 模拟数据
+    productList.value = [
+      { id: 1, productName: 'iPhone 15 Pro Max' },
+      { id: 2, productName: 'MacBook Air M3' },
+      { id: 3, productName: 'AirPods Pro 2' },
+      { id: 4, productName: 'iPad Pro 12.9' },
+      { id: 5, productName: 'Apple Watch Series 9' }
+    ];
+    if (productList.value.length > 0) {
+      selectedProduct.value = productList.value[0].id;
+    }
+  } catch (error) {
+    console.error('加载产品列表失败:', error);
+    // 使用模拟数据
+    productList.value = [
+      { id: 1, productName: 'iPhone 15 Pro Max' },
+      { id: 2, productName: 'MacBook Air M3' },
+      { id: 3, productName: 'AirPods Pro 2' }
+    ];
+    if (productList.value.length > 0) {
+      selectedProduct.value = productList.value[0].id;
+    }
+  }
 };
 
 // 消息相关方法
@@ -792,21 +851,36 @@ const userLogout = () => {
 
 // 初始化数据
 const loadOverviewData = async () => {
-  // try {
-  //   const res = await get('/api/auth/dashboard/overview');
-  //   overviewData.value = res || {};
-  // } catch (e) {
-  //   console.error('加载概览数据失败:', e);
-  // }
+  // 模拟数据
+  overviewData.value = {
+    totalProducts: 156,
+    totalWarehouses: 8,
+    todayInbound: 24,
+    todayOutbound: 18,
+    pendingApprovals: 5,
+    lowStockItems: 3
+  };
 };
 
 const loadRecentActions = async () => {
   try {
-    // const res = await post('/api/auth/operation-log/recent', {
-    //   page: 1,
-    //   size: 10
-    // });
-    // recentActions.value = res.records || [];
+    // 模拟数据
+    recentActions.value = [
+      {
+        operationTime: new Date(),
+        module: '入库管理',
+        operation: '新建入库单',
+        description: '创建了入库单 IN20240115001',
+        operator: '张三'
+      },
+      {
+        operationTime: new Date(Date.now() - 30 * 60 * 1000),
+        module: '出库管理',
+        operation: '审核出库单',
+        description: '审核通过了出库单 OUT20240115002',
+        operator: '李四'
+      }
+    ];
   } catch (e) {
     console.error('加载操作记录失败:', e);
   }
@@ -825,6 +899,7 @@ const fetchUnreadCount = async () => {
   try {
     // const res = await get('/api/auth/message/unreadCount');
     // unreadCount.value = res || 0;
+    unreadCount.value = 3; // 模拟数据
   } catch (e) {
     console.error('获取未读消息数失败:', e);
   }
@@ -835,7 +910,21 @@ onMounted(() => {
   loadOverviewData();
   loadRecentActions();
   fetchUnreadCount();
-  loadLowStockData(); // 加载低库存数据
+  loadProductList();
+  
+  // 初始化图表
+  nextTick(() => {
+    initLowStockChart();
+  });
+});
+
+// 组件卸载时清理图表
+import { onUnmounted } from 'vue';
+onUnmounted(() => {
+  if (chartInstance) {
+    chartInstance.dispose();
+    chartInstance = null;
+  }
 });
 </script>
 
@@ -984,6 +1073,11 @@ onMounted(() => {
   color: #303133;
 }
 
+.chart-actions {
+  display: flex;
+  align-items: center;
+}
+
 .quick-actions {
   display: flex;
   gap: 16px;
@@ -1020,37 +1114,12 @@ onMounted(() => {
   justify-content: center;
 }
 
-.table-container {
-  height: 320px;
-}
-
 .chart-placeholder {
   text-align: center;
 }
 
 .recent-actions-card {
   border-radius: 8px;
-}
-
-/* 库存状态样式 */
-.stock-normal {
-  color: #67C23A;
-  font-weight: bold;
-}
-
-.stock-warning {
-  color: #E6A23C;
-  font-weight: bold;
-}
-
-.stock-low {
-  color: #F56C6C;
-  font-weight: bold;
-}
-
-.stock-out {
-  color: #909399;
-  font-weight: bold;
 }
 
 /* 消息样式 */
@@ -1181,6 +1250,11 @@ onMounted(() => {
   
   .main-content {
     padding: 10px;
+  }
+  
+  .chart-actions {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 </style>

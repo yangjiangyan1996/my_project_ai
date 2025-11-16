@@ -44,6 +44,13 @@ public class CkInventoryWarehouseServiceImpl  extends ServiceImpl<CkInventoryWar
     }
 
     @Override
+    public List<InventoryWarehouse> selectByTenantId(Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<InventoryWarehouse>()
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode()));
+    }
+
+    @Override
     public List<InventoryWarehouse> getByProductIds(Long tenantId, List<Long> productIds) {
         return baseMapper.selectList(new QueryWrapper<InventoryWarehouse>()
                 .eq("tenant_id", tenantId)

@@ -20,4 +20,6 @@ public interface CkInventoryWarehouseService extends IService<InventoryWarehouse
     List<InventoryWarehouse> getByProductIdsAndWarehouseIds(Long tenantId, List<Long> productIds, List<Long> warehouseIds);
 
     List<InventoryWarehouse> getByProductIds(Long tenantId, List<Long> productIds);
+
+    List<InventoryWarehouse> selectByTenantId(Long tenantId);
 }

@@ -10,6 +10,8 @@ import com.example.entity.cangku.req.OutboundListPageReq;
 import com.example.entity.cangku.resp.OutboundDetailResp;
 import com.example.entity.cangku.resp.OutboundListPageResp;
 import com.example.entity.dto.Account;
+import com.example.enums.CkInOutboundEnums;
+import com.example.holder.InventoryHolder;
 import com.example.service.*;
 import com.google.common.collect.Lists;
 import jakarta.annotation.Resource;
@@ -43,6 +45,8 @@ public class CkOutboundFacade {
     CkInventoryService inventoryService;
 
     @Resource
+    InventoryHolder inventoryHolder;
+    @Resource
     CkInventoryWarehouseService inventoryWarehouseService;
 
     @Resource
@@ -65,8 +69,6 @@ public class CkOutboundFacade {
     CkWareHouseService warehouseService;
 
     public Boolean create(OutboundCreateReq req) {
-        // 1. 参数校验
-        validateCreateReq(req);
 
         // 2. 构建出库单主表实体
         OutboundOrder outboundOrder = buildOutboundOrder(req);
@@ -77,18 +79,53 @@ public class CkOutboundFacade {
             throw new ValidationException("出库单主表保存失败");
         }
 
-        // 4. 处理出库单明细
-        List<OutboundOrderItem> orderItems = buildOutboundOrderItems(req, outboundOrder.getId());
-        boolean itemsSaved = outboundOrderItemService.saveBatch(orderItems);
-        if (!itemsSaved) {
-            throw new ValidationException("出库单明细保存失败");
-        }
+        CkInOutboundEnums.OutBoundType out = CkInOutboundEnums.OutBoundType.getByCode(req.getOrderType());
+        switch (Objects.requireNonNull(out)) {
 
-        // 5. 如果是已完成状态，更新库存和流水
-        if (req.getStatus() == 3) { // 已完成状态
-            updateInventoryAndTransaction(req, outboundOrder.getId(), orderItems);
-        }
+            case ProductionOutbound:// 生产领料
+                // 4. 处理出库单明细
+                List<OutboundOrderItem> orderItems = req.getBomAllocations().stream().map(v -> {
+                    OutboundOrderItem item = new OutboundOrderItem();
+                    item.setTenantId(req.getTenantId());
+                    item.setOrderId(outboundOrder.getId());
+                    item.setProductId(v.getComponentProductId());
+                    item.setRelationProductId(req.getItems().get(v.getItemIndex()).getProductId());
+                    //item.setBatchNo(outboundOrder.getRelatedOrderNo());
+                    item.setShelfLocationId(v.getShelfId());
+                    item.setQuantity(v.getQuantity());
+                    item.setCreatedAt(new Date());
+                    item.setCreatedBy(req.getUserId());
+                    item.setModifiedAt(new Date());
+                    item.setModifiedBy(req.getUserId());
+                    return item;
+                }).collect(Collectors.toList());
+                boolean itemsSaved = outboundOrderItemService.saveBatch(orderItems);
+                if (!itemsSaved) {
+                    throw new ValidationException("出库单明细保存失败");
+                }
+                // 5. 如果是已完成状态，更新库存和流水
+                if (req.getStatus() == 3) { // 已完成状态
+                    //updateInventoryAndTransaction(req, outboundOrder.getId(), orderItems);
+                    inventoryHolder.updateSubInventoryForApprove(outboundOrder, orderItems, req.getUserId());
+                }
+                break;
 
+            case SaleOutbound:// 销售出库
+                // 1. 参数校验
+                validateCreateReq(req);
+                // 4. 处理出库单明细
+                List<OutboundOrderItem> orderItems1 = buildOutboundOrderItems(req, outboundOrder.getId());
+                boolean itemsSaved1 = outboundOrderItemService.saveBatch(orderItems1);
+                if (!itemsSaved1) {
+                    throw new ValidationException("出库单明细保存失败");
+                }
+                // 5. 如果是已完成状态，更新库存和流水
+                if (req.getStatus() == 3) { // 已完成状态
+                   // updateInventoryAndTransaction(req, outboundOrder.getId(), orderItems1);
+                    inventoryHolder.updateSubInventoryForApprove(outboundOrder, orderItems1, req.getUserId());
+                }
+                break;
+        }
         return true;
     }
 
@@ -118,7 +155,7 @@ public class CkOutboundFacade {
         }
 
         // 6. 删除原有的出库单明细
-        int itemsDeleted = outboundOrderItemService.deleteByOrderId(req.getId(), req.getTenantId(),req.getUserId());
+        int itemsDeleted = outboundOrderItemService.deleteByOrderId(req.getId(), req.getTenantId(), req.getUserId());
         if (itemsDeleted < 0) {
             throw new ValidationException("原有出库单明细删除失败");
         }
@@ -132,7 +169,8 @@ public class CkOutboundFacade {
 
         // 8. 如果是已完成状态，更新库存和流水
         if (req.getStatus() == 3) { // 已完成状态
-            updateInventoryAndTransaction(req, req.getId(), orderItems);
+            inventoryHolder.updateSubInventoryForApprove(updatedOrder, orderItems, req.getUserId());
+            //updateInventoryAndTransaction(req, req.getId(), orderItems);
         }
 
         return true;
@@ -318,7 +356,7 @@ public class CkOutboundFacade {
 
         // 校验每个批次的库存是否足够
         for (int i = 0; i < item.getAvailableBatches().size(); i++) {
-            OutboundCreateReq.ProductInventoryBatchInner batch = item.getAvailableBatches().get(i);
+            OutboundCreateReq.ProductInventoryAllBatchInner batch = item.getAvailableBatches().get(i);
 
             // 查询批次库存
             InventoryBatch inventoryBatch = inventoryBatchService.selectByBatchNoAndProductId(
@@ -375,8 +413,10 @@ public class CkOutboundFacade {
                 orderItem.setProductId(item.getProductId());
                 orderItem.setBatchNo(batch.getBatchNo());
                 orderItem.setQuantity(batch.getQuantity()); // 转换为int类型
+                orderItem.setShelfLocationId(batch.getShelfId());
                 orderItem.setPriceUnit(item.getPrice());
                 orderItem.setPriceTotal(batch.getQuantity().multiply(item.getPrice()));
+                //orderItem.setShelfLocationId(item.gets);
                 orderItem.setRemark(item.getRemark());
                 orderItem.setTenantId(req.getTenantId());
                 orderItem.setCreatedBy(req.getUserId());
@@ -414,7 +454,7 @@ public class CkOutboundFacade {
     /**
      * 更新库存
      */
-    private void updateInventory(OutboundCreateReq req, OutboundOrderItem item , Long orderId) {
+    private void updateInventory(OutboundCreateReq req, OutboundOrderItem item, Long orderId) {
         // 查询现有库存
         Inventory existingInventory = inventoryService.getByProduct(item.getProductId(), req.getTenantId());
 
@@ -505,6 +545,9 @@ public class CkOutboundFacade {
      * 更新批次库存
      */
     private void updateInventoryBatch(OutboundCreateReq req, OutboundOrderItem item) {
+        if (!StringUtils.isNotBlank(item.getBatchNo())) {
+            return;
+        }
         // 查询现有批次库存
         InventoryBatch existingBatch = inventoryBatchService.selectByBatchNoAndProductId(
                 item.getBatchNo(), item.getProductId(), req.getTenantId());
@@ -619,7 +662,8 @@ public class CkOutboundFacade {
         req.setUserId(approveOkReq.getUserId());
 
         // 5. 更新库存和流水
-        updateInventoryAndTransaction(req, approveOkReq.getId(), orderItems);
+        inventoryHolder.updateSubInventoryForApprove(outboundOrder, orderItems, approveOkReq.getUserId());
+        //updateInventoryAndTransaction(req, approveOkReq.getId(), orderItems);
 
         // 6. 更新出库单状态为已完成
         outboundOrder.setStatus(3); // 3-已完成
@@ -636,25 +680,25 @@ public class CkOutboundFacade {
     /**
      * 修改原有的 updateInventoryAndTransaction 方法，使其可复用
      */
-    private void updateInventoryAndTransaction(OutboundCreateReq req, Long orderId, List<OutboundOrderItem> orderItems) {
-        for (OutboundOrderItem item : orderItems) {
-            // 更新库存
-            updateInventory(req, item, orderId);
-            // 更新仓库库存
-            updateWarehouseInventory(req, item);
-            // 更新批次库存
-            updateInventoryBatch(req, item);
-            // 记录库存流水
-            createInventoryTransaction(req, orderId, item);
-        }
-    }
+//    private void updateInventoryAndTransaction(OutboundCreateReq req, Long orderId, List<OutboundOrderItem> orderItems) {
+//        for (OutboundOrderItem item : orderItems) {
+//            // 更新库存
+//            updateInventory(req, item, orderId);
+//            // 更新仓库库存
+//            updateWarehouseInventory(req, item);
+//            // 更新批次库存
+//            updateInventoryBatch(req, item);
+//            // 记录库存流水
+//            createInventoryTransaction(req, orderId, item);
+//        }
+//    }
 
     public OutboundDetailResp detail(Long orderId, Long tenantId) {
         OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);
         if (outboundOrder == null) {
             throw new ValidationException("出库单不存在");
         }
-        List<OutboundOrderItem> items = outboundOrderItemService.selectByOrderId(orderId,tenantId);
+        List<OutboundOrderItem> items = outboundOrderItemService.selectByOrderId(orderId, tenantId);
         Map<Long, List<OutboundOrderItem>> productId2OutItemListMap = items.stream().collect(Collectors.groupingBy(OutboundOrderItem::getProductId));
 
         Map<Long, Product> productId2ProductMap = new HashMap<>();
@@ -731,7 +775,7 @@ public class CkOutboundFacade {
                 req.setPriceUnit(outItemList.get(0).getPriceUnit());
                 req.setRemark(outItemList.get(0).getRemark());
 
-                List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v->{
+                List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v -> {
                     OutboundDetailResp.ProductInventoryBatchInner i = new OutboundDetailResp.ProductInventoryBatchInner();
                     i.setItemId(v.getId());
                     i.setBatchNo(v.getBatchNo());
@@ -743,7 +787,7 @@ public class CkOutboundFacade {
             }
         }
         resp.setItems(innerList);
-        resp.setItemCount(CollectionUtils.isEmpty(innerList) ? 0 :innerList.size());
+        resp.setItemCount(CollectionUtils.isEmpty(innerList) ? 0 : innerList.size());
         return resp;
     }
 

@@ -41,6 +41,10 @@ public class CkInventoryFacade {
     @Resource
     CkWareHouseService wareHouseService;
     @Resource
+    CkShelfService shelfService;
+    @Resource
+    CkInventoryShelfService inventoryShelfService;
+    @Resource
     CkInventoryBatchService inventoryBatchService;
     @Resource
     AccountService accountService;
@@ -310,10 +314,24 @@ public class CkInventoryFacade {
         if (CollectionUtils.isEmpty(inventoryBatches)) {
             return Collections.emptyList();
         }
+        List<InventoryShelf> inventoryShelfList = inventoryShelfService.selectByProductIds(productId, tenantId);
+
+        Map<String, List<InventoryShelf>> batchNo2InventoryShelfMap = inventoryShelfList.stream().collect(Collectors.groupingBy(InventoryShelf::getBatchNo));
+
+        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(tenantId);
+        Map<Long, WarehouseShelf> shelfId2InfoMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+
         return inventoryBatches.stream().map(c -> {
             InventoryBatchResp resp = new InventoryBatchResp();
             resp.setQuantity(c.getQuantity());
             resp.setBatchNo(c.getBatchNo());
+            resp.setShelfList(batchNo2InventoryShelfMap.getOrDefault(c.getBatchNo(), Collections.emptyList()).stream().map(s -> {
+                InventoryBatchResp.ShelfInfo shelfInfo = new InventoryBatchResp.ShelfInfo();
+                shelfInfo.setShelfId(s.getShelfId());
+                shelfInfo.setShelfName(shelfId2InfoMap.getOrDefault(s.getShelfId(), new WarehouseShelf()).getShelfName());
+                shelfInfo.setQuantity(s.getQuantity());
+                return shelfInfo;
+            }).collect(Collectors.toList()));
             return resp;
         }).collect(Collectors.toList());
     }

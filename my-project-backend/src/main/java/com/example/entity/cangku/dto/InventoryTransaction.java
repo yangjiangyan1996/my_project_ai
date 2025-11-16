@@ -19,6 +19,10 @@ public class InventoryTransaction extends BaseModel {
     private Long tenantId;
     //仓库ID
     private Long warehouseId;
+    //批次号
+    private String batchNo;
+    //货架ID
+    private Long shelfId;
     //产品ID
     private Long productId;
     //单据类型:1-入库单,2-出库单

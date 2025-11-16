@@ -69,6 +69,9 @@ public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMappe
 
     @Override
     public List<OutboundOrder> selectByInboundOrderIds(Long tenantId, List<Long> outboundOrderIds) {
+        if (outboundOrderIds == null || outboundOrderIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         return baseMapper.selectList(
                 new QueryWrapper<OutboundOrder>()
                         .eq("tenant_id", tenantId)

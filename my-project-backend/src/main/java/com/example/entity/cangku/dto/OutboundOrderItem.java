@@ -20,6 +20,10 @@ public class OutboundOrderItem extends BaseModel {
     private Long orderId;
     //产品ID
     private Long productId;
+    //货架位置ID
+    private Long shelfLocationId;
+    //关联产品ID （生产领料时，ID为成品ID）
+    private Long relationProductId;
     //批次 ID
     String batchNo;
     //备注

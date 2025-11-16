@@ -393,21 +393,22 @@
               </template>
             </el-table-column>
             <el-table-column label="批次分配" min-width="200">
-              <template #default="{ row }">
-                <div v-if="row.batchAllocations && row.batchAllocations.length > 0" class="batch-summary">
-                  <el-tag
-                    v-for="allocation in row.batchAllocations"
-                    :key="allocation.batchNo"
-                    size="small"
-                    class="batch-tag"
-                  >
-                    {{ allocation.batchNo }}: {{ allocation.quantity }}个
-                  </el-tag>
-                </div>
-                <div v-else class="batch-empty">
-                  <span class="empty-text">未分配批次</span>
-                </div>
-              </template>
+                <template #default="{ row }">
+                  
+                      <div v-if="row.batchAllocations && row.batchAllocations.length > 0" class="batch-summary">
+                        <el-tag
+                          v-for="allocation in row.batchAllocations"
+                          :key="allocation.batchNo"
+                          size="small"
+                          class="batch-tag"
+                        >
+                          {{ allocation.batchNo }}: {{ allocation.quantity }}个
+                        </el-tag>
+                      </div>
+                      <div v-else class="batch-empty">
+                        <span class="empty-text">未分配批次</span>
+                      </div>
+                </template>
             </el-table-column>
             <el-table-column label="备注" min-width="150" prop="remark">
               <template #default="{ row }">

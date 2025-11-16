@@ -14,10 +14,12 @@ import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @Author YangJian
@@ -198,7 +200,7 @@ public class ProductController {
     }
 
 
-    //获取可用商品列表
+    //获取可用所有商品列表
     @GetMapping("/listEnable")
     public RespBean<List<ProductPageListResp>> listEnable() {
         try {
@@ -210,6 +212,23 @@ public class ProductController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("ProductController#listEnable,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    //获取可用成品商品列表
+    @GetMapping("/finishedProductListEnable")
+    public RespBean<List<ProductPageListResp>> finishedProductListEnable() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<ProductPageListResp> productPageListResps = CKProductFacade.listEnable(user);
+            List<ProductPageListResp> result = productPageListResps.stream().filter(productPageListResp -> CollectionUtils.isEmpty(productPageListResp.getBomData())).collect(Collectors.toList());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProductController#finishedProductListEnable,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#finishedProductListEnable,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

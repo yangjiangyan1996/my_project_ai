@@ -3,6 +3,7 @@ package com.example.entity.cangku.resp;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -12,6 +13,7 @@ import java.math.BigDecimal;
  */
 @Data
 public class BomDetailListResp {
+    //bomdetail的ID
     private Long id;
     Long componentProductId;
     String componentProductName;
@@ -22,4 +24,6 @@ public class BomDetailListResp {
     BigDecimal lossRate;
     String remark;
     Integer sortOrder;
+
+    List<ProductWarehouseQuantityResp> warehouseQuantityList;
 }

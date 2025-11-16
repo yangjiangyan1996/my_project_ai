@@ -3,6 +3,7 @@ package com.example.entity.cangku.resp;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -14,4 +15,12 @@ import java.math.BigDecimal;
 public class InventoryBatchResp {
     String batchNo;
     BigDecimal quantity;
+    List<ShelfInfo> shelfList;
+
+    @Data
+    public static class ShelfInfo {
+        Long shelfId;
+        String shelfName;
+        BigDecimal quantity;
+    }
 }

@@ -17,19 +17,25 @@ public class InboundCreateReq {
     Long id;
     private String orderNo;
     private Integer orderType;
+    //关联单号
     private String relatedOrderNo;
     private String remark;
     private Integer status;
     private Long supplierId;
     private Double totalQuantity;
     private Long warehouseId;
-    private List<InboundDetailCreateReq> items;
     //总价
     private BigDecimal totalAmount;
+    //产品明细
+    private List<InboundDetailCreateReq> items;
+
+    private Long tenantId;
+    private Long userId;
 
     @Data
     public static class InboundDetailCreateReq {
         private Double actualQuantity;
+        //批次号
         private String batchNo;
         private Long productId;
         private String remark;
@@ -38,8 +44,16 @@ public class InboundCreateReq {
         private BigDecimal priceUnit;
         //总价
         private BigDecimal priceTotal;
+
+        //货架分配
+        private List<ShelfDetailCreateReq> shelfAllocations;
     }
 
-    private Long tenantId;
-    private Long userId;
+
+
+    @Data
+    public static class ShelfDetailCreateReq {
+        private Long shelfLocationId;
+        private Double quantity;
+    }
 }

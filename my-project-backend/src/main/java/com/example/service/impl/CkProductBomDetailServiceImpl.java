@@ -28,6 +28,13 @@ public class CkProductBomDetailServiceImpl extends ServiceImpl<CkProductBomDetai
     }
 
     @Override
+    public List<ProductBomDetail> selectByTenantId(Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<ProductBomDetail>()
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete));
+    }
+
+    @Override
     public Boolean deletedByBomId(Long bomId, Long userId,  Long tenantId) {
         ProductBomDetail productBom = new ProductBomDetail();
         productBom.setModifiedAt(new Date());
