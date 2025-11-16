@@ -238,6 +238,12 @@ const router = createRouter({
             component: () => import('@/views/ck/CkInventoryHistory.vue'),
             meta: { requiresAuth: false }
         },
+        {
+            path: '/index/ckSkuManage/',
+            name: 'ckSkuManage',
+            component: () => import('@/views/ck/CkSkuManage.vue'),
+            meta: { requiresAuth: false }
+        },
 
 
 
