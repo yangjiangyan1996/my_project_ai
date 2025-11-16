@@ -30,6 +30,7 @@ public class InboundListPageResp {
     private Integer status;
     //总数量
     private BigDecimal totalQuantity;
+    private BigDecimal totalAmount;
     //备注
     private String remark;
     private String warehouseName;

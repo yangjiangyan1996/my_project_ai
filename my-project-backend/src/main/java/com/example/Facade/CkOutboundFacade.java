@@ -68,6 +68,7 @@ public class CkOutboundFacade {
     @Resource
     CkWareHouseService warehouseService;
 
+    @Transactional(rollbackFor = Exception.class)
     public Boolean create(OutboundCreateReq req) {
 
         // 2. 构建出库单主表实体
@@ -83,30 +84,36 @@ public class CkOutboundFacade {
         switch (Objects.requireNonNull(out)) {
 
             case ProductionOutbound:// 生产领料
+                List<OutboundOrderItem> saveList = new ArrayList<>();
+                List<OutboundCreateReq.ProductInfoInner> items = req.getItems();
+                for (OutboundCreateReq.ProductInfoInner item : items) {
+                    List<OutboundOrderItem> orderItems = item.getBomAllocations().stream().map(v -> {
+                        OutboundOrderItem saveEntity = new OutboundOrderItem();
+                        saveEntity.setTenantId(req.getTenantId());
+                        saveEntity.setOrderId(outboundOrder.getId());
+                        saveEntity.setProductId(v.getComponentProductId());
+                        saveEntity.setRelationProductId(item.getProductId());
+                        //item.setBatchNo(outboundOrder.getRelatedOrderNo());
+                        saveEntity.setShelfLocationId(v.getShelfId());
+                        saveEntity.setQuantity(v.getQuantity());
+                        saveEntity.setCreatedAt(new Date());
+                        saveEntity.setCreatedBy(req.getUserId());
+                        saveEntity.setModifiedAt(new Date());
+                        saveEntity.setModifiedBy(req.getUserId());
+                        return saveEntity;
+                    }).collect(Collectors.toList());
+                    saveList.addAll(orderItems);
+                }
                 // 4. 处理出库单明细
-                List<OutboundOrderItem> orderItems = req.getBomAllocations().stream().map(v -> {
-                    OutboundOrderItem item = new OutboundOrderItem();
-                    item.setTenantId(req.getTenantId());
-                    item.setOrderId(outboundOrder.getId());
-                    item.setProductId(v.getComponentProductId());
-                    item.setRelationProductId(req.getItems().get(v.getItemIndex()).getProductId());
-                    //item.setBatchNo(outboundOrder.getRelatedOrderNo());
-                    item.setShelfLocationId(v.getShelfId());
-                    item.setQuantity(v.getQuantity());
-                    item.setCreatedAt(new Date());
-                    item.setCreatedBy(req.getUserId());
-                    item.setModifiedAt(new Date());
-                    item.setModifiedBy(req.getUserId());
-                    return item;
-                }).collect(Collectors.toList());
-                boolean itemsSaved = outboundOrderItemService.saveBatch(orderItems);
+
+                boolean itemsSaved = outboundOrderItemService.saveBatch(saveList);
                 if (!itemsSaved) {
                     throw new ValidationException("出库单明细保存失败");
                 }
                 // 5. 如果是已完成状态，更新库存和流水
                 if (req.getStatus() == 3) { // 已完成状态
                     //updateInventoryAndTransaction(req, outboundOrder.getId(), orderItems);
-                    inventoryHolder.updateSubInventoryForApprove(outboundOrder, orderItems, req.getUserId());
+                    inventoryHolder.updateSubInventoryForApprove(outboundOrder, saveList, req.getUserId());
                 }
                 break;
 

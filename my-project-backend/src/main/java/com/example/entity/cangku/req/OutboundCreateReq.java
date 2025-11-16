@@ -39,9 +39,6 @@ public class OutboundCreateReq {
 
     private List<ProductInfoInner> items;
 
-    //生产入库时子产品明细
-    List<BomAllocationCreateReq> bomAllocations;
-
     private Long userId;
     private Long tenantId;
 
@@ -63,6 +60,9 @@ public class OutboundCreateReq {
         List<ProductInventoryAllBatchInner> availableBatches;
         // 分配的批次数量
         List<ProductInventoryBatchInner> batchAllocations;
+
+        //生产入库时子产品明细
+        List<BomAllocationCreateReq> bomAllocations;
     }
 
 

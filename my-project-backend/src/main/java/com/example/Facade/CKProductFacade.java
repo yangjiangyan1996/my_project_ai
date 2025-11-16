@@ -567,6 +567,49 @@ public class CKProductFacade {
                     return r;
                 }).collect(Collectors.toList());
                 p.setBomData(bomData);
+            } else {
+                //没有bom
+                Product pp = productId2ProductMap.getOrDefault(productId, new Product());
+                BomDetailListResp r = new BomDetailListResp();
+                r.setId(pp.getId());
+                r.setComponentProductId(pp.getId());
+                r.setComponentProductName(pp.getName());
+                r.setComponentProductSku(pp.getSku());
+                r.setComponentProductUnit(finalUnitCode2UnitMap.getOrDefault(pp.getUnitCode(), new Unit()).getUnitName());
+                r.setComponentProductSpec(pp.getSpec());
+                r.setQuantity(new BigDecimal(1));
+                r.setLossRate(new BigDecimal(1));
+                r.setRemark(pp.getRemark());
+                r.setSortOrder(0);
+
+                List<InventoryWarehouse> inventoryWarehouseList = finalProductId2InventoryWarehouseMap.getOrDefault(pp.getId(), null);
+                if (!CollectionUtils.isEmpty(inventoryWarehouseList)) {
+                    List<ProductWarehouseQuantityResp> productWarehouseQuantityRespStream = inventoryWarehouseList.stream().map(inventoryWarehouse -> {
+                        ProductWarehouseQuantityResp pwqr = new ProductWarehouseQuantityResp();
+                        pwqr.setWarehouseId(inventoryWarehouse.getWarehouseId());
+                        pwqr.setWarehouseName(finalWarehouseId2WarehouseMap.getOrDefault(inventoryWarehouse.getWarehouseId(), new Warehouse()).getName());
+                        pwqr.setWarehouseQuantity(inventoryWarehouse.getQuantity());
+                        pwqr.setWarehouseAvailableQuantity(inventoryWarehouse.getQuantity().subtract(inventoryWarehouse.getLockedQuantity()));
+
+                        List<InventoryShelf> inventoryShelfList = finalProductId2InventoryShelfMap.getOrDefault(pp.getId(), null);
+                        if (!CollectionUtils.isEmpty(inventoryShelfList)) {
+                            List<ProductShelfQuantityResp> psqrList = inventoryShelfList.stream()
+                                    .filter(inventoryShelf -> inventoryShelf.getWarehouseId().equals(inventoryWarehouse.getWarehouseId()))
+                                    .map(inventoryShelf -> {
+                                        ProductShelfQuantityResp psqr = new ProductShelfQuantityResp();
+                                        psqr.setShelfId(inventoryShelf.getShelfId());
+                                        psqr.setShelfName(finalShelfId2ShelfMap.getOrDefault(inventoryShelf.getShelfId(), new WarehouseShelf()).getShelfName());
+                                        psqr.setShelfQuantity(inventoryShelf.getQuantity());
+                                        psqr.setShelfAvailableQuantity(inventoryShelf.getQuantity().subtract(inventoryShelf.getLockedQuantity()));
+                                        return psqr;
+                                    }).collect(Collectors.toList());
+                            pwqr.setShelfQuantityList(psqrList);
+                        }
+                        return pwqr;
+                    }).collect(Collectors.toList());
+                    r.setWarehouseQuantityList(productWarehouseQuantityRespStream);
+                }
+                p.setBomData(Collections.singletonList(r));
             }
             return p;
         }).collect(Collectors.toList());

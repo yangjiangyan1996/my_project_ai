@@ -576,7 +576,7 @@
                     <el-input-number
                       v-model="shelf.allocated"
                       :min="0"
-                      :max="getShelfMaxAllocation(row, shelf)"
+                      :max="getShelfMaxAllocation(row, shelf, batchIndex, shelfIndex)"
                       :precision="0"
                       controls-position="right"
                       size="small"
@@ -653,9 +653,8 @@ const formData = reactive({
   remark: '',
   status: 0,
   items: [],
-  attachments: [],
-  // 新增：BOM分配数据
-  bomAllocations: []
+  attachments: []
+  // 移除全局的 bomAllocations，改为在每个 item 中存储
 });
 
 // 批次分配对话框数据
@@ -787,10 +786,12 @@ const calculateRequiredQuantity = (unitQuantity, productQuantity) => {
   return (unitQty * productQty).toFixed(4);
 };
 
-// 获取分配数量
+// 获取分配数量 - 修改为从 item.bomAllocations 中获取
 const getAllocationQuantity = (itemIndex, componentProductId, warehouseId, shelfId) => {
-  const allocation = formData.bomAllocations.find(a => 
-    a.itemIndex === itemIndex &&
+  const item = formData.items[itemIndex];
+  if (!item.bomAllocations) return 0;
+  
+  const allocation = item.bomAllocations.find(a => 
     a.componentProductId === componentProductId &&
     a.warehouseId === warehouseId &&
     a.shelfId === shelfId
@@ -798,10 +799,13 @@ const getAllocationQuantity = (itemIndex, componentProductId, warehouseId, shelf
   return allocation ? parseFloat(allocation.quantity) : 0;
 };
 
-// 获取某个原料的总分配数量
+// 获取某个原料的总分配数量 - 修改为从 item.bomAllocations 中获取
 const getAllocatedQuantityForComponent = (itemIndex, componentProductId) => {
-  return formData.bomAllocations
-    .filter(a => a.itemIndex === itemIndex && a.componentProductId === componentProductId)
+  const item = formData.items[itemIndex];
+  if (!item.bomAllocations) return 0;
+  
+  return item.bomAllocations
+    .filter(a => a.componentProductId === componentProductId)
     .reduce((sum, a) => sum + (parseFloat(a.quantity) || 0), 0)
     .toFixed(4);
 };
@@ -838,11 +842,17 @@ const getMaxAllocation = (itemIndex, bomRow, warehouse, shelf) => {
   return Math.min(remainingAllocation, physicalMax);
 };
 
-// 更新分配数量
+// 更新分配数量 - 修改为更新到 item.bomAllocations
 const updateAllocationQuantity = (value, itemIndex, bomRow, warehouse, shelf) => {
   const quantity = parseFloat(value) || 0;
-  const allocationIndex = formData.bomAllocations.findIndex(a => 
-    a.itemIndex === itemIndex &&
+  const item = formData.items[itemIndex];
+  
+  // 确保 item.bomAllocations 存在
+  if (!item.bomAllocations) {
+    item.bomAllocations = [];
+  }
+  
+  const allocationIndex = item.bomAllocations.findIndex(a => 
     a.componentProductId === bomRow.componentProductId &&
     a.warehouseId === warehouse.warehouseId &&
     a.shelfId === (shelf ? shelf.shelfId : null)
@@ -862,10 +872,9 @@ const updateAllocationQuantity = (value, itemIndex, bomRow, warehouse, shelf) =>
     
     if (adjustedQuantity > 0) {
       if (allocationIndex >= 0) {
-        formData.bomAllocations[allocationIndex].quantity = adjustedQuantity;
+        item.bomAllocations[allocationIndex].quantity = adjustedQuantity;
       } else {
-        formData.bomAllocations.push({
-          itemIndex,
+        item.bomAllocations.push({
           componentProductId: bomRow.componentProductId,
           componentProductName: bomRow.componentProductName,
           componentProductSku: bomRow.componentProductSku,
@@ -877,17 +886,16 @@ const updateAllocationQuantity = (value, itemIndex, bomRow, warehouse, shelf) =>
         });
       }
     } else if (allocationIndex >= 0) {
-      formData.bomAllocations.splice(allocationIndex, 1);
+      item.bomAllocations.splice(allocationIndex, 1);
     }
     return;
   }
 
   if (quantity > 0) {
     if (allocationIndex >= 0) {
-      formData.bomAllocations[allocationIndex].quantity = quantity;
+      item.bomAllocations[allocationIndex].quantity = quantity;
     } else {
-      formData.bomAllocations.push({
-        itemIndex,
+      item.bomAllocations.push({
         componentProductId: bomRow.componentProductId,
         componentProductName: bomRow.componentProductName,
         componentProductSku: bomRow.componentProductSku,
@@ -899,7 +907,7 @@ const updateAllocationQuantity = (value, itemIndex, bomRow, warehouse, shelf) =>
       });
     }
   } else if (allocationIndex >= 0) {
-    formData.bomAllocations.splice(allocationIndex, 1);
+    item.bomAllocations.splice(allocationIndex, 1);
   }
 };
 
@@ -974,8 +982,7 @@ const loadOutboundDetail = async (id) => {
         expectedDate: detailData.expectedDate,
         relatedOrderNo: detailData.relatedOrderNo || '',
         remark: detailData.remark || '',
-        status: detailData.status,
-        bomAllocations: detailData.bomAllocations || []
+        status: detailData.status
       });
 
       // 如果仓库有值，先加载对应的数据
@@ -985,7 +992,7 @@ const loadOutboundDetail = async (id) => {
         }
       }
 
-      // 设置产品明细数据
+      // 设置产品明细数据 - 修改为将 bomAllocations 放入每个 item 中
       if (detailData.items && detailData.items.length > 0) {
         formData.items = detailData.items.map(item => {
           let currentStock = 0;
@@ -1004,19 +1011,11 @@ const loadOutboundDetail = async (id) => {
             price: item.price || 0,
             batchAllocations: item.batchAllocations || [],
             availableBatches: item.availableBatches || [],
-            remark: item.remark || ''
+            remark: item.remark || '',
+            // 将 bomAllocations 放入每个 item 中
+            bomAllocations: item.bomAllocations || []
           };
         });
-
-        // 为销售出库的产品加载批次信息
-        if (detailData.orderType === 1) {
-          for (let i = 0; i < formData.items.length; i++) {
-            const item = formData.items[i];
-            if (item.productId && formData.warehouseId) {
-              await loadBatchInfo(item.productId, formData.warehouseId, i);
-            }
-          }
-        }
       } else {
         formData.items = [];
       }
@@ -1073,7 +1072,6 @@ const handleOrderTypeChange = (value) => {
   
   // 清空产品列表和分配数据
   formData.items = [];
-  formData.bomAllocations = [];
   
   // 重新加载产品数据
   if (value === 1 && formData.warehouseId) {
@@ -1107,20 +1105,14 @@ const handleAddProduct = () => {
     price: 0,
     batchAllocations: [],
     availableBatches: [],
-    remark: ''
+    remark: '',
+    // 新增：每个商品项的BOM分配数据
+    bomAllocations: []
   });
 };
 
 const handleRemoveProduct = (index) => {
   formData.items.splice(index, 1);
-  // 同时移除相关的BOM分配数据
-  formData.bomAllocations = formData.bomAllocations.filter(a => a.itemIndex !== index);
-  // 更新后续项的索引
-  formData.bomAllocations.forEach(a => {
-    if (a.itemIndex > index) {
-      a.itemIndex--;
-    }
-  });
 };
 
 const handleProductChange = async (productId, index) => {
@@ -1151,11 +1143,10 @@ const handleProductChange = async (productId, index) => {
     } else {
       item.quantity = item.quantity || 1;
       item.price = item.price || 0;
+      // 生产领料：初始化 bomAllocations
+      item.bomAllocations = item.bomAllocations || [];
     }
   }
-  
-  // 清空该产品相关的BOM分配数据
-  formData.bomAllocations = formData.bomAllocations.filter(a => a.itemIndex !== index);
 };
 
 const handleQuantityChange = (index) => {
@@ -1275,10 +1266,21 @@ const handleShelfAllocationChange = (batchIndex, shelfIndex, newValue) => {
   }
   
   // 检查是否超过货架最大可用数量
-  const maxAllocation = getShelfMaxAllocation(batch, shelf);
+  const maxAllocation = getShelfMaxAllocation(batch, shelf, batchIndex, shelfIndex);
   if (newValue > maxAllocation) {
     newValue = maxAllocation;
     ElMessage.warning(`分配数量不能超过货架可用数量 ${maxAllocation}`);
+  }
+  
+  // 检查是否超过总出库数量限制
+  const currentAllocated = batchDialog.allocatedQuantity;
+  const otherAllocated = currentAllocated - (shelf.allocated || 0);
+  const totalAllocated = otherAllocated + newValue;
+  
+  if (totalAllocated > batchDialog.totalQuantity) {
+    const maxAllowed = batchDialog.totalQuantity - otherAllocated;
+    newValue = Math.max(0, maxAllowed);
+    ElMessage.warning(`分配总数不能超过出库数量 ${batchDialog.totalQuantity}，当前最多可分配 ${maxAllowed}`);
   }
   
   shelf.allocated = newValue;
@@ -1287,9 +1289,16 @@ const handleShelfAllocationChange = (batchIndex, shelfIndex, newValue) => {
   updateBatchDialogCalculations();
 };
 
-const getShelfMaxAllocation = (batch, shelf) => {
-  // 货架最大可分配数量 = 货架可用数量
-  return shelf.quantity;
+const getShelfMaxAllocation = (batch, shelf, batchIndex, shelfIndex) => {
+  // 货架最大可分配数量 = 货架可用数量 和 剩余可分配数量的较小值
+  const shelfMax = shelf.quantity;
+  
+  // 计算剩余可分配数量
+  const currentAllocated = batchDialog.allocatedQuantity;
+  const currentShelfAllocated = shelf.allocated || 0;
+  const remainingQuantity = batchDialog.totalQuantity - (currentAllocated - currentShelfAllocated);
+  
+  return Math.min(shelfMax, remainingQuantity);
 };
 
 const getBatchAllocatedTotal = (batch) => {
@@ -1341,8 +1350,8 @@ const autoAllocateBatches = () => {
       for (const shelf of batch.shelfList) {
         if (remaining <= 0) break;
         
-        const available = shelf.quantity - (shelf.allocated || 0);
-        const allocate = Math.min(available, remaining);
+        const available = Math.min(shelf.quantity - (shelf.allocated || 0), remaining);
+        const allocate = available;
         
         if (allocate > 0) {
           shelf.allocated = (shelf.allocated || 0) + allocate;
@@ -1423,7 +1432,6 @@ const handleReset = () => {
       // 创建模式下清空表单
       formRef.value?.resetFields();
       formData.items = [];
-      formData.bomAllocations = [];
       fileList.value = [];
       generateOrderNo();
       ElMessage.success('表单已重置');
@@ -1440,8 +1448,8 @@ const handleSaveDraft = async () => {
       ...formData,
       status: 0,
       totalQuantity: totalQuantity.value,
-      totalAmount: totalAmount.value,
-      bomAllocations: formData.bomAllocations
+      totalAmount: totalAmount.value
+      // 不再需要单独的 bomAllocations 字段，因为已经放在每个 item 中
     };
     
     const url = isEditMode.value ? '/api/auth/outbound/update' : '/api/auth/outbound/create';
@@ -1495,8 +1503,8 @@ const handleSubmit = async () => {
       ...formData,
       status: 1,
       totalQuantity: totalQuantity.value,
-      totalAmount: totalAmount.value,
-      bomAllocations: formData.bomAllocations
+      totalAmount: totalAmount.value
+      // 不再需要单独的 bomAllocations 字段，因为已经放在每个 item 中
     };
     
     const url = isEditMode.value ? '/api/auth/outbound/update' : '/api/auth/outbound/create';
@@ -1655,8 +1663,7 @@ watch(
         remark: '',
         status: 0,
         items: [],
-        attachments: [],
-        bomAllocations: []
+        attachments: []
       });
       fileList.value = [];
       productStockMap.value = {};
@@ -1988,7 +1995,7 @@ watch(
   margin: 16px 0;
 }
 
-/* 货架分配样式 */
+/* 货架分配样式 - 调整为6:4比例 */
 .shelf-allocation-container {
   padding: 8px 0;
 }
@@ -2007,28 +2014,38 @@ watch(
   background-color: #f8f9fa;
   border-radius: 4px;
   border: 1px solid #ebeef5;
+  gap: 12px;
 }
 
 .shelf-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
+  flex: 6; /* 60% 宽度 */
+  min-width: 0;
 }
 
 .shelf-name {
   font-size: 13px;
   font-weight: 500;
   color: #303133;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .shelf-quantity {
   font-size: 12px;
   color: #909399;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .shelf-input {
-  width: 120px;
+  width: 100%;
+  flex: 4; /* 40% 宽度 */
+  max-width: 120px;
 }
 
 .no-shelf {
@@ -2120,8 +2137,15 @@ watch(
   
   .shelf-info {
     width: 100%;
-    margin-right: 0;
-    margin-bottom: 6px;
+    flex-direction: row;
+    justify-content: space-between;
+    flex: none;
+  }
+  
+  .shelf-input {
+    width: 100%;
+    max-width: none;
+    flex: none;
   }
   
   .allocation-input {

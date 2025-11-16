@@ -224,6 +224,12 @@
             </template>
           </el-table-column>
 
+          <el-table-column label="出货单位数量" width="100" align="center">
+            <template #default="{ row }">
+              <span>{{ row.outUnitPerNum || '--' }}</span>
+            </template>
+          </el-table-column>
+
           <el-table-column label="出货数量" width="120" align="center">
             <template #default="{ row }">
               <span>{{ formatNumber(row.outUnitTotalNum) }}</span>

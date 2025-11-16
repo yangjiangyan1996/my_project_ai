@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -231,12 +232,11 @@ public class CkInventoryFacade {
 
                     //出货单位数量的总数量 = 出货单位数量 / 出货单位数量
                     if (product.getOutUnitPerNum() != null && !Objects.equals(product.getOutUnitPerNum(), BigDecimal.ZERO)) {
-                        r.setOutUnitTotalNum(totalOutboundQuantityOfAllWarehouses.divide(product.getOutUnitPerNum()));
+                        r.setOutUnitTotalNum(totalOutboundQuantityOfAllWarehouses.divide(product.getOutUnitPerNum(),0, RoundingMode.HALF_UP));
                     }
 
                     //体积 = 出货单位的长宽高 * 出货单位数量的总数量
-                    //TODO 数据OK了，把这里要替换
-                    r.setVolume(BigDecimal.ZERO);
+                    r.setVolume(product.getOutUnitHeight().multiply(product.getOutUnitLength()).multiply(product.getOutUnitWidth()).multiply(r.getOutUnitTotalNum()).divide(new BigDecimal(1000000),2, RoundingMode.HALF_UP));
                     r.setWeightPerUnit(product.getWeightPerUnit());
                     //总重量 = 单件重量 * 出货单位数量的总数量
                     r.setWeightAll(product.getWeightPerUnit().multiply(totalOutboundQuantityOfAllWarehouses));
