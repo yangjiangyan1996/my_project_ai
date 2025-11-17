@@ -57,7 +57,7 @@ public class OutboundCreateReq {
         private String remark;
 
         // 批次数量
-        List<ProductInventoryAllBatchInner> availableBatches;
+        //List<ProductInventoryAllBatchInner> availableBatches;
         // 分配的批次数量
         List<ProductInventoryBatchInner> batchAllocations;
 

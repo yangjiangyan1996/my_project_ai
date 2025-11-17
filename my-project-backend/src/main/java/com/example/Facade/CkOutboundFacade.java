@@ -362,8 +362,8 @@ public class CkOutboundFacade {
         }
 
         // 校验每个批次的库存是否足够
-        for (int i = 0; i < item.getAvailableBatches().size(); i++) {
-            OutboundCreateReq.ProductInventoryAllBatchInner batch = item.getAvailableBatches().get(i);
+        for (int i = 0; i < item.getBatchAllocations().size(); i++) {
+            OutboundCreateReq.ProductInventoryBatchInner batch = item.getBatchAllocations().get(i);
 
             // 查询批次库存
             InventoryBatch inventoryBatch = inventoryBatchService.selectByBatchNoAndProductId(
