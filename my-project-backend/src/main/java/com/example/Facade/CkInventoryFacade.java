@@ -9,6 +9,7 @@ import com.example.entity.cangku.resp.*;
 import com.example.entity.dto.Account;
 import com.example.enums.CkCommonEnums;
 import com.example.enums.CkInventoryEnums;
+import com.example.holder.InventoryHolder;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,8 @@ public class CkInventoryFacade {
     CkOutboundOrderService outboundOrderService;
     @Resource
     CkUnitService unitService;
+    @Resource
+    InventoryHolder inventoryHolder;
     @Resource
     CkProductCategoryService productCategoryService;
     @Resource
@@ -282,6 +285,10 @@ public class CkInventoryFacade {
                 .collect(Collectors.toMap(Unit::getUnitCode, v -> v));
 
 
+        List<InventoryTransaction> inventoryTransactions = inventoryTransactionService.selectByProductIds(tenantId, productIds);
+        Map<Long, InventoryTransaction> productId2LatestInventorySactionMap = inventoryHolder.getLatestOutTransactions(inventoryTransactions);
+
+
         // 获取产品分类信息
         List<ProductCategory> productCategories = productCategoryService.selectByTenantId(tenantId);
         Map<String, ProductCategory> productCode2CategoryMap = productCategories.stream()
@@ -303,6 +310,7 @@ public class CkInventoryFacade {
             r.setOutUnitName(unitCode2UnitMap.getOrDefault(productMap.getOrDefault(productId, new Product()).getOutUnitCode(), new Unit()).getUnitName());
             r.setOutUnitPerNum(productMap.get(productId).getOutUnitPerNum());
             r.setCategoryName(productCode2CategoryMap.get(productMap.get(productId).getCategoryCode()).getCategoryName());
+            r.setPrice(productId2LatestInventorySactionMap.getOrDefault(productId, new InventoryTransaction()).getPriceUnit());
             result.add(r);
         }
 

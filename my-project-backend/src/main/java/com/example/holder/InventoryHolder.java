@@ -8,8 +8,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @Author YangJian
@@ -30,6 +30,33 @@ public class InventoryHolder {
     private CkInventoryWarehouseService inventoryWarehouseService;
     @Resource
     private CkInventoryShelfService inventoryShelfService;
+
+    /**
+     * 获取每个productId出库单中ID最大的流水
+     */
+    public  Map<Long, InventoryTransaction> getLatestOutTransactions(List<InventoryTransaction> inventoryTransactions) {
+        if (inventoryTransactions == null || inventoryTransactions.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        // 只保留出库单 orderType = 2
+        List<InventoryTransaction> outList = inventoryTransactions.stream()
+                .filter(tx -> tx.getOrderType() != null && tx.getOrderType() == 2)
+                .collect(Collectors.toList());
+
+        // 使用Map存储每个productId对应ID最大的流水
+        Map<Long, InventoryTransaction> productId2LatestInventorySactionMap = new HashMap<>();
+        for (InventoryTransaction tx : outList) {
+            Long productId = tx.getProductId();
+            if (!productId2LatestInventorySactionMap.containsKey(productId) || tx.getId() > productId2LatestInventorySactionMap.get(productId).getId()) {
+                productId2LatestInventorySactionMap.put(productId, tx);
+            }
+        }
+
+        // 返回结果
+        return productId2LatestInventorySactionMap;
+    }
+
 
     /**
      * 审核通过时减少库存

@@ -31,7 +31,14 @@ public class OutboundContorller {
     @Resource
     CkOutboundFacade outboundFacade;
 
-    @PostMapping("/pageList")
+
+
+    /**
+     * 分页查询出库列表
+     * @param req 出库列表查询请求参数
+     * @return 返回分页结果
+     */
+    @PostMapping("/pageList") // POST映射到/pageList路径
     public RespBean<Page<OutboundListPageResp>> pageList(@RequestBody OutboundListPageReq req) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
@@ -50,7 +57,14 @@ public class OutboundContorller {
         }
     }
 
-    @GetMapping("/detail")
+
+
+    /**
+     * 获取出库详情
+     * @param orderId 出库订单ID
+     * @return 返回出库详情
+     */
+    @GetMapping("/detail") // GET映射到/detail路径
     public RespBean<OutboundDetailResp> detail(@RequestParam("orderId") Long orderId) {
         try {
             OutboundDetailResp result = outboundFacade.detail(orderId, UserUtil.getCurrentUser().getTenantId());
@@ -64,7 +78,14 @@ public class OutboundContorller {
         }
     }
 
-    @PostMapping("/create")
+
+
+    /**
+     * 创建出库单
+     * @param req 创建出库单请求参数
+     * @return 返回是否创建成功
+     */
+    @PostMapping("/create") // POST映射到/create路径
     public RespBean<Boolean> create(@RequestBody OutboundCreateReq req) {
         try {
             Long userId  = UserUtil.getCurrentUser().getId();
@@ -85,7 +106,14 @@ public class OutboundContorller {
 
 
 
-    @PostMapping("/update")
+
+
+    /**
+     * 更新出库单
+     * @param req 更新出库单请求参数
+     * @return 返回是否更新成功
+     */
+    @PostMapping("/update") // POST映射到/update路径
     public RespBean<Boolean> update(@RequestBody OutboundCreateReq req) {
         try {
             Long userId  = UserUtil.getCurrentUser().getId();
@@ -105,7 +133,14 @@ public class OutboundContorller {
     }
 
 
-    @PostMapping("/approveOk")
+
+
+    /**
+     * 审核通过出库单
+     * @param req 审核通过请求参数
+     * @return 返回是否审核成功
+     */
+    @PostMapping("/approveOk") // POST映射到/approveOk路径
     public RespBean<Boolean> approveOk(@RequestBody OutboundApproveOkReq req) {
         try {
             req.setUserId(UserUtil.getCurrentUser().getId());
@@ -121,7 +156,14 @@ public class OutboundContorller {
         }
     }
 
-    @PostMapping("/delete")
+
+
+    /**
+     * 删除出库单
+     * @param req 删除出库单请求参数
+     * @return 返回是否删除成功
+     */
+    @PostMapping("/delete") // POST映射到/delete路径
     public RespBean<Boolean> delete(@RequestBody OutboundDeleteReq req) {
         try {
             Long userId = UserUtil.getCurrentUser().getId();
