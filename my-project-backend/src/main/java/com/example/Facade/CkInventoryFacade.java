@@ -239,7 +239,16 @@ public class CkInventoryFacade {
                     }
 
                     //体积 = 出货单位的长宽高 * 出货单位数量的总数量
-                    r.setVolume(product.getOutUnitHeight().multiply(product.getOutUnitLength()).multiply(product.getOutUnitWidth()).multiply(r.getOutUnitTotalNum()).divide(new BigDecimal(1000000),2, RoundingMode.HALF_UP));
+                    if(product.getOutUnitHeight() != null
+                            && product.getOutUnitLength()!=null
+                            && product.getOutUnitWidth()!=null
+                            && r.getOutUnitTotalNum() != null
+                            && !Objects.equals(product.getOutUnitHeight(), BigDecimal.ZERO)
+                            && !Objects.equals(product.getOutUnitLength(), BigDecimal.ZERO)
+                            && !Objects.equals(product.getOutUnitWidth(), BigDecimal.ZERO)
+                           && !Objects.equals(r.getOutUnitTotalNum(), BigDecimal.ZERO)) {
+                        r.setVolume(product.getOutUnitHeight().multiply(product.getOutUnitLength()).multiply(product.getOutUnitWidth()).multiply(r.getOutUnitTotalNum()).divide(new BigDecimal(1000000),2, RoundingMode.HALF_UP));
+                    }
                     r.setWeightPerUnit(product.getWeightPerUnit());
                     //总重量 = 单件重量 * 出货单位数量的总数量
                     r.setWeightAll(product.getWeightPerUnit().multiply(totalOutboundQuantityOfAllWarehouses));
