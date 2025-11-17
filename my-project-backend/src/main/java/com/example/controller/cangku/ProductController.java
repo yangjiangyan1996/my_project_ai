@@ -6,10 +6,7 @@ import com.example.Facade.CKProductFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
-import com.example.entity.cangku.resp.BomDetailListResp;
-import com.example.entity.cangku.resp.ProductCategoryResp;
-import com.example.entity.cangku.resp.ProductPageListResp;
-import com.example.entity.cangku.resp.UnitResp;
+import com.example.entity.cangku.resp.*;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -229,6 +226,22 @@ public class ProductController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("ProductController#finishedProductListEnable,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    //商品样式
+    @GetMapping("/search")
+    public RespBean<List<ProductSimpleListResp>> styleList(@RequestParam(value = "keyword", required = false) String keyword) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<ProductSimpleListResp> productPageListResps = CKProductFacade.productSimpleList(user,keyword);
+            return RespBean.success(productPageListResps);
+        } catch (ValidationException e) {
+            log.error("ProductController#productSimpleList,e:{}", keyword, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#productSimpleList,e:{}", keyword,e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

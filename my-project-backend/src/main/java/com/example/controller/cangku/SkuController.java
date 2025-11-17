@@ -1,5 +1,6 @@
 package com.example.controller.cangku;
 
+import com.alibaba.excel.EasyExcel;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CkSkuFacade;
@@ -7,7 +8,10 @@ import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.SkuDeleteReq;
 import com.example.entity.cangku.req.SkuListPageReq;
+import com.example.entity.cangku.req.SkuUpdateStatusReq;
+import com.example.entity.cangku.resp.SkuCreateReq;
 import com.example.entity.cangku.resp.SkuPageListResp;
+import com.example.entity.cangku.resp.excel.SkuExcelModel;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,6 +19,10 @@ import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -68,17 +76,25 @@ public class SkuController {
         }
     }
 
-    /**
-     * 导出SKU映射Excel
-     */
     @GetMapping("/exportExcel")
-    public void exportExcel(HttpServletResponse response) {
-        try {
-            skuFacade.exportExcel(response);
-        } catch (Exception e) {
-            log.error("导出SKU映射Excel失败", e);
-            throw new RuntimeException("导出失败");
-        }
+    public void exportSkuExcel(HttpServletResponse response) throws IOException {
+        Long tenantId = UserUtil.getCurrentUser().getTenantId();
+        // 设置响应头
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("utf-8");
+
+        // 文件名
+        String fileName = URLEncoder.encode("sku导入模版", "UTF-8").replaceAll("\\+", "%20");
+        response.setHeader("Content-Disposition", "attachment;filename=" + fileName + ".xlsx");
+
+        // 准备数据，这里示例用空数据，如果有实际数据可以填充
+        // 如果不想预填充测试数据，可传空列表 data = new ArrayList<>();
+        List<SkuExcelModel> dataList = skuFacade.getSkuExportData(tenantId);
+
+        // EasyExcel 写入
+        EasyExcel.write(response.getOutputStream(), SkuExcelModel.class)
+                .sheet("SKU模板")
+                .doWrite(dataList);
     }
 
 
@@ -97,7 +113,7 @@ public class SkuController {
             Boolean result = skuFacade.importSku(file, tenantId, userId,customerId);
             log.info("导入结果: {}", result);
             log.info("=== 导入产品接口结束 ===");
-            return RespBean.success(result);
+            return RespBean.success(true);
         }catch (ValidationException e) {
             log.error("SkuController#importSku", e);
             return RespBean.failure(999, e.getMessage());
@@ -108,22 +124,60 @@ public class SkuController {
     }
 
 
-//    @PostMapping("/update")
-//    public RespBean<Boolean> update(@RequestBody ShelfCreateReq req) {
-//        try {
-//            Long userId  = UserUtil.getCurrentUser().getId();
-//            Long tenantId = UserUtil.getCurrentUser().getTenantId();
-//
-//            req.setUserId(userId);
-//            req.setTenantId(tenantId);
-//            Boolean result = skuFacade.update(req);
-//            return RespBean.success(result);
-//        }catch (ValidationException e) {
-//            log.error("ShelfController#update,req:{}", JSON.toJSONString(req), e);
-//            return RespBean.failure(999, e.getMessage());
-//        } catch (Exception e) {
-//            log.error("ShelfController#update,req:{}", JSON.toJSONString(req), e);
-//            return RespBean.failure(999, "系统异常，请联系管理员");
-//        }
-//    }
+    @PostMapping("/create")
+    public RespBean<Boolean> create(@RequestBody SkuCreateReq req) {
+        try {
+            Long userId  = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+            Boolean result = skuFacade.create(req);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("SkuController#create,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("SkuController#create,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @PostMapping("/update")
+    public RespBean<Boolean> update(@RequestBody SkuCreateReq req) {
+        try {
+            Long userId  = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+            Boolean result = skuFacade.update(req);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("SkuController#update,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("SkuController#update,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @PostMapping("/updateStatus")
+    public RespBean<Boolean> updateStatus(@RequestBody SkuUpdateStatusReq req) {
+        try {
+            Long userId  = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+            Boolean result = skuFacade.updateStatus(req);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("SkuController#updateStatus,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("SkuController#updateStatus,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 }

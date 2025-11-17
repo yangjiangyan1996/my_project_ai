@@ -20,7 +20,7 @@ public class AutoPublishQuanJob {
     @Scheduled(cron = "${auto-publish.schedule}")
     public void scheduledAutoPublish() {
         log.info("开始执行自动发布帖子任务...");
-        autoProjectService.autoQuanTieProject();
+        //autoProjectService.autoQuanTieProject();
         log.info("开始执行自动发布帖子任务成功");
     }
 }

@@ -1428,6 +1428,21 @@ public class CKProductFacade {
         return name + "_" + spec + "_" + color;
     }
 
+    public List<ProductSimpleListResp> productSimpleList(UserInfo user,String keyword) {
+        if (StringUtils.isEmpty( keyword)) {
+            return Collections.emptyList();
+        }
+        List<Product> products = productService.listWareHouseEnable(user.getTenantId());
+        return products.stream()
+                .filter(product -> product.getName().contains(keyword))
+                .map(product -> {
+                    ProductSimpleListResp resp = new ProductSimpleListResp();
+                    BeanUtils.copyProperties(product, resp);
+                    return resp;
+                })
+                .collect(Collectors.toList());
+    }
+
 
     /**
      * 数据持有类，用于传递初始化数据
