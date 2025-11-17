@@ -4,7 +4,7 @@ import router from "@/router";
 
 const authItemName = "authorize";
 
-const accessHeader = () => {
+export const accessHeader = () => {
     return {
         'Authorization': `Bearer ${takeAccessToken()}`
     }
@@ -91,26 +91,25 @@ function deleteAccessToken(redirect = false) {
     }
 }
 
+
 function internalPost(url, data, headers, success = () => {}, failure = defaultFailure, error = defaultError) {
-    return axios.post(url, data, { headers: headers }).then(({ data: responseData }) => {
-        // console.log("====internalPost",url)
+    return axios.post(url, data, { headers }).then(({ data: responseData }) => {
 
         if (responseData.code === 200) {
             success(responseData.data);
             return responseData.data;
         } else if (responseData.code === 401 && !url.startsWith('/api/unauth') && !url.startsWith('/api/auth/user/getCurrentUserInfo')) {
-            // failure('登录状态已过期，请重新登录！');
             failure(responseData.message, responseData.code, url);
             deleteAccessToken(true);
             throw new Error('需要重新认证');
         } else {
-            if(!url.startsWith('/api/auth/user/getCurrentUserInfo')) {
+            if (!url.startsWith('/api/auth/user/getCurrentUserInfo')) {
                 failure(responseData.message, responseData.code, url);
-                 throw new Error(responseData.message);
+                throw new Error(responseData.message);
             }
         }
+
     }).catch(err => {
-        // console.log("接口调用失败", err);
         error(err);
         throw err;
     });
@@ -153,8 +152,8 @@ function login(username, password, remember, success, failure = defaultFailure) 
     }, failure);
 }
 
-// 修改post函数
-function post(url, data, success, failure = defaultFailure) {
+
+function post(url, data, success = () => {}, failure = defaultFailure) {
     const isUnauth = url.startsWith('/api/unauth');
     return internalPost(url, data, isUnauth ? {} : accessHeader(), success, failure);
 }

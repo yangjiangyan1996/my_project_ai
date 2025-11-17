@@ -23,10 +23,10 @@
           <el-icon><Upload /></el-icon>
           导入
         </el-button>
-        <el-button @click="handleExport">
+        <!-- <el-button @click="handleExport">
           <el-icon><Download /></el-icon>
           导出
-        </el-button>
+        </el-button> -->
       </div>
     </div>
 
@@ -75,7 +75,7 @@
           />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="filterForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="filterForm.status" placeholder="请选择状态" clearable style="width: 120px">
             <el-option label="全部" value="" />
             <el-option label="启用" value="1" />
             <el-option label="禁用" value="0" />
@@ -387,6 +387,11 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Refresh, Download, Upload, UploadFilled } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
+import axios from 'axios';
+import { accessHeader } from '@/net'; 
+
+
+
 
 // 响应式数据
 const loading = ref(false);
@@ -585,6 +590,7 @@ const handleExport = () => {
 };
 
 const handleCustomerChange = (customerId) => {
+  console.log('customerId:', customerId);
   if (customerId) {
     loadSkuMappingList();
   }
@@ -610,12 +616,8 @@ const searchProducts = async (query) => {
   if (query) {
     productLoading.value = true;
     try {
-      const res = await post('/api/auth/product/search', {
-        keyword: query,
-        page: 1,
-        size: 20
-      });
-      productOptions.value = res.records || [];
+      const res = await get('/api/auth/product/search?keyword=' + query);
+      productOptions.value = res || [];
     } catch (error) {
       console.error('搜索产品失败:', error);
     } finally {
@@ -685,40 +687,72 @@ const handleImportCancel = () => {
   currentFile.value = null;
 };
 
-const downloadTemplate = () => {
-//   if (!importForm.customerId) {
-//     ElMessage.warning('请先选择客户');
-//     return;
-//   }
+// const downloadTemplate = () => {
+// //   if (!importForm.customerId) {
+// //     ElMessage.warning('请先选择客户');
+// //     return;
+// //   }
   
-//   try {
-//     // 下载模板时也传递客户ID
-//     window.open(`/api/auth/sku/downloadTemplate?customerId=${importForm.customerId}`, '_blank');
-//     ElMessage.success('模板下载开始');
-//   } catch (error) {
-//     console.error('下载模板失败:', error);
-//     ElMessage.error('下载模板失败');
-//   }
-// 使用制表符\t分隔，Excel能更好识别
-  const tsvContent = "名称\t规格\t颜色\t用户SKU\t客户SKU\n" +
-                    "示例产品\t标准规格\t黑色\tSYSTEM_SKU_001\tCUSTOMER_SKU_001\n" +
-                    "测试商品\t大号\t红色\tSYSTEM_SKU_002\tCUSTOMER_SKU_002\n";
+// //   try {
+// //     // 下载模板时也传递客户ID
+// //     window.open(`/api/auth/sku/downloadTemplate?customerId=${importForm.customerId}`, '_blank');
+// //     ElMessage.success('模板下载开始');
+// //   } catch (error) {
+// //     console.error('下载模板失败:', error);
+// //     ElMessage.error('下载模板失败');
+// //   }
+// // 使用制表符\t分隔，Excel能更好识别
+//   const tsvContent = "名称\t规格\t颜色\t用户SKU\t客户SKU\n" +
+//                     "示例产品\t标准规格\t黑色\tSYSTEM_SKU_001\tCUSTOMER_SKU_001\n" +
+//                     "测试商品\t大号\t红色\tSYSTEM_SKU_002\tCUSTOMER_SKU_002\n";
   
-  const blob = new Blob([tsvContent], { 
-    type: 'text/tab-separated-values;charset=utf-8' 
-  });
+//   const blob = new Blob([tsvContent], { 
+//     type: 'text/tab-separated-values;charset=utf-8' 
+//   });
   
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'SKU导入模板.xlsx';
+//   const url = window.URL.createObjectURL(blob);
+//   const a = document.createElement('a');
+//   a.href = url;
+//   a.download = 'SKU导入模板.xlsx';
   
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
+//   document.body.appendChild(a);
+//   a.click();
+//   document.body.removeChild(a);
+//   window.URL.revokeObjectURL(url);
   
-  ElMessage.success('模板下载成功');
+//   ElMessage.success('模板下载成功');
+// };
+
+const downloadTemplate = async () => {
+  try {
+    const response = await axios.get('/api/auth/sku/exportExcel', {
+      headers: accessHeader(), // 如果需要认证
+      responseType: 'blob', // ⚠️ 必须加
+    });
+
+    // 创建 blob 对象
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    // 创建 URL 对象
+    const url = window.URL.createObjectURL(blob);
+
+    // 创建 a 标签下载
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sku_export_template.xlsx'; // 可自定义文件名
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // 释放 URL
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error('下载模板失败', error);
+    ElMessage.error('下载模板失败，请稍后重试');
+  }
 };
 
 const handleImportSubmit = async () => {
@@ -749,23 +783,18 @@ const handleImportSubmit = async () => {
 
     ElMessage.info('开始导入数据，请稍候...');
 
-    const result = await post('/api/auth/sku/import', formData, {
-      
-      headers: { 'Content-Type': undefined }
-    });
+    const result = await post('/api/auth/sku/import', formData);
     console.log('导入响应:', result);
 
-    if (result?.success) {
-      importResult.value = result;
-      ElMessage.success(`导入成功！成功${result.successCount}条，失败${result.errorCount}条`);
-      emit('success');
+    if (result) {
+      ElMessage.success(`导入成功！`);
+      handleSearch();
     } else {
-      ElMessage.error(result?.message || '导入失败，请检查数据格式');
+      ElMessage.error('导入失败，请检查数据格式');
     }
   } catch (error) {
     console.error('导入失败详情:', error);
-
-    ElMessage.error(error?.response?.data?.message || "导入失败，请重试");
+    ElMessage.error("导入失败，请重试");
   }
 };
 
@@ -808,6 +837,8 @@ const loadCustomerList = async () => {
     console.error('加载客户列表失败:', error);
   }
 };
+
+
 
 const loadSkuMappingList = async () => {
   loading.value = true;
