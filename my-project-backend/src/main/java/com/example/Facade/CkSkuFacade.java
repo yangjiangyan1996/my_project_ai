@@ -5,7 +5,7 @@ import com.example.entity.cangku.dto.Customer;
 import com.example.entity.cangku.dto.CustomerSkuMapping;
 import com.example.entity.cangku.dto.Product;
 import com.example.entity.cangku.req.SkuDeleteReq;
-import com.example.entity.cangku.req.SkuImportDto;
+import com.example.entity.cangku.req.excel.SkuImportDto;
 import com.example.entity.cangku.req.SkuListPageReq;
 import com.example.entity.cangku.req.SkuUpdateStatusReq;
 import com.example.entity.cangku.resp.SkuCreateReq;

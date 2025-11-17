@@ -741,7 +741,7 @@ const downloadTemplate = async () => {
     // 创建 a 标签下载
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'sku_export_template.xlsx'; // 可自定义文件名
+    a.download = 'sku导入模版.xlsx'; // 可自定义文件名
     document.body.appendChild(a);
     a.click();
     a.remove();

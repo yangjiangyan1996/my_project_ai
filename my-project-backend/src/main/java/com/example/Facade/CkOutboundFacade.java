@@ -7,12 +7,17 @@ import com.example.entity.cangku.req.OutboundApproveOkReq;
 import com.example.entity.cangku.req.OutboundCreateReq;
 import com.example.entity.cangku.req.OutboundDeleteReq;
 import com.example.entity.cangku.req.OutboundListPageReq;
+import com.example.entity.cangku.req.excel.OutBoundSaleQuantityImportDto;
+import com.example.entity.cangku.resp.InventoryListResp;
+import com.example.entity.cangku.resp.OutBoundSaleQuantityImportResp;
 import com.example.entity.cangku.resp.OutboundDetailResp;
 import com.example.entity.cangku.resp.OutboundListPageResp;
+import com.example.entity.cangku.resp.excel.OutboundSaleExcelModel;
 import com.example.entity.dto.Account;
 import com.example.enums.CkInOutboundEnums;
 import com.example.holder.InventoryHolder;
 import com.example.service.*;
+import com.example.utils.ExcelUtils;
 import com.google.common.collect.Lists;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -21,6 +26,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -65,6 +71,8 @@ public class CkOutboundFacade {
     @Resource
     AccountService accountService;
 
+    @Resource
+    CkInventoryFacade inventoryFacade;
     @Resource
     CkWareHouseService warehouseService;
 
@@ -811,5 +819,39 @@ public class CkOutboundFacade {
         save.setModifiedAt(new Date());
         save.setModifiedBy(req.getUserId());
         return outboundOrderService.updateById(save);
+    }
+
+    public List<OutboundSaleExcelModel> getOutboundSaleExportData(Long tenantId, Long warehouseId) {
+        List<InventoryListResp> result = inventoryFacade.List(warehouseId,tenantId);
+        return result.stream().map(v -> {
+            OutboundSaleExcelModel model = new OutboundSaleExcelModel();
+            model.setProductId(v.getProductId().toString());
+            model.setSku(v.getSku());
+            model.setName(v.getProductName());
+            model.setSpec(v.getSpec());
+            model.setColor(v.getColor());
+            model.setInventory(v.getAvailableQuantity().toString());
+            return model;
+        }).collect(Collectors.toList());
+    }
+
+    public List<OutBoundSaleQuantityImportResp> importOutboundSaleQuantity(MultipartFile file, Long tenantId, Long userId, Long warehouseId) {
+        // 1. 读取Excel数据
+        List<OutBoundSaleQuantityImportDto> importDataList = ExcelUtils.readExcel(file, OutBoundSaleQuantityImportDto.class);
+        if (CollectionUtils.isEmpty(importDataList) || importDataList.size() < 1) {
+            throw new ValidationException("Excel文件数据不足");
+        }
+
+        return importDataList.stream().map(v -> {
+            OutBoundSaleQuantityImportResp r = new OutBoundSaleQuantityImportResp();
+            r.setProductId(Long.valueOf(v.getProductId()));
+            r.setSku(v.getSku());
+            r.setProductName(v.getProductName());
+            r.setQuantity( StringUtils.isBlank(v.getQuantity()) ? BigDecimal.ZERO : new BigDecimal(v.getQuantity()));
+            r.setRemark(v.getRemark());
+            r.setPrice(StringUtils.isBlank(v.getPrice()) ? null :new BigDecimal(v.getPrice()));
+            return r;
+        }).collect(Collectors.toList());
+
     }
 }

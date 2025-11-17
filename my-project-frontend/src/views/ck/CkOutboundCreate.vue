@@ -632,6 +632,7 @@
     </el-dialog>
 
     <!-- 导入Excel对话框 -->
+    <!-- 导入Excel对话框 -->
     <el-dialog
       v-model="importDialog.visible"
       title="导入Excel模板"
@@ -642,14 +643,10 @@
         <el-upload
           ref="uploadRef"
           class="upload-demo"
-          action="/api/auth/outbound/importExcel"
-          :headers="uploadHeaders"
-          :data="uploadData"
-          :on-success="handleImportSuccess"
-          :on-error="handleImportError"
-          :before-upload="beforeImportUpload"
+          :auto-upload="false"
           :show-file-list="false"
           accept=".xlsx,.xls"
+          :on-change="handleFileChange"
         >
           <el-button type="primary">选择Excel文件</el-button>
           <template #tip>
@@ -658,6 +655,24 @@
             </div>
           </template>
         </el-upload>
+        
+        <div v-if="currentFile" class="selected-file">
+          <el-icon><Document /></el-icon>
+          <span>{{ currentFile.name }}</span>
+          <el-button type="danger" link @click="clearSelectedFile">
+            <el-icon><Close /></el-icon>
+          </el-button>
+        </div>
+        
+        <div class="import-actions" v-if="currentFile">
+          <el-button 
+            type="primary" 
+            @click="handleImportSubmit"
+            :loading="importLoading"
+          >
+            开始导入
+          </el-button>
+        </div>
         
         <div class="import-tips" v-if="importResult">
           <h4>导入结果：</h4>
@@ -670,12 +685,9 @@
           </div>
         </div>
       </div>
-      
-      <template #footer>
-        <el-button @click="importDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="importDialog.visible = false">确定</el-button>
-      </template>
     </el-dialog>
+
+
   </div>
 </template>
 
@@ -683,8 +695,10 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Delete, Upload, Download } from '@element-plus/icons-vue';
+import { Plus, Delete, Upload, Download,  Document, Close  } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
+import axios from 'axios';
+import { accessHeader } from '@/net'; 
 
 const router = useRouter();
 const route = useRoute();
@@ -692,6 +706,14 @@ const formRef = ref();
 const uploadRef = ref();
 const loading = ref(false);
 const downloadLoading = ref(false);
+
+const importDialog = reactive({
+  visible: false
+});
+
+const currentFile = ref(null);
+const importResult = ref(null);
+const importLoading = ref(false);
 
 // 判断是否是编辑模式
 const isEditMode = computed(() => {
@@ -725,19 +747,13 @@ const batchDialog = reactive({
   currentRow: null
 });
 
-// 导入对话框数据
-const importDialog = reactive({
-  visible: false
-});
-
-const importResult = ref(null);
-
 // 选项数据
 const warehouseList = ref([]);
 const customerList = ref([]);
 const inventoryList = ref([]);
 const productionProductList = ref([]);
 const fileList = ref([]);
+const allInventoryProducts = ref([]);
 
 // 产品库存映射表
 const productStockMap = ref({});
@@ -757,18 +773,45 @@ const showCustomer = computed(() => {
 });
 
 // 所有库存产品（销售出库使用）
-const allInventoryProducts = computed(() => {
-  if (!formData.warehouseId || !inventoryList.value.length) return [];
+// const allInventoryProducts = computed(() => {
+//   if (!formData.warehouseId || !inventoryList.value.length) return [];
   
-  return inventoryList.value.map(item => ({
-    ...item,
-    quantity: 0,
-    price: item.price || 0,
-    remark: item.remark || '',
-    batchAllocations: item.batchAllocations || [],
-    availableBatches: item.availableBatches || []
-  }));
-});
+//   return inventoryList.value.map(item => ({
+//     ...item,
+//     quantity: 0,
+//     price: item.price || 0,
+//     remark: item.remark || '',
+//     batchAllocations: item.batchAllocations || [],
+//     availableBatches: item.availableBatches || []
+//   }));
+// });
+
+// 添加一个方法来更新库存产品数据
+const updateInventoryProducts = () => {
+  if (!formData.warehouseId || !inventoryList.value.length) {
+    allInventoryProducts.value = [];
+    return;
+  }
+  
+  allInventoryProducts.value = inventoryList.value.map(item => {
+    // 查找是否已经存在这个产品的数据（保留已输入的数量和价格）
+    const existingProduct = allInventoryProducts.value.find(p => p.productId === item.productId);
+    
+    // 默认使用接口返回的price，如果已有数据则保留用户输入的价格
+    const displayPrice = existingProduct ? existingProduct.price : (item.price || 0);
+    
+    return {
+      ...item,
+      quantity: existingProduct ? existingProduct.quantity : 0,
+      price: displayPrice, // 默认展示接口中的price字段
+      remark: existingProduct ? existingProduct.remark : '',
+      batchAllocations: existingProduct ? existingProduct.batchAllocations : [],
+      availableBatches: existingProduct ? existingProduct.availableBatches : [],
+      // 保存接口原始价格，用于导入时的逻辑判断
+      originalPrice: item.price || 0
+    };
+  });
+};
 
 // 销售出库可用产品（有库存的产品）
 const availableProducts = computed(() => {
@@ -1222,6 +1265,11 @@ const handleOrderTypeChange = (value) => {
     loadInventoryData(formData.warehouseId);
   } else if (value === 2) {
     loadProductionProducts();
+    // 清空销售出库的产品数据
+    allInventoryProducts.value = [];
+  } else {
+    // 其他出库类型也清空销售出库数据
+    allInventoryProducts.value = [];
   }
 };
 
@@ -1742,113 +1790,132 @@ const handleDownloadTemplate = async () => {
   }
   
   downloadLoading.value = true;
+
   try {
-    const response = await get('/api/auth/outbound/downloadTemplate', {
-      responseType: 'blob',
-      params: {
-        warehouseId: formData.warehouseId
-      }
+    const response = await axios.get('/api/auth/outbound/exportExcel?warehouseId=' + formData.warehouseId, {
+      headers: accessHeader(), // 如果需要认证
+      responseType: 'blob', // ⚠️ 必须加
     });
-    
-    // 创建Blob对象并下载
-    const blob = new Blob([response], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+
+    // 创建 blob 对象
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
+
+    // 创建 URL 对象
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `出库模板_${new Date().getTime()}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    // 创建 a 标签下载
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '销售出库数量导入模版.xlsx'; // 可自定义文件名
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // 释放 URL
     window.URL.revokeObjectURL(url);
-    
-    ElMessage.success('模板下载成功');
+
   } catch (error) {
-    console.error('下载模板失败:', error);
-    ElMessage.error('下载模板失败');
-  } finally {
+    console.error('下载模板失败', error);
+    ElMessage.error('下载模板失败，请稍后重试');
+  }finally {
     downloadLoading.value = false;
   }
+
 };
 
-// 导入Excel
-const handleImportExcel = () => {
-  if (!formData.warehouseId) {
-    ElMessage.warning('请先选择仓库');
-    return;
-  }
+
+// 验证导入数据
+const validateImportData = (importedData) => {
+  const errors = [];
   
-  importDialog.visible = true;
-  importResult.value = null;
-};
-
-const beforeImportUpload = (file) => {
-  const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
-                 file.type === 'application/vnd.ms-excel';
-  if (!isExcel) {
-    ElMessage.error('只能上传Excel文件!');
-    return false;
-  }
-  const isLt10M = file.size / 1024 / 1024 < 10;
-  if (!isLt10M) {
-    ElMessage.error('文件大小不能超过10MB!');
-    return false;
-  }
-  return true;
-};
-
-
-const handleImportSuccess = (response) => {
-  console.log('导入成功:', response);
-  
-  if (response && response.success) {
-    importResult.value = response;
-    
-    // 首先将所有产品的数量重置为0
-    allInventoryProducts.value.forEach(product => {
-      product.quantity = 0;
-      product.price = 0;
-      product.remark = '';
-      product.batchAllocations = [];
-    });
-    
-    // 将导入的数据应用到表格中
-    if (response.data && Array.isArray(response.data)) {
-      response.data.forEach(importedItem => {
-        const existingProduct = allInventoryProducts.value.find(p => 
-          p.productId === importedItem.productId || p.sku === importedItem.sku
-        );
-        
-        if (existingProduct) {
-          // 更新现有产品的数据
-          existingProduct.quantity = importedItem.quantity || 0;
-          existingProduct.price = importedItem.price || 0;
-          existingProduct.remark = importedItem.remark || '';
-          // 清空之前的批次分配
-          existingProduct.batchAllocations = [];
-        }
-      });
-      
-      ElMessage.success(`成功导入 ${response.data.length} 条产品记录`);
+  importedData.forEach((item, index) => {
+    // 验证数量
+    if (!item.quantity || item.quantity <= 0) {
+      errors.push(`第 ${index + 1} 行: 出库数量必须大于0`);
     }
-  } else {
-    importResult.value = {
-      success: false,
-      message: response?.message || '导入失败'
-    };
-    ElMessage.error(importResult.value.message);
-  }
+    
+    // 验证价格
+    if (item.price && item.price < 0) {
+      errors.push(`第 ${index + 1} 行: 价格不能为负数`);
+    }
+    
+    // 验证库存是否足够
+    const existingProduct = allInventoryProducts.value.find(p => 
+      p.productId === item.productId || p.sku === item.sku
+    );
+    
+    if (existingProduct && item.quantity > existingProduct.availableQuantity) {
+      errors.push(`第 ${index + 1} 行: 出库数量 ${item.quantity} 超过可用库存 ${existingProduct.availableQuantity}`);
+    }
+  });
+  
+  return errors;
 };
 
-const handleImportError = (error) => {
-  console.error('导入失败:', error);
-  importResult.value = {
-    success: false,
-    message: '文件上传失败，请重试'
-  };
-  ElMessage.error('导入失败');
+// 应用导入数据到表格
+const applyImportedData = (importedData) => {
+  let successCount = 0;
+  let failCount = 0;
+  
+  console.log('导入数据:', importedData);
+  
+  importedData.forEach(importedItem => {
+    // 通过 productId 或 sku 匹配现有产品
+    const existingProductIndex = allInventoryProducts.value.findIndex(p => 
+      p.productId === importedItem.productId || p.sku === importedItem.sku
+    );
+    
+    if (existingProductIndex >= 0) {
+      console.log('匹配产品:', allInventoryProducts.value[existingProductIndex]);
+      
+      // 直接修改响应式数组中的对象
+      const product = allInventoryProducts.value[existingProductIndex];
+      
+      // 情况1：填写数量，没有填写价格 - 使用导入的数量，价格用接口中的originalPrice
+      if (importedItem.quantity && importedItem.quantity > 0 && (!importedItem.price || importedItem.price === 0)) {
+        console.log('情况1:', importedItem);
+        product.quantity = importedItem.quantity || 0;
+        product.price = product.originalPrice || 0; // 使用接口原始价格
+      }
+      // 情况2：填写数量，填写价格 - 使用导入的数量和价格
+      else if (importedItem.quantity && importedItem.quantity > 0 && importedItem.price && importedItem.price > 0) {
+        console.log('情况2:', importedItem);
+        product.quantity = importedItem.quantity || 0;
+        product.price = importedItem.price || 0;
+      }
+      // 情况3：没有填写数量，填写价格 - 数量为0，使用导入的价格
+      else if ((!importedItem.quantity || importedItem.quantity === 0) && importedItem.price && importedItem.price > 0) {
+        console.log('情况3:', importedItem);
+        product.quantity = 0;
+        product.price = importedItem.price || 0;
+      }
+      // 其他情况：默认处理
+      else {
+        console.log('情况4:', importedItem);
+        product.quantity = importedItem.quantity || 0;
+        product.price = importedItem.price || product.originalPrice || 0;
+      }
+      
+      product.remark = importedItem.remark || '';
+      // 清空之前的批次分配
+      product.batchAllocations = [];
+      
+      console.log('更新后产品:', product);
+      successCount++;
+    } else {
+      console.warn('未找到匹配的产品:', importedItem);
+      failCount++;
+    }
+  });
+  
+  // 强制触发响应式更新
+  allInventoryProducts.value = [...allInventoryProducts.value];
+  
+  return { successCount, failCount };
 };
+
 
 const handleReset = () => {
   ElMessageBox.confirm(
@@ -1869,14 +1936,15 @@ const handleReset = () => {
       generateOrderNo();
       
       // 清空所有商品表格的数据
-      if (formData.orderType === 1 && allInventoryProducts.value.length > 0) {
-        allInventoryProducts.value.forEach(product => {
-          product.quantity = 0;
-          product.price = 0;
-          product.remark = '';
-          product.batchAllocations = [];
-        });
-      }
+      allInventoryProducts.value.forEach(product => {
+        product.quantity = 0;
+        product.price = 0;
+        product.remark = '';
+        product.batchAllocations = [];
+      });
+      
+      // 强制更新
+      allInventoryProducts.value = [...allInventoryProducts.value];
       
       ElMessage.success('表单已重置');
     }
@@ -2071,6 +2139,129 @@ const loadWarehouseList = async () => {
   }
 };
 
+
+// 文件选择处理
+const handleFileChange = (file) => {
+  // console.log('选择的文件:', file.type);
+  // const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+  //                file.type === 'application/vnd.ms-excel';
+  // if (!isExcel) {
+  //   ElMessage.error('只能上传Excel文件!');
+  //   return;
+  // }
+  const isLt10M = file.size / 1024 / 1024 < 10;
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过10MB!');
+    return;
+  }
+  
+  currentFile.value = file;
+};
+
+// 清空选择的文件
+const clearSelectedFile = () => {
+  currentFile.value = null;
+  importResult.value = null;
+};
+
+// 导入提交处理
+const handleImportSubmit = async () => {
+  console.log("开始导入销售出库数量");
+  if (!formData.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
+  console.log("开始导入销售出库数量。仓库ID:", formData.warehouseId);
+  if (!currentFile.value) {
+    ElMessage.warning('请选择要上传的文件');
+    return;
+  }
+
+  try {
+    importLoading.value = true;
+    const fd = new FormData();
+
+    const realFile = currentFile.value.raw || currentFile.value;
+    fd.append('file', realFile);
+    fd.append('warehouseId', formData.warehouseId);
+
+    console.log('FormData:');
+    for (let [k, v] of fd.entries()) console.log(k, v);
+
+    ElMessage.info('开始导入数据，请稍候...');
+
+    const result = await post('/api/auth/outbound/importOutboundSaleQuantity', fd);
+    console.log('导入响应:', result);
+
+    if (result) {
+      importResult.value = result;
+      ElMessage.success(`导入成功！`);
+      
+      // 验证导入数据
+        if (result && Array.isArray(result)) {
+          // const validationErrors = validateImportData(result);
+          
+          // if (validationErrors.length > 0) {
+          //   ElMessage.warning({
+          //     message: `导入数据存在以下问题：\n${validationErrors.join('\n')}`,
+          //     duration: 10000,
+          //     showClose: true
+          //   });
+          //   return;
+          // }
+          
+          // 首先将所有产品的数量重置为0
+          allInventoryProducts.value.forEach(product => {
+            product.quantity = 0;
+            product.price = 0;
+            product.remark = '';
+            product.batchAllocations = [];
+          });
+          
+          // 应用导入数据
+          const { successCount, failCount } = applyImportedData(result);
+          
+          if (successCount > 0) {
+            ElMessage.success(`成功导入 ${successCount} 条产品记录`);
+          }
+          if (failCount > 0) {
+            ElMessage.warning(`${failCount} 条记录未找到匹配的产品`);
+          }
+          
+          // 关闭对话框
+          importDialog.visible = false;
+          currentFile.value = null;
+          importResult.value = null;
+        }
+    } else {
+      ElMessage.error('导入失败，请检查数据格式');
+    }
+  } catch (error) {
+    console.error('导入失败详情:', error);
+    ElMessage.error("导入失败，请重试");
+    importResult.value = {
+      success: false,
+      message: error.message || '导入失败，请重试'
+    };
+  } finally {
+    importLoading.value = false;
+  }
+};
+
+// 导入Excel
+const handleImportExcel = () => {
+  if (!formData.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
+  
+  importDialog.visible = true;
+  currentFile.value = null;
+  importResult.value = null;
+};
+
+
+
 const loadCustomerList = async () => {
   try {
     const res = await get('/api/auth/customer/listEnable');
@@ -2093,11 +2284,13 @@ const loadInventoryData = async (warehouseId) => {
       if (item.price && item.price > 0) {
         item.priceFromApi = item.price;
       }
-      // 确保新加载的数据数量为0
-      item.quantity = 0;
     });
     
     console.log('库存映射表:', productStockMap.value);
+    
+    // 更新库存产品数据
+    updateInventoryProducts();
+    
   } catch (error) {
     ElMessage.error('加载库存数据失败');
   }
@@ -2195,12 +2388,15 @@ watch(
   }
 );
 
-// 监听出库类型变化，加载对应的产品数据
+// 监听仓库变化，重新加载库存数据
 watch(
-  () => formData.orderType,
-  (newOrderType) => {
-    if (newOrderType === 2) {
-      loadProductionProducts();
+  () => formData.warehouseId,
+  (newWarehouseId) => {
+    if (newWarehouseId && formData.orderType === 1) {
+      loadInventoryData(newWarehouseId);
+    } else {
+      // 清空产品数据
+      allInventoryProducts.value = [];
     }
   }
 );
@@ -2310,6 +2506,24 @@ watch(
   color: #409eff;
   font-size: 14px;
   margin-bottom: 8px;
+}
+
+
+.selected-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.import-actions {
+  margin: 16px 0;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .allocation-summary {

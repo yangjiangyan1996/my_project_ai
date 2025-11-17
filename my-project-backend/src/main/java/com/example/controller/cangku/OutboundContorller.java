@@ -1,5 +1,6 @@
 package com.example.controller.cangku;
 
+import com.alibaba.excel.EasyExcel;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CkOutboundFacade;
@@ -9,13 +10,21 @@ import com.example.entity.cangku.req.OutboundApproveOkReq;
 import com.example.entity.cangku.req.OutboundCreateReq;
 import com.example.entity.cangku.req.OutboundDeleteReq;
 import com.example.entity.cangku.req.OutboundListPageReq;
+import com.example.entity.cangku.resp.OutBoundSaleQuantityImportResp;
 import com.example.entity.cangku.resp.OutboundDetailResp;
 import com.example.entity.cangku.resp.OutboundListPageResp;
+import com.example.entity.cangku.resp.excel.OutboundSaleExcelModel;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -181,4 +190,54 @@ public class OutboundContorller {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+
+    @GetMapping("/exportExcel")
+    public void exportSkuExcel(HttpServletResponse response, @RequestParam("warehouseId") Long warehouseId) throws IOException {
+        try{
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            // 设置响应头
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setCharacterEncoding("utf-8");
+
+            // 文件名
+            String fileName = URLEncoder.encode("销售出库数量导入模版", "UTF-8").replaceAll("\\+", "%20");
+            response.setHeader("Content-Disposition", "attachment;filename=" + fileName + ".xlsx");
+
+            // 准备数据，这里示例用空数据，如果有实际数据可以填充
+            // 如果不想预填充测试数据，可传空列表 data = new ArrayList<>();
+            List<OutboundSaleExcelModel> dataList = outboundFacade.getOutboundSaleExportData(tenantId, warehouseId);
+
+            // EasyExcel 写入
+            EasyExcel.write(response.getOutputStream(), OutboundSaleExcelModel.class)
+                    .sheet("销售出库数量导入模版")
+                    .doWrite(dataList);
+        }catch (ValidationException e) {
+            log.error("OutboundContorller#exportSkuExcel", e);
+        } catch (Exception e) {
+            log.error("OutboundContorller#exportSkuExcel,", e);
+        }
+    }
+
+
+    @PostMapping("/importOutboundSaleQuantity")
+    public RespBean<List<OutBoundSaleQuantityImportResp>> importOutboundSaleQuantity(@RequestParam("file") MultipartFile file, @RequestParam("warehouseId") Long warehouseId) {
+        try {
+            log.info("=== 导入销售出货接口开始 ===");
+            log.info("接收到文件: {}. 文件大小: {} bytes, 文件类型: {}", file.getOriginalFilename(), file.getSize(), file.getContentType());
+
+            Long userId = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            List<OutBoundSaleQuantityImportResp> result = outboundFacade.importOutboundSaleQuantity(file, tenantId, userId,warehouseId);
+            log.info("=== 导入销售出货接口结束 ===导入结果: {}", result);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("OutboundContorller#importSku", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("OutboundContorller#importSku,", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
 }

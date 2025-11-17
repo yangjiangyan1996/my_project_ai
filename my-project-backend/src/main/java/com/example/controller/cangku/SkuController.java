@@ -101,7 +101,7 @@ public class SkuController {
     @PostMapping("/import")
     public RespBean<Boolean> importSku(@RequestParam("file") MultipartFile file, @RequestParam("customerId") Long customerId) {
         try {
-            log.info("=== 导入产品接口开始 ===");
+            log.info("=== 导入sku接口开始 ===");
             log.info("接收到文件: {}", file.getOriginalFilename());
             log.info("文件大小: {} bytes", file.getSize());
             log.info("文件类型: {}", file.getContentType());
@@ -112,7 +112,7 @@ public class SkuController {
 
             Boolean result = skuFacade.importSku(file, tenantId, userId,customerId);
             log.info("导入结果: {}", result);
-            log.info("=== 导入产品接口结束 ===");
+            log.info("=== 导入sku接口结束 ===");
             return RespBean.success(true);
         }catch (ValidationException e) {
             log.error("SkuController#importSku", e);

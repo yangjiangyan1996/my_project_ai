@@ -1,4 +1,4 @@
-package com.example.entity.cangku.req;
+package com.example.entity.cangku.req.excel;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.annotation.write.style.ColumnWidth;
