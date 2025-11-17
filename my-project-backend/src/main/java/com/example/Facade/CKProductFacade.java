@@ -1088,7 +1088,7 @@ public class CKProductFacade {
             inboundOrderItemService.save(item);
 
             // 更新库存
-            updateInventoryForInbound(tenantId, userId, product.getId(), warehouse.getId(), quantity, batchNo, inboundOrder.getId(), item.getId(), unitPrice);
+            updateInventoryForInbound(tenantId, userId, product.getId(), warehouse.getId(), quantity, batchNo, inboundOrder.getId(), item.getId(), unitPrice,shelfLocationId);
 
         } catch (Exception e) {
             log.error("处理入库操作失败: product={}, warehouse={}", product.getName(), warehouseName, e);
@@ -1158,7 +1158,7 @@ public class CKProductFacade {
      * 更新入库库存
      */
     private void updateInventoryForInbound(Long tenantId, Long userId, Long productId, Long warehouseId,
-                                           BigDecimal quantity, String batchNo, Long orderId, Long itemId, BigDecimal unitPrice) {
+                                           BigDecimal quantity, String batchNo, Long orderId, Long itemId, BigDecimal unitPrice, Long shelfLocationId) {
 
         BigDecimal oldQuantity = BigDecimal.ZERO;
         // 1. 更新库存表
@@ -1205,6 +1205,29 @@ public class CKProductFacade {
             inventoryBatch.setCreatedAt(new Date());
             inventoryBatch.setModifiedAt(new Date());
             inventoryBatchService.save(inventoryBatch);
+        }
+
+        // 更新仓库货架库存表
+        InventoryShelf inventoryShelf = inventoryShelfService.getByWarehouseAndProductAndShelf(warehouseId, productId, shelfLocationId, batchNo, tenantId);
+        if (inventoryShelf != null) {
+            inventoryShelf.setQuantity(inventoryShelf.getQuantity().add(quantity));
+            inventoryShelf.setModifiedBy(userId);
+            inventoryShelf.setModifiedAt(new Date());
+            inventoryShelfService.updateById(inventoryShelf);
+        } else {
+            inventoryShelf = new InventoryShelf();
+            inventoryShelf.setTenantId(tenantId);
+            inventoryShelf.setProductId(productId);
+            inventoryShelf.setBatchNo(batchNo);
+            inventoryShelf.setWarehouseId(warehouseId);
+            inventoryShelf.setShelfId(shelfLocationId);
+            inventoryShelf.setQuantity(quantity);
+            inventoryShelf.setLockedQuantity(BigDecimal.ZERO);
+            inventoryShelf.setCreatedBy(userId);
+            inventoryShelf.setModifiedBy(userId);
+            inventoryShelf.setCreatedAt(new Date());
+            inventoryShelf.setModifiedAt(new Date());
+            inventoryShelfService.save(inventoryShelf);
         }
 
         // 3. 更新仓库库存表
