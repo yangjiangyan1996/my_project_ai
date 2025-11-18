@@ -1,4 +1,3 @@
-<!-- CkInventoryHistory.vue -->
 <template>
   <div class="inventory-history-container">
     <el-card class="manage-card" shadow="never">
@@ -247,6 +246,18 @@
           <el-table-column label="总价(¥)" width="120" align="right">
             <template #default="{ row }">
               <span class="amount">{{ formatCurrency(row.priceTotal) }}</span>
+            </template>
+          </el-table-column>
+          <!-- 新增美元价格列 -->
+          <el-table-column label="单价($)" width="120" align="right">
+            <template #default="{ row }">
+              <span class="amount usd">{{ formatCurrency(row.priceUnitUsd) }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="总价($)" width="120" align="right">
+            <template #default="{ row }">
+              <span class="amount usd">{{ formatCurrency(row.priceTotalUsd) }}</span>
             </template>
           </el-table-column>
 
@@ -526,6 +537,8 @@ const loadHistoryList = async () => {
         balanceQuantity: item.balanceQuantity,
         priceUnit: item.priceUnit,
         priceTotal: item.priceTotal,
+        priceUnitUsd: item.priceUnitUsd, // 新增美元单价
+        priceTotalUsd: item.priceTotalUsd, // 新增美元总价
         remark: item.remark,
         transactionTime: item.transactionTime,
         operatorName: item.operatorName,
@@ -980,5 +993,10 @@ onMounted(() => {
 
 .history-table :deep(.el-table__row:hover) {
   background-color: #f5f7fa;
+}
+
+.amount.usd {
+  color: #409EFF; /* 使用蓝色区分美元价格 */
+  font-weight: bold;
 }
 </style>

@@ -12,6 +12,7 @@ import com.example.entity.cangku.resp.InventoryListResp;
 import com.example.entity.cangku.resp.OutBoundSaleQuantityImportResp;
 import com.example.entity.cangku.resp.OutboundDetailResp;
 import com.example.entity.cangku.resp.OutboundListPageResp;
+import com.example.entity.cangku.resp.excel.OutboundOderExcelModel;
 import com.example.entity.cangku.resp.excel.OutboundSaleExcelModel;
 import com.example.entity.dto.Account;
 import com.example.enums.CkInOutboundEnums;
@@ -29,6 +30,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -48,29 +50,25 @@ public class CkOutboundFacade {
     CkOutboundOrderService outboundOrderService;
 
     @Resource
+    CkProductService productService;
+    @Resource
+    CkShelfService shelfService;
+    @Resource
     CkInventoryService inventoryService;
-
     @Resource
     InventoryHolder inventoryHolder;
     @Resource
     CkInventoryWarehouseService inventoryWarehouseService;
-
     @Resource
     CkInventoryBatchService inventoryBatchService;
-
     @Resource
     CkInventoryTransactionService inventoryTransactionService;
-
     @Resource
     CkCustomerService customerService;
-
-    @Resource
-    CkProductService productService;
     @Resource
     CkUnitService unitService;
     @Resource
     AccountService accountService;
-
     @Resource
     CkInventoryFacade inventoryFacade;
     @Resource
@@ -859,5 +857,69 @@ public class CkOutboundFacade {
             return r;
         }).collect(Collectors.toList());
 
+    }
+
+    public List<OutboundOderExcelModel> exportOutboundOrderExcel(Long tenantId, Long orderId) {
+        OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);
+        if (Objects.isNull(outboundOrder)) {
+            throw new ValidationException("出库单不存在");
+        }
+
+        List<OutboundOrderItem> outboundOrderItems = outboundOrderItemService.selectByOrderId(orderId, tenantId);
+        List<Long> productIds = outboundOrderItems.stream().map(v -> v.getProductId()).distinct().collect(Collectors.toList());
+
+        Map<Long, WarehouseShelf> shelfId2ShelfMap = new HashMap<>();
+        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(warehouseShelves)) {
+            shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        }
+
+        Map<Long, Product> productId2ProductMap = new HashMap<>();
+        List<Product> products = productService.selectByIds(tenantId, productIds);
+        if (!CollectionUtils.isEmpty(products)) {
+            productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+        }
+
+
+        Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
+        Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
+        return outboundOrderItems.stream().map(v -> {
+            OutboundOderExcelModel model = new OutboundOderExcelModel();
+            model.setShelfName(finalShelfId2ShelfMap.getOrDefault(v.getShelfLocationId(), new WarehouseShelf()).getShelfName());
+            model.setQuantity(String.valueOf(v.getQuantity()));
+            model.setRemark(v.getRemark());
+            model.setPriceUnit(v.getPriceUnit().toString());
+            model.setPriceTotal(v.getPriceTotal().toString());
+            model.setPriceUnitUsd(v.getPriceUnitUsd().toString());
+            model.setPriceTotalUsd(v.getPriceTotalUsd().toString());
+
+            if (finalProductId2ProductMap.containsKey(v.getProductId())) {
+                Product product = finalProductId2ProductMap.get(v.getProductId());
+                model.setEnglishName(product.getEnglishName());
+                model.setSku(product.getSku());
+                model.setName(product.getName());
+                model.setSpec(product.getSpec());
+                model.setColor(product.getColor());
+                model.setOutUnitPerNum(product.getOutUnitPerNum().toString());
+                // 计算箱数 = 数量 / 出货单位数量 (有小数，则进1)
+                BigDecimal boxNumB = v.getQuantity().divide(product.getOutUnitPerNum(), 2, RoundingMode.HALF_UP);
+                model.setBoxCount(boxNumB.toString());
+                model.setOutUnitHeight(product.getOutUnitHeight().toString());
+                model.setOutUnitLength(product.getOutUnitLength().toString());
+                model.setOutUnitWidth(product.getOutUnitWidth().toString());
+                //体积 = 长 * 宽 * 高 * 箱数 / 1000000
+                BigDecimal volumeB = product.getOutUnitHeight()
+                        .multiply(product.getOutUnitLength())
+                        .multiply(product.getOutUnitWidth())
+                        .multiply(boxNumB)
+                        .divide(new BigDecimal(1000000), 2, RoundingMode.HALF_UP);
+                model.setVolume(volumeB.toString());
+                model.setWeightPerUnit(product.getWeightPerUnit().toString());
+                //总重量 = 单件重量 * 箱数
+                BigDecimal wall = product.getWeightPerUnit().multiply(boxNumB);
+                model.setWeightAll(wall.toString());
+            }
+            return model;
+        }).collect(Collectors.toList());
     }
 }

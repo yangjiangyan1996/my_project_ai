@@ -184,7 +184,7 @@
               <span>{{ row.spec || '-' }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="颜色" width="120">
+          <el-table-column label="颜色" width="60">
             <template #default="{ row }">
               <span>{{ row.color || '-' }}</span>
             </template>
@@ -229,6 +229,30 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
+
+          <!-- 新增USD单价字段 -->
+          <el-table-column label="USD单价" width="120">
+            <template #default="{ row }">
+              <el-input-number
+                v-model="row.priceUnitUsd"
+                :min="0"
+                :precision="2"
+                controls-position="right"
+                style="width: 100%"
+                :disabled="!row.quantity || row.quantity <= 0"
+              >
+                <template #prefix>$</template>
+              </el-input-number>
+            </template>
+          </el-table-column>
+          <!-- 新增USD总额字段 -->
+          <el-table-column label="USD总额" width="120" align="right">
+            <template #default="{ row }">
+              <span v-if="row.quantity > 0">$ {{ ((row.priceUnitUsd || 0) * (row.quantity || 0)).toFixed(2) }}</span>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          
           <el-table-column label="批次分配" min-width="200">
             <template #default="{ row }">
               <div class="batch-allocation">
@@ -471,25 +495,31 @@
         <!-- 统计信息 -->
         <div class="summary-info" v-if="(formData.orderType === 1 && allInventoryProducts.some(p => p.quantity > 0)) || (formData.orderType !== 1 && formData.items.length > 0)">
           <el-row :gutter="20">
-            <el-col :span="6">
+            <el-col :span="4">
               <div class="summary-item">
                 <span class="label">产品种类：</span>
                 <span class="value">{{ productTypeCount }} 种</span>
               </div>
             </el-col>
-            <el-col :span="6">
+            <el-col :span="4">
               <div class="summary-item">
                 <span class="label">总数量：</span>
                 <span class="value">{{ totalQuantity }} 个</span>
               </div>
             </el-col>
-            <el-col :span="6">
+            <el-col :span="4">
               <div class="summary-item">
                 <span class="label">总金额：</span>
                 <span class="value">¥ {{ totalAmount.toFixed(2) }}</span>
               </div>
             </el-col>
-            <el-col :span="6">
+            <el-col :span="4">
+              <div class="summary-item">
+                <span class="label">USD总额：</span>
+                <span class="value">$ {{ totalAmountUsd.toFixed(2) }}</span>
+              </div>
+            </el-col>
+            <el-col :span="4">
               <div class="summary-item">
                 <span class="label">库存状态：</span>
                 <span class="value" :class="stockStatusClass">
@@ -808,7 +838,8 @@ const updateInventoryProducts = () => {
       batchAllocations: existingProduct ? existingProduct.batchAllocations : [],
       availableBatches: existingProduct ? existingProduct.availableBatches : [],
       // 保存接口原始价格，用于导入时的逻辑判断
-      originalPrice: item.price || 0
+      originalPrice: item.price || 0,
+      originalPriceUnitUsd: item.priceUnitUsd || 0 // 新增：保存接口原始USD价格
     };
   });
 };
@@ -944,6 +975,24 @@ const calculateRequiredQuantity = (unitQuantity, productQuantity) => {
   const productQty = parseFloat(productQuantity) || 0;
   return (unitQty * productQty).toFixed(4);
 };
+
+
+// 计算属性 - 添加USD总额
+const totalAmountUsd = computed(() => {
+  if (formData.orderType === 1) {
+    return allInventoryProducts.value.reduce((sum, item) => {
+      const priceUsd = item.priceUnitUsd || 0;
+      const quantity = item.quantity || 0;
+      return sum + (priceUsd * quantity);
+    }, 0);
+  } else {
+    return formData.items.reduce((sum, item) => {
+      const priceUsd = item.priceUnitUsd || 0;
+      const quantity = item.quantity || 0;
+      return sum + (priceUsd * quantity);
+    }, 0);
+  }
+});
 
 // 获取分配数量 - 修改为从 item.bomAllocations 中获取
 const getAllocationQuantity = (itemIndex, componentProductId, warehouseId, shelfId) => {
@@ -1384,10 +1433,15 @@ const handleQuantityChangeForAll = (row) => {
     if (row.priceFromApi && row.priceFromApi > 0 && (!row.price || row.price === 0)) {
       row.price = row.priceFromApi;
     }
+    // 新增：如果接口返回了USD价格，使用接口USD价格（仅在USD价格为空时自动填充）
+    if (row.originalPriceUnitUsd && row.originalPriceUnitUsd > 0 && (!row.priceUnitUsd || row.priceUnitUsd === 0)) {
+      row.priceUnitUsd = row.originalPriceUnitUsd;
+    }
   } else {
     // 如果数量设为0，清空相关数据
     row.quantity = 0; // 确保数量为0
     row.price = 0;
+    row.priceUnitUsd = 0; // 新增：清空USD价格
     row.remark = '';
     row.batchAllocations = [];
   }
@@ -1878,24 +1932,29 @@ const applyImportedData = (importedData) => {
         console.log('情况1:', importedItem);
         product.quantity = importedItem.quantity || 0;
         product.price = product.originalPrice || 0; // 使用接口原始价格
+        product.priceUnitUsd = product.originalPriceUnitUsd || 0; // 新增：使用接口原始USD价格
       }
       // 情况2：填写数量，填写价格 - 使用导入的数量和价格
       else if (importedItem.quantity && importedItem.quantity > 0 && importedItem.price && importedItem.price > 0) {
         console.log('情况2:', importedItem);
         product.quantity = importedItem.quantity || 0;
         product.price = importedItem.price || 0;
+        // 新增：如果导入数据包含USD价格，使用导入的USD价格
+        product.priceUnitUsd = importedItem.priceUnitUsd || product.originalPriceUnitUsd || 0;
       }
       // 情况3：没有填写数量，填写价格 - 数量为0，使用导入的价格
       else if ((!importedItem.quantity || importedItem.quantity === 0) && importedItem.price && importedItem.price > 0) {
         console.log('情况3:', importedItem);
         product.quantity = 0;
         product.price = importedItem.price || 0;
+        product.priceUnitUsd = importedItem.priceUnitUsd || product.originalPriceUnitUsd || 0;
       }
       // 其他情况：默认处理
       else {
         console.log('情况4:', importedItem);
         product.quantity = importedItem.quantity || 0;
         product.price = importedItem.price || product.originalPrice || 0;
+        product.priceUnitUsd = importedItem.priceUnitUsd || product.originalPriceUnitUsd || 0;
       }
       
       product.remark = importedItem.remark || '';
@@ -1939,6 +1998,7 @@ const handleReset = () => {
       allInventoryProducts.value.forEach(product => {
         product.quantity = 0;
         product.price = 0;
+        product.priceUnitUsd = 0; // 新增：清空USD价格
         product.remark = '';
         product.batchAllocations = [];
       });
@@ -2049,6 +2109,9 @@ const prepareSubmitData = () => {
         currentStock: item.availableQuantity,
         quantity: item.quantity,
         price: item.price,
+        priceTotal: item.price * (item.quantity || 0), // 新增：总额
+        priceUnitUsd: item.priceUnitUsd || 0, // 新增：USD单价
+        priceTotalUsd: (item.priceUnitUsd || 0) * (item.quantity || 0), // 新增：USD总额
         batchAllocations: item.batchAllocations || [],
         remark: item.remark || ''
       }));
@@ -2063,6 +2126,8 @@ const prepareSubmitData = () => {
       currentStock: item.currentStock,
       quantity: item.quantity,
       price: item.price,
+      priceUnitUsd: item.priceUnitUsd || 0, // 新增：USD单价
+      priceTotalUsd: (item.priceUnitUsd || 0) * (item.quantity || 0), // 新增：USD总额
       batchAllocations: item.batchAllocations || [],
       remark: item.remark || '',
       bomAllocations: item.bomAllocations || []
@@ -2073,7 +2138,8 @@ const prepareSubmitData = () => {
     ...formData,
     items: items,
     totalQuantity: totalQuantity.value,
-    totalAmount: totalAmount.value
+    totalAmount: totalAmount.value,
+    totalAmountUsd: totalAmountUsd.value // 新增：USD总额
   };
 };
 
@@ -2098,6 +2164,13 @@ const validateForm = async () => {
         ElMessage.warning('请为所有出库数量大于0的产品设置有效的单价');
         return false;
       }
+
+      // 新增：检查USD价格是否为负数
+      const invalidUsdProducts = productsWithQuantity.filter(p => p.priceUnitUsd < 0);
+      if (invalidUsdProducts.length > 0) {
+        ElMessage.warning('USD单价不能为负数');
+        return false;
+      }
     } else {
       // 生产领料：原有验证逻辑
       for (let i = 0; i < formData.items.length; i++) {
@@ -2111,6 +2184,12 @@ const validateForm = async () => {
           return false;
         }
         
+        // 新增：检查USD价格是否为负数
+        if (item.priceUnitUsd < 0) {
+          ElMessage.warning(`第 ${i + 1} 行产品的USD单价不能为负数`);
+          return false;
+        }
+
         // 销售出库：验证库存
         if (formData.orderType === 1) {
           const currentStock = getCurrentStock(item);

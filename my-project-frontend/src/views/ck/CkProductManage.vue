@@ -48,6 +48,14 @@
               style="width: 150px"
             />
           </el-form-item>
+          <el-form-item label="英文名称">
+            <el-input
+              v-model="filterForm.englishName"
+              placeholder="请输入英文名称"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
           <el-form-item label="产品分类">
             <el-cascader
               v-model="filterForm.categoryCode"
@@ -163,6 +171,9 @@
             <template #default="{ row }">
               <div class="product-info">
                 <div class="product-name">{{ row.name }}</div>
+                <div class="product-english-name" v-if="row.englishName">
+                  {{ row.englishName }}
+                </div>
                 <div class="product-sku">SKU: {{ row.sku }}</div>
                 <div class="product-spec" v-if="row.spec">规格: {{ row.spec }}</div>
                 <div class="product-color" v-if="row.color">颜色: {{ row.color }}</div>
@@ -358,6 +369,7 @@ const currentProduct = ref(null);
 const filterForm = reactive({
   name: '',
   sku: '',
+  englishName: '', // 新增英文名筛选
   categoryCode: '',
   status: ''
 });
@@ -424,6 +436,7 @@ const loadProductList = async () => {
         sku: product.sku || '',
         barcode: product.barcode || '',
         name: product.name || '',
+        englishName: product.englishName || '', // 新增英文名字段
         spec: product.spec || '',
         categoryCode: product.categoryCode || '',
         categoryName: product.categoryName || '',
@@ -520,6 +533,7 @@ const handleSearch = () => {
 const handleReset = () => {
   Object.assign(filterForm, {
     name: '',
+    englishName: '', // 新增重置英文名
     sku: '',
     categoryCode: '',
     status: ''
@@ -549,6 +563,7 @@ const handleCreate = () => {
     sku: '',
     barcode: '',
     name: '',
+    englishName: '', // 新增英文名字段
     spec: '',
     categoryCode: '',
     unitCode: '',
@@ -908,5 +923,33 @@ onMounted(() => {
 
 .product-table :deep(.el-table__row:hover) {
   background-color: #f5f7fa;
+}
+
+.product-info {
+  line-height: 1.4;
+}
+
+.product-name {
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.product-english-name {
+  font-size: 12px;
+  color: #409EFF;
+  font-style: italic;
+  margin-bottom: 4px;
+}
+
+.product-sku {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 2px;
+}
+
+.product-spec, .product-color {
+  font-size: 12px;
+  color: #606266;
 }
 </style>

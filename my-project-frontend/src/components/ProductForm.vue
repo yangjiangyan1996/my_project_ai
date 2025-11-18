@@ -35,6 +35,16 @@
         />
       </el-form-item>
 
+            <!-- 添加英文名字段 -->
+      <el-form-item label="英文名称">
+        <el-input
+          v-model="formModel.englishName"
+          placeholder="请输入产品英文名称"
+          maxlength="100"
+          show-word-limit
+        />
+      </el-form-item>
+
       <el-row :gutter="20">
         <el-col :span="12">
           <el-form-item label="规格型号" prop="spec">
@@ -485,6 +495,7 @@ const formModel = reactive({
   sku: '',
   barcode: '',
   name: '',
+  englishName: '', // 新增英文名字段
   spec: '',
   categoryCode: '',
   unitCode: '',
@@ -542,6 +553,10 @@ const formRules = {
   sku: [
     { required: true, message: '请输入SKU编码', trigger: 'blur' },
     { pattern: /^[A-Za-z0-9_-]+$/, message: 'SKU编码只能包含字母、数字、下划线和横线', trigger: 'blur' }
+  ],
+    englishName: [
+    { required: true, message: '请输入英文名称', trigger: 'blur' },
+    { pattern: /^[A-Za-z0-9_]+$/, message: '英文名称只能包含字母、数字和下划线', trigger: 'blur' }
   ],
   name: [
     { required: true, message: '请输入产品名称', trigger: 'blur' }
@@ -800,6 +815,7 @@ const handleSubmit = async () => {
       sku: formModel.sku,
       barcode: formModel.barcode,
       name: formModel.name,
+      englishName: formModel.englishName, // 新增英文名
       spec: formModel.spec,
       categoryCode: formModel.categoryCode,
       color: formModel.color,

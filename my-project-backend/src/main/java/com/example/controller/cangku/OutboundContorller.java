@@ -13,6 +13,7 @@ import com.example.entity.cangku.req.OutboundListPageReq;
 import com.example.entity.cangku.resp.OutBoundSaleQuantityImportResp;
 import com.example.entity.cangku.resp.OutboundDetailResp;
 import com.example.entity.cangku.resp.OutboundListPageResp;
+import com.example.entity.cangku.resp.excel.OutboundOderExcelModel;
 import com.example.entity.cangku.resp.excel.OutboundSaleExcelModel;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
@@ -211,6 +212,34 @@ public class OutboundContorller {
             // EasyExcel 写入
             EasyExcel.write(response.getOutputStream(), OutboundSaleExcelModel.class)
                     .sheet("销售出库数量导入模版")
+                    .doWrite(dataList);
+        }catch (ValidationException e) {
+            log.error("OutboundContorller#exportSkuExcel", e);
+        } catch (Exception e) {
+            log.error("OutboundContorller#exportSkuExcel,", e);
+        }
+    }
+
+
+    @GetMapping("/exportOutboundOrderExcel")
+    public void exportOutboundOrderExcel(HttpServletResponse response, @RequestParam("orderId") Long orderId) throws IOException {
+        try{
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            // 设置响应头
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setCharacterEncoding("utf-8");
+
+            // 文件名
+            String fileName = URLEncoder.encode("出库单", "UTF-8").replaceAll("\\+", "%20");
+            response.setHeader("Content-Disposition", "attachment;filename=" + fileName + ".xlsx");
+
+            // 准备数据，这里示例用空数据，如果有实际数据可以填充
+            // 如果不想预填充测试数据，可传空列表 data = new ArrayList<>();
+            List<OutboundOderExcelModel> dataList = outboundFacade.exportOutboundOrderExcel(tenantId, orderId);
+
+            // EasyExcel 写入
+            EasyExcel.write(response.getOutputStream(), OutboundOderExcelModel.class)
+                    .sheet("出库单")
                     .doWrite(dataList);
         }catch (ValidationException e) {
             log.error("OutboundContorller#exportSkuExcel", e);

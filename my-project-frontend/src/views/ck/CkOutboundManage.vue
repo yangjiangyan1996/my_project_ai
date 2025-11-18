@@ -221,6 +221,12 @@
               <span class="amount">¥{{ (row.totalAmount || 0).toFixed(2) }}</span>
             </template>
           </el-table-column>
+           <!-- 新增USD总额列 -->
+          <el-table-column label="USD总额" width="120" align="right">
+            <template #default="{ row }">
+              <span class="amount-usd">${{ (row.totalAmountUsd || 0).toFixed(2) }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="申请人" width="120">
             <template #default="{ row }">
               <div class="applicant-info">
@@ -263,6 +269,16 @@
                   v-if="row.status === 0 || row.status === 4"
                 >
                   编辑
+                </el-button>
+                <!-- 新增导出按钮 -->
+                <el-button
+                  type="info"
+                  link
+                  size="small"
+                  @click="handleDownloadTemplate(row)"
+                  :loading="row.exportLoading"
+                >
+                  导出
                 </el-button>
                 <el-button
                   type="success"
@@ -351,6 +367,8 @@
             <el-descriptions-item label="产品种类">{{ currentOutbound.itemCount }} 种</el-descriptions-item>
             <el-descriptions-item label="总数量">{{ currentOutbound.totalQuantity }}</el-descriptions-item>
             <el-descriptions-item label="总金额">¥{{ (currentOutbound.totalAmount || 0).toFixed(2) }}</el-descriptions-item>
+            <!-- 新增USD总额 -->
+            <el-descriptions-item label="USD总额">${{ (currentOutbound.totalAmountUsd || 0).toFixed(2) }}</el-descriptions-item>
             <el-descriptions-item label="申请人">{{ currentOutbound.applicantName || '--' }}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{ formatTime(currentOutbound.createdAt) }}</el-descriptions-item>
             <el-descriptions-item label="更新时间">{{ formatTime(currentOutbound.updatedAt) }}</el-descriptions-item>
@@ -393,6 +411,18 @@
                 <span class="price-total">¥{{ (row.priceTotal).toFixed(2) }}</span>
               </template>
             </el-table-column>
+            <!-- 新增USD单价 -->
+            <el-table-column label="USD单价" width="120" align="right">
+              <template #default="{ row }">
+                <span>${{ (row.priceUnitUsd || 0).toFixed(4) }}</span>
+              </template>
+            </el-table-column>
+            <!-- 新增USD总额 -->
+            <el-table-column label="USD总额" width="120" align="right">
+              <template #default="{ row }">
+                <span class="price-total-usd">${{ (row.priceTotalUsd || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
             <el-table-column label="批次分配" min-width="200">
                 <template #default="{ row }">
                   
@@ -421,22 +451,28 @@
           <!-- 产品统计 -->
           <div class="product-summary">
             <el-row :gutter="20">
-              <el-col :span="6">
+              <el-col :span="4">
                 <div class="summary-item">
                   <span class="label">产品种类：</span>
                   <span class="value">{{ currentOutbound.items.length }} 种</span>
                 </div>
               </el-col>
-              <el-col :span="6">
+              <el-col :span="4">
                 <div class="summary-item">
                   <span class="label">总数量：</span>
                   <span class="value">{{ currentOutbound.totalQuantity }}</span>
                 </div>
               </el-col>
-              <el-col :span="6">
+              <el-col :span="4">
                 <div class="summary-item">
                   <span class="label">总金额：</span>
                   <span class="value">¥{{ (currentOutbound.totalAmount || 0).toFixed(2) }}</span>
+                </div>
+              </el-col>
+              <el-col :span="4">
+                <div class="summary-item">
+                  <span class="label">USD总额：</span>
+                  <span class="value">${{ (currentOutbound.totalAmountUsd || 0).toFixed(2) }}</span>
                 </div>
               </el-col>
             </el-row>
@@ -510,6 +546,8 @@ import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Refresh, Document, Clock, CircleCheck, Finished } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
+import axios from 'axios';
+import { accessHeader } from '@/net'; 
 
 const router = useRouter();
 const loading = ref(false);
@@ -590,6 +628,7 @@ const loadOutboundDetail = async (id) => {
         itemCount: detailData.itemCount,
         totalQuantity: detailData.totalQuantity,
         totalAmount: detailData.totalAmount,
+        totalAmountUsd: detailData.totalAmountUsd || 0, // 新增：USD总额
         applicantId: detailData.applicantId,
         applicantName: detailData.applicantName,
         applicantAvatar: detailData.applicantAvatar,
@@ -610,6 +649,8 @@ const loadOutboundDetail = async (id) => {
           unit: item.unit,
           quantity: item.quantity,
           price: item.price,
+          priceUnitUsd: item.priceUnitUsd || 0, // 新增：USD单价
+          priceTotalUsd: item.priceTotalUsd || 0, // 新增：USD总额
           batchAllocations: item.batchAllocations || [],
           remark: item.remark,
           // 保留所有原始字段
@@ -637,6 +678,7 @@ const loadOutboundDetail = async (id) => {
         itemCount: res.itemCount,
         totalQuantity: res.totalQuantity,
         totalAmount: res.totalAmount,
+        totalAmountUsd: res.totalAmountUsd || 0, // 新增：USD总额
         applicantId: res.applicantId,
         applicantName: res.applicantName,
         applicantAvatar: res.applicantAvatar,
@@ -657,6 +699,8 @@ const loadOutboundDetail = async (id) => {
           unit: item.unit,
           quantity: item.quantity,
           price: item.price,
+          priceUnitUsd: item.priceUnitUsd || 0, // 新增：USD单价
+          priceTotalUsd: item.priceTotalUsd || 0, // 新增：USD总额
           batchAllocations: item.batchAllocations || [],
           remark: item.remark,
           // 保留所有原始字段
@@ -717,6 +761,7 @@ const loadOutboundList = async () => {
         itemCount: outbound.itemCount || 0,
         totalQuantity: outbound.totalQuantity || 0,
         totalAmount: outbound.totalAmount || 0,
+        totalAmountUsd: outbound.totalAmountUsd || 0, // 新增：USD总额
         applicantId: outbound.applicantId || '',
         applicantName: outbound.applicantName || '',
         applicantAvatar: outbound.applicantAvatar || '/images/default-avatar.png',
@@ -977,6 +1022,47 @@ const getStatusTagType = (status) => {
     9: 'info'       // 已取消
   };
   return types[status] || '';
+};
+
+const handleDownloadTemplate = async (outbound) => {
+  try {
+    // 设置导出加载状态
+    outbound.exportLoading = true;
+    
+    const response = await axios.get(`/api/auth/outbound/exportOutboundOrderExcel?orderId=${outbound.id}`, {
+      headers: accessHeader(), // 如果需要认证
+      responseType: 'blob', // ⚠️ 必须加
+    });
+
+
+    // 创建 blob 对象
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    // 创建 URL 对象
+    const url = window.URL.createObjectURL(blob);
+
+    // 创建 a 标签下载
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `出库单_${outbound.orderNo}.xlsx`; // 使用出库单号作为文件名
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // 释放 URL
+    window.URL.revokeObjectURL(url);
+
+    ElMessage.success('导出成功');
+
+  } catch (error) {
+    console.error('导出出库单失败', error);
+    ElMessage.error('导出失败，请稍后重试');
+  } finally {
+    // 清除导出加载状态
+    outbound.exportLoading = false;
+  }
 };
 
 const formatTime = (timeString) => {
@@ -1320,5 +1406,22 @@ onMounted(() => {
 
 .outbound-table :deep(.el-table__row:hover) {
   background-color: #f5f7fa;
+}
+/* USD金额样式 */
+.amount-usd {
+  font-weight: bold;
+  color: #67C23A;
+}
+
+.price-total-usd {
+  font-weight: bold;
+  color: #67C23A;
+}
+
+/* 响应式设计调整 */
+@media (max-width: 768px) {
+  .product-summary .el-col {
+    margin-bottom: 8px;
+  }
 }
 </style>
