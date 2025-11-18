@@ -50,4 +50,7 @@ public class InventoryListResp {
 
     //单价
     private BigDecimal price;
+
+    //美元单价
+    private BigDecimal priceUnitUsd;
 }

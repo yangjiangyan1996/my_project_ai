@@ -217,6 +217,8 @@ public class InventoryHolder {
         transaction.setTenantId(outboundOrder.getTenantId());
         transaction.setPriceUnit(item.getPriceUnit());
         transaction.setPriceTotal(item.getPriceTotal());
+        transaction.setPriceUnitUsd(item.getPriceUnitUsd());
+        transaction.setPriceTotalUsd(item.getPriceTotalUsd());
         transaction.setCreatedBy(userId);
         transaction.setModifiedBy(userId);
         transaction.setCreatedAt(new Date());

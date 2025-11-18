@@ -50,6 +50,8 @@ public class ProductCreateReq {
     //出货单位的体积：宽度
     private  BigDecimal outUnitWidth;
 
+    private String englishName;
+
     private Long tenantId;
     private Long userId;
 }

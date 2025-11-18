@@ -49,4 +49,7 @@ public class Product extends BaseModel {
     private  BigDecimal outUnitLength;
     //出货单位的体积：宽度
     private  BigDecimal outUnitWidth;
+
+    //英文名称
+    private String englishName;
 }

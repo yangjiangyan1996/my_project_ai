@@ -196,6 +196,7 @@ public class CKProductFacade {
         product.setSku(req.getSku());
         product.setBarcode(req.getBarcode());
         product.setName(req.getName());
+        product.setEnglishName(req.getEnglishName());
         product.setSpec(req.getSpec());
         product.setCategoryCode(req.getCategoryCode());
         product.setUnitCode(req.getUnitCode());

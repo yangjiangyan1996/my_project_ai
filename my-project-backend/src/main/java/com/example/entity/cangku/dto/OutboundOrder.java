@@ -31,10 +31,13 @@ public class OutboundOrder extends BaseModel {
     private Integer status;
     //总数量
     private BigDecimal totalQuantity;
+    //总金额-人民币
     private BigDecimal totalAmount;
+    //美元总价
+    private BigDecimal totalAmountUsd;
     //备注
     private String remark;
-
+    //预计出库时间
     private Date expectedDate;
 
 }

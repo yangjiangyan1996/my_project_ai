@@ -3,6 +3,8 @@ package com.example.entity.cangku.req;
 import com.example.entity.base.PageReq;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -11,14 +13,11 @@ import lombok.Data;
  */
 @Data
 public class InventoryListPageReq extends PageReq {
-    private String categoryId;
-    private String productCode;
     private String productName;
-    private String sortField;
-    private String stockStatus;
-    private String warehouseId;
-    private String sortOrder;
+    private String sku;
 
+    private List<Long> productIdsOfSku;
+    private List<Long> productIdsOfName;
     Long userId;
     Long tenantId;
 }

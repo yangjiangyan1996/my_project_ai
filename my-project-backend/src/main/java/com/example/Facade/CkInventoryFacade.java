@@ -12,6 +12,7 @@ import com.example.enums.CkInventoryEnums;
 import com.example.holder.InventoryHolder;
 import com.example.service.*;
 import jakarta.annotation.Resource;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -62,6 +63,21 @@ public class CkInventoryFacade {
     CkInboundOrderItemService inboundOrderItemService;
 
     public Page<InventoryPageListResp> pageList(Page<Inventory> page, InventoryListPageReq req) {
+        if (StringUtils.isNotBlank(req.getProductName())) {
+            List<Product> productsOfName = productService.selectByProductNameLike(req.getTenantId(), req.getProductName());
+            if (!CollectionUtils.isEmpty(productsOfName)) {
+                List<Long> productIdsOfName = productsOfName.stream().map(v -> v.getId()).collect(Collectors.toList());
+                req.setProductIdsOfName(productIdsOfName);
+            }
+        }
+        if (StringUtils.isNotBlank(req.getSku())) {
+            List<Product> productsOfSku = productService.selectByProductSkuLike(req.getTenantId(), req.getSku());
+            if (!CollectionUtils.isEmpty(productsOfSku)) {
+                List<Long> productIdsOfSku = productsOfSku.stream().map(v -> v.getId()).collect(Collectors.toList());
+                req.setProductIdsOfSku(productIdsOfSku);
+            }
+        }
+
         Page<Inventory> list = inventoryService.getPage(page, req);
         if (list.getRecords().isEmpty()) {
             return Page.of(req.getPage() - 1, req.getSize());
@@ -498,6 +514,8 @@ public class CkInventoryFacade {
                     resp.setTransactionTime(transaction.getTransactionTime());
                     resp.setPriceUnit(transaction.getPriceUnit());
                     resp.setPriceTotal(transaction.getPriceTotal());
+                    resp.setPriceUnitUsd(transaction.getPriceUnitUsd());
+                    resp.setPriceTotalUsd(transaction.getPriceTotalUsd());
 
                     // 设置操作人信息
                     Account operator = operatorMap.get(transaction.getCreatedBy());

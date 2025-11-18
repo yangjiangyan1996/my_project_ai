@@ -404,6 +404,7 @@ public class CkOutboundFacade {
         order.setStatus(req.getStatus());
         order.setTotalQuantity(req.getTotalQuantity());
         order.setTotalAmount(req.getTotalAmount());
+        order.setTotalAmountUsd(req.getTotalAmountUsd());
         order.setTenantId(req.getTenantId());
         order.setCreatedBy(req.getUserId());
         order.setModifiedBy(req.getUserId());
@@ -431,7 +432,8 @@ public class CkOutboundFacade {
                 orderItem.setShelfLocationId(batch.getShelfId());
                 orderItem.setPriceUnit(item.getPrice());
                 orderItem.setPriceTotal(batch.getQuantity().multiply(item.getPrice()));
-                //orderItem.setShelfLocationId(item.gets);
+                orderItem.setPriceUnitUsd(item.getPriceUnitUsd());
+                orderItem.setPriceTotalUsd(batch.getQuantity().multiply(item.getPriceUnitUsd()));
                 orderItem.setRemark(item.getRemark());
                 orderItem.setTenantId(req.getTenantId());
                 orderItem.setCreatedBy(req.getUserId());
@@ -758,6 +760,7 @@ public class CkOutboundFacade {
         resp.setCustomerName(customerId2CustomerMap.getOrDefault(outboundOrder.getCustomerId(), new Customer()).getCustomerName());
         resp.setTotalQuantity(outboundOrder.getTotalQuantity());
         resp.setTotalAmount(outboundOrder.getTotalAmount());
+        resp.setTotalAmountUsd(outboundOrder.getTotalAmountUsd());
         resp.setWarehouseId(outboundOrder.getWarehouseId());
         resp.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(outboundOrder.getWarehouseId(), new Warehouse()).getName());
         resp.setExpectedDate(DateUtils.format(outboundOrder.getExpectedDate()));
@@ -788,6 +791,8 @@ public class CkOutboundFacade {
                 BigDecimal totalAmount = outItemList.stream().map(OutboundOrderItem::getPriceTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
                 req.setPriceTotal(totalAmount);
                 req.setPriceUnit(outItemList.get(0).getPriceUnit());
+                req.setPriceTotalUsd(outItemList.get(0).getPriceTotalUsd());
+                req.setPriceUnitUsd(outItemList.get(0).getPriceUnitUsd());
                 req.setRemark(outItemList.get(0).getRemark());
 
                 List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v -> {
@@ -850,6 +855,7 @@ public class CkOutboundFacade {
             r.setQuantity( StringUtils.isBlank(v.getQuantity()) ? BigDecimal.ZERO : new BigDecimal(v.getQuantity()));
             r.setRemark(v.getRemark());
             r.setPrice(StringUtils.isBlank(v.getPrice()) ? null :new BigDecimal(v.getPrice()));
+            r.setPriceUnitUsd(StringUtils.isBlank(v.getPriceUsd()) ? null :new BigDecimal(v.getPriceUsd()));
             return r;
         }).collect(Collectors.toList());
 

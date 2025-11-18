@@ -34,6 +34,8 @@ public class OutboundDetailResp {
     private Integer status;
     // 总金额
     private BigDecimal totalAmount;
+    // 总金额（美元）
+    private BigDecimal totalAmountUsd;
     // 总数量
     private BigDecimal totalQuantity;
     // 仓库id
@@ -68,6 +70,10 @@ public class OutboundDetailResp {
         private BigDecimal priceUnit;
         //总价
         private BigDecimal priceTotal;
+        //美元单价
+        private BigDecimal priceUnitUsd;
+        //美元总价
+        private BigDecimal priceTotalUsd;
         // 备注
         private String remark;
 

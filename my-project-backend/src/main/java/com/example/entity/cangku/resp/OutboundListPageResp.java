@@ -29,7 +29,11 @@ public class OutboundListPageResp {
     private Integer status;
     //总数量
     private BigDecimal totalQuantity;
+    //总金额（元）
     private BigDecimal totalAmount;
+    //总价(美元）)
+    private BigDecimal totalAmountUsd;
+
     //备注
     private String remark;
 

@@ -39,6 +39,16 @@ public class CkProductServiceImpl extends ServiceImpl<CkProductMapper, Product> 
     }
 
     @Override
+    public List<Product> selectByProductSkuLike(Long tenantId, String sku) {
+        return baseMapper.selectList(
+                new QueryWrapper<Product>()
+                        .eq("tenant_id", tenantId)
+                        .like("sku", sku)
+                        .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
     public List<Product> selectByProductNameLike(Long tenantId, String productName) {
         return baseMapper.selectList(
                 new QueryWrapper<Product>()
@@ -84,6 +94,7 @@ public class CkProductServiceImpl extends ServiceImpl<CkProductMapper, Product> 
                         .eq(StringUtils.isNotBlank(req.getCategoryCode() ), "category_code", req.getCategoryCode())
                         .like(StringUtils.isNotBlank(req.getName() ), "name", req.getName())
                         .like(StringUtils.isNotBlank(req.getSku()) , "sku", req.getSku())
+                        .like(StringUtils.isNotBlank(req.getEnglishName()) , "english_name", req.getEnglishName())
                         .eq( "tenant_id", req.getTenantId())
                         .eq("is_deleted",0)
                         .orderByAsc("created_at")

@@ -13,6 +13,7 @@ import lombok.Data;
 public class ProductListPageReq extends PageReq {
     private String categoryCode;
     private String name;
+    private String englishName;
     private String sku;
     private Integer status;
 

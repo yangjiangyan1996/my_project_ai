@@ -43,4 +43,8 @@ public class InventoryTransaction extends BaseModel {
     private BigDecimal priceUnit;
     //总价
     private BigDecimal priceTotal;
+    //美元单价
+    private BigDecimal priceUnitUsd;
+    //美元总价
+    private BigDecimal priceTotalUsd;
 }

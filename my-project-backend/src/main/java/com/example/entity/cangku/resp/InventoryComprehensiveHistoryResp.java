@@ -26,6 +26,10 @@ public class InventoryComprehensiveHistoryResp {
     private Date transactionTime;
     private BigDecimal priceUnit;
     private BigDecimal priceTotal;
+    //美元单价
+    private BigDecimal priceUnitUsd;
+    //美元总价
+    private BigDecimal priceTotalUsd;
     private String orderNo;
     private String batchNo;
     private Boolean isUrgent;

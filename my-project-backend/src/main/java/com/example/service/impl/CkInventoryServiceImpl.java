@@ -7,6 +7,7 @@ import com.example.entity.cangku.dto.Inventory;
 import com.example.entity.cangku.req.InventoryListPageReq;
 import com.example.mapper.CkInventoryMapper;
 import com.example.service.CkInventoryService;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -32,6 +33,8 @@ public class CkInventoryServiceImpl extends ServiceImpl<CkInventoryMapper, Inven
                 new QueryWrapper<Inventory>()
                         .eq( "tenant_id", req.getTenantId())
                         .eq("is_deleted",0)
+                        .in(!CollectionUtils.isEmpty(req.getProductIdsOfSku()), "product_id", req.getProductIdsOfSku())
+                        .in(!CollectionUtils.isEmpty(req.getProductIdsOfName()), "product_id", req.getProductName())
                         .orderByAsc("modified_at")
         );
     }

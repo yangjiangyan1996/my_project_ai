@@ -21,6 +21,8 @@ public class ProductPageListResp {
     private String barcode;
     //商品名称
     private String name;
+    //英文名称
+    private String englishName;
     //规格型号
     private String spec;
     //分类code

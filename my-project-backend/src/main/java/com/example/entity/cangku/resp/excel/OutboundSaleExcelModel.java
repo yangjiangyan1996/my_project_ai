@@ -36,8 +36,11 @@ public class OutboundSaleExcelModel {
     @ExcelProperty("数量")
     private String quantity;
 
-    @ExcelProperty("价格")
+    @ExcelProperty("价格(人民币)")
     private String price;
+
+    @ExcelProperty("价格(美元)")
+    private String priceUsd;
 
     @ExcelProperty("备注")
     private String remark;

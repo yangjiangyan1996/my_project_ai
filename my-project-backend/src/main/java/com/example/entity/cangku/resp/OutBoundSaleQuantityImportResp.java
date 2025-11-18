@@ -22,5 +22,7 @@ public class OutBoundSaleQuantityImportResp {
 
     private BigDecimal price;
 
+    private BigDecimal priceUnitUsd;
+
     private String remark;
 }

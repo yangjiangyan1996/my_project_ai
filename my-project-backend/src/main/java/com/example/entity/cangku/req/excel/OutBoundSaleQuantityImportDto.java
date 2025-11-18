@@ -43,10 +43,13 @@ public class OutBoundSaleQuantityImportDto {
     @ExcelProperty(value = "数量", index = 6)
     private String quantity;
 
-    @ExcelProperty(value = "价格", index = 7)
+    @ExcelProperty(value = "价格(人民币)", index = 7)
     private String price;
 
-    @ExcelProperty(value = "备注", index = 8)
+    @ExcelProperty(value = "价格(美元)", index = 8)
+    private String priceUsd;
+
+    @ExcelProperty(value = "备注", index = 9)
     private String remark;
 
 

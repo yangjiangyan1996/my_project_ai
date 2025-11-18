@@ -32,6 +32,8 @@ public class OutboundCreateReq {
     private Integer status;
     // 总金额
     private BigDecimal totalAmount;
+    // 美元总金额
+    private BigDecimal totalAmountUsd;
     // 总数量
     private BigDecimal totalQuantity;
     // 仓库id
@@ -52,7 +54,11 @@ public class OutboundCreateReq {
         // 价格
         private BigDecimal price;
         // 金额
-        private BigDecimal amount;
+        private BigDecimal priceTotal;
+        //美元单价
+        private BigDecimal priceUnitUsd;
+        //美元总价
+        private BigDecimal priceTotalUsd;
         // 备注
         private String remark;
 
