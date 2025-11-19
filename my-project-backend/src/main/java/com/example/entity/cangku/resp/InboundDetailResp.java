@@ -46,8 +46,17 @@ public class InboundDetailResp {
         private String shelfLocationName;
         private BigDecimal priceUnit;
         private BigDecimal priceTotal;
-    }
 
+        //货架分配
+        private List<InboundDetailResp.ShelfDetailCreateReq> shelfAllocations;
+    }
     private Long tenantId;
     private Long userId;
+
+    @Data
+    public static class ShelfDetailCreateReq {
+        private Long shelfLocationId;
+        private String shelfLocationName;
+        private BigDecimal quantity;
+    }
 }

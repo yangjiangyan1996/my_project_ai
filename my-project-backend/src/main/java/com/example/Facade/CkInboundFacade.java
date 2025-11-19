@@ -143,6 +143,19 @@ public class CkInboundFacade {
             if (item.getActualQuantity() <= 0) {
                 throw new ValidationException("第" + (i + 1) + "行入库数量必须大于0");
             }
+            if (item.getPriceUnit() == null || item.getPriceUnit().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("第" + (i + 1) + "行入库单价必须大于0");
+            }
+            if(StringUtils.isBlank(item.getBatchNo())) {
+                throw new ValidationException("第" + (i + 1) + "行批次号不能为空");
+            }
+            if (item.getShelfAllocations() == null || item.getShelfAllocations().isEmpty()) {
+                throw new ValidationException("第" + (i + 1) + "行货架分配不能为空");
+            }
+            double sum = item.getShelfAllocations().stream().mapToDouble(v -> v.getQuantity()).sum();
+            if (Math.abs(sum - item.getActualQuantity()) > 0.0001) {
+                throw new ValidationException("第" + (i + 1) + "行货架分配数量之和与入库数量不一致");
+            }
         }
     }
 
@@ -421,7 +434,7 @@ public class CkInboundFacade {
 
             p.setSupplierName(supplierId2SupplierMap.getOrDefault(v.getSupplierId(), new Supplier()).getSupplierName());
             p.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(v.getWarehouseId(), new Warehouse()).getName());
-            p.setItemCount(orderId2ItemListMap.getOrDefault(v.getId(), new ArrayList<>()).size());
+            p.setItemCount(orderId2ItemListMap.getOrDefault(v.getId(), new ArrayList<>()).stream().map(s->s.getProductId()).distinct().collect(Collectors.toList()).size());
             return p;
         }).collect(Collectors.toList());
 
@@ -516,26 +529,45 @@ public class CkInboundFacade {
         Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
         Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
         Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
-        resp.setItems(items.stream().map(item -> {
+        Map<Long, List<InboundOrderItem>> productId2InboundItemListMap = items.stream().collect(Collectors.groupingBy(v -> v.getProductId()));
+
+        List<InboundDetailResp.InboundDetailCreateReq> innerList = new ArrayList<>();
+        for (Long productId : productId2InboundItemListMap.keySet()) {
+            List<InboundOrderItem> inboundOrderItems = productId2InboundItemListMap.get(productId);
+
+            BigDecimal priceTotal = BigDecimal.ZERO;
+            BigDecimal actualQuantity = BigDecimal.ZERO;
+            List<InboundDetailResp.ShelfDetailCreateReq> shelfAllocations = new ArrayList<>();
+            for (InboundOrderItem item : inboundOrderItems) {
+                InboundDetailResp.ShelfDetailCreateReq shelfDetail = new InboundDetailResp.ShelfDetailCreateReq();
+                shelfDetail.setShelfLocationId(item.getShelfLocationId());
+                shelfDetail.setQuantity(item.getActualQuantity());
+                shelfDetail.setShelfLocationName(finalShelfId2ShelfMap.getOrDefault(item.getShelfLocationId(), new WarehouseShelf()).getShelfName());
+                shelfAllocations.add(shelfDetail);
+
+                priceTotal = priceTotal.add(item.getPriceTotal());
+                actualQuantity = actualQuantity.add(item.getActualQuantity());
+            }
+
             InboundDetailResp.InboundDetailCreateReq req = new InboundDetailResp.InboundDetailCreateReq();
-            req.setItemId(item.getId());
-            req.setActualQuantity(item.getActualQuantity());
-            req.setProductId(item.getProductId());
-            req.setProductName(finalProductId2ProductMap.getOrDefault(item.getProductId(), new Product()).getName());
-            req.setSku(finalProductId2ProductMap.getOrDefault(item.getProductId(), new Product()).getSku());
-            req.setBatchNo(item.getBatchNo());
-            req.setShelfLocationId(item.getShelfLocationId());
-            req.setShelfLocationName(finalShelfId2ShelfMap.getOrDefault(item.getShelfLocationId(), new WarehouseShelf()).getShelfName());
-            req.setRemark(item.getRemark());
-            req.setPriceUnit(item.getPriceUnit());
-            req.setPriceTotal(item.getPriceTotal());
-            Product product = finalProductId2ProductMap.getOrDefault(item.getProductId(), null);
+            req.setProductId(inboundOrderItems.get(0).getProductId());
+            req.setProductName(finalProductId2ProductMap.getOrDefault(inboundOrderItems.get(0).getProductId(), new Product()).getName());
+            req.setSku(finalProductId2ProductMap.getOrDefault(inboundOrderItems.get(0).getProductId(), new Product()).getSku());
+            req.setBatchNo(inboundOrderItems.get(0).getBatchNo());
+            req.setRemark(inboundOrderItems.get(0).getRemark());
+            req.setPriceUnit(inboundOrderItems.get(0).getPriceUnit());
+            req.setPriceTotal(priceTotal);
+            req.setActualQuantity(actualQuantity);
+            Product product = finalProductId2ProductMap.getOrDefault(inboundOrderItems.get(0).getProductId(), null);
             if (product.getId() != null) {
                 req.setSpec(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSpec());
                 req.setUnit(finalUnitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
             }
-            return req;
-        }).collect(Collectors.toList()));
+            req.setShelfAllocations(shelfAllocations);
+
+            innerList.add( req);
+        }
+        resp.setItems(innerList);
         resp.setItemCount(CollectionUtils.isEmpty(resp.getItems()) ? 0 : resp.getItems().size());
         return resp;
     }
