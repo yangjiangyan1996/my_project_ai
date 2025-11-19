@@ -257,6 +257,7 @@ const handleFileChange = (file) => {
 };
 
 const handleManualUpload = async () => {
+  console.log('开始手动上传文件:', currentFile.value);
   if (!currentFile.value) {
     ElMessage.warning('请先选择要导入的文件');
     return;
