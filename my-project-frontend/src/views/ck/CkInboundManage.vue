@@ -367,11 +367,6 @@
             </el-table-column>
             <el-table-column label="规格型号" width="120" prop="spec" />
             <el-table-column label="单位" width="80" align="center" prop="unit" />
-            <!-- <el-table-column label="数量" width="100" align="center">
-              <template #default="{ row }">
-                <span>{{ row.quantity }}</span>
-              </template>
-            </el-table-column> -->
             <el-table-column label="实际数量" width="100" align="center">
               <template #default="{ row }">
                 <span>{{ row.actualQuantity }}</span>
@@ -392,9 +387,20 @@
                 <span>{{ row.batchNo || '--' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="货架位置" width="150">
+            <el-table-column label="货架分配" min-width="200">
               <template #default="{ row }">
-                <span>{{ row.shelfLocationName || '--' }}</span>
+                <div v-if="row.shelfAllocations && row.shelfAllocations.length > 0" class="shelf-allocation-info">
+                  <div 
+                    v-for="allocation in row.shelfAllocations" 
+                    :key="allocation.shelfLocationId"
+                    class="shelf-allocation-item"
+                  >
+                    <el-tag size="small" type="info">
+                      {{ allocation.shelfLocationName }}: {{ allocation.quantity }}
+                    </el-tag>
+                  </div>
+                </div>
+                <span v-else class="no-allocation">--</span>
               </template>
             </el-table-column>
             <el-table-column label="备注" min-width="150" prop="remark">
@@ -428,19 +434,6 @@
             </el-row>
           </div>
         </el-card>
-
-        <!-- 原始数据展示（用于调试） -->
-        <!-- <el-card class="detail-section" shadow="never" v-if="showRawData">
-          <template #header>
-            <div class="section-header">
-              <span class="section-title">原始数据</span>
-              <el-button type="text" @click="showRawData = !showRawData">
-                {{ showRawData ? '隐藏' : '显示' }}原始数据
-              </el-button>
-            </div>
-          </template>
-          <pre class="raw-data">{{ JSON.stringify(currentInbound, null, 2) }}</pre>
-        </el-card> -->
       </div>
       <div v-else class="no-data">
         <el-empty description="数据加载失败" />
@@ -448,9 +441,6 @@
 
       <template #footer>
         <div class="dialog-footer">
-          <!-- <el-button @click="showRawData = !showRawData" type="info" link>
-            {{ showRawData ? '隐藏原始数据' : '显示原始数据' }}
-          </el-button> -->
           <el-button @click="detailDialogVisible = false">关闭</el-button>
           <el-button 
             type="primary" 
@@ -476,7 +466,6 @@ const router = useRouter();
 const loading = ref(false);
 const detailDialogVisible = ref(false);
 const currentInbound = ref(null);
-const showRawData = ref(false);
 
 // 筛选表单
 const filterForm = reactive({
@@ -525,15 +514,14 @@ const statusOptions = [
   { value: 9, label: '已取消' }
 ];
 
-// 加载入库单详情
+// 加载入库单详情 - 根据新的API响应结构调整
 const loadInboundDetail = async (id) => {
   try {
     const res = await get(`/api/auth/inbound/detail?orderId=${id}`);
-    console.log('入库单详情响应:', res); // 调试日志
+    console.log('入库单详情响应:', res);
     
-    if (res && res.code === 200) {
-      // 如果接口返回了标准响应格式
-      const detailData = res.data || res;
+    if (res) {
+      const detailData = res;
       return {
         // 基本信息
         id: detailData.id,
@@ -552,74 +540,27 @@ const loadInboundDetail = async (id) => {
         createdAt: detailData.createdAt,
         modifiedAt: detailData.modifiedAt,
         
-        // 扩展字段，保留所有原始数据
-        ...detailData,
-        
-        // 产品明细
+        // 产品明细 - 根据新的数据结构调整
         items: detailData.items ? detailData.items.map(item => ({
-          id: item.id,
+          id: item.itemId,
           productId: item.productId,
           productName: item.productName,
           sku: item.sku,
           spec: item.spec,
           unit: item.unit,
-          quantity: item.quantity,
           actualQuantity: item.actualQuantity,
           priceUnit: item.priceUnit,
           priceTotal: item.priceTotal,
-          shelfLocationId: item.shelfLocationId,
-          shelfLocationName: item.shelfLocationName,
           batchNo: item.batchNo,
           remark: item.remark,
-          // 保留所有原始字段
-          ...item
+          // 货架分配信息
+          shelfAllocations: item.shelfAllocations || []
         })) : []
       };
-    } else if (res) {
-      // 如果接口直接返回数据对象
-      return {
-        // 基本信息
-        id: res.id,
-        orderNo: res.orderNo,
-        orderType: res.orderType,
-        warehouseId: res.warehouseId,
-        warehouseName: res.warehouseName,
-        supplierId: res.supplierId,
-        supplierName: res.supplierName,
-        relatedOrderNo: res.relatedOrderNo,
-        remark: res.remark,
-        status: res.status,
-        itemCount: res.itemCount,
-        totalQuantity: res.totalQuantity,
-        totalAmount: res.totalAmount,
-        createdAt: res.createdAt,
-        modifiedAt: res.modifiedAt,
-        
-        // 扩展字段，保留所有原始数据
-        ...res,
-        
-        // 产品明细
-        items: res.items ? res.items.map(item => ({
-          id: item.id,
-          productId: item.productId,
-          productName: item.productName,
-          sku: item.sku,
-          spec: item.spec,
-          unit: item.unit,
-          quantity: item.quantity,
-          actualQuantity: item.actualQuantity,
-          priceUnit: item.priceUnit,
-          priceTotal: item.priceTotal,
-          shelfLocationId: item.shelfLocationId,
-          shelfLocationName: item.shelfLocationName,
-          batchNo: item.batchNo,
-          remark: item.remark,
-          // 保留所有原始字段
-          ...item
-        })) : []
-      };
+    } else {
+      console.error('API返回数据格式异常:', res);
+      return null;
     }
-    return null;
   } catch (error) {
     console.error('加载入库单详情失败:', error);
     ElMessage.error('加载详情失败: ' + (error.message || '未知错误'));
@@ -1097,6 +1038,21 @@ onMounted(() => {
   color: #409eff;
 }
 
+.shelf-allocation-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shelf-allocation-item {
+  display: flex;
+}
+
+.no-allocation {
+  color: #909399;
+  font-style: italic;
+}
+
 .product-summary {
   margin-top: 16px;
   padding: 16px;
@@ -1120,19 +1076,6 @@ onMounted(() => {
   color: #303133;
   font-weight: bold;
   font-size: 16px;
-}
-
-.raw-data {
-  background: #f5f5f5;
-  padding: 16px;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  line-height: 1.4;
-  max-height: 400px;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
 }
 
 .dialog-footer {

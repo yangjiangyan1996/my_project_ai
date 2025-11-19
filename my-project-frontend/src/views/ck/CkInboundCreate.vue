@@ -901,7 +901,7 @@ const handleSaveDraft = async () => {
       router.push('/index/ckInboundManage');
     }
   } catch (error) {
-    ElMessage.error(isEditMode.value ? '更新草稿失败' : '保存草稿失败');
+    // ElMessage.error(isEditMode.value ? '更新草稿失败' : '保存草稿失败');
   } finally {
     loading.value = false;
   }
