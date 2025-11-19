@@ -5,6 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.config.AsyncTaskUtil;
 import com.example.constants.CommonConstant;
+import com.example.entity.cangku.dto.Product;
+import com.example.entity.cangku.dto.ProductCategory;
+import com.example.entity.cangku.dto.Unit;
+import com.example.entity.cangku.req.excel.ProductCreateImportModel;
 import com.example.entity.dto.*;
 import com.example.entity.req.*;
 import com.example.entity.resp.*;
@@ -13,6 +17,7 @@ import com.example.enums.MessageEnums;
 import com.example.enums.ProjectEnum;
 import com.example.enums.UserEnums;
 import com.example.service.*;
+import com.example.utils.ExcelUtils;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +26,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,7 +41,8 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class ProjectFacade {
-
+    @Resource
+    private CkProductCategoryService productCategoryService;
     @Resource
     ProjectWatchService projectWatchService;
     @Resource
@@ -60,7 +68,11 @@ public class ProjectFacade {
     @Resource
     ProjectsDetailService projectsDetailService;
     @Resource
-    private ProjectService projectService;
+    ProjectService projectService;
+    @Resource
+    CkUnitService unitService;
+    @Resource
+    CkProductService productService;
     @Resource
     AccountService accountService;
 

@@ -1,5 +1,6 @@
 package com.example.controller.cangku;
 
+import com.alibaba.excel.EasyExcel;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CKProductFacade;
@@ -7,14 +8,19 @@ import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.*;
+import com.example.entity.cangku.resp.excel.ProductCreateExportModel;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -273,6 +279,55 @@ public class ProductController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("ProductController#listEnable,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @GetMapping("/exportProductCreateExcel")
+    public void exportProductCreateExcel(HttpServletResponse response) throws IOException {
+        try {
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            // 设置响应头
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setCharacterEncoding("utf-8");
+
+            // 文件名
+            String fileName = URLEncoder.encode("产品导入模版单", "UTF-8").replaceAll("\\+", "%20");
+            response.setHeader("Content-Disposition", "attachment;filename=" + fileName + ".xlsx");
+
+            // 准备数据，这里示例用空数据，如果有实际数据可以填充
+            // 如果不想预填充测试数据，可传空列表 data = new ArrayList<>();
+            List<ProductCreateExportModel> dataList = new ArrayList<>();
+
+            // EasyExcel 写入
+            EasyExcel.write(response.getOutputStream(), ProductCreateExportModel.class)
+                    .sheet("产品导入模版单")
+                    .doWrite(dataList);
+        } catch (ValidationException e) {
+            log.error("ProjectController#exportProductCreateExcel", e);
+        } catch (Exception e) {
+            log.error("ProjectController#exportProductCreateExcel,", e);
+        }
+    }
+
+
+
+    @PostMapping("/importProductCreateExcel")
+    public RespBean<Boolean> importProductCreateExcel(@RequestParam("file") MultipartFile file) {
+        try {
+            log.info("=== 导入产品创建接口开始 ===");
+            log.info("接收到文件: {}. 文件大小: {} bytes, 文件类型: {}", file.getOriginalFilename(), file.getSize(), file.getContentType());
+
+            Long userId = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            Boolean result = CKProductFacade.importOutboundSaleQuantity(file, tenantId, userId);
+            log.info("=== 导入产品创建接口结束 ===导入结果: {}", result);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("ProjectController#importProductCreateExcel", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProjectController#importProductCreateExcel,", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

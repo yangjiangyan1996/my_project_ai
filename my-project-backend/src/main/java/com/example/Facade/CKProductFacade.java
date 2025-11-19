@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.*;
+import com.example.entity.cangku.req.excel.ProductCreateImportModel;
 import com.example.entity.cangku.resp.*;
 import com.example.service.*;
 import com.example.utils.ExcelUtils;
@@ -1467,7 +1468,6 @@ public class CKProductFacade {
                 .collect(Collectors.toList());
     }
 
-
     /**
      * 数据持有类，用于传递初始化数据
      */
@@ -1480,5 +1480,71 @@ public class CKProductFacade {
         Map<String, Warehouse> warehouseName2WarehouseMap;
         ProductImportDto warehouseInfo;
     }
+
+    public Boolean importOutboundSaleQuantity(MultipartFile file, Long tenantId, Long userId) {
+        // 1. 读取Excel数据
+        List<ProductCreateImportModel> importDataList = ExcelUtils.readExcel(file, ProductCreateImportModel.class);
+        if (CollectionUtils.isEmpty(importDataList) || importDataList.size() < 1) {
+            throw new ValidationException("Excel文件数据不足");
+        }
+
+        Map<String, ProductCategory> categoryName2CategoryMap = new HashMap<>();
+        List<ProductCategory> categoryList = productCategoryService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(categoryList)) {
+            categoryName2CategoryMap = categoryList.stream().collect(Collectors.toMap(ProductCategory::getCategoryName, v -> v));
+        }
+
+        Map<String, Unit> unitName2UnitMap = new HashMap<>();
+        List<Unit> unitList = unitService.selectByTenantId(tenantId, 1);
+        if (!CollectionUtils.isEmpty(unitList)) {
+            unitName2UnitMap = unitList.stream().collect(Collectors.toMap(Unit::getUnitName, v -> v));
+        }
+
+
+        Set<String> duplicateSkuSet = new HashSet<>();
+        Set<String> duplicateNameSpecColorSet = new HashSet<>();
+        Map<String, ProductCategory> finalCategoryName2CategoryMap = categoryName2CategoryMap;
+        Map<String, Unit> finalUnitName2UnitMap = unitName2UnitMap;
+        List<Product> saveList = importDataList.stream().map(v -> {
+            if(StringUtils.isBlank(v.getSku())) {
+                throw new ValidationException("SKU不能为空:" + v.getName());
+            }
+            if (duplicateSkuSet.contains(v.getSku())) {
+                throw new ValidationException("SKU重复:" + v.getSku());
+            }
+            duplicateSkuSet.add(v.getSku());
+
+            if (duplicateNameSpecColorSet.contains(buildProductKey(v.getName(), v.getSpec(), v.getColor()))) {
+                throw new ValidationException("商品名称规格型号颜色重复:" + v.getName() + "_" + v.getSpec() + "_" + v.getColor());
+            }
+            duplicateNameSpecColorSet.add(buildProductKey(v.getName(), v.getSpec(), v.getColor()));
+
+
+
+            Product r = new Product();
+            r.setTenantId(tenantId);
+            r.setSku(v.getSku());
+            r.setBarcode("BarCode-" + v.getSku());
+            r.setName(StringUtils.isNotBlank(v.getName()) ? v.getName() : v.getEnglishName());
+            r.setSpec(v.getSpec());
+            r.setCategoryCode(finalCategoryName2CategoryMap.getOrDefault("通用分类", new ProductCategory()).getCategoryCode());
+            r.setUnitCode(finalUnitName2UnitMap.getOrDefault("件", new Unit()).getUnitCode());
+            r.setOutUnitCode(finalUnitName2UnitMap.getOrDefault("箱", new Unit()).getUnitCode());
+            r.setOutUnitPerNum(StringUtils.isNotBlank(v.getOutUnitPerNum()) ? new BigDecimal(v.getOutUnitPerNum()) : BigDecimal.ONE);
+            r.setWeightPerUnit(StringUtils.isNotBlank(v.getWeightPerUnit()) ? new BigDecimal(v.getWeightPerUnit()) : BigDecimal.ONE);
+            r.setColor(v.getColor());
+            r.setMinStock(StringUtils.isNotBlank(v.getMinStock()) ? Long.valueOf(v.getMinStock()) : 100);
+            r.setRemark(v.getRemark());
+            r.setStatus(1);
+            r.setEnglishName(v.getEnglishName());
+            r.setOutUnitHeight(StringUtils.isNotBlank(v.getOutUnitHeight()) ? new BigDecimal(v.getOutUnitHeight()) : BigDecimal.ZERO);
+            r.setOutUnitLength(StringUtils.isNotBlank(v.getOutUnitLength()) ? new BigDecimal(v.getOutUnitLength()) : BigDecimal.ZERO);
+            r.setOutUnitWidth(StringUtils.isNotBlank(v.getOutUnitWidth()) ? new BigDecimal(v.getOutUnitWidth()) : BigDecimal.ZERO);
+            return r;
+        }).collect(Collectors.toList());
+
+        return productService.saveBatch(saveList);
+    }
+
 }
 

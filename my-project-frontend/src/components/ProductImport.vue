@@ -17,7 +17,7 @@
       </template>
       <div class="template-content">
         <p>请下载产品导入模板，按照模板格式填写数据后上传</p>
-        <el-button type="primary" @click="handleDownloadTemplate">
+        <el-button type="primary" @click="handleDownloadTemplate"  :loading="downloadLoading">
           <el-icon><Download /></el-icon>
           下载导入模板
         </el-button>
@@ -179,6 +179,8 @@ import { ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { UploadFilled, Download, InfoFilled, Upload } from '@element-plus/icons-vue';
 import { post } from '@/net';
+import axios from 'axios';
+import { accessHeader } from '@/net'; 
 
 const emit = defineEmits(['success', 'cancel']);
 
@@ -187,12 +189,45 @@ const fileList = ref([]);
 const importResult = ref(null);
 const uploading = ref(false);
 const currentFile = ref(null);
+const downloadLoading = ref(false);
+
 
 // 方法
-const handleDownloadTemplate = () => {
-  ElMessage.info('模板下载功能开发中');
-  // 实际项目中这里应该调用下载接口
-  // window.open('/api/auth/product/import/template', '_blank');
+const handleDownloadTemplate = async () => {
+  downloadLoading.value = true;
+
+  try {
+    const response = await axios.get('/api/auth/product/exportProductCreateExcel', {
+      headers: accessHeader(), // 如果需要认证
+      responseType: 'blob', // ⚠️ 必须加
+    });
+
+    // 创建 blob 对象
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    // 创建 URL 对象
+    const url = window.URL.createObjectURL(blob);
+
+    // 创建 a 标签下载
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '产品导入模版.xlsx'; // 可自定义文件名
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // 释放 URL
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error('下载模板失败', error);
+    ElMessage.error('下载模板失败，请稍后重试');
+  }finally {
+    downloadLoading.value = false;
+  }
+
 };
 
 const beforeUpload = (file) => {
@@ -234,36 +269,24 @@ const handleManualUpload = async () => {
     formData.append('file', currentFile.value);
     
     ElMessage.info('开始导入数据，请稍候...');
-    
-    const result = await post('/api/auth/product/import', formData, {
+    //importProductCreateExcel
+    const result = await post('/api/auth/product/importProductCreateExcel', formData, {
+    //const result = await post('/api/auth/product/import', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     });
     
+    console.log('导入结果:', result);
     // 处理导入结果
-    if (result && result.success) {
+    if (result && result.code ===200) {
       importResult.value = result;
-      ElMessage.success(`导入成功！成功${result.successCount}条，失败${result.errorCount}条`);
-      emit('success');
+      ElMessage.success(`导入成功`);
     } else {
       ElMessage.error(result?.message || '导入失败，请检查数据格式');
     }
   } catch (error) {
-    console.error('导入失败:', error);
-    ElMessage.error('导入失败: ' + (error.message || '未知错误'));
     
-    // 模拟错误结果用于演示
-    importResult.value = {
-      success: false,
-      total: 0,
-      successCount: 0,
-      errorCount: 1,
-      importTime: new Date().toISOString(),
-      errors: [
-        { row: 1, sku: '', message: error.message || '系统错误' }
-      ]
-    };
   } finally {
     uploading.value = false;
   }
