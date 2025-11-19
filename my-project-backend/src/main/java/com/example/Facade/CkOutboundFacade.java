@@ -97,6 +97,7 @@ public class CkOutboundFacade {
                         OutboundOrderItem saveEntity = new OutboundOrderItem();
                         saveEntity.setTenantId(req.getTenantId());
                         saveEntity.setOrderId(outboundOrder.getId());
+                        saveEntity.setBatchNo(v.getBatchNo());
                         saveEntity.setProductId(v.getComponentProductId());
                         saveEntity.setRelationProductId(item.getProductId());
                         //item.setBatchNo(outboundOrder.getRelatedOrderNo());

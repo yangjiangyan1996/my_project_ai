@@ -385,112 +385,110 @@
         </el-table>
 
         <!-- BOM原料分配（仅生产领料显示） -->
-        <div class="bom-section" v-if="formData.orderType === 2 && hasBomData">
-          <div class="section-header">
-            <h3>原料分配</h3>
-            <span class="bom-tip">根据产品BOM自动计算所需原料</span>
-          </div>
-          
-          <div class="bom-content" v-for="(item, itemIndex) in formData.items" :key="itemIndex">
-            <div class="bom-item-header" v-if="getBomData(item.productId)?.length">
-              <h4>{{ item.productName }} ({{ item.quantity || 0 }} {{ item.unit }}) 所需原料:</h4>
-              <div class="allocation-summary">
-                <span v-for="bomItem in getBomData(item.productId)" :key="bomItem.componentProductId" 
-                      class="summary-item" :class="{ 'insufficient': isInsufficient(itemIndex, bomItem) }">
-                  {{ bomItem.componentProductName }}: 
-                  已分配 {{ getAllocatedQuantityForComponent(itemIndex, bomItem.componentProductId) }} / 
-                  总需求 {{ calculateRequiredQuantity(bomItem.quantity, item.quantity) }}
-                  <span v-if="isInsufficient(itemIndex, bomItem)" class="insufficient-tip">
-                    (不足 {{ calculateShortage(itemIndex, bomItem) }})
-                  </span>
-                </span>
+       
+        <!-- BOM原料分配部分 -->
+  <div class="bom-section" v-if="formData.orderType === 2 && hasBomData">
+    <div class="section-header">
+      <h3>原料分配</h3>
+      <span class="bom-tip">根据产品BOM自动计算所需原料</span>
+    </div>
+    
+    <div class="bom-content" v-for="(item, itemIndex) in formData.items" :key="itemIndex">
+      <div class="bom-item-header" v-if="getBomData(item.productId)?.length">
+        <h4>{{ item.productName }} ({{ item.quantity || 0 }} {{ item.unit }}) 所需原料:</h4>
+        <div class="allocation-summary">
+          <span v-for="bomItem in getBomData(item.productId)" :key="bomItem.componentProductId" 
+                class="summary-item" :class="{ 'insufficient': isInsufficient(itemIndex, bomItem) }">
+            {{ bomItem.componentProductName }}: 
+            已分配 {{ getAllocatedQuantityForComponent(itemIndex, bomItem.componentProductId) }} / 
+            总需求 {{ calculateRequiredQuantity(bomItem.quantity, item.quantity) }}
+            <span v-if="isInsufficient(itemIndex, bomItem)" class="insufficient-tip">
+              (不足 {{ calculateShortage(itemIndex, bomItem) }})
+            </span>
+          </span>
+        </div>
+      </div>
+      
+      <el-table
+        :data="getBomData(item.productId)"
+        border
+        class="bom-table"
+        v-if="getBomData(item.productId)?.length"
+      >
+        <el-table-column type="index" label="序号" width="60" align="center" />
+        <el-table-column label="原料信息" min-width="100">
+          <template #default="{ row }">
+            <div>
+              <div>{{ row.componentProductName }}</div>
+              <div class="sku-text">{{ row.componentProductSku }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="规格" width="120">
+          <template #default="{ row }">
+            <span>{{ row.componentProductSpec || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="单位" width="80" align="center">
+          <template #default="{ row }">
+            <span>{{ row.componentProductUnit || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="单件用量" width="100" align="center">
+          <template #default="{ row }">
+            <span>{{ row.quantity }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="总需求量" width="120" align="center">
+          <template #default="{ row }">
+            <span class="required-quantity">{{ calculateRequiredQuantity(row.quantity, item.quantity) }}</span>
+          </template>
+        </el-table-column>
+
+        <!-- 修改原料分配列，显示批次货架信息 -->
+        <el-table-column label="原料分配" min-width="400">
+          <template #default="{ row }">
+            <div class="allocation-container">
+              <!-- 改为批次维度展示 -->
+              <div v-for="batch in getBatchDataForComponent(row.componentProductId)" 
+                  :key="batch.batchNo" 
+                  class="batch-allocation">
+                <div class="batch-info">
+                  <strong>批次 {{ batch.batchNo }}</strong>
+                  <span>总可用: {{ batch.quantity }}</span>
+                </div>
+                <div class="shelf-allocation" v-if="batch.shelfList && batch.shelfList.length > 0">
+                  <div v-for="shelf in batch.shelfList" 
+                      :key="shelf.shelfId" 
+                      class="shelf-item">
+                    <div class="shelf-info">
+                      <span>货架 {{ shelf.shelfName }}</span>
+                      <span>可用: {{ shelf.quantity }}</span>
+                    </div>
+                    <el-input-number
+                      :model-value="getAllocationQuantity(itemIndex, row.componentProductId, batch.batchNo, shelf.shelfId)"
+                      @update:model-value="(value) => updateAllocationQuantity(value, itemIndex, row, batch, shelf)"
+                      :min="0"
+                      :max="getMaxAllocation(itemIndex, row, batch, shelf)"
+                      :precision="4"
+                      :step="1"
+                      controls-position="right"
+                      size="small"
+                      placeholder="使用数量"
+                      class="allocation-input"
+                    />
+                  </div>
+                </div>
+                <div v-else class="no-shelf-allocation">
+                  <span class="no-shelf-text">无货架信息</span>
+                </div>
               </div>
             </div>
-            
-            <el-table
-              :data="getBomData(item.productId)"
-              border
-              class="bom-table"
-              v-if="getBomData(item.productId)?.length"
-            >
-              <el-table-column type="index" label="序号" width="60" align="center" />
-              <el-table-column label="原料信息" min-width="100">
-                <template #default="{ row }">
-                  <div>
-                    <div>{{ row.componentProductName }}</div>
-                    <div class="sku-text">{{ row.componentProductSku }}</div>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column label="规格" width="120">
-                <template #default="{ row }">
-                  <span>{{ row.componentProductSpec || '-' }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column label="单位" width="80" align="center">
-                <template #default="{ row }">
-                  <span>{{ row.componentProductUnit || '-' }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column label="单件用量" width="100" align="center">
-                <template #default="{ row }">
-                  <span>{{ row.quantity }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column label="总需求量" width="120" align="center">
-                <template #default="{ row }">
-                  <span class="required-quantity">{{ calculateRequiredQuantity(row.quantity, item.quantity) }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column label="原料分配" min-width="300">
-                <template #default="{ row }">
-                  <div class="allocation-container">
-                    <div v-for="(warehouse, whIndex) in row.warehouseQuantityList" :key="warehouse.warehouseId" class="warehouse-allocation">
-                      <div class="warehouse-info">
-                        <strong>{{ warehouse.warehouseName }}</strong>
-                        <span>可用: {{ warehouse.warehouseAvailableQuantity }}</span>
-                      </div>
-                      <div class="shelf-allocation" v-if="warehouse.shelfQuantityList">
-                        <div v-for="shelf in warehouse.shelfQuantityList" :key="shelf.shelfId" class="shelf-item">
-                          <div class="shelf-info">
-                            <span>货架 {{ shelf.shelfName }}</span>
-                            <span>可用: {{ shelf.shelfAvailableQuantity }}</span>
-                          </div>
-                          <el-input-number
-                            :model-value="getAllocationQuantity(itemIndex, row.componentProductId, warehouse.warehouseId, shelf.shelfId)"
-                            @update:model-value="(value) => updateAllocationQuantity(value, itemIndex, row, warehouse, shelf)"
-                            :min="0"
-                            :max="getMaxAllocation(itemIndex, row, warehouse, shelf)"
-                            :precision="4"
-                            :step="1"
-                            controls-position="right"
-                            size="small"
-                            placeholder="使用数量"
-                            class="allocation-input"
-                          />
-                        </div>
-                      </div>
-                      <div v-else class="no-shelf-allocation">
-                        <el-input-number
-                          :model-value="getAllocationQuantity(itemIndex, row.componentProductId, warehouse.warehouseId, null)"
-                          @update:model-value="(value) => updateAllocationQuantity(value, itemIndex, row, warehouse, null)"
-                          :min="0"
-                          :max="getMaxAllocation(itemIndex, row, warehouse, null)"
-                          :precision="4"
-                          :step="1"
-                          controls-position="right"
-                          size="small"
-                          placeholder="使用数量"
-                          class="allocation-input"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+  </div>
 
         <!-- 统计信息 -->
         <div class="summary-info" v-if="(formData.orderType === 1 && allInventoryProducts.some(p => p.quantity > 0)) || (formData.orderType !== 1 && formData.items.length > 0)">
@@ -963,11 +961,67 @@ const uploadData = computed(() => {
   };
 });
 
-// 获取产品的BOM数据
+// 修改获取BOM数据的方法，加入批次数据
 const getBomData = (productId) => {
+  // 首先查找产品自身的bomData（从批次接口获取的）
+  const itemWithBomData = formData.items.find(item => item.productId === productId && item.bomData);
+  if (itemWithBomData && itemWithBomData.bomData.length > 0) {
+    return itemWithBomData.bomData;
+  }
+  
+  // 如果没有，再从生产产品列表中查找
   const product = productionProductList.value.find(p => p.id === productId);
   return product?.bomData || [];
 };
+
+
+// 新增：为生产领料加载批次信息的方法
+const loadBatchInfoForProduction = async (productId, index) => {
+  try {
+    const item = formData.items[index];
+    
+    // 首先获取产品的BOM数据
+    const product = productionProductList.value.find(p => p.id === productId);
+    if (!product?.bomData) {
+      item.bomData = [];
+      return;
+    }
+    
+    // 为每个BOM组件加载批次信息
+    const bomDataWithBatches = await Promise.all(
+      product.bomData.map(async (bomItem) => {
+        const batches = await loadBatchInfoForComponent(bomItem.componentProductId);
+        return {
+          ...bomItem,
+          batches: batches || []
+        };
+      })
+    );
+    
+    item.bomData = bomDataWithBatches;
+    console.log('生产领料批次信息加载完成:', item.bomData);
+    
+  } catch (error) {
+    console.error('加载生产领料批次信息失败:', error);
+    formData.items[index].bomData = [];
+  }
+};
+
+
+// 修改：获取原料组件的批次数据
+const getBatchDataForComponent = (componentProductId) => {
+  // 在所有产品的BOM数据中查找该组件的批次信息
+  for (const item of formData.items) {
+    if (item.bomData) {
+      const bomItem = item.bomData.find(b => b.componentProductId === componentProductId);
+      if (bomItem && bomItem.batches) {
+        return bomItem.batches;
+      }
+    }
+  }
+  return [];
+};
+
 
 // 计算总需求量
 const calculateRequiredQuantity = (unitQuantity, productQuantity) => {
@@ -994,14 +1048,14 @@ const totalAmountUsd = computed(() => {
   }
 });
 
-// 获取分配数量 - 修改为从 item.bomAllocations 中获取
-const getAllocationQuantity = (itemIndex, componentProductId, warehouseId, shelfId) => {
+// 修改获取分配数量的方法，加入批次维度
+const getAllocationQuantity = (itemIndex, componentProductId, batchNo, shelfId) => {
   const item = formData.items[itemIndex];
   if (!item.bomAllocations) return 0;
   
   const allocation = item.bomAllocations.find(a => 
     a.componentProductId === componentProductId &&
-    a.warehouseId === warehouseId &&
+    a.batchNo === batchNo &&
     a.shelfId === shelfId
   );
   return allocation ? parseFloat(allocation.quantity) : 0;
@@ -1033,25 +1087,25 @@ const calculateShortage = (itemIndex, bomItem) => {
 };
 
 // 获取最大分配数量（考虑总需求量和已分配数量）
-const getMaxAllocation = (itemIndex, bomRow, warehouse, shelf) => {
+const getMaxAllocation = (itemIndex, bomRow, batch, shelf) => {
   const requiredQuantity = parseFloat(calculateRequiredQuantity(bomRow.quantity, formData.items[itemIndex].quantity));
   const currentAllocated = parseFloat(getAllocatedQuantityForComponent(itemIndex, bomRow.componentProductId));
-  const currentInputValue = getAllocationQuantity(itemIndex, bomRow.componentProductId, warehouse.warehouseId, shelf ? shelf.shelfId : null);
+  const currentInputValue = getAllocationQuantity(itemIndex, bomRow.componentProductId, batch.batchNo, shelf.shelfId);
   
   // 剩余可分配数量 = 总需求量 - (当前已分配总量 - 当前输入框的值)
   const remainingAllocation = requiredQuantity - (currentAllocated - currentInputValue);
   
-  // 物理库存限制
-  const physicalMax = shelf ? 
-    parseFloat(shelf.shelfAvailableQuantity) : 
-    parseFloat(warehouse.warehouseAvailableQuantity);
+  // 物理库存限制 - 使用货架可用数量
+  const physicalMax = parseFloat(shelf.quantity);
   
   // 取两者中的较小值
   return Math.min(remainingAllocation, physicalMax);
 };
 
-// 更新分配数量 - 修改为更新到 item.bomAllocations
-const updateAllocationQuantity = (value, itemIndex, bomRow, warehouse, shelf) => {
+
+
+// 修改更新分配数量的方法，加入批次维度
+const updateAllocationQuantity = (value, itemIndex, bomRow, batch, shelf) => {
   const quantity = parseFloat(value) || 0;
   const item = formData.items[itemIndex];
   
@@ -1062,14 +1116,14 @@ const updateAllocationQuantity = (value, itemIndex, bomRow, warehouse, shelf) =>
   
   const allocationIndex = item.bomAllocations.findIndex(a => 
     a.componentProductId === bomRow.componentProductId &&
-    a.warehouseId === warehouse.warehouseId &&
-    a.shelfId === (shelf ? shelf.shelfId : null)
+    a.batchNo === batch.batchNo &&
+    a.shelfId === shelf.shelfId
   );
 
   // 检查是否超过总需求量
   const requiredQuantity = parseFloat(calculateRequiredQuantity(bomRow.quantity, formData.items[itemIndex].quantity));
   const currentAllocated = parseFloat(getAllocatedQuantityForComponent(itemIndex, bomRow.componentProductId));
-  const currentInputValue = getAllocationQuantity(itemIndex, bomRow.componentProductId, warehouse.warehouseId, shelf ? shelf.shelfId : null);
+  const currentInputValue = getAllocationQuantity(itemIndex, bomRow.componentProductId, batch.batchNo, shelf.shelfId);
   
   const newTotalAllocated = currentAllocated - currentInputValue + quantity;
   
@@ -1086,10 +1140,9 @@ const updateAllocationQuantity = (value, itemIndex, bomRow, warehouse, shelf) =>
           componentProductId: bomRow.componentProductId,
           componentProductName: bomRow.componentProductName,
           componentProductSku: bomRow.componentProductSku,
-          warehouseId: warehouse.warehouseId,
-          warehouseName: warehouse.warehouseName,
-          shelfId: shelf ? shelf.shelfId : null,
-          shelfName: shelf ? shelf.shelfName : null,
+          batchNo: batch.batchNo,
+          shelfId: shelf.shelfId,
+          shelfName: shelf.shelfName,
           quantity: adjustedQuantity
         });
       }
@@ -1107,10 +1160,9 @@ const updateAllocationQuantity = (value, itemIndex, bomRow, warehouse, shelf) =>
         componentProductId: bomRow.componentProductId,
         componentProductName: bomRow.componentProductName,
         componentProductSku: bomRow.componentProductSku,
-        warehouseId: warehouse.warehouseId,
-        warehouseName: warehouse.warehouseName,
-        shelfId: shelf ? shelf.shelfId : null,
-        shelfName: shelf ? shelf.shelfName : null,
+        batchNo: batch.batchNo,
+        shelfId: shelf.shelfId,
+        shelfName: shelf.shelfName,
         quantity: quantity
       });
     }
@@ -1364,6 +1416,7 @@ const handleRemoveProduct = (index) => {
   formData.items.splice(index, 1);
 };
 
+
 const handleProductChange = async (productId, index) => {
   let product;
   if (formData.orderType === 1) {
@@ -1381,19 +1434,21 @@ const handleProductChange = async (productId, index) => {
     item.unit = product.unit;
     
     if (formData.orderType === 1) {
-      // 统一从库存映射中获取库存数量
+      // 销售出库逻辑保持不变
       item.currentStock = productStockMap.value[productId] || 0;
       item.quantity = item.quantity || 1;
       item.price = item.price || 0;
       item.batchAllocations = [];
       
-      // 加载批次信息
       await loadBatchInfo(productId, formData.warehouseId, index);
     } else {
+      // 生产领料：初始化数据
       item.quantity = item.quantity || 1;
       item.price = item.price || 0;
-      // 生产领料：初始化 bomAllocations
       item.bomAllocations = item.bomAllocations || [];
+      
+      // 新增：为生产领料加载批次信息
+      await loadBatchInfoForProduction(productId, index);
     }
   }
 };
@@ -1754,6 +1809,23 @@ const openBatchDialogForProduct = async (row) => {
   updateBatchDialogCalculations();
   batchDialog.visible = true;
 };
+
+
+const loadBatchInfoForComponent = async (componentProductId) => {
+  try {
+    const res = await get(`/api/auth/inventory/batches?productId=${componentProductId}&warehouseId=${formData.warehouseId}`);
+    console.log('原料批次信息响应:', res);
+    
+    if (res && Array.isArray(res)) {
+      return res;
+    }
+    return [];
+  } catch (error) {
+    console.error('加载原料批次信息失败:', error);
+    return [];
+  }
+};
+
 
 const loadBatchInfoForProduct = async (productId, warehouseId, row) => {
   try {
@@ -3049,5 +3121,64 @@ watch(
     flex-direction: row;
     justify-content: space-between;
   }
+}
+
+/* 添加批次分配样式 */
+.batch-allocation {
+  margin-bottom: 12px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+}
+
+.batch-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px dashed #dcdfe6;
+}
+
+.batch-info strong {
+  color: #409eff;
+}
+
+.shelf-allocation {
+  margin-left: 8px;
+}
+
+.shelf-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  background-color: white;
+  border-radius: 2px;
+  gap: 12px;
+}
+
+.shelf-info {
+  display: flex;
+  justify-content: space-between;
+  flex: 6;
+  font-size: 12px;
+}
+
+.allocation-input {
+  flex: 4;
+  min-width: 100px;
+}
+
+.no-shelf-allocation {
+  text-align: center;
+  padding: 8px;
+}
+
+.no-shelf-text {
+  color: #909399;
+  font-size: 12px;
 }
 </style>

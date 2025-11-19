@@ -144,7 +144,7 @@ public class CkInboundFacade {
                 throw new ValidationException("第" + (i + 1) + "行入库数量必须大于0");
             }
             if (item.getPriceUnit() == null || item.getPriceUnit().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new ValidationException("第" + (i + 1) + "行入库单价必须大于0");
+//                throw new ValidationException("第" + (i + 1) + "行入库单价必须大于0");
             }
             if(StringUtils.isBlank(item.getBatchNo())) {
                 throw new ValidationException("第" + (i + 1) + "行批次号不能为空");

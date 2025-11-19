@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 @Data
 public class BomAllocationCreateReq {
     //items集合中的索引
+    String  batchNo;
     Integer itemIndex;
     Long componentProductId;
     String componentProductName;
