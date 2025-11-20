@@ -8,6 +8,7 @@ import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.*;
+import com.example.entity.cangku.resp.excel.ProductBomExcelModel;
 import com.example.entity.cangku.resp.excel.ProductCreateExportModel;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
@@ -54,7 +55,7 @@ public class ProductController {
             log.info("导入结果: {}", result);
             log.info("=== 导入产品接口结束 ===");
             return RespBean.success(result);
-        }catch (ValidationException e) {
+        } catch (ValidationException e) {
             log.error("ProductController#import", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
@@ -67,14 +68,14 @@ public class ProductController {
     @PostMapping("/delete")
     public RespBean<Boolean> delete(@RequestBody ProductDeleteReq req) {
         try {
-            Long userId  = UserUtil.getCurrentUser().getId();
+            Long userId = UserUtil.getCurrentUser().getId();
             Long tenantId = UserUtil.getCurrentUser().getTenantId();
 
             req.setUserId(userId);
             req.setTenantId(tenantId);
             Boolean result = CKProductFacade.delete(req);
             return RespBean.success(result);
-        }catch (ValidationException e) {
+        } catch (ValidationException e) {
             log.error("ProductController#delete,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
@@ -86,14 +87,14 @@ public class ProductController {
     @PostMapping("/updateStatus")
     public RespBean<Boolean> updateStatus(@RequestBody ProductUpdateStatusReq req) {
         try {
-            Long userId  = UserUtil.getCurrentUser().getId();
+            Long userId = UserUtil.getCurrentUser().getId();
             Long tenantId = UserUtil.getCurrentUser().getTenantId();
 
             req.setUserId(userId);
             req.setTenantId(tenantId);
             Boolean result = CKProductFacade.updateStatus(req);
             return RespBean.success(result);
-        }catch (ValidationException e) {
+        } catch (ValidationException e) {
             log.error("ProductController#updateStatus,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
@@ -130,10 +131,10 @@ public class ProductController {
             Boolean result = CKProductFacade.productCreate(req);
             return RespBean.success(result);
         } catch (ValidationException e) {
-            log.error("ProductController#categoryCreate,req:{}", JSON.toJSONString( req), e);
+            log.error("ProductController#categoryCreate,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("ProductController#categoryCreate,req:{}", JSON.toJSONString( req), e);
+            log.error("ProductController#categoryCreate,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -141,14 +142,14 @@ public class ProductController {
     @PostMapping("/update")
     public RespBean<Boolean> update(@RequestBody ProductCreateReq req) {
         try {
-            Long userId  = UserUtil.getCurrentUser().getId();
+            Long userId = UserUtil.getCurrentUser().getId();
             Long tenantId = UserUtil.getCurrentUser().getTenantId();
 
             req.setUserId(userId);
             req.setTenantId(tenantId);
             Boolean result = CKProductFacade.update(req);
             return RespBean.success(result);
-        }catch (ValidationException e) {
+        } catch (ValidationException e) {
             log.error("ProductController#update,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
@@ -241,13 +242,13 @@ public class ProductController {
     public RespBean<List<ProductSimpleListResp>> styleList(@RequestParam(value = "keyword", required = false) String keyword) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            List<ProductSimpleListResp> productPageListResps = CKProductFacade.productSimpleList(user,keyword);
+            List<ProductSimpleListResp> productPageListResps = CKProductFacade.productSimpleList(user, keyword);
             return RespBean.success(productPageListResps);
         } catch (ValidationException e) {
             log.error("ProductController#productSimpleList,e:{}", keyword, e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("ProductController#productSimpleList,e:{}", keyword,e);
+            log.error("ProductController#productSimpleList,e:{}", keyword, e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -311,7 +312,6 @@ public class ProductController {
     }
 
 
-
     @PostMapping("/importProductCreateExcel")
     public RespBean<Boolean> importProductCreateExcel(@RequestParam("file") MultipartFile file) {
         try {
@@ -323,11 +323,59 @@ public class ProductController {
             Boolean result = CKProductFacade.importOutboundSaleQuantity(file, tenantId, userId);
             log.info("=== 导入产品创建接口结束 ===导入结果: {}", result);
             return RespBean.success(result);
-        }catch (ValidationException e) {
+        } catch (ValidationException e) {
             log.error("ProjectController#importProductCreateExcel", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("ProjectController#importProductCreateExcel,", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+    @GetMapping("/bom/exportBomExcel")
+    public void exportBomExcel(HttpServletResponse response) throws IOException {
+        Long tenantId = UserUtil.getCurrentUser().getTenantId();
+        // 设置响应头
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("utf-8");
+
+        // 文件名
+        String fileName = URLEncoder.encode("成品原材料导入模板", "UTF-8").replaceAll("\\+", "%20");
+        response.setHeader("Content-Disposition", "attachment;filename=" + fileName + ".xlsx");
+
+        // 准备数据，这里示例用空数据，如果有实际数据可以填充
+        // 如果不想预填充测试数据，可传空列表 data = new ArrayList<>();
+        List<ProductBomExcelModel> dataList = new ArrayList<>();
+
+        // EasyExcel 写入
+        EasyExcel.write(response.getOutputStream(), ProductBomExcelModel.class)
+                .sheet("成品原材料导入模板")
+                .doWrite(dataList);
+    }
+
+
+    @PostMapping("/bom/importBomExcel")
+    public RespBean<Boolean> importBomExcel(@RequestParam("file") MultipartFile file, @RequestParam("productId") Long productId) {
+        try {
+            log.info("=== 导入成品原材料导入模板开始 ===");
+            log.info("接收到文件: {}", file.getOriginalFilename());
+            log.info("文件大小: {} bytes", file.getSize());
+            log.info("文件类型: {}", file.getContentType());
+
+            Long userId = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            log.info("用户ID: {}, 租户ID: {}", userId, tenantId);
+
+            Boolean result = CKProductFacade.importBomExcel(file, tenantId, userId, productId);
+            log.info("导入结果: {}", result);
+            log.info("=== 导入sku接口结束 ===");
+            return RespBean.success(true);
+        } catch (ValidationException e) {
+            log.error("ProductController#importBomExcel, req:{}", productId, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#importBomExcel,req:{}", productId, e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

@@ -231,7 +231,7 @@
               <span>{{ formatTime(row.createdAt) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="180" fixed="right" align="center">
+          <el-table-column label="操作" width="280" fixed="right" align="center">
             <template #default="{ row }">
               <div class="action-buttons">
                 <el-button
@@ -249,6 +249,15 @@
                   @click="handleEdit(row)"
                 >
                   编辑
+                </el-button>
+                <!-- 新增导入成品原材料按钮 -->
+                <el-button
+                  type="success"
+                  link
+                  size="small"
+                  @click="handleImportBom(row)"
+                >
+                  导入原材料
                 </el-button>
                 <el-button
                   :type="row.status === 1 ? 'danger' : 'success'"
@@ -342,6 +351,123 @@
         @cancel="importDialogVisible = false"
       />
     </el-dialog>
+
+    <!-- 导入成品原材料对话框 -->
+    <el-dialog
+      v-model="importBomDialogVisible"
+      :title="`导入原材料 - ${currentProduct?.name}`"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <div class="import-bom-dialog">
+        <el-steps :active="importBomStep" align-center class="import-steps">
+          <el-step title="下载模板" />
+          <el-step title="上传文件" />
+          <el-step title="导入结果" />
+        </el-steps>
+
+        <!-- 步骤1：下载模板 -->
+        <div v-if="importBomStep === 0" class="step-content">
+          <div class="step-description">
+            <p>请先下载导入模板，按照模板格式填写原材料数据</p>
+          </div>
+          <div class="download-section">
+            <el-button 
+              type="primary" 
+              @click="downloadBomTemplate"
+              :loading="downloadLoading"
+            >
+              <el-icon><Download /></el-icon>
+              下载导入模板
+            </el-button>
+          </div>
+        </div>
+
+        <!-- 步骤2：上传文件 -->
+        <div v-if="importBomStep === 1" class="step-content">
+          <div class="step-description">
+            <p>请选择已填写好的Excel文件进行导入</p>
+          </div>
+          <div class="upload-section">
+            <el-upload
+              ref="bomUploadRef"
+              class="upload-demo"
+              :auto-upload="false"
+              :show-file-list="true"
+              :on-change="handleBomFileChange"
+              accept=".xlsx,.xls"
+            >
+              <template #trigger>
+                <el-button type="primary">选择文件</el-button>
+              </template>
+            </el-upload>
+            <div class="upload-tips">
+              <p>支持 .xlsx, .xls 格式文件，文件大小不超过10MB</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 步骤3：导入结果 -->
+        <div v-if="importBomStep === 2" class="step-content">
+          <div class="import-result">
+            <el-result
+              v-if="importResult.success"
+              icon="success"
+              :title="importResult.title"
+              :sub-title="importResult.message"
+            >
+              <template #extra>
+                <el-button type="primary" @click="handleImportBomSuccess">完成</el-button>
+              </template>
+            </el-result>
+            <el-result
+              v-else
+              icon="error"
+              :title="importResult.title"
+              :sub-title="importResult.message"
+            >
+              <template #extra>
+                <el-button @click="importBomStep = 1">重新上传</el-button>
+                <el-button type="primary" @click="handleImportBomSuccess">关闭</el-button>
+              </template>
+            </el-result>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button 
+            v-if="importBomStep > 0 && importBomStep < 2" 
+            @click="importBomStep--"
+          >
+            上一步
+          </el-button>
+          <el-button 
+            v-if="importBomStep === 0" 
+            type="primary" 
+            @click="importBomStep++"
+          >
+            下一步
+          </el-button>
+          <el-button 
+            v-if="importBomStep === 1" 
+            type="primary" 
+            @click="handleBomImportSubmit"
+            :loading="importLoading"
+            :disabled="!currentBomFile"
+          >
+            开始导入
+          </el-button>
+          <el-button 
+            v-if="importBomStep === 2" 
+            @click="importBomDialogVisible = false"
+          >
+            关闭
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -356,6 +482,8 @@ import ProductForm from '@/components/ProductForm.vue';
 import ProductDetail from '@/components/ProductDetail.vue';
 import ProductInventory from '@/components/ProductInventory.vue';
 import ProductImport from '@/components/ProductImport.vue';
+import axios from 'axios';
+import { accessHeader } from '@/net'; 
 
 const loading = ref(false);
 const editDialogVisible = ref(false);
@@ -364,6 +492,14 @@ const inventoryDialogVisible = ref(false);
 const importDialogVisible = ref(false);
 const isEdit = ref(false);
 const currentProduct = ref(null);
+
+// 导入成品原材料弹窗
+const importBomDialogVisible = ref(false);
+const importBomStep = ref(0);
+const downloadLoading = ref(false);
+const importLoading = ref(false);
+const currentBomFile = ref(null);
+const bomUploadRef = ref(null);
 
 // 筛选表单
 const filterForm = reactive({
@@ -400,6 +536,107 @@ const categoryProps = {
   label: 'categoryName',
   children: 'children',
   checkStrictly: true
+};
+
+// 导入结果
+const importResult = reactive({
+  success: false,
+  title: '',
+  message: ''
+});
+
+
+// 导入成品原材料方法
+const handleImportBom = (product) => {
+  currentProduct.value = product;
+  importBomDialogVisible.value = true;
+  importBomStep.value = 0;
+  currentBomFile.value = null;
+  if (bomUploadRef.value) {
+    bomUploadRef.value.clearFiles();
+  }
+};
+
+// 下载BOM模板
+const downloadBomTemplate = async () => {
+  downloadLoading.value = true;
+  try {
+    const response = await axios.get('/api/auth/product/bom/exportBomExcel', {
+      headers: accessHeader(),
+      responseType: 'blob',
+    });
+
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '成品原材料导入模板.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    ElMessage.success('模板下载成功');
+  } catch (error) {
+    console.error('下载模板失败', error);
+    ElMessage.error('下载模板失败，请稍后重试');
+  } finally {
+    downloadLoading.value = false;
+  }
+};
+
+// 处理文件选择
+const handleBomFileChange = (file) => {
+  currentBomFile.value = file;
+};
+
+// 提交BOM导入
+const handleBomImportSubmit = async () => {
+  if (!currentBomFile.value) {
+    ElMessage.warning('请选择要上传的文件');
+    return;
+  }
+
+  importLoading.value = true;
+  try {
+    const formData = new FormData();
+    const realFile = currentBomFile.value.raw || currentBomFile.value;
+    formData.append('file', realFile);
+    // 传入当前产品的ID
+    formData.append('productId', currentProduct.value.id);
+
+    ElMessage.info('开始导入原材料数据，请稍候...');
+
+    const result = await post('/api/auth/product/bom/importBomExcel', formData);
+    console.log('BOM导入响应:', result);
+
+    if (result) {
+      importResult.success = true;
+      importResult.title = '导入成功';
+      importResult.message = `成功导入原材料数据`;
+      importBomStep.value = 2;
+    } else {
+      throw new Error('导入失败');
+    }
+  } catch (error) {
+    console.error('BOM导入失败:', error);
+    importResult.success = false;
+    importResult.title = '导入失败';
+    importResult.message = error.response?.data?.message || '导入失败，请检查数据格式';
+    importBomStep.value = 2;
+  } finally {
+    importLoading.value = false;
+  }
+};
+
+// 处理导入成功
+const handleImportBomSuccess = () => {
+  importBomDialogVisible.value = false;
+  // 可以刷新产品列表或BOM数据
+  loadProductList();
 };
 
 // 计算属性
@@ -951,5 +1188,107 @@ onMounted(() => {
 .product-spec, .product-color {
   font-size: 12px;
   color: #606266;
+}
+
+/* 新增导入BOM对话框样式 */
+.import-bom-dialog {
+  padding: 20px 0;
+}
+
+.import-steps {
+  margin-bottom: 30px;
+}
+
+.step-content {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.step-description {
+  margin-bottom: 20px;
+  color: #606266;
+}
+
+.download-section, .upload-section {
+  margin: 20px 0;
+}
+
+.upload-tips {
+  margin-top: 10px;
+  color: #909399;
+  font-size: 12px;
+}
+
+.import-result {
+  padding: 20px 0;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 调整操作按钮间距 */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-buttons .el-button {
+  margin: 2px;
+}
+
+/* 新增导入BOM对话框样式 */
+.import-bom-dialog {
+  padding: 20px 0;
+}
+
+.import-steps {
+  margin-bottom: 30px;
+}
+
+.step-content {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.step-description {
+  margin-bottom: 20px;
+  color: #606266;
+}
+
+.download-section, .upload-section {
+  margin: 20px 0;
+}
+
+.upload-tips {
+  margin-top: 10px;
+  color: #909399;
+  font-size: 12px;
+}
+
+.import-result {
+  padding: 20px 0;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 调整操作按钮间距 */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-buttons .el-button {
+  margin: 2px;
 }
 </style>

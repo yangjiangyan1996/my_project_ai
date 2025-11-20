@@ -4,12 +4,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.*;
+import com.example.entity.cangku.req.excel.ProductBomExcelImportModel;
 import com.example.entity.cangku.req.excel.ProductCreateImportModel;
 import com.example.entity.cangku.resp.*;
 import com.example.service.*;
-import com.example.utils.ExcelUtils;
-import com.example.utils.MoneyUtils;
-import com.example.utils.OrderNumberGenerator;
+import com.example.utils.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -1466,6 +1465,140 @@ public class CKProductFacade {
                     return resp;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean importBomExcel(MultipartFile file, Long tenantId, Long userId, Long productId) {
+        Product product = productService.selectById(tenantId, productId);
+        if (product == null) {
+            throw new ValidationException("成品不存在");
+        }
+        // 1. 读取Excel数据
+        List<ProductBomExcelImportModel> importDataList = ExcelUtils.readExcel(file, ProductBomExcelImportModel.class);
+        if (CollectionUtils.isEmpty(importDataList) || importDataList.size() < 1) {
+            throw new ValidationException("Excel文件数据不足");
+        }
+        //获取或者保存分类
+        ProductCategory commonBom = productCategoryService.selectByTenantIdAndCode(tenantId, "common_bom");
+        if (commonBom == null) {
+            commonBom = new ProductCategory();
+            commonBom.setTenantId(tenantId);
+            commonBom.setCategoryCode("common_bom");
+            commonBom.setCategoryName("通用原料分类");
+            commonBom.setCreatedAt(new Date());
+            commonBom.setCreatedBy(userId);
+            commonBom.setModifiedAt(new Date());
+            commonBom.setModifiedBy(userId);
+            productCategoryService.save(commonBom);
+        }
+
+        Map<String, Unit> unitName2UnitBeforSaveMap = new HashMap<>();
+        List<Unit> unitsBeforSave = unitService.selectByTenantId(tenantId, 1);
+        if (!CollectionUtils.isEmpty( unitsBeforSave)) {
+            unitName2UnitBeforSaveMap = unitsBeforSave.stream().collect(Collectors.toMap(Unit::getUnitName, v -> v));
+        }
+
+        //先保存单位
+        Map<String, Unit> finalUnitName2UnitMap1 = unitName2UnitBeforSaveMap;
+        List<String> unitNameNeedCreate = importDataList.stream()
+                .filter(v-> !finalUnitName2UnitMap1.containsKey(v.getUnitName()))
+                .map(v -> v.getUnitName()).distinct().collect(Collectors.toList());
+
+        List<Unit> unitCreateList = unitNameNeedCreate.stream().map(v -> {
+            Unit unit = new Unit();
+            unit.setTenantId(tenantId);
+            unit.setUnitCode(ChineseUtils.chineseToPinyin(v));
+            unit.setUnitName(v);
+            unit.setCreatedAt(new Date());
+            unit.setCreatedBy(userId);
+            unit.setModifiedAt(new Date());
+            unit.setModifiedBy(userId);
+            return unit;
+        }).collect(Collectors.toList());
+        unitService.saveBatch(unitCreateList);
+
+        List<Unit> unitsAfterCreate = unitService.selectByTenantId(tenantId, 1);
+        Map<String, Unit> unitName2UnitMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty( unitsAfterCreate)) {
+            unitName2UnitMap = unitsAfterCreate.stream().collect(Collectors.toMap(Unit::getUnitName, v -> v));
+        }
+
+
+        //先保存不存在的原料
+        List<Product> products = productService.listWareHouseEnable(tenantId);
+        Map<String, Product>  productNameSpecColorExist2InfoMap = products.stream().collect(Collectors.toMap(v -> buildProductKey(v.getName(), v.getSpec(), v.getColor()), v -> v));
+        if (!CollectionUtils.isEmpty( products)) {
+            productNameSpecColorExist2InfoMap = products.stream().collect(Collectors.toMap(v -> buildProductKey(v.getName(), v.getSpec(), v.getColor()), v -> v));
+        }
+        ProductCategory finalCommonBom = commonBom;
+        Map<String, Unit> finalUnitName2UnitMap = unitName2UnitMap;
+        List< Product> pbomList = new ArrayList<>();
+        for (ProductBomExcelImportModel v : importDataList) {
+            if (productNameSpecColorExist2InfoMap.containsKey(buildProductKey(v.getName(), v.getSpec(), v.getColor()))) {
+                continue;
+            }
+            Product pBom = new Product();
+            pBom.setTenantId(tenantId);
+            pBom.setSku(StringUtils.isNotBlank(v.getSku()) ? v.getSku() : generateSmartSku(v.getName(), v.getColor(), v.getSpec()));
+            pBom.setBarcode("barCode-" + generateSmartSku(v.getName(), v.getColor(), v.getSpec()));
+            pBom.setName(v.getName());
+            pBom.setSpec(v.getSpec());
+            pBom.setColor(v.getColor());
+            pBom.setCategoryCode(finalCommonBom.getCategoryCode());
+            pBom.setUnitCode(finalUnitName2UnitMap.getOrDefault(v.getUnitName(), new Unit()).getUnitCode());
+            pBom.setWeightPerUnit(StringUtils.isNotBlank(v.getWeightPerUnit()) ? new BigDecimal(v.getWeightPerUnit()) : BigDecimal.ZERO);
+            pBom.setMinStock(StringUtils.isNotBlank(v.getMinStock()) ?
+                    new BigDecimal(v.getMinStock()).longValue() : 100L);
+            pBom.setRemark(v.getRemark());
+            pBom.setStatus(1);
+            pBom.setCreatedAt(new Date());
+            pBom.setCreatedBy(userId);
+            pBom.setModifiedAt(new Date());
+            pBom.setModifiedBy(userId);
+            pbomList.add(pBom);
+        }
+        productService.saveBatch(pbomList);
+
+        //创建 bom 表数据
+        ProductBom pb = new ProductBom();
+        pb.setTenantId(tenantId);
+        pb.setProductId(productId);
+        pb.setBomCode(product.getSku() + "_BOM");
+        pb.setVersion("V1.0");
+        pb.setStatus(1);
+        boolean save = productBomService.save(pb);
+        if (!save) {
+            throw new ValidationException("保存BOM数据失败");
+        }
+
+        List<Product> productsAfterCreate = productService.listWareHouseEnable(tenantId);
+        Map<String, Product> productNameSpecColor2InfoMap = productsAfterCreate.stream().collect(Collectors.toMap(v -> buildProductKey(v.getName(), v.getSpec(), v.getColor()), v -> v));
+        // 创建bomdetail 数据
+        List<ProductBomDetail> collect = importDataList.stream().map(v->{
+            ProductBomDetail detail = new ProductBomDetail();
+            detail.setTenantId(tenantId);
+            detail.setBomId(pb.getId());
+            if (!productNameSpecColor2InfoMap.containsKey(buildProductKey(v.getName(), v.getSpec(), v.getColor()))){
+                throw new ValidationException("未找到对应的原料");
+            } else{
+                detail.setComponentProductId(productNameSpecColor2InfoMap.get(buildProductKey(v.getName(), v.getSpec(), v.getColor())).getId());
+            }
+            if (StringUtils.isBlank(v.getQuantity())) {
+                throw new ValidationException("数量不能为空");
+            } else {
+                detail.setQuantity(new BigDecimal(v.getQuantity()));
+            }
+            detail.setLossRate(StringUtils.isBlank(v.getLossRate()) ? BigDecimal.ZERO : new BigDecimal(NumUtils.parsePercentStrict(v.getLossRate())));
+            detail.setRemark(v.getRemark());
+            detail.setType(StringUtils.isBlank(v.getTypeName()) ? 2 : v.getTypeName().contains("辅") ? 2 : 1);
+            detail.setCreatedAt(new Date());
+            detail.setCreatedBy(userId);
+            detail.setModifiedAt(new Date());
+            detail.setModifiedBy(userId);
+            return  detail;
+        }).collect(Collectors.toList());
+        
+        return productBomDetailService.saveBatch(collect);
     }
 
     /**
