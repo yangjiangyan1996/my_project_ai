@@ -674,6 +674,7 @@ public class CkInboundFacade {
         }
 
         // 校验明细数据
+        BigDecimal shelfQuantity = BigDecimal.ZERO;
         for (int i = 0; i < req.getItems().size(); i++) {
             InboundCreateReq.InboundDetailCreateReq item = req.getItems().get(i);
             if (item.getProductId() == null) {
@@ -682,6 +683,14 @@ public class CkInboundFacade {
             if (item.getActualQuantity() <= 0) {
                 throw new ValidationException("第" + (i + 1) + "行入库数量必须大于0");
             }
+            //求 item中getQuantity的和
+            for (InboundCreateReq.ShelfDetailCreateReq s : item.getShelfAllocations()) {
+                shelfQuantity = shelfQuantity.add(new BigDecimal(s.getQuantity()));
+            }
+        }
+
+        if (shelfQuantity.compareTo(BigDecimal.valueOf(req.getTotalQuantity())) != 0) {
+            throw new ValidationException("货架分配数量与入库数量不一致");
         }
     }
 

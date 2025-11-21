@@ -46,6 +46,7 @@ public class CkInboundOrderServiceImpl extends ServiceImpl<CkInboundOrderMapper,
                         .ge(StringUtils.isNotBlank(req.getStartDate()), "created_at", req.getStartDate())
                         .le(StringUtils.isNotBlank(req.getEndDate()), "created_at", req.getEndDate())
                         .like(StringUtils.isNotBlank(req.getOrderNo()), "order_no", req.getOrderNo())
+                        .like(StringUtils.isNotBlank(req.getRelatedOrderNo()), "order_no", req.getOrderNo())
                         .eq(req.getOrderType() !=null , "order_type", req.getOrderType())
                         .like(req.getWarehouseId() != null, "warehouse_id", req.getWarehouseId())
                         .like(req.getSupplierId() != null, "supplier_id", req.getSupplierId())

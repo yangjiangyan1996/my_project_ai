@@ -270,7 +270,60 @@ const router = createRouter({
             name: 'ckUser',
             component: () => import('@/views/ck/CkUser.vue'),
             meta: { requiresAuth: false }
-        },       
+        },     
+        
+        // 采购入库
+        {
+            path: '/index/ckInboundPurchase',
+            name: 'ckInboundPurchase',
+            component: () => import('@/views/ck/inbound/CkInboundPurchase.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckInboundPurchaseEdit/:id',
+            name: 'ckInboundPurchaseEdit',
+            component: () => import('@/views/ck/inbound/CkInboundPurchase.vue'),
+            meta: { requiresAuth: false }
+        },
+        // 生产入库
+        {
+            path: '/index/ckInboundProduction',
+            name: 'ckInboundProduction',
+            component: () => import('@/views/ck/inbound/CkInboundProduction.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckInboundProductionEdit/:id',
+            name: 'ckInboundProductionEdit',
+            component: () => import('@/views/ck/inbound/CkInboundProduction.vue'),
+            meta: { requiresAuth: false }
+        },
+        // 退货入库
+        {
+            path: '/index/ckInboundReturn',
+            name: 'ckInboundReturn',
+            component: () => import('@/views/ck/inbound/CkInboundReturn.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckInboundReturnEdit/:id',
+            name: 'ckInboundReturnEdit',
+            component: () => import('@/views/ck/inbound/CkInboundReturn.vue'),
+            meta: { requiresAuth: false }
+        },
+        // 调拨入库
+        {
+            path: '/index/ckInboundTransfer',
+            name: 'ckInboundTransfer',
+            component: () => import('@/views/ck/inbound/CkInboundTransfer.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckInboundTransferEdit/:id',
+            name: 'ckInboundTransferEdit',
+            component: () => import('@/views/ck/inbound/CkInboundTransfer.vue'),
+            meta: { requiresAuth: false }
+        },
         
     ]
 })

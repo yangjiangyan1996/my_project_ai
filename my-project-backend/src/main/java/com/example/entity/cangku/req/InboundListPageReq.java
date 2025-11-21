@@ -13,6 +13,7 @@ import lombok.Data;
 @Data
 public class InboundListPageReq extends PageReq {
     String startDate;
+    String relatedOrderNo;
     String endDate;
     String orderNo;
     Integer orderType;

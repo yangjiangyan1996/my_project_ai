@@ -5,13 +5,21 @@
         <div class="card-header">
           <span class="card-title">入库管理</span>
           <div class="header-actions">
-            <el-button 
-              type="primary" 
-              @click="handleCreate"
-            >
-              <el-icon><Plus /></el-icon>
-              新建入库单
-            </el-button>
+            <el-dropdown @command="handleCreate" trigger="click">
+              <el-button type="primary">
+                <el-icon><Plus /></el-icon>
+                新建入库单
+                <el-icon class="el-icon--right"><arrow-down /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="purchase">采购入库</el-dropdown-item>
+                  <el-dropdown-item command="production">生产入库</el-dropdown-item>
+                  <el-dropdown-item command="return">退货入库</el-dropdown-item>
+                  <el-dropdown-item command="transfer">调拨入库</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <el-button 
               @click="refreshList"
               :loading="loading"
@@ -467,6 +475,30 @@ const loading = ref(false);
 const detailDialogVisible = ref(false);
 const currentInbound = ref(null);
 
+// 添加入库类型映射
+const inboundTypeMap = {
+  1: 'purchase',
+  2: 'production', 
+  3: 'return',
+  4: 'transfer'
+};
+
+
+// 修改新建处理方法
+const handleCreate = (command) => {
+  const routeMap = {
+    'purchase': '/index/ckInboundPurchase',
+    'production': '/index/ckInboundProduction',
+    'return': '/index/ckInboundReturn',
+    'transfer': '/index/ckInboundTransfer'
+  };
+  
+  const targetRoute = routeMap[command];
+  if (targetRoute) {
+    router.push(targetRoute);
+  }
+};
+
 // 筛选表单
 const filterForm = reactive({
   relatedOrderNo: '',
@@ -680,34 +712,31 @@ const handleCurrentChange = (page) => {
   loadInboundList();
 };
 
-const handleCreate = () => {
-  router.push('/index/ckInboundCreate');
-};
+// const handleCreate = () => {
+//   router.push('/index/ckInboundCreate');
+// };
 
-const handleView = async (inbound) => {
-  loading.value = true;
-  detailDialogVisible.value = true;
-  try {
-    const detail = await loadInboundDetail(inbound.id);
-    if (detail) {
-      currentInbound.value = detail;
-      ElMessage.success('详情加载成功');
-    } else {
-      ElMessage.error('获取入库单详情失败');
-      detailDialogVisible.value = false;
-    }
-  } catch (error) {
-    ElMessage.error('获取入库单详情失败');
-    detailDialogVisible.value = false;
-  } finally {
-    loading.value = false;
+// 修改查看和编辑方法
+const handleView = (inbound) => {
+  console.log("查看",inbound);
+  const typeKey = inboundTypeMap[inbound.orderType];
+  if (typeKey) {
+    router.push(`/index/ckInbound${typeKey.charAt(0).toUpperCase() + typeKey.slice(1)}Edit/${inbound.id}`);
+  } else {
+    ElMessage.error('未知的入库类型');
   }
 };
 
 const handleEdit = (inbound) => {
-  router.push(`/index/ckInboundCreate/${inbound.id}`);
+  console.log("编辑",inbound);
+  const typeKey = inboundTypeMap[inbound.orderType];
+  console.log("typeKey",typeKey.charAt(0).toUpperCase() + typeKey.slice(1) +"Edit");
+  if (typeKey) {
+    router.push(`/index/ckInbound${typeKey.charAt(0).toUpperCase() + typeKey.slice(1)}Edit/${inbound.id}`);
+  } else {
+    ElMessage.error('未知的入库类型');
+  }
 };
-
 const handleSubmit = async (inbound) => {
   try {
     await ElMessageBox.confirm(
