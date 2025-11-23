@@ -313,18 +313,7 @@
                 <span class="value">{{ totalQuantity }} 个</span>
               </div>
             </el-col>
-            <el-col :span="4">
-              <div class="summary-item">
-                <span class="label">总金额：</span>
-                <span class="value">¥ {{ totalAmount.toFixed(2) }}</span>
-              </div>
-            </el-col>
-            <el-col :span="4">
-              <div class="summary-item">
-                <span class="label">USD总额：</span>
-                <span class="value">$ {{ totalAmountUsd.toFixed(2) }}</span>
-              </div>
-            </el-col>
+            
             <el-col :span="4">
               <div class="summary-item">
                 <span class="label">库存状态：</span>
@@ -1035,7 +1024,7 @@ const handleSaveDraft = async () => {
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新草稿成功' : '保存草稿成功');
-      router.push('/index/productionPickingManage');
+      router.push('/index/CkOutboundManage/');
     }
   } catch (error) {
     ElMessage.error(isEditMode.value ? '更新草稿失败' : '保存草稿失败');
