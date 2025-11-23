@@ -20,6 +20,16 @@ public class OutBoundBatchAllocationCheckRequest {
      * 当前操作的商品项索引（用于排除自身）
      */
     private Long currentProductId;
+
+    /**
+     * 当前操作的商品货架索引（用于排除自身）
+     */
+    private Long currentShelfId;
+
+    /**
+     *  当前操作的批次号索引（用于排除自身）
+     */
+    private String currentBatchNo;
     
     /**
      * 所有商品项的分配数据

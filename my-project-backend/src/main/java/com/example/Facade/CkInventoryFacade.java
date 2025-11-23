@@ -201,7 +201,7 @@ public class CkInventoryFacade {
                     List<InventoryWarehouse> inventoryWareOfProductList
                             = productId2InventoryWarehouseListMap.getOrDefault(productId, new ArrayList<>());
                     //inventoryWareOfProductList 获取map, key是warehouseId ，value是计算每个组中的quantity和，
-                    Map<Long,BigDecimal> warehouseId2QuantityMap = inventoryWareOfProductList.stream()
+                    Map<Long, BigDecimal> warehouseId2QuantityMap = inventoryWareOfProductList.stream()
                             .collect(Collectors.groupingBy(InventoryWarehouse::getWarehouseId,
                                     Collectors.mapping(InventoryWarehouse::getQuantity, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))));
                     List<InventoryPageListResp.WarehouseInventory> warehouseInventoryList = new ArrayList<>();
@@ -258,19 +258,19 @@ public class CkInventoryFacade {
 
                     //出货单位数量的总数量 = 出货单位数量 / 出货单位数量
                     if (product.getOutUnitPerNum() != null && !Objects.equals(product.getOutUnitPerNum(), BigDecimal.ZERO)) {
-                        r.setOutUnitTotalNum(totalOutboundQuantityOfAllWarehouses.divide(product.getOutUnitPerNum(),0, RoundingMode.HALF_UP));
+                        r.setOutUnitTotalNum(totalOutboundQuantityOfAllWarehouses.divide(product.getOutUnitPerNum(), 0, RoundingMode.HALF_UP));
                     }
 
                     //体积 = 出货单位的长宽高 * 出货单位数量的总数量
-                    if(product.getOutUnitHeight() != null
-                            && product.getOutUnitLength()!=null
-                            && product.getOutUnitWidth()!=null
+                    if (product.getOutUnitHeight() != null
+                            && product.getOutUnitLength() != null
+                            && product.getOutUnitWidth() != null
                             && r.getOutUnitTotalNum() != null
                             && !Objects.equals(product.getOutUnitHeight(), BigDecimal.ZERO)
                             && !Objects.equals(product.getOutUnitLength(), BigDecimal.ZERO)
                             && !Objects.equals(product.getOutUnitWidth(), BigDecimal.ZERO)
-                           && !Objects.equals(r.getOutUnitTotalNum(), BigDecimal.ZERO)) {
-                        r.setVolume(product.getOutUnitHeight().multiply(product.getOutUnitLength()).multiply(product.getOutUnitWidth()).multiply(r.getOutUnitTotalNum()).divide(new BigDecimal(1000000),2, RoundingMode.HALF_UP));
+                            && !Objects.equals(r.getOutUnitTotalNum(), BigDecimal.ZERO)) {
+                        r.setVolume(product.getOutUnitHeight().multiply(product.getOutUnitLength()).multiply(product.getOutUnitWidth()).multiply(r.getOutUnitTotalNum()).divide(new BigDecimal(1000000), 2, RoundingMode.HALF_UP));
                     }
                     r.setWeightPerUnit(product.getWeightPerUnit());
                     //总重量 = 单件重量 * 出货单位数量的总数量
@@ -901,8 +901,28 @@ public class CkInventoryFacade {
 //        }
 //    }
 
+    public void sortBatchAllocations(OutBoundBatchAllocationCheckRequest request,
+                                     List<OutBoundBatchAllocationCheckRequest.BomAllocationDTO> batchAllocations) {
 
+        batchAllocations.sort((o1, o2) -> {
+            boolean o1Matches = matchesCriteria(o1, request);
+            boolean o2Matches = matchesCriteria(o2, request);
 
+            if (o1Matches && !o2Matches) {
+                return -1;
+            } else if (!o1Matches && o2Matches) {
+                return 1;
+            } else {
+                return 0;
+            }
+        });
+    }
+
+    private boolean matchesCriteria(OutBoundBatchAllocationCheckRequest.BomAllocationDTO bomAlloc,
+                                    OutBoundBatchAllocationCheckRequest request) {
+        return (bomAlloc.getBatchNo() != null && bomAlloc.getBatchNo().equals(request.getCurrentBatchNo())) &&
+                (bomAlloc.getShelfId() != null && bomAlloc.getShelfId().equals(request.getCurrentShelfId()));
+    }
 
 //    新的
     public OutBoundBatchAllocationCheckResponse checkBatchAllocation(OutBoundBatchAllocationCheckRequest request) {
@@ -918,12 +938,13 @@ public class CkInventoryFacade {
         List<InventoryShelf> inventoryList = inventoryShelfService.getBatchShelfStock(
                 request.getTenantId(), request.getWarehouseId(), componentProductIds);
 
-        // 3. 构建库存映射
+        // 3.1. 构建批次货架映射
         Map<String, BigDecimal> productBatchShelf2CountMap = inventoryList.stream().collect(Collectors.toMap(
                 stock -> buildBatchShelfKey(stock.getProductId(), stock.getBatchNo(), stock.getShelfId()),
                 InventoryShelf::getQuantity
         ));
 
+        // 3.2. 构建批次映射
         Map<String, BigDecimal> productBatch2CountMap = inventoryList.stream()
                 .filter(inventory -> inventory.getProductId() != null && inventory.getBatchNo() != null)
                 .collect(Collectors.toMap(
@@ -976,6 +997,16 @@ public class CkInventoryFacade {
                 sonDto.setProductSonName(firstBomAlloc.getComponentProductName());
                 sonDto.setBatchList(new ArrayList<>());
 
+                //补充： 先算出其他货架的商品总和
+                BigDecimal totalOtherShelfAllocatedInBatch = BigDecimal.ZERO;
+                for (OutBoundBatchAllocationCheckRequest.BomAllocationDTO bomAlloc : bomAllocations) {
+                    if (bomAlloc.getShelfId() != null
+                            && StringUtils.isNotBlank(bomAlloc.getBatchNo())
+                            && (!Objects.equals(bomAlloc.getShelfId(), request.getCurrentShelfId()) || !bomAlloc.getBatchNo().equals(request.getCurrentBatchNo()))) {
+                        totalOtherShelfAllocatedInBatch = totalOtherShelfAllocatedInBatch.add(bomAlloc.getQuantity());
+                    }
+                }
+
                 // 按批次分组处理
                 Map<String, List<OutBoundBatchAllocationCheckRequest.BomAllocationDTO>> batchGroupMap =
                         bomAllocations.stream()
@@ -994,25 +1025,41 @@ public class CkInventoryFacade {
                     batchCountDTO.setBatchNo(batchNo);
                     batchCountDTO.setShelfList(new ArrayList<>());
 
-                    // 计算批次总可用数量
+                    // 计算批次总可用数量 这里先默认设置)
                     String batchKey = buildBatchShelfKey(componentProductId, batchNo, -1L);
                     BigDecimal batchAvailableQuantity = productBatch2CountMap.getOrDefault(batchKey, BigDecimal.ZERO);
                     batchCountDTO.setAvailableBatchQuantity(batchAvailableQuantity);
 
-
                     // 用于跟踪当前批次的总分配量
                     BigDecimal totalAllocatedInBatch = BigDecimal.ZERO;
+                    // batchAllocations 排序，按照 bomAlloc.getBatchNo()等于 request.getCurrentBatchNo()， bomAlloc.getShelfId() 等于 request.getCurrentShelfId() 的放在最前面
+                    sortBatchAllocations(request, batchAllocations);
 
                     for (OutBoundBatchAllocationCheckRequest.BomAllocationDTO bomAlloc : batchAllocations) {
-                        String shelfKey = buildBatchShelfKey(componentProductId, batchNo, bomAlloc.getShelfId());
-                        BigDecimal remainCount = productBatchShelf2CountMap.getOrDefault(shelfKey, BigDecimal.ZERO);
+                        if (bomAlloc.getShelfId() != null
+                                && StringUtils.isNotBlank(bomAlloc.getBatchNo())
+                                && Objects.equals(bomAlloc.getShelfId(), request.getCurrentShelfId())
+                                && bomAlloc.getBatchNo().equals(request.getCurrentBatchNo())) {
+                            String shelfKey = buildBatchShelfKey(componentProductId, batchNo, bomAlloc.getShelfId());
+                            BigDecimal remainCount = productBatchShelf2CountMap.getOrDefault(shelfKey, BigDecimal.ZERO);
 
-                        BigDecimal allocatedQuantity = BigDecimal.ZERO;
-                        BigDecimal shelfAvailableQuantity = remainCount;
+                            BigDecimal allocatedQuantity = BigDecimal.ZERO;
+                            BigDecimal shelfAvailableQuantity = remainCount;
 
-                        if (bomAlloc.getTotalBomQuantity().compareTo(bomAlloc.getQuantity()) >= 0) {
+                            //获取总量扣减可分配数量
+                            BigDecimal totalBomQuantity = new BigDecimal(0);
+                            if (bomAlloc.getTotalBomQuantity().subtract(totalOtherShelfAllocatedInBatch).compareTo(bomAlloc.getQuantity()) > 0) {
+                                //bomAlloc.getTotalBomQuantity()（总量） - 其他货架的商品综总和 > bomAlloc.getQuantity()（本货架的数量）,则使用 bomAlloc.getQuantity()
+                                totalBomQuantity = bomAlloc.getQuantity();
+                            } else {
+                                // bomAlloc.getTotalBomQuantity()（总量） - 其他货架的商品综总和 < bomAlloc.getQuantity()（本货架的数量）,则使用  totalBomQuantity（总量） - 其他货架的商品综总和
+                                totalBomQuantity = bomAlloc.getTotalBomQuantity().subtract(totalOtherShelfAllocatedInBatch);
+                            }
+
+
                             // 当前成品进行分配计算
-                            if (bomAlloc.getQuantity().compareTo(remainCount) > 0) {
+                            if (totalBomQuantity.compareTo(remainCount) > 0) {
+                                //如果总量扣减可分配数量 > 库存 数量， 分配数量使用库存数量
                                 // 分配数量超过库存，实际分配最大库存数量
                                 allocatedQuantity = remainCount;
                                 shelfAvailableQuantity = BigDecimal.ZERO;
@@ -1023,59 +1070,88 @@ public class CkInventoryFacade {
                                         batchNo, bomAlloc.getShelfName(),
                                         bomAlloc.getQuantity(), remainCount, allocatedQuantity));
                             } else {
+                                //如果总量扣减可分配数量 < 库存 数量， 则使用 总量扣减可分配数量
                                 // 分配数量在可用范围内
-                                allocatedQuantity = bomAlloc.getQuantity();
+                                allocatedQuantity = totalBomQuantity;
                                 shelfAvailableQuantity = remainCount.subtract(allocatedQuantity);
                                 totalAllocatedInBatch = totalAllocatedInBatch.add(allocatedQuantity);
                             }
-                        } else if (bomAlloc.getTotalBomQuantity().compareTo(bomAlloc.getQuantity()) < 0) {
-                            // 当前成品进行分配计算
-                            if (bomAlloc.getTotalBomQuantity().compareTo(remainCount) > 0) {
-                                // 分配数量超过库存，实际分配最大库存数量
-                                allocatedQuantity = remainCount;
-                                shelfAvailableQuantity = BigDecimal.ZERO;
-                                totalAllocatedInBatch = totalAllocatedInBatch.add(allocatedQuantity);
-                                hasInsufficient = true;
-                                errorMessage.append(String.format("成品%s的原料%s批次%s货架%s: 分配%s > 剩余%s，实际分配%s; ",
-                                        productAlloc.getProductName(), bomAlloc.getComponentProductName(),
-                                        batchNo, bomAlloc.getShelfName(),
-                                        bomAlloc.getTotalBomQuantity(), remainCount, allocatedQuantity));
-                            } else {
-                                // 分配数量在可用范围内
-                                allocatedQuantity = bomAlloc.getTotalBomQuantity();
-                                shelfAvailableQuantity = remainCount.subtract(allocatedQuantity);
-                                totalAllocatedInBatch = totalAllocatedInBatch.add(allocatedQuantity);
+
+
+                            // 更新批次库存映射
+                            productBatchShelf2CountMap.put(shelfKey, shelfAvailableQuantity);
+
+                            BigDecimal batchAvailableQuantityOfJisuan = batchAvailableQuantity.subtract(allocatedQuantity);
+                            // 确保批次可用数量不为负数
+                            if (batchAvailableQuantityOfJisuan.compareTo(BigDecimal.ZERO) < 0) {
+                                batchAvailableQuantityOfJisuan = BigDecimal.ZERO;
                             }
+                            productBatch2CountMap.put(batchKey, batchAvailableQuantityOfJisuan);
+
+//                            // 更新批次可用数量
+//                            String batchKeyOfJisuan = buildBatchShelfKey(componentProductId, batchNo, -1L);
+//                            BigDecimal batchAvailableQuantityOfJisuan = productBatch2CountMap.getOrDefault(batchKeyOfJisuan, BigDecimal.ZERO);
+//                            BigDecimal updatedBatchAvailableQuantity = batchAvailableQuantityOfJisuan.subtract(allocatedQuantity);
+//                            // 确保批次可用数量不为负数
+//                            if (updatedBatchAvailableQuantity.compareTo(BigDecimal.ZERO) < 0) {
+//                                updatedBatchAvailableQuantity = BigDecimal.ZERO;
+//                            }
+//                            productBatch2CountMap.put(batchKey, updatedBatchAvailableQuantity);
+
+                            // 创建货架分配信息
+                            OutBoundBatchAllocationCheckResponse.BatchShelfAvailableDTO shelfAvailableDTO =
+                                    new OutBoundBatchAllocationCheckResponse.BatchShelfAvailableDTO();
+                            shelfAvailableDTO.setProductParentId(productAlloc.getProductId());
+                            shelfAvailableDTO.setProductParentName(productAlloc.getProductName());
+                            shelfAvailableDTO.setProductSonId(componentProductId);
+                            shelfAvailableDTO.setProductSonName(bomAlloc.getComponentProductName());
+                            shelfAvailableDTO.setBatchNo(batchNo);
+                            shelfAvailableDTO.setShelfId(bomAlloc.getShelfId());
+                            shelfAvailableDTO.setShelfName(bomAlloc.getShelfName());
+                            shelfAvailableDTO.setShelfAvailableQuantity(shelfAvailableQuantity);
+                            shelfAvailableDTO.setAllocatedQuantity(allocatedQuantity);
+
+                            batchCountDTO.getShelfList().add(shelfAvailableDTO);
+                        } else {
+                            OutBoundBatchAllocationCheckResponse.BatchShelfAvailableDTO shelfAvailableDTO =
+                                    new OutBoundBatchAllocationCheckResponse.BatchShelfAvailableDTO();
+                            shelfAvailableDTO.setProductParentId(productAlloc.getProductId());
+                            shelfAvailableDTO.setProductParentName(productAlloc.getProductName());
+                            shelfAvailableDTO.setProductSonId(componentProductId);
+                            shelfAvailableDTO.setProductSonName(bomAlloc.getComponentProductName());
+                            shelfAvailableDTO.setBatchNo(batchNo);
+                            shelfAvailableDTO.setShelfId(bomAlloc.getShelfId());
+                            shelfAvailableDTO.setShelfName(bomAlloc.getShelfName());
+//                            shelfAvailableDTO.setShelfAvailableQuantity(shelfAvailableQuantity);
+//                            shelfAvailableDTO.setAllocatedQuantity(allocatedQuantity);
+
+                            //更新批次库存数量
+                            String shelfKey = buildBatchShelfKey(componentProductId, batchNo, bomAlloc.getShelfId());
+                            BigDecimal remainCount = productBatchShelf2CountMap.getOrDefault(shelfKey, BigDecimal.ZERO);
+                            BigDecimal remainCountAfterAlloc = remainCount.subtract(bomAlloc.getQuantity());
+                            productBatchShelf2CountMap.put(shelfKey, remainCountAfterAlloc);
+
+                            // 更新批次可用数量
+                            String batchKeyOfJisuan = buildBatchShelfKey(componentProductId, batchNo, -1L);
+                            BigDecimal batchAvailableQuantityOfJisuan = productBatch2CountMap.getOrDefault(batchKeyOfJisuan, BigDecimal.ZERO);
+                            BigDecimal updatedBatchAvailableQuantity = batchAvailableQuantityOfJisuan.subtract(bomAlloc.getQuantity());
+                            // 确保批次可用数量不为负数
+                            if (updatedBatchAvailableQuantity.compareTo(BigDecimal.ZERO) < 0) {
+                                updatedBatchAvailableQuantity = BigDecimal.ZERO;
+                            }
+                            productBatch2CountMap.put(batchKey, updatedBatchAvailableQuantity);
+
+                            shelfAvailableDTO.setShelfAvailableQuantity(remainCountAfterAlloc);
+                            shelfAvailableDTO.setAllocatedQuantity(bomAlloc.getQuantity());
+                            batchCountDTO.getShelfList().add(shelfAvailableDTO);
                         }
 
-
-                        // 更新库存映射
-                        productBatchShelf2CountMap.put(shelfKey, shelfAvailableQuantity);
-
-                        // 创建货架分配信息
-                        OutBoundBatchAllocationCheckResponse.BatchShelfAvailableDTO shelfAvailableDTO =
-                                new OutBoundBatchAllocationCheckResponse.BatchShelfAvailableDTO();
-                        shelfAvailableDTO.setProductParentId(productAlloc.getProductId());
-                        shelfAvailableDTO.setProductParentName(productAlloc.getProductName());
-                        shelfAvailableDTO.setProductSonId(componentProductId);
-                        shelfAvailableDTO.setProductSonName(bomAlloc.getComponentProductName());
-                        shelfAvailableDTO.setBatchNo(batchNo);
-                        shelfAvailableDTO.setShelfId(bomAlloc.getShelfId());
-                        shelfAvailableDTO.setShelfName(bomAlloc.getShelfName());
-                        shelfAvailableDTO.setShelfAvailableQuantity(shelfAvailableQuantity);
-                        shelfAvailableDTO.setAllocatedQuantity(allocatedQuantity);
-
-                        batchCountDTO.getShelfList().add(shelfAvailableDTO);
                     }
 
-                    // 更新批次可用数量
-                    BigDecimal updatedBatchAvailableQuantity = batchAvailableQuantity.subtract(totalAllocatedInBatch);
-                    // 确保批次可用数量不为负数
-                    if (updatedBatchAvailableQuantity.compareTo(BigDecimal.ZERO) < 0) {
-                        updatedBatchAvailableQuantity = BigDecimal.ZERO;
-                    }
-                    productBatch2CountMap.put(batchKey, updatedBatchAvailableQuantity);
-                    batchCountDTO.setAvailableBatchQuantity(updatedBatchAvailableQuantity);
+                    String batchKeyOfJisuan = buildBatchShelfKey(componentProductId, batchNo, -1L);
+                    BigDecimal batchAvailableQuantityOfJisuan = productBatch2CountMap.getOrDefault(batchKeyOfJisuan, BigDecimal.ZERO);
+
+                    batchCountDTO.setAvailableBatchQuantity(batchAvailableQuantityOfJisuan);
 
                     sonDto.getBatchList().add(batchCountDTO);
                 }
@@ -1141,7 +1217,6 @@ public class CkInventoryFacade {
                     String batchKey = buildBatchShelfKey(componentProductId, batchNo, -1L);
                     BigDecimal batchAvailableQuantity = productBatch2CountMap.getOrDefault(batchKey, BigDecimal.ZERO);
                     batchCountDTO.setAvailableBatchQuantity(batchAvailableQuantity);
-
 
 
                     // 用于跟踪当前批次的总分配量

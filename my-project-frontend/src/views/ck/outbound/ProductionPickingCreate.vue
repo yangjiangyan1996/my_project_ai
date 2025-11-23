@@ -487,7 +487,7 @@ const formRules = {
 };
 
 // 构建检查请求数据
-const buildAllocationCheckRequest = (currentProductId = null) => {
+const buildAllocationCheckRequest = (currentProductId = null, currentBatchNo = null, currentShelfId = null) => {
   const productAllocations = formData.items.map((item, index) => {
     const productInfo = productionProductList.value.find(p => p.id === item.productId);
     
@@ -518,12 +518,14 @@ const buildAllocationCheckRequest = (currentProductId = null) => {
     warehouseId: formData.warehouseId,
     tenantId: 1,
     currentProductId: currentProductId,
+    currentBatchNo: currentBatchNo,
+    currentShelfId: currentShelfId,
     productAllocations: productAllocations
   };
 };
 
 // 检查分配数量 - 失去焦点时调用
-const checkBatchAllocation = async (currentProductId = null) => {
+const checkBatchAllocation = async (currentProductId = null, currentBatchNo = null, currentShelfId = null) => {
   if (!formData.warehouseId || formData.items.length === 0) {
     return { success: true };
   }
@@ -534,7 +536,7 @@ const checkBatchAllocation = async (currentProductId = null) => {
 
   loadingCheck.value = true;
   try {
-    const requestData = buildAllocationCheckRequest(currentProductId);
+    const requestData = buildAllocationCheckRequest(currentProductId, currentBatchNo, currentShelfId);
     console.log('调用检查分配接口，请求数据:', requestData);
     
     const res = await post('/api/auth/inventory/checkBatchAllocation', requestData);
@@ -677,13 +679,13 @@ const updateAllocationQuantity = (value, itemIndex, bomRow, batch, shelf, produc
 
 // 原料分配输入框失去焦点处理
 const handleAllocationBlur = async (itemIndex, bomRow, batch, shelf, productId) => {
-  await checkBatchAllocation(productId);
+  await checkBatchAllocation(productId, batch.batchNo, shelf.shelfId);
 };
 
 // 领料数量输入框失去焦点处理
 const handleQuantityBlur = async (index) => {
   const item = formData.items[index];
-  await checkBatchAllocation(item.productId);
+  await checkBatchAllocation(item.productId, null, null);
 };
 
 // 加载出库单详情
@@ -734,7 +736,7 @@ const loadOutboundDetail = async (id) => {
           }
         }
         
-        await checkBatchAllocation(null);
+        await checkBatchAllocation(null, null, null);
       } else {
         formData.items = [];
       }
@@ -798,7 +800,7 @@ const handleAddProduct = () => {
 
 const handleRemoveProduct = async (index) => {
   formData.items.splice(index, 1);
-  await checkBatchAllocation(null);
+  await checkBatchAllocation(null, null, null);
 };
 
 const handleProductChange = async (productId, index) => {
@@ -818,7 +820,7 @@ const handleProductChange = async (productId, index) => {
     
     await loadBatchInfoForProduction(productId, index);
     await initializeBomAllocations(item);
-    await checkBatchAllocation(productId);
+    await checkBatchAllocation(productId, null, null);
   }
 };
 
@@ -943,6 +945,9 @@ const calculateRequiredQuantity = (unitQuantity, productQuantity) => {
 
 // 获取某个原料的总分配数量
 const getAllocatedQuantityForComponent = (itemIndex, componentProductId) => {
+  console.log('itemIndex:', itemIndex);
+  console.log('componentProductId:', componentProductId);
+  console.log('formData.item', formData.items[itemIndex].bomAllocations);
   const item = formData.items[itemIndex];
   if (!item.bomAllocations) return 0;
   
@@ -1047,7 +1052,7 @@ const handleSubmit = async () => {
     return;
   }
   
-  const checkResult = await checkBatchAllocation(null);
+  const checkResult = await checkBatchAllocation(null, null, null);
   if (!checkResult.success) {
     ElMessage.warning(`库存分配存在问题: ${checkResult.message}`);
     return;
