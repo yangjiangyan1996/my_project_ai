@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.InventoryShelf;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * @Author YangJian
@@ -17,4 +18,6 @@ public interface CkInventoryShelfService extends IService<InventoryShelf> {
     InventoryShelf getByWarehouseAndProductAndShelf(Long warehouseId, Long productId, Long shelfLocationId,String batchNo, Long tenantId);
 
     List<InventoryShelf> selectByProductIds(Long productId, Long tenantId);
+
+    List<InventoryShelf> getBatchShelfStock(Long tenantId,Long warehouseId, Set<Long> componentProductIds);
 }

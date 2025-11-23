@@ -324,6 +324,27 @@ const router = createRouter({
             component: () => import('@/views/ck/inbound/CkInboundTransfer.vue'),
             meta: { requiresAuth: false }
         },
+
+        {
+            path: '/index/salesOutboundCreate',
+            name: 'SalesOutboundCreate',
+            component: () => import('@/views/ck/outbound/SalesOutboundCreate.vue')
+        },
+        {
+            path: '/index/salesOutboundCreate/:id',
+            name: 'SalesOutboundCreateEdit',
+            component: () => import('@/views/ck/outbound/SalesOutboundCreate.vue')
+        },
+        {
+            path: '/index/productionPickingCreate',
+            name: 'ProductionPickingCreate',
+            component: () => import('@/views/ck/outbound/ProductionPickingCreate.vue')
+        },
+        {
+            path: '/index/productionPickingCreate/:id',
+            name: 'ProductionPickingCreateEdit',
+            component: () => import('@/views/ck/outbound/ProductionPickingCreate.vue')
+        }
         
     ]
 })

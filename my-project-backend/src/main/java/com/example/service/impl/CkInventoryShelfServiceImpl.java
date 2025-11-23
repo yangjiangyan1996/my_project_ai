@@ -1,5 +1,6 @@
 package com.example.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.InventoryShelf;
@@ -9,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * @Author YangJian
@@ -18,6 +20,19 @@ import java.util.List;
  */
 @Service
 public class CkInventoryShelfServiceImpl extends ServiceImpl<CkInventoryShelfMapper, InventoryShelf> implements CkInventoryShelfService {
+    @Override
+    public List<InventoryShelf> getBatchShelfStock(Long tenantId, Long warehouseId, Set<Long> componentProductIds) {
+        if (CollUtil.isEmpty(componentProductIds)) {
+            return CollUtil.newArrayList();
+        }
+        return baseMapper.selectList(new QueryWrapper<InventoryShelf>()
+                .eq("tenant_id", tenantId)
+//                .eq("warehouse_id", warehouseId)
+                .eq("is_deleted", 0)
+                .in("product_id", componentProductIds)
+        );
+    }
+
     @Override
     public List<InventoryShelf> selectByProductIds(Long productId, Long tenantId) {
         return  baseMapper.selectList(new QueryWrapper<InventoryShelf>()

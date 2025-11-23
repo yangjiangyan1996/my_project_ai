@@ -42,7 +42,6 @@ public class OutboundContorller {
     CkOutboundFacade outboundFacade;
 
 
-
     /**
      * 分页查询出库列表
      * @param req 出库列表查询请求参数

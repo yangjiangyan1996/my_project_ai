@@ -43,6 +43,14 @@ public class CkProductBomServiceImpl extends ServiceImpl<CkProductBomMapper, Pro
     }
 
     @Override
+    public List<ProductBom> selectByProduectIds(List<Long> productId, Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<ProductBom>()
+                .in("product_id", productId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode()));
+    }
+
+    @Override
     public ProductBom selectByProduectId(Long productId, Long tenantId) {
         return baseMapper.selectOne(new QueryWrapper<ProductBom>()
                 .eq("product_id", productId)

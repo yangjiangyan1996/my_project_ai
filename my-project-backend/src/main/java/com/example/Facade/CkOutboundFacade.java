@@ -135,7 +135,7 @@ public class CkOutboundFacade {
                 }
                 // 5. 如果是已完成状态，更新库存和流水
                 if (req.getStatus() == 3) { // 已完成状态
-                   // updateInventoryAndTransaction(req, outboundOrder.getId(), orderItems1);
+                    // updateInventoryAndTransaction(req, outboundOrder.getId(), orderItems1);
                     inventoryHolder.updateSubInventoryForApprove(outboundOrder, orderItems1, req.getUserId());
                 }
                 break;
@@ -708,7 +708,6 @@ public class CkOutboundFacade {
 //            createInventoryTransaction(req, orderId, item);
 //        }
 //    }
-
     public OutboundDetailResp detail(Long orderId, Long tenantId) {
         OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);
         if (outboundOrder == null) {
@@ -826,7 +825,7 @@ public class CkOutboundFacade {
     }
 
     public List<OutboundSaleExcelModel> getOutboundSaleExportData(Long tenantId, Long warehouseId) {
-        List<InventoryListResp> result = inventoryFacade.List(warehouseId,tenantId);
+        List<InventoryListResp> result = inventoryFacade.List(warehouseId, tenantId);
         return result.stream().map(v -> {
             OutboundSaleExcelModel model = new OutboundSaleExcelModel();
             model.setProductId(v.getProductId().toString());
@@ -851,10 +850,10 @@ public class CkOutboundFacade {
             r.setProductId(Long.valueOf(v.getProductId()));
             r.setSku(v.getSku());
             r.setProductName(v.getProductName());
-            r.setQuantity( StringUtils.isBlank(v.getQuantity()) ? BigDecimal.ZERO : new BigDecimal(v.getQuantity()));
+            r.setQuantity(StringUtils.isBlank(v.getQuantity()) ? BigDecimal.ZERO : new BigDecimal(v.getQuantity()));
             r.setRemark(v.getRemark());
-            r.setPrice(StringUtils.isBlank(v.getPrice()) ? null :new BigDecimal(v.getPrice()));
-            r.setPriceUnitUsd(StringUtils.isBlank(v.getPriceUsd()) ? null :new BigDecimal(v.getPriceUsd()));
+            r.setPrice(StringUtils.isBlank(v.getPrice()) ? null : new BigDecimal(v.getPrice()));
+            r.setPriceUnitUsd(StringUtils.isBlank(v.getPriceUsd()) ? null : new BigDecimal(v.getPriceUsd()));
             return r;
         }).collect(Collectors.toList());
 
@@ -901,24 +900,30 @@ public class CkOutboundFacade {
                 model.setName(product.getName());
                 model.setSpec(product.getSpec());
                 model.setColor(product.getColor());
-                model.setOutUnitPerNum(product.getOutUnitPerNum().toString());
-                // 计算箱数 = 数量 / 出货单位数量 (有小数，则进1)
-                BigDecimal boxNumB = v.getQuantity().divide(product.getOutUnitPerNum(), 2, RoundingMode.HALF_UP);
-                model.setBoxCount(boxNumB.toString());
-                model.setOutUnitHeight(product.getOutUnitHeight().toString());
-                model.setOutUnitLength(product.getOutUnitLength().toString());
-                model.setOutUnitWidth(product.getOutUnitWidth().toString());
-                //体积 = 长 * 宽 * 高 * 箱数 / 1000000
-                BigDecimal volumeB = product.getOutUnitHeight()
-                        .multiply(product.getOutUnitLength())
-                        .multiply(product.getOutUnitWidth())
-                        .multiply(boxNumB)
-                        .divide(new BigDecimal(1000000), 2, RoundingMode.HALF_UP);
-                model.setVolume(volumeB.toString());
-                model.setWeightPerUnit(product.getWeightPerUnit().toString());
-                //总重量 = 单件重量 * 箱数
-                BigDecimal wall = product.getWeightPerUnit().multiply(boxNumB);
-                model.setWeightAll(wall.toString());
+                model.setOutUnitHeight(product.getOutUnitHeight() == null || product.getOutUnitHeight().equals(BigDecimal.ZERO) ? "" : product.getOutUnitHeight().toString());
+                model.setOutUnitLength(product.getOutUnitLength() == null || product.getOutUnitLength().equals(BigDecimal.ZERO) ? "" : product.getOutUnitLength().toString());
+                model.setOutUnitWidth(product.getOutUnitWidth() == null || product.getOutUnitWidth().equals(BigDecimal.ZERO) ? "" : product.getOutUnitWidth().toString());
+                model.setWeightPerUnit(product.getWeightPerUnit() == null || product.getWeightPerUnit().equals(BigDecimal.ZERO) ? "" : product.getWeightPerUnit().toString());
+                if (product.getOutUnitPerNum() != null) {
+                    model.setOutUnitPerNum(product.getOutUnitPerNum() == null ? "" : product.getOutUnitPerNum().toString());
+
+                    // 计算箱数 = 数量 / 出货单位数量 (有小数，则进1)
+                    BigDecimal boxNumB = v.getQuantity().divide(product.getOutUnitPerNum(), 2, RoundingMode.HALF_UP);
+                    model.setBoxCount(boxNumB.toString());
+
+                    //体积 = 长 * 宽 * 高 * 箱数 / 1000000
+                    BigDecimal volumeB = product.getOutUnitHeight()
+                            .multiply(product.getOutUnitLength())
+                            .multiply(product.getOutUnitWidth())
+                            .multiply(boxNumB)
+                            .divide(new BigDecimal(1000000), 2, RoundingMode.HALF_UP);
+                    model.setVolume(volumeB.toString());
+
+
+                    //总重量 = 单件重量 * 箱数
+                    BigDecimal wall = product.getWeightPerUnit().multiply(boxNumB);
+                    model.setWeightAll(wall.toString());
+                }
             }
             return model;
         }).collect(Collectors.toList());

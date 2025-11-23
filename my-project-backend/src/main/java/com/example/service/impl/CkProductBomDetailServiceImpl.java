@@ -8,6 +8,7 @@ import com.example.mapper.CkProductBomDetailMapper;
 import com.example.service.CkProductBomDetailService;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -23,6 +24,14 @@ public class CkProductBomDetailServiceImpl extends ServiceImpl<CkProductBomDetai
     public List<ProductBomDetail> selectByBomId(Long bomId, Long tenantId) {
         return baseMapper.selectList(new QueryWrapper<ProductBomDetail>()
                 .eq("bom_id", bomId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete));
+    }
+
+    @Override
+    public List<ProductBomDetail> selectByProductIds(List<Long> productIds, Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<ProductBomDetail>()
+                .in("component_product_id", productIds)
                 .eq("tenant_id", tenantId)
                 .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete));
     }
@@ -51,6 +60,9 @@ public class CkProductBomDetailServiceImpl extends ServiceImpl<CkProductBomDetai
 
     @Override
     public List<ProductBomDetail> selectByBomIds(List<Long> bomIds, Long tenantId) {
+        if (bomIds == null || bomIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         return baseMapper.selectList(new QueryWrapper<ProductBomDetail>()
                 .in("bom_id", bomIds)
                 .eq("tenant_id", tenantId)

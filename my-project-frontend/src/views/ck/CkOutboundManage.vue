@@ -5,13 +5,25 @@
         <div class="card-header">
           <span class="card-title">出库管理</span>
           <div class="header-actions">
-            <el-button 
-              type="primary" 
-              @click="handleCreate"
-            >
-              <el-icon><Plus /></el-icon>
-              新建出库单
-            </el-button>
+            <el-dropdown @command="handleCreate" trigger="click">
+              <el-button type="primary">
+                <el-icon><Plus /></el-icon>
+                新建出库单
+                <el-icon class="el-icon--right"><arrow-down /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item 
+                    v-for="item in orderTypeOptions" 
+                    :key="item.value" 
+                    :command="item.value"
+                    :icon="getTypeIcon(item.value)"
+                  >
+                    {{ item.label }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <el-button 
               @click="refreshList"
               :loading="loading"
@@ -603,6 +615,38 @@ const statusOptions = [
   { value: 9, label: '已取消' }
 ];
 
+// 新增：获取出库类型图标
+const getTypeIcon = (orderType) => {
+  const icons = {
+    1: 'ShoppingCart',
+    2: 'Box',
+    3: 'Refresh',
+    4: 'Switch',
+    5: 'More'
+  };
+  return icons[orderType] || 'Document';
+};
+
+// 新增：根据出库类型获取路由路径
+const getRoutePathByType = (orderType, id = null, isEdit = false) => {
+  const basePaths = {
+    1: '/index/salesOutboundCreate',      // 销售出库
+    2: '/index/productionPickingCreate',  // 生产领料
+    // 3: '/index/ckOutboundCreateReturn',    // 退货出库 // 新建时候名称注意
+    // 4: '/index/ckOutboundCreateTransfer',  // 调拨出库
+    // 5: '/index/ckOutboundCreateOther'      // 其他出库
+  };
+  
+  let path = basePaths[orderType] || '/index/ckOutboundCreate';
+  
+  // 如果有ID，则添加到路径中（编辑/查看模式）
+  if (id) {
+    path += `/${id}`;
+  }
+  
+  return path;
+};
+
 // 加载出库单详情
 const loadOutboundDetail = async (id) => {
   try {
@@ -853,33 +897,22 @@ const handleCurrentChange = (page) => {
   loadOutboundList();
 };
 
-const handleCreate = () => {
-  router.push('/index/ckOutboundCreate');
+// 修改：新建出库单处理
+const handleCreate = (orderType) => {
+  const path = getRoutePathByType(orderType);
+  router.push(path);
 };
 
-const handleView = async (outbound) => {
-  loading.value = true;
-  detailDialogVisible.value = true;
-  try {
-    const detail = await loadOutboundDetail(outbound.id);
-    if (detail) {
-      currentOutbound.value = detail;
-      ElMessage.success('详情加载成功');
-    } else {
-      ElMessage.error('获取出库单详情失败');
-      detailDialogVisible.value = false;
-    }
-  } catch (error) {
-    ElMessage.error('获取出库单详情失败');
-    detailDialogVisible.value = false;
-  } finally {
-    loading.value = false;
-  }
+
+const handleView = (outbound) => {
+  const path = getRoutePathByType(outbound.orderType, outbound.id);
+  router.push(path);
 };
 
+// 修改：编辑出库单
 const handleEdit = (outbound) => {
-  // 跳转到编辑页面，传递出库单ID
-  router.push(`/index/ckOutboundCreate/${outbound.id}`);
+  const path = getRoutePathByType(outbound.orderType, outbound.id);
+  router.push(path);
 };
 
 const handleSubmit = async (outbound) => {
@@ -1423,5 +1456,209 @@ onMounted(() => {
   .product-summary .el-col {
     margin-bottom: 8px;
   }
+}
+
+/* 原有样式保持不变，新增下拉菜单样式 */
+.outbound-manage-container {
+  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: calc(100vh - 60px);
+}
+
+.manage-card {
+  border-radius: 8px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* 下拉菜单样式调整 */
+:deep(.el-dropdown) {
+  margin-right: 12px;
+}
+
+/* 其他样式保持不变... */
+.filter-section {
+  padding: 20px 0;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.stats-section {
+  padding: 20px 0;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  color: white;
+  font-size: 24px;
+}
+
+.stat-item.total .stat-icon {
+  background-color: #409EFF;
+}
+
+.stat-item.pending .stat-icon {
+  background-color: #E6A23C;
+}
+
+.stat-item.approved .stat-icon {
+  background-color: #67C23A;
+}
+
+.stat-item.completed .stat-icon {
+  background-color: #909399;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #909399;
+}
+
+.outbound-list-section {
+  margin-top: 20px;
+}
+
+.outbound-table {
+  width: 100%;
+}
+
+.order-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-no {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  color: #409EFF;
+}
+
+.urgent-tag {
+  margin-left: 4px;
+}
+
+.amount {
+  font-weight: bold;
+  color: #E6A23C;
+}
+
+.amount-usd {
+  font-weight: bold;
+  color: #67C23A;
+}
+
+.applicant-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.applicant-avatar {
+  flex-shrink: 0;
+}
+
+.applicant-name {
+  font-weight: 500;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.pagination-section {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ebeef5;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .outbound-manage-container {
+    padding: 10px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .filter-section .el-form-item {
+    margin-bottom: 12px;
+  }
+  
+  .stats-section .el-col {
+    margin-bottom: 12px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .applicant-info {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+}
+
+/* 动画效果 */
+.outbound-table :deep(.el-table__row) {
+  transition: all 0.3s;
+}
+
+.outbound-table :deep(.el-table__row:hover) {
+  background-color: #f5f7fa;
 }
 </style>
