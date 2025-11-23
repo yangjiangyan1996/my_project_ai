@@ -547,6 +547,8 @@ const checkBatchAllocation = async (currentProductId = null, currentBatchNo = nu
       // 存储接口返回的最新数据
       if (res.batchAllocatedList) {
         updateLatestAllocationData(res.batchAllocatedList);
+        // 关键修复：同步更新本地数据
+        syncLocalAllocationsWithApiData(res.batchAllocatedList);
       }
       
       allocationCheckResult.value = {
@@ -564,6 +566,33 @@ const checkBatchAllocation = async (currentProductId = null, currentBatchNo = nu
   } finally {
     loadingCheck.value = false;
   }
+};
+
+// 同步本地分配数据与接口返回数据
+const syncLocalAllocationsWithApiData = (batchAllocatedList) => {
+  batchAllocatedList.forEach(parentDto => {
+    parentDto.productSonDtoList?.forEach(sonDto => {
+      sonDto.batchList?.forEach(batch => {
+        batch.shelfList?.forEach(shelf => {
+          // 找到对应的本地分配记录并更新
+          formData.items.forEach((item, itemIndex) => {
+            if (item.productId == shelf.productParentId && item.bomAllocations) {
+              const allocationIndex = item.bomAllocations.findIndex(a => 
+                a.componentProductId == shelf.productSonId &&
+                a.batchNo === shelf.batchNo &&
+                a.shelfId == shelf.shelfId
+              );
+              
+              if (allocationIndex >= 0) {
+                // 使用接口返回的实际分配数量更新本地数据
+                item.bomAllocations[allocationIndex].quantity = parseFloat(shelf.allocatedQuantity) || 0;
+              }
+            }
+          });
+        });
+      });
+    });
+  });
 };
 
 // 更新最新的分配数据
@@ -943,18 +972,35 @@ const calculateRequiredQuantity = (unitQuantity, productQuantity) => {
   return (unitQty * productQty).toFixed(4);
 };
 
-// 获取某个原料的总分配数量
+// 获取某个原料的总分配数量 - 修复：优先使用接口返回的数据
 const getAllocatedQuantityForComponent = (itemIndex, componentProductId) => {
-  console.log('itemIndex:', itemIndex);
-  console.log('componentProductId:', componentProductId);
-  console.log('formData.item', formData.items[itemIndex].bomAllocations);
   const item = formData.items[itemIndex];
-  if (!item.bomAllocations) return 0;
   
-  return item.bomAllocations
+  // 优先从接口返回数据中计算总分配数量
+  let totalFromApi = 0;
+  for (const [key, data] of Object.entries(latestAllocationData.value)) {
+    const parts = key.split('_');
+    const productParentId = parts[0];
+    const productSonId = parts[1];
+    
+    if (productParentId == item.productId && productSonId == componentProductId) {
+      totalFromApi += parseFloat(data.allocatedQuantity) || 0;
+    }
+  }
+  
+  // 如果接口数据存在，优先使用接口数据
+  if (totalFromApi > 0) {
+    return totalFromApi.toFixed(4);
+  }
+  
+  // 如果没有接口数据，从本地数据获取
+  if (!item.bomAllocations) return '0.0000';
+  
+  const totalFromLocal = item.bomAllocations
     .filter(a => a.componentProductId === componentProductId)
-    .reduce((sum, a) => sum + (parseFloat(a.quantity) || 0), 0)
-    .toFixed(4);
+    .reduce((sum, a) => sum + (parseFloat(a.quantity) || 0), 0);
+  
+  return totalFromLocal.toFixed(4);
 };
 
 // 检查原料是否不足
@@ -1076,10 +1122,54 @@ const handleSubmit = async () => {
   }
 };
 
-// 准备提交数据
+// 准备提交数据 - 修复：使用接口返回的实际分配数量
 const prepareSubmitData = () => {
   const items = formData.items.map(item => {
     const productInfo = productionProductList.value.find(p => p.id === item.productId);
+    
+    // 构建最终的分配数据，优先使用接口返回的数据
+    const finalBomAllocations = [];
+    
+    // 遍历所有可能的分配组合
+    for (const [key, data] of Object.entries(latestAllocationData.value)) {
+      const parts = key.split('_');
+      const productParentId = parts[0];
+      const productSonId = parts[1];
+      const batchNo = parts[2];
+      const shelfId = parts[3];
+      
+      if (productParentId == item.productId && parseFloat(data.allocatedQuantity) > 0) {
+        // 从本地数据中查找对应的分配信息以获取名称等元数据
+        const localAllocation = item.bomAllocations?.find(a => 
+          a.componentProductId == productSonId &&
+          a.batchNo === batchNo &&
+          a.shelfId == shelfId
+        );
+        
+        finalBomAllocations.push({
+          componentProductId: productSonId,
+          componentProductName: localAllocation?.componentProductName || '',
+          componentProductSku: localAllocation?.componentProductSku || '',
+          batchNo: batchNo,
+          shelfId: shelfId,
+          shelfName: localAllocation?.shelfName || `货架${shelfId}`,
+          quantity: parseFloat(data.allocatedQuantity) || 0
+        });
+      }
+    }
+    
+    // 如果没有接口数据，使用本地数据
+    if (finalBomAllocations.length === 0 && item.bomAllocations) {
+      finalBomAllocations.push(...item.bomAllocations.map(allocation => ({
+        componentProductId: allocation.componentProductId,
+        componentProductName: allocation.componentProductName,
+        componentProductSku: allocation.componentProductSku,
+        batchNo: allocation.batchNo,
+        shelfId: allocation.shelfId,
+        shelfName: allocation.shelfName,
+        quantity: allocation.quantity
+      })));
+    }
     
     return {
       productId: item.productId,
@@ -1094,15 +1184,7 @@ const prepareSubmitData = () => {
       priceTotalUsd: (item.priceUnitUsd || 0) * (item.quantity || 0),
       batchAllocations: item.batchAllocations || [],
       remark: item.remark || '',
-      bomAllocations: item.bomAllocations?.map(allocation => ({
-        componentProductId: allocation.componentProductId,
-        componentProductName: allocation.componentProductName,
-        componentProductSku: allocation.componentProductSku,
-        batchNo: allocation.batchNo,
-        shelfId: allocation.shelfId,
-        shelfName: allocation.shelfName,
-        quantity: allocation.quantity
-      })) || []
+      bomAllocations: finalBomAllocations
     };
   });
   
