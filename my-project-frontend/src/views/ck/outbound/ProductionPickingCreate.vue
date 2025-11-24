@@ -188,7 +188,7 @@
         </el-table>
 
         <!-- BOM原料分配部分 -->
-        <div class="bom-section" v-if="hasBomData">
+        <div class="bom-section" v-if="hasBomData && dataLoaded">
           <div class="section-header">
             <h3>原料分配</h3>
             <span class="bom-tip">根据产品BOM自动计算所需原料</span>
@@ -298,6 +298,11 @@
           </div>
         </div>
 
+        <!-- 加载状态提示 -->
+        <div v-if="hasBomData && !dataLoaded" class="loading-section">
+          <el-alert title="正在加载原料分配数据..." type="info" :closable="false" show-icon />
+        </div>
+
         <!-- 统计信息 -->
         <div class="summary-info" v-if="formData.items.length > 0">
           <el-row :gutter="20">
@@ -378,6 +383,7 @@ const route = useRoute();
 const formRef = ref();
 const loading = ref(false);
 const loadingCheck = ref(false);
+const dataLoaded = ref(false); // 新增：数据加载完成标志
 
 // 存储接口返回的最新分配数据
 const latestAllocationData = ref({});
@@ -524,7 +530,7 @@ const buildAllocationCheckRequest = (currentProductId = null, currentBatchNo = n
   };
 };
 
-// 检查分配数量 - 失去焦点时调用
+// 检查分配数量 - 增强版本，确保数据完全加载
 const checkBatchAllocation = async (currentProductId = null, currentBatchNo = null, currentShelfId = null) => {
   if (!formData.warehouseId || formData.items.length === 0) {
     return { success: true };
@@ -556,6 +562,9 @@ const checkBatchAllocation = async (currentProductId = null, currentBatchNo = nu
         message: res.message || ''
       };
       
+      // 标记数据加载完成
+      dataLoaded.value = true;
+      
       return res;
     }
     return { success: true };
@@ -568,24 +577,43 @@ const checkBatchAllocation = async (currentProductId = null, currentBatchNo = nu
   }
 };
 
-// 同步本地分配数据与接口返回数据
+// 同步本地分配数据与接口返回数据 - 增强版本
 const syncLocalAllocationsWithApiData = (batchAllocatedList) => {
+  if (!batchAllocatedList || !Array.isArray(batchAllocatedList)) return;
+  
   batchAllocatedList.forEach(parentDto => {
     parentDto.productSonDtoList?.forEach(sonDto => {
       sonDto.batchList?.forEach(batch => {
         batch.shelfList?.forEach(shelf => {
           // 找到对应的本地分配记录并更新
           formData.items.forEach((item, itemIndex) => {
-            if (item.productId == shelf.productParentId && item.bomAllocations) {
+            if (item.productId == shelf.productParentId) {
+              if (!item.bomAllocations) {
+                item.bomAllocations = [];
+              }
+              
               const allocationIndex = item.bomAllocations.findIndex(a => 
                 a.componentProductId == shelf.productSonId &&
                 a.batchNo === shelf.batchNo &&
                 a.shelfId == shelf.shelfId
               );
               
+              const allocatedQuantity = parseFloat(shelf.allocatedQuantity) || 0;
+              
               if (allocationIndex >= 0) {
-                // 使用接口返回的实际分配数量更新本地数据
-                item.bomAllocations[allocationIndex].quantity = parseFloat(shelf.allocatedQuantity) || 0;
+                // 更新现有分配记录的数量
+                item.bomAllocations[allocationIndex].quantity = allocatedQuantity;
+              } else if (allocatedQuantity > 0) {
+                // 创建新的分配记录
+                item.bomAllocations.push({
+                  componentProductId: shelf.productSonId,
+                  componentProductName: sonDto.componentProductName || '',
+                  componentProductSku: sonDto.componentProductSku || '',
+                  batchNo: shelf.batchNo,
+                  shelfId: shelf.shelfId,
+                  shelfName: shelf.shelfName || `货架${shelf.shelfId}`,
+                  quantity: allocatedQuantity
+                });
               }
             }
           });
@@ -640,11 +668,26 @@ const getRealTimeAvailableInfo = (componentProductId, batchNo, shelfId = null) =
   return '0.0000';
 };
 
-// 获取分配数量的方法 - 直接从接口返回数据获取
+// 获取分配数量的方法 - 增强版本
 const getAllocationQuantity = (itemIndex, componentProductId, batchNo, shelfId) => {
   const item = formData.items[itemIndex];
   
-  // 首先从接口返回数据中查找
+  if (!item) return 0;
+  
+  // 首先从本地分配数据中查找
+  if (item.bomAllocations && item.bomAllocations.length > 0) {
+    const allocation = item.bomAllocations.find(a => 
+      a.componentProductId === componentProductId &&
+      a.batchNo === batchNo &&
+      a.shelfId === shelfId
+    );
+    
+    if (allocation && allocation.quantity > 0) {
+      return parseFloat(allocation.quantity) || 0;
+    }
+  }
+  
+  // 其次从接口返回数据中查找
   for (const [key, data] of Object.entries(latestAllocationData.value)) {
     const parts = key.split('_');
     const productParentId = parts[0];
@@ -660,16 +703,7 @@ const getAllocationQuantity = (itemIndex, componentProductId, batchNo, shelfId) 
     }
   }
   
-  // 如果没有接口数据，从本地数据获取
-  if (!item.bomAllocations) return 0;
-  
-  const allocation = item.bomAllocations.find(a => 
-    a.componentProductId === componentProductId &&
-    a.batchNo === batchNo &&
-    a.shelfId === shelfId
-  );
-  
-  return parseFloat(allocation?.quantity) || 0;
+  return 0;
 };
 
 // 更新分配数量的方法 - 只更新本地数据
@@ -717,9 +751,10 @@ const handleQuantityBlur = async (index) => {
   await checkBatchAllocation(item.productId, null, null);
 };
 
-// 加载出库单详情
+// 加载出库单详情 - 修复版本
 const loadOutboundDetail = async (id) => {
   loading.value = true;
+  dataLoaded.value = false; // 重置加载状态
   try {
     const res = await get(`/api/auth/outbound/detailNew?orderId=${id}`);
     console.log('出库单详情响应:', res);
@@ -739,51 +774,95 @@ const loadOutboundDetail = async (id) => {
       });
 
       if (detailData.items && detailData.items.length > 0) {
-        formData.items = detailData.items.map(item => {
-          return {
-            productId: item.productId,
-            productName: item.productName || '',
-            sku: item.sku || '',
-            spec: item.spec || '',
-            unit: item.unit || '',
-            quantity: item.quantity || 1,
-
-            // 映射BOM数据
-                bomData: item.bomComponents?.map(component => ({
-                  componentProductId: component.componentProductId,
-                  componentProductName: component.componentProductName,
-                  componentProductSku: component.componentProductSku,
-                  componentProductSpec: component.componentProductSpec,
-                  componentProductUnit: component.componentProductUnit,
-                  quantity: component.unitUsage,
-                  batches: component.availableBatches
-                })) || [],
-                
-                // 映射分配数据
-                bomAllocations: item.materialAllocations?.map(allocation => ({
-                  componentProductId: allocation.componentProductId,
-                  componentProductName: '', // 需要从bomData中匹配
-                  componentProductSku: '', // 需要从bomData中匹配
-                  batchNo: allocation.batchNo,
-                  shelfId: allocation.shelfId,
-                  shelfName: allocation.shelfName,
-                  quantity: allocation.allocatedQuantity
-                })) || []
-          };
-        });
-
-        for (let i = 0; i < formData.items.length; i++) {
-          const item = formData.items[i];
-          if (item.productId) {
-            await loadBatchInfoForProduction(item.productId, i);
-          }
-        }
+        // 先清空现有数据
+        formData.items = [];
         
+        // 使用 nextTick 确保 DOM 更新
+        await nextTick();
+        
+        // 逐个处理产品项
+        for (const itemData of detailData.items) {
+          const newItem = {
+            productId: itemData.productId,
+            productName: itemData.productName || '',
+            sku: itemData.sku || '',
+            spec: itemData.spec || '',
+            unit: itemData.unit || '',
+            quantity: itemData.quantity || 1,
+            bomData: [],
+            bomAllocations: []
+          };
+          
+          // 处理 BOM 组件数据
+          if (itemData.bomComponents && itemData.bomComponents.length > 0) {
+            newItem.bomData = itemData.bomComponents.map(component => ({
+              componentProductId: component.componentProductId,
+              componentProductName: component.componentProductName,
+              componentProductSku: component.componentProductSku,
+              componentProductSpec: component.componentProductSpec,
+              componentProductUnit: component.componentProductUnit,
+              quantity: component.unitUsage,
+              batches: component.availableBatches ? component.availableBatches.map(batch => ({
+                batchNo: batch.batchNo,
+                totalQuantity: batch.totalQuantity,
+                shelfList: batch.shelves ? batch.shelves.map(shelf => ({
+                  shelfId: shelf.shelfId,
+                  shelfName: shelf.shelfName,
+                  availableQuantity: shelf.availableQuantity
+                })) : []
+              })) : []
+            }));
+          }
+          
+          // 处理物料分配数据 - 关键修复：确保分配数据正确映射
+          if (itemData.materialAllocations && itemData.materialAllocations.length > 0) {
+            newItem.bomAllocations = itemData.materialAllocations.map(allocation => {
+              // 查找对应的组件信息以获取完整数据
+              const bomComponent = newItem.bomData?.find(b => 
+                b.componentProductId === allocation.componentProductId
+              );
+              
+              return {
+                componentProductId: allocation.componentProductId,
+                componentProductName: bomComponent?.componentProductName || allocation.componentProductName || '',
+                componentProductSku: bomComponent?.componentProductSku || '',
+                batchNo: allocation.batchNo,
+                shelfId: allocation.shelfId,
+                shelfName: allocation.shelfName,
+                quantity: parseFloat(allocation.allocatedQuantity) || 0
+              };
+            });
+          }
+          
+          formData.items.push(newItem);
+        }
+
+        // 等待 DOM 更新后触发库存检查
+        await nextTick();
+        
+        // 为每个产品加载批次信息
+        const batchPromises = formData.items.map(async (item, index) => {
+          if (item.productId) {
+            await loadBatchInfoForProduction(item.productId, index);
+          }
+        });
+        
+        await Promise.all(batchPromises);
+        
+        // 触发库存检查以更新分配数据显示
         await checkBatchAllocation(null, null, null);
+        
+        // 双重确保数据刷新
+        setTimeout(async () => {
+          await checkBatchAllocation(null, null, null);
+        }, 300);
+        
       } else {
         formData.items = [];
+        dataLoaded.value = true;
       }
 
+      // 处理附件数据
       if (detailData.attachments && detailData.attachments.length > 0) {
         fileList.value = detailData.attachments.map(att => ({
           name: att.fileName,
@@ -819,6 +898,7 @@ const handleWarehouseChange = async (warehouseId) => {
     formData.items = [];
     latestAllocationData.value = {};
     allocationCheckResult.value = { success: true, message: '' };
+    dataLoaded.value = false;
   }
 };
 
@@ -863,7 +943,11 @@ const handleProductChange = async (productId, index) => {
     
     await loadBatchInfoForProduction(productId, index);
     await initializeBomAllocations(item);
-    await checkBatchAllocation(productId, null, null);
+    
+    // 添加延迟确保数据完全加载
+    setTimeout(async () => {
+      await checkBatchAllocation(productId, null, null);
+    }, 300);
   }
 };
 
@@ -1071,6 +1155,7 @@ const handleReset = () => {
       fileList.value = [];
       latestAllocationData.value = {};
       allocationCheckResult.value = { success: true, message: '' };
+      dataLoaded.value = false;
       generateOrderNo();
       ElMessage.success('表单已重置');
     }
@@ -1296,6 +1381,7 @@ onMounted(() => {
     loadOutboundDetail(route.params.id);
   } else {
     generateOrderNo();
+    dataLoaded.value = true;
   }
   loadWarehouseList();
   loadProductionProducts();
@@ -1322,6 +1408,7 @@ watch(
       fileList.value = [];
       latestAllocationData.value = {};
       allocationCheckResult.value = { success: true, message: '' };
+      dataLoaded.value = false;
       generateOrderNo();
     }
   }
@@ -1398,6 +1485,10 @@ watch(
 
 .product-table {
   margin-bottom: 16px;
+}
+
+.loading-section {
+  margin: 20px 0;
 }
 
 /* BOM相关样式 */

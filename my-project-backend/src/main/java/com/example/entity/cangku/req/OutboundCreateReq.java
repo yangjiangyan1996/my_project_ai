@@ -62,11 +62,6 @@ public class OutboundCreateReq {
         // 备注
         private String remark;
 
-        // 批次数量
-        //List<ProductInventoryAllBatchInner> availableBatches;
-        // 分配的批次数量
-        List<ProductInventoryBatchInner> batchAllocations;
-
         //生产入库时子产品明细
         List<BomAllocationCreateReq> bomAllocations;
     }

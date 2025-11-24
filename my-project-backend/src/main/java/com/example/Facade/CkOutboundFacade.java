@@ -3,10 +3,7 @@ package com.example.Facade;
 import com.alibaba.fastjson2.util.DateUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
-import com.example.entity.cangku.req.OutboundApproveOkReq;
-import com.example.entity.cangku.req.OutboundCreateReq;
-import com.example.entity.cangku.req.OutboundDeleteReq;
-import com.example.entity.cangku.req.OutboundListPageReq;
+import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.req.excel.OutBoundSaleQuantityImportDto;
 import com.example.entity.cangku.resp.*;
 import com.example.entity.cangku.resp.excel.OutboundOderExcelModel;
@@ -358,12 +355,12 @@ public class CkOutboundFacade {
      * 校验批次分配
      */
     private void validateBatchAllocation(OutboundCreateReq.ProductInfoInner item, int index, Long tenantId) {
-        if (item.getBatchAllocations() == null || item.getBatchAllocations().isEmpty()) {
+        if (item.getBomAllocations() == null || item.getBomAllocations().isEmpty()) {
             throw new ValidationException("第" + (index + 1) + "行产品未分配批次");
         }
 
         // 计算批次分配总数量
-        BigDecimal batchTotalQuantity = item.getBatchAllocations().stream()
+        BigDecimal batchTotalQuantity = item.getBomAllocations().stream()
                 .map(batch -> batch.getQuantity())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -374,8 +371,8 @@ public class CkOutboundFacade {
         }
 
         // 校验每个批次的库存是否足够
-        for (int i = 0; i < item.getBatchAllocations().size(); i++) {
-            OutboundCreateReq.ProductInventoryBatchInner batch = item.getBatchAllocations().get(i);
+        for (int i = 0; i < item.getBomAllocations().size(); i++) {
+            BomAllocationCreateReq batch = item.getBomAllocations().get(i);
 
             // 查询批次库存
             InventoryBatch inventoryBatch = inventoryBatchService.selectByBatchNoAndProductId(
@@ -427,17 +424,17 @@ public class CkOutboundFacade {
 
         for (OutboundCreateReq.ProductInfoInner item : req.getItems()) {
             // 为每个批次创建明细记录
-            for (OutboundCreateReq.ProductInventoryBatchInner batch : item.getBatchAllocations()) {
+            for (BomAllocationCreateReq batch : item.getBomAllocations()) {
                 OutboundOrderItem orderItem = new OutboundOrderItem();
                 orderItem.setOrderId(orderId);
                 orderItem.setProductId(item.getProductId());
                 orderItem.setBatchNo(batch.getBatchNo());
                 orderItem.setQuantity(batch.getQuantity()); // 转换为int类型
                 orderItem.setShelfLocationId(batch.getShelfId());
-                orderItem.setPriceUnit(item.getPrice());
-                orderItem.setPriceTotal(batch.getQuantity().multiply(item.getPrice()));
-                orderItem.setPriceUnitUsd(item.getPriceUnitUsd());
-                orderItem.setPriceTotalUsd(batch.getQuantity().multiply(item.getPriceUnitUsd()));
+                //orderItem.setPriceUnit(item.getPrice());
+                //orderItem.setPriceTotal(batch.getQuantity().multiply(item.getPrice()));
+                //orderItem.setPriceUnitUsd(item.getPriceUnitUsd());
+                //orderItem.setPriceTotalUsd(batch.getQuantity().multiply(item.getPriceUnitUsd()));
                 orderItem.setRemark(item.getRemark());
                 orderItem.setTenantId(req.getTenantId());
                 orderItem.setCreatedBy(req.getUserId());
