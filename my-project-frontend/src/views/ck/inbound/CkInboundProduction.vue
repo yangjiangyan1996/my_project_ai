@@ -80,6 +80,23 @@
               </el-button>
             </div>
           </div>
+
+          <!-- 已导入的领料单列表 -->
+          <div class="imported-picking-orders" v-if="importedPickingOrders.length > 0">
+            <h4>已导入的领料单</h4>
+            <div class="imported-list">
+              <el-tag
+                v-for="order in importedPickingOrders"
+                :key="order.id"
+                closable
+                @close="removeImportedPickingOrder(order.id)"
+                type="success"
+                style="margin-right: 8px; margin-bottom: 8px;"
+              >
+                {{ order.orderNo }}
+              </el-tag>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -127,14 +144,6 @@
           </el-row>
 
           <el-row :gutter="24">
-            <el-col :xs="24" :sm="12" :lg="8">
-              <el-form-item label="关联单号">
-                <el-input
-                  v-model="formData.relatedOrderNo"
-                  placeholder="可输入关联的生产订单号"
-                />
-              </el-form-item>
-            </el-col>
             <el-col :xs="24" :sm="12" :lg="8">
               <el-form-item label="预计入库日期" prop="expectedDate">
                 <el-date-picker
@@ -222,6 +231,11 @@
                 />
               </template>
             </el-table-column>
+            <el-table-column label="关联领料单" width="150">
+              <template #default="{ row }">
+                <span>{{ row.relatedPickingOrderNo || '-' }}</span>
+              </template>
+            </el-table-column>
             <el-table-column label="批次号" width="150">
               <template #default="{ row, $index }">
                 <el-input
@@ -280,19 +294,25 @@
         <!-- 统计信息 -->
         <div class="summary-info" v-if="formData.items.length > 0">
           <el-row :gutter="20">
-            <el-col :span="8">
+            <el-col :span="6">
               <div class="summary-item">
                 <span class="label">产品种类：</span>
                 <span class="value">{{ formData.items.length }} 种</span>
               </div>
             </el-col>
-            <el-col :span="8">
+            <el-col :span="6">
               <div class="summary-item">
                 <span class="label">入库总数：</span>
                 <span class="value">{{ totalActualQuantity }}</span>
               </div>
             </el-col>
-            <el-col :span="8">
+            <el-col :span="6">
+              <div class="summary-item">
+                <span class="label">关联领料单：</span>
+                <span class="value">{{ importedPickingOrders.length }} 个</span>
+              </div>
+            </el-col>
+            <el-col :span="6">
               <div class="summary-item">
                 <span class="label">分配状态：</span>
                 <span class="value" :class="allocationStatusClass">
@@ -392,6 +412,7 @@ const dataSource = ref('manual');
 const selectedPickingOrderId = ref('');
 const selectedPickingOrder = ref(null);
 const availablePickingOrders = ref([]);
+const importedPickingOrders = ref([]); // 已导入的领料单列表
 
 // 判断是否是编辑模式
 const isEditMode = computed(() => {
@@ -405,7 +426,6 @@ const formData = reactive({
   orderType: 2,
   warehouseId: null,
   expectedDate: '',
-  relatedOrderNo: '',
   remark: '',
   status: 0,
   items: [],
@@ -506,41 +526,74 @@ const importPickingData = async () => {
     return;
   }
 
+  // 检查是否已导入过该领料单
+  if (importedPickingOrders.value.some(order => order.id === selectedPickingOrder.value.id)) {
+    ElMessage.warning('该领料单已导入');
+    return;
+  }
+
   importing.value = true;
   try {
     const pickingOrder = selectedPickingOrder.value;
     
-    // 设置基本信息
-    formData.warehouseId = pickingOrder.warehouseId;
-    formData.relatedOrderNo = pickingOrder.orderNo;
-    formData.remark = `由生产领料单${pickingOrder.orderNo}导入`;
-    
-    // 加载货架位置
-    await loadShelfLocationList(pickingOrder.warehouseId);
+    // 设置基本信息（如果是第一次导入）
+    if (!formData.warehouseId && pickingOrder.warehouseId) {
+      formData.warehouseId = pickingOrder.warehouseId;
+      await loadShelfLocationList(pickingOrder.warehouseId);
+    }
     
     // 导入产品数据 - 基于BOM反向推导产成品
     const finishedProducts = deriveFinishedProducts(pickingOrder.items);
-    formData.items = finishedProducts.map(product => ({
+    const newItems = finishedProducts.map(product => ({
       productId: product.id,
       productName: product.name,
       sku: product.sku,
       spec: product.spec,
       unit: product.unit,
       actualQuantity: product.quantity,
+      relatedPickingOrderNo: pickingOrder.orderNo, // 关联单号放到产品明细
       shelfLocationIds: [],
       shelfAllocations: [],
       batchNo: generateBatchNo(),
       remark: ''
     }));
     
-    ElMessage.success(`成功导入 ${finishedProducts.length} 个产品`);
-    dataSource.value = 'manual'; // 导入后切换到手动模式
+    // 添加到现有产品列表
+    formData.items.push(...newItems);
+    
+    // 添加到已导入领料单列表
+    importedPickingOrders.value.push({
+      id: pickingOrder.id,
+      orderNo: pickingOrder.orderNo
+    });
+    
+    ElMessage.success(`成功导入 ${newItems.length} 个产品`);
+    
+    // 清空选择，允许继续导入其他领料单
+    selectedPickingOrderId.value = '';
+    selectedPickingOrder.value = null;
     
   } catch (error) {
     console.error('导入数据失败:', error);
     ElMessage.error('导入数据失败');
   } finally {
     importing.value = false;
+  }
+};
+
+// 移除已导入的领料单
+const removeImportedPickingOrder = (orderId) => {
+  const orderIndex = importedPickingOrders.value.findIndex(order => order.id === orderId);
+  if (orderIndex > -1) {
+    const orderNo = importedPickingOrders.value[orderIndex].orderNo;
+    
+    // 移除该领料单对应的产品
+    formData.items = formData.items.filter(item => item.relatedPickingOrderNo !== orderNo);
+    
+    // 从已导入列表中移除
+    importedPickingOrders.value.splice(orderIndex, 1);
+    
+    ElMessage.success(`已移除领料单 ${orderNo} 及其相关产品`);
   }
 };
 
@@ -730,6 +783,7 @@ const handleAddProduct = () => {
     spec: '',
     unit: '',
     actualQuantity: 1,
+    relatedPickingOrderNo: '', // 手动添加的产品没有关联领料单
     shelfLocationIds: [],
     shelfAllocations: [],
     batchNo: generateBatchNo(),
@@ -744,11 +798,31 @@ const clearAllProducts = () => {
     type: 'warning'
   }).then(() => {
     formData.items = [];
+    importedPickingOrders.value = []; // 同时清空已导入的领料单
     ElMessage.success('已清空所有产品');
   });
 };
 
 const handleRemoveProduct = (index) => {
+  const item = formData.items[index];
+  
+  // 如果删除的是导入的产品，检查是否需要从已导入列表中移除
+  if (item.relatedPickingOrderNo) {
+    const remainingItemsFromOrder = formData.items.filter(
+      product => product.relatedPickingOrderNo === item.relatedPickingOrderNo && product !== item
+    );
+    
+    if (remainingItemsFromOrder.length === 0) {
+      // 该领料单没有其他产品了，从已导入列表中移除
+      const orderIndex = importedPickingOrders.value.findIndex(
+        order => order.orderNo === item.relatedPickingOrderNo
+      );
+      if (orderIndex > -1) {
+        importedPickingOrders.value.splice(orderIndex, 1);
+      }
+    }
+  }
+  
   formData.items.splice(index, 1);
 };
 
@@ -815,6 +889,7 @@ const handleReset = () => {
     } else {
       formRef.value?.resetFields();
       formData.items = [];
+      importedPickingOrders.value = [];
       dataSource.value = 'manual';
       selectedPickingOrderId.value = '';
       selectedPickingOrder.value = null;
@@ -943,7 +1018,6 @@ const loadInboundDetail = async (id) => {
         orderType: res.orderType,
         warehouseId: res.warehouseId,
         expectedDate: res.expectedDate || '',
-        relatedOrderNo: res.relatedOrderNo || '',
         remark: res.remark || '',
         status: res.status,
         items: []
@@ -973,6 +1047,14 @@ const loadInboundDetail = async (id) => {
               }));
             }
 
+            // 重建已导入领料单列表
+            if (item.relatedPickingOrderNo && !importedPickingOrders.value.some(order => order.orderNo === item.relatedPickingOrderNo)) {
+              importedPickingOrders.value.push({
+                id: item.relatedPickingOrderId || Date.now(), // 如果没有id，使用时间戳
+                orderNo: item.relatedPickingOrderNo
+              });
+            }
+
             return {
               productId: item.productId,
               productName: item.productName || '',
@@ -980,6 +1062,7 @@ const loadInboundDetail = async (id) => {
               spec: item.spec || '',
               unit: item.unit || '',
               actualQuantity: parseInt(item.actualQuantity) || 1,
+              relatedPickingOrderNo: item.relatedPickingOrderNo || '', // 加载关联领料单号
               shelfLocationIds: shelfLocationIds,
               shelfAllocations: shelfAllocations,
               batchNo: item.batchNo || generateBatchNo(),
@@ -1021,11 +1104,11 @@ watch(
         orderType: 2,
         warehouseId: null,
         expectedDate: '',
-        relatedOrderNo: '',
         remark: '',
         status: 0,
         items: []
       });
+      importedPickingOrders.value = [];
       dataSource.value = 'manual';
       selectedPickingOrderId.value = '';
       selectedPickingOrder.value = null;
@@ -1036,6 +1119,27 @@ watch(
 </script>
 
 <style scoped>
+/* 原有样式保持不变，只添加新样式 */
+.imported-picking-orders {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f0f9ff;
+  border-radius: 4px;
+  border: 1px solid #e1f5fe;
+}
+
+.imported-picking-orders h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #0288d1;
+}
+
+.imported-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* 其他样式保持不变 */
 .inbound-create-container {
   padding: 20px;
   background-color: #f5f7fa;

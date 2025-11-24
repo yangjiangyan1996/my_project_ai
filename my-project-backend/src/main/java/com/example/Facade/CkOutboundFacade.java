@@ -1,6 +1,5 @@
 package com.example.Facade;
 
-import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson2.util.DateUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
@@ -29,6 +28,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @Author YangJian
@@ -103,7 +103,7 @@ public class CkOutboundFacade {
                         saveEntity.setBatchNo(v.getBatchNo());
                         saveEntity.setProductId(v.getComponentProductId());
                         saveEntity.setRelationProductId(item.getProductId());
-                        //item.setBatchNo(outboundOrder.getRelatedOrderNo());
+                        saveEntity.setBatchNo(v.getBatchNo());
                         saveEntity.setShelfLocationId(v.getShelfId());
                         saveEntity.setQuantity(v.getQuantity());
                         saveEntity.setCreatedAt(new Date());
@@ -428,7 +428,8 @@ public class CkOutboundFacade {
             for (BomAllocationCreateReq batch : item.getBomAllocations()) {
                 OutboundOrderItem orderItem = new OutboundOrderItem();
                 orderItem.setOrderId(orderId);
-                orderItem.setProductId(item.getProductId());
+                orderItem.setProductId(batch.getComponentProductId());
+                orderItem.setRelationProductId(item.getProductId());
                 orderItem.setBatchNo(batch.getBatchNo());
                 orderItem.setQuantity(batch.getQuantity()); // 转换为int类型
                 orderItem.setShelfLocationId(batch.getShelfId());
@@ -941,13 +942,17 @@ public class CkOutboundFacade {
         }
 
         List<OutboundOrderItem> items = outboundOrderItemService.selectByOrderId(orderId, tenantId);
-        Map<Long, List<OutboundOrderItem>> productId2OutItemListMap = items.stream()
-                .collect(Collectors.groupingBy(OutboundOrderItem::getProductId));
+        Map<Long, List<OutboundOrderItem>> parentProductId2OutItemListMap = items.stream()
+                .collect(Collectors.groupingBy(OutboundOrderItem::getRelationProductId));
 
         // 获取产品信息
         Map<Long, Product> productId2ProductMap = new HashMap<>();
-        List<Long> productIds = items.stream().map(OutboundOrderItem::getProductId).distinct().collect(Collectors.toList());
-        List<Product> products = productService.selectByIds(tenantId, productIds);
+
+        List<Long> allProductIds = Stream.of(
+                items.stream().map(OutboundOrderItem::getProductId).distinct().collect(Collectors.toList()),
+                items.stream().map(OutboundOrderItem::getRelationProductId).distinct()
+                        .collect(Collectors.toList())).flatMap(List::stream).collect(Collectors.toList());
+        List<Product> products = productService.selectByIds(tenantId, allProductIds);
         if (!CollectionUtils.isEmpty(products)) {
             productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
         }
@@ -1003,14 +1008,14 @@ public class CkOutboundFacade {
         // 构建产品明细
         List<OutBoundDetailOfProductionResp.ProductionProductItem> productItems = new ArrayList<>();
 
-        for (Long productId : productId2OutItemListMap.keySet()) {
-            List<OutboundOrderItem> outItemList = productId2OutItemListMap.get(productId);
+        for (Long parentProductId : parentProductId2OutItemListMap.keySet()) {
+            List<OutboundOrderItem> outItemList = parentProductId2OutItemListMap.get(parentProductId);
             if (!CollectionUtils.isEmpty(outItemList)) {
                 OutBoundDetailOfProductionResp.ProductionProductItem productItem = new OutBoundDetailOfProductionResp.ProductionProductItem();
 
                 // 设置产品基本信息
-                productItem.setProductId(productId);
-                Product product = productId2ProductMap.get(productId);
+                productItem.setProductId(parentProductId);
+                Product product = productId2ProductMap.get(parentProductId);
                 if (product != null) {
                     productItem.setProductName(product.getName());
                     productItem.setSku(product.getSku());
@@ -1025,7 +1030,7 @@ public class CkOutboundFacade {
                 productItem.setQuantity(quantity);
 
                 // 构建BOM组件信息
-                List<OutBoundDetailOfProductionResp.BomComponent> bomComponents = buildBomComponents(productId, tenantId, outboundOrder.getWarehouseId(), unitCode2UnitMap, shelfId2ShelfMap);
+                List<OutBoundDetailOfProductionResp.BomComponent> bomComponents = buildBomComponents(parentProductId, tenantId, outboundOrder.getWarehouseId(), unitCode2UnitMap, shelfId2ShelfMap);
                 productItem.setBomComponents(bomComponents);
 
                 // 构建原料分配信息
