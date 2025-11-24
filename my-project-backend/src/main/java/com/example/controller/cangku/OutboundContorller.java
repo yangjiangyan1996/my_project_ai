@@ -10,10 +10,7 @@ import com.example.entity.cangku.req.OutboundApproveOkReq;
 import com.example.entity.cangku.req.OutboundCreateReq;
 import com.example.entity.cangku.req.OutboundDeleteReq;
 import com.example.entity.cangku.req.OutboundListPageReq;
-import com.example.entity.cangku.resp.OutBoundDetailOfProductionResp;
-import com.example.entity.cangku.resp.OutBoundSaleQuantityImportResp;
-import com.example.entity.cangku.resp.OutboundDetailResp;
-import com.example.entity.cangku.resp.OutboundListPageResp;
+import com.example.entity.cangku.resp.*;
 import com.example.entity.cangku.resp.excel.OutboundOderExcelModel;
 import com.example.entity.cangku.resp.excel.OutboundSaleExcelModel;
 import com.example.filter.UserUtil;
@@ -288,4 +285,19 @@ public class OutboundContorller {
         }
     }
 
+
+    @GetMapping("/listCompletedOutBoundProduction")
+    public RespBean<List<OutBoundComplateProductResp>> listCompletedOutBoundProduction(@RequestParam("orderType") Integer orderType) {
+        try {
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            List<OutBoundComplateProductResp> result = outboundFacade.listCompletedOutBoundProduction(tenantId, orderType);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("OutboundContorller#listCompletedOutBoundProduction,orderType:{}",orderType, e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("OutboundContorller#listCompletedOutBoundProduction,orderType:{}",orderType, e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 }

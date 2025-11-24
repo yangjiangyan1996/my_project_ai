@@ -1,5 +1,6 @@
 package com.example.Facade;
 
+import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson2.util.DateUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
@@ -1154,5 +1155,26 @@ public class CkOutboundFacade {
                     return allocation;
                 })
                 .collect(Collectors.toList());
+    }
+
+    public List<OutBoundComplateProductResp> listCompletedOutBoundProduction(Long tenantId, Integer orderType) {
+        if (orderType == null || tenantId == null) {
+            return Collections.emptyList();
+        }
+        List<OutboundOrder> outboundOrders = outboundOrderService.listCompletedOutBoundProduction(tenantId, orderType);
+        return outboundOrders.stream().map(outboundOrder -> {
+            OutBoundComplateProductResp resp = new OutBoundComplateProductResp();
+            resp.setId(outboundOrder.getId());
+            resp.setOrderNo(outboundOrder.getOrderNo());
+            resp.setRelatedOrderNo(outboundOrder.getRelatedOrderNo());
+            resp.setOrderType(outboundOrder.getOrderType());
+            resp.setWarehouseId(outboundOrder.getWarehouseId());
+            resp.setWarehouseName(warehouseService.getById(outboundOrder.getWarehouseId()).getName());
+            resp.setTotalQuantity(outboundOrder.getTotalQuantity());
+            resp.setStatus(outboundOrder.getStatus());
+            resp.setRemark(outboundOrder.getRemark());
+            return resp;
+        }).collect(Collectors.toList());
+
     }
 }

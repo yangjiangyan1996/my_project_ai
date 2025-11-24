@@ -18,4 +18,6 @@ public interface CkOutboundOrderService extends IService<OutboundOrder> {
     OutboundOrder selectById(Long orderId, Long tenantId);
 
     List<OutboundOrder> selectByOutboundOrderIds(Long tenantId, List<Long> orderIds);
+
+    List<OutboundOrder> listCompletedOutBoundProduction(Long tenantId, Integer orderType);
 }

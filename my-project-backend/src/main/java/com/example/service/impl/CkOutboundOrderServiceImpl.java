@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.OutboundOrder;
 import com.example.entity.cangku.req.OutboundListPageReq;
 import com.example.enums.CkCommonEnums;
+import com.example.enums.CkInOutboundEnums;
 import com.example.mapper.CkOutboundOrderMapper;
 import com.example.service.CkOutboundOrderService;
 import org.apache.commons.lang3.StringUtils;
@@ -26,6 +27,17 @@ public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMappe
                         .in("product_id", productIds)
                         .eq("status", status)
                         .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
+    public List<OutboundOrder> listCompletedOutBoundProduction(Long tenantId, Integer orderType) {
+        return baseMapper.selectList(
+                new QueryWrapper<OutboundOrder>()
+                        .eq("tenant_id", tenantId)
+                        .eq("order_type", orderType)
+                        .eq("status", CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.getCode())
+                        .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
         );
     }
 
