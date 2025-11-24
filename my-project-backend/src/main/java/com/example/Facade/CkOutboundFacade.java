@@ -8,10 +8,7 @@ import com.example.entity.cangku.req.OutboundCreateReq;
 import com.example.entity.cangku.req.OutboundDeleteReq;
 import com.example.entity.cangku.req.OutboundListPageReq;
 import com.example.entity.cangku.req.excel.OutBoundSaleQuantityImportDto;
-import com.example.entity.cangku.resp.InventoryListResp;
-import com.example.entity.cangku.resp.OutBoundSaleQuantityImportResp;
-import com.example.entity.cangku.resp.OutboundDetailResp;
-import com.example.entity.cangku.resp.OutboundListPageResp;
+import com.example.entity.cangku.resp.*;
 import com.example.entity.cangku.resp.excel.OutboundOderExcelModel;
 import com.example.entity.cangku.resp.excel.OutboundSaleExcelModel;
 import com.example.entity.dto.Account;
@@ -22,6 +19,7 @@ import com.example.utils.ExcelUtils;
 import com.google.common.collect.Lists;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -41,6 +39,7 @@ import java.util.stream.Collectors;
  * @Date 2025/11/7 01:04
  */
 @Service
+@Slf4j
 public class CkOutboundFacade {
 
     @Resource
@@ -49,6 +48,10 @@ public class CkOutboundFacade {
     @Resource
     CkOutboundOrderService outboundOrderService;
 
+    @Resource
+    CkProductBomService productBomService;
+    @Resource
+    CkProductBomDetailService productBomDetailService;
     @Resource
     CkProductService productService;
     @Resource
@@ -61,6 +64,8 @@ public class CkOutboundFacade {
     CkInventoryWarehouseService inventoryWarehouseService;
     @Resource
     CkInventoryBatchService inventoryBatchService;
+    @Resource
+    CkInventoryShelfService inventoryShelfService;
     @Resource
     CkInventoryTransactionService inventoryTransactionService;
     @Resource
@@ -708,106 +713,6 @@ public class CkOutboundFacade {
 //            createInventoryTransaction(req, orderId, item);
 //        }
 //    }
-    public OutboundDetailResp detail(Long orderId, Long tenantId) {
-        OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);
-        if (outboundOrder == null) {
-            throw new ValidationException("出库单不存在");
-        }
-        List<OutboundOrderItem> items = outboundOrderItemService.selectByOrderId(orderId, tenantId);
-        Map<Long, List<OutboundOrderItem>> productId2OutItemListMap = items.stream().collect(Collectors.groupingBy(OutboundOrderItem::getProductId));
-
-        Map<Long, Product> productId2ProductMap = new HashMap<>();
-        List<Long> productIds = items.stream().map(v -> v.getProductId()).distinct().collect(Collectors.toList());
-        List<Product> products = productService.selectByIds(tenantId, productIds);
-        if (!CollectionUtils.isEmpty(products)) {
-            productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
-        }
-
-        Map<String, Unit> unitCode2UnitMap = new HashMap<>();
-        List<Unit> units = unitService.selectByTenantId(tenantId, 1);
-        if (!CollectionUtils.isEmpty(units)) {
-            unitCode2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
-        }
-
-        Map<Long, Warehouse> warehouseId2WarehouseMap = new HashMap<>();
-        List<Warehouse> warehouses = warehouseService.selectByTenantId(tenantId);
-        if (!CollectionUtils.isEmpty(warehouses)) {
-            warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
-        }
-
-        Map<Long, Customer> customerId2CustomerMap = new HashMap<>();
-        List<Customer> customers = customerService.listEnable(tenantId);
-        if (!CollectionUtils.isEmpty(customers)) {
-            customerId2CustomerMap = customers.stream().collect(Collectors.toMap(Customer::getId, v -> v));
-        }
-
-        Map<Long, Account> accountId2AccountMap = new HashMap<>();
-        List<Account> accounts = accountService.selectByIds(Lists.newArrayList(outboundOrder.getCreatedBy(), outboundOrder.getModifiedBy()));
-        if (!CollectionUtils.isEmpty(accounts)) {
-            accountId2AccountMap = accounts.stream().collect(Collectors.toMap(Account::getId, v -> v));
-        }
-
-        OutboundDetailResp resp = new OutboundDetailResp();
-        resp.setId(outboundOrder.getId());
-        resp.setOrderNo(outboundOrder.getOrderNo());
-        resp.setOrderType(outboundOrder.getOrderType());
-        resp.setRelatedOrderNo(outboundOrder.getRelatedOrderNo());
-        resp.setRemark(outboundOrder.getRemark());
-        resp.setStatus(outboundOrder.getStatus());
-        resp.setCustomerId(outboundOrder.getCustomerId());
-        resp.setCustomerName(customerId2CustomerMap.getOrDefault(outboundOrder.getCustomerId(), new Customer()).getCustomerName());
-        resp.setTotalQuantity(outboundOrder.getTotalQuantity());
-        resp.setTotalAmount(outboundOrder.getTotalAmount());
-        resp.setTotalAmountUsd(outboundOrder.getTotalAmountUsd());
-        resp.setWarehouseId(outboundOrder.getWarehouseId());
-        resp.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(outboundOrder.getWarehouseId(), new Warehouse()).getName());
-        resp.setExpectedDate(DateUtils.format(outboundOrder.getExpectedDate()));
-        resp.setApplicantName(accountId2AccountMap.getOrDefault(outboundOrder.getCreatedBy(), new Account()).getUsername());
-        resp.setCreatedAt(outboundOrder.getCreatedAt());
-        resp.setUpdatedAt(outboundOrder.getModifiedAt());
-        Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
-        Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
-
-        List<OutboundDetailResp.ProductInfoInner> innerList = new ArrayList<>();
-
-        for (Long productId : productId2OutItemListMap.keySet()) {
-            List<OutboundOrderItem> outItemList = productId2OutItemListMap.get(productId);
-            if (!CollectionUtils.isEmpty(outItemList)) {
-                OutboundDetailResp.ProductInfoInner req = new OutboundDetailResp.ProductInfoInner();
-                req.setProductId(productId);
-                Product product = finalProductId2ProductMap.getOrDefault(productId, null);
-                if (product.getId() != null) {
-                    req.setProductName(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getName());
-                    req.setSku(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSku());
-                    req.setSpec(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSpec());
-                    req.setUnit(finalUnitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
-                }
-
-                //将outItemList 中的getQuantity求和
-                BigDecimal quantity = outItemList.stream().map(OutboundOrderItem::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
-                req.setQuantity(quantity);
-                BigDecimal totalAmount = outItemList.stream().map(OutboundOrderItem::getPriceTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-                req.setPriceTotal(totalAmount);
-                req.setPriceUnit(outItemList.get(0).getPriceUnit());
-                req.setPriceTotalUsd(outItemList.get(0).getPriceTotalUsd());
-                req.setPriceUnitUsd(outItemList.get(0).getPriceUnitUsd());
-                req.setRemark(outItemList.get(0).getRemark());
-
-                List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v -> {
-                    OutboundDetailResp.ProductInventoryBatchInner i = new OutboundDetailResp.ProductInventoryBatchInner();
-                    i.setItemId(v.getId());
-                    i.setBatchNo(v.getBatchNo());
-                    i.setQuantity(v.getQuantity());
-                    return i;
-                }).collect(Collectors.toList());
-                req.setBatchAllocations(batchAllocations);
-                innerList.add(req);
-            }
-        }
-        resp.setItems(innerList);
-        resp.setItemCount(CollectionUtils.isEmpty(innerList) ? 0 : innerList.size());
-        return resp;
-    }
 
 
     public Boolean delete(OutboundDeleteReq req) {
@@ -927,5 +832,330 @@ public class CkOutboundFacade {
             }
             return model;
         }).collect(Collectors.toList());
+    }
+
+
+    public OutboundDetailResp detail(Long orderId, Long tenantId) {
+        OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);
+        if (outboundOrder == null) {
+            throw new ValidationException("出库单不存在");
+        }
+        List<OutboundOrderItem> items = outboundOrderItemService.selectByOrderId(orderId, tenantId);
+        Map<Long, List<OutboundOrderItem>> productId2OutItemListMap = items.stream().collect(Collectors.groupingBy(OutboundOrderItem::getProductId));
+
+        Map<Long, Product> productId2ProductMap = new HashMap<>();
+        List<Long> productIds = items.stream().map(v -> v.getProductId()).distinct().collect(Collectors.toList());
+        List<Product> products = productService.selectByIds(tenantId, productIds);
+        if (!CollectionUtils.isEmpty(products)) {
+            productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+        }
+
+        Map<String, Unit> unitCode2UnitMap = new HashMap<>();
+        List<Unit> units = unitService.selectByTenantId(tenantId, 1);
+        if (!CollectionUtils.isEmpty(units)) {
+            unitCode2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
+        }
+
+        Map<Long, Warehouse> warehouseId2WarehouseMap = new HashMap<>();
+        List<Warehouse> warehouses = warehouseService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(warehouses)) {
+            warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
+        }
+
+        Map<Long, Customer> customerId2CustomerMap = new HashMap<>();
+        List<Customer> customers = customerService.listEnable(tenantId);
+        if (!CollectionUtils.isEmpty(customers)) {
+            customerId2CustomerMap = customers.stream().collect(Collectors.toMap(Customer::getId, v -> v));
+        }
+
+        Map<Long, Account> accountId2AccountMap = new HashMap<>();
+        List<Account> accounts = accountService.selectByIds(Lists.newArrayList(outboundOrder.getCreatedBy(), outboundOrder.getModifiedBy()));
+        if (!CollectionUtils.isEmpty(accounts)) {
+            accountId2AccountMap = accounts.stream().collect(Collectors.toMap(Account::getId, v -> v));
+        }
+
+        OutboundDetailResp resp = new OutboundDetailResp();
+        resp.setId(outboundOrder.getId());
+        resp.setOrderNo(outboundOrder.getOrderNo());
+        resp.setOrderType(outboundOrder.getOrderType());
+        resp.setRelatedOrderNo(outboundOrder.getRelatedOrderNo());
+        resp.setRemark(outboundOrder.getRemark());
+        resp.setStatus(outboundOrder.getStatus());
+        resp.setCustomerId(outboundOrder.getCustomerId());
+        resp.setCustomerName(customerId2CustomerMap.getOrDefault(outboundOrder.getCustomerId(), new Customer()).getCustomerName());
+        resp.setTotalQuantity(outboundOrder.getTotalQuantity());
+        resp.setTotalAmount(outboundOrder.getTotalAmount());
+        resp.setTotalAmountUsd(outboundOrder.getTotalAmountUsd());
+        resp.setWarehouseId(outboundOrder.getWarehouseId());
+        resp.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(outboundOrder.getWarehouseId(), new Warehouse()).getName());
+        resp.setExpectedDate(DateUtils.format(outboundOrder.getExpectedDate()));
+        resp.setApplicantName(accountId2AccountMap.getOrDefault(outboundOrder.getCreatedBy(), new Account()).getUsername());
+        resp.setCreatedAt(outboundOrder.getCreatedAt());
+        resp.setUpdatedAt(outboundOrder.getModifiedAt());
+        Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
+        Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
+
+        List<OutboundDetailResp.ProductInfoInner> innerList = new ArrayList<>();
+
+        for (Long productId : productId2OutItemListMap.keySet()) {
+            List<OutboundOrderItem> outItemList = productId2OutItemListMap.get(productId);
+            if (!CollectionUtils.isEmpty(outItemList)) {
+                OutboundDetailResp.ProductInfoInner req = new OutboundDetailResp.ProductInfoInner();
+                req.setProductId(productId);
+                Product product = finalProductId2ProductMap.getOrDefault(productId, null);
+                if (product.getId() != null) {
+                    req.setProductName(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getName());
+                    req.setSku(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSku());
+                    req.setSpec(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSpec());
+                    req.setUnit(finalUnitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
+                }
+
+                //将outItemList 中的getQuantity求和
+                BigDecimal quantity = outItemList.stream().map(OutboundOrderItem::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+                req.setQuantity(quantity);
+                BigDecimal totalAmount = outItemList.stream().map(OutboundOrderItem::getPriceTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+                req.setPriceTotal(totalAmount);
+                req.setPriceUnit(outItemList.get(0).getPriceUnit());
+                req.setPriceTotalUsd(outItemList.get(0).getPriceTotalUsd());
+                req.setPriceUnitUsd(outItemList.get(0).getPriceUnitUsd());
+                req.setRemark(outItemList.get(0).getRemark());
+
+                List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v -> {
+                    OutboundDetailResp.ProductInventoryBatchInner i = new OutboundDetailResp.ProductInventoryBatchInner();
+                    i.setItemId(v.getId());
+                    i.setBatchNo(v.getBatchNo());
+                    i.setQuantity(v.getQuantity());
+                    return i;
+                }).collect(Collectors.toList());
+                req.setBatchAllocations(batchAllocations);
+                innerList.add(req);
+            }
+        }
+        resp.setItems(innerList);
+        resp.setItemCount(CollectionUtils.isEmpty(innerList) ? 0 : innerList.size());
+        return resp;
+    }
+
+    public OutBoundDetailOfProductionResp detailNew(Long orderId, Long tenantId) {
+        OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);
+        if (outboundOrder == null) {
+            throw new ValidationException("出库单不存在");
+        }
+
+        List<OutboundOrderItem> items = outboundOrderItemService.selectByOrderId(orderId, tenantId);
+        Map<Long, List<OutboundOrderItem>> productId2OutItemListMap = items.stream()
+                .collect(Collectors.groupingBy(OutboundOrderItem::getProductId));
+
+        // 获取产品信息
+        Map<Long, Product> productId2ProductMap = new HashMap<>();
+        List<Long> productIds = items.stream().map(OutboundOrderItem::getProductId).distinct().collect(Collectors.toList());
+        List<Product> products = productService.selectByIds(tenantId, productIds);
+        if (!CollectionUtils.isEmpty(products)) {
+            productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+        }
+
+        // 单位信息
+        Map<String, Unit> unitCode2UnitMap = new HashMap<>();
+        List<Unit> units = unitService.selectByTenantId(tenantId, 1);
+        if (!CollectionUtils.isEmpty(units)) {
+            unitCode2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
+        }
+
+        // 仓库信息
+        Map<Long, Warehouse> warehouseId2WarehouseMap = new HashMap<>();
+        List<Warehouse> warehouses = warehouseService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(warehouses)) {
+            warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
+        }
+
+        // 用户信息
+        Map<Long, Account> accountId2AccountMap = new HashMap<>();
+        List<Account> accounts = accountService.selectByIds(Lists.newArrayList(outboundOrder.getCreatedBy(), outboundOrder.getModifiedBy()));
+        if (!CollectionUtils.isEmpty(accounts)) {
+            accountId2AccountMap = accounts.stream().collect(Collectors.toMap(Account::getId, v -> v));
+        }
+
+        //货架信息
+        Map<Long, WarehouseShelf> shelfId2ShelfMap = new HashMap<>();
+        List<WarehouseShelf> shelves = shelfService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(shelves)) {
+            shelfId2ShelfMap = shelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        }
+
+        // 构建响应对象
+        OutBoundDetailOfProductionResp resp = new OutBoundDetailOfProductionResp();
+        resp.setId(outboundOrder.getId());
+        resp.setOrderNo(outboundOrder.getOrderNo());
+        resp.setOrderType(outboundOrder.getOrderType());
+        resp.setRelatedOrderNo(outboundOrder.getRelatedOrderNo());
+        resp.setRemark(outboundOrder.getRemark());
+        resp.setStatus(outboundOrder.getStatus());
+        resp.setTotalQuantity(outboundOrder.getTotalQuantity());
+        resp.setTotalAmount(outboundOrder.getTotalAmount());
+        resp.setTotalAmountUsd(outboundOrder.getTotalAmountUsd());
+        resp.setWarehouseId(outboundOrder.getWarehouseId());
+        resp.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(outboundOrder.getWarehouseId(), new Warehouse()).getName());
+        resp.setExpectedDate(DateUtils.format(outboundOrder.getExpectedDate()));
+        resp.setApplicantName(accountId2AccountMap.getOrDefault(outboundOrder.getCreatedBy(), new Account()).getUsername());
+        resp.setCreatedAt(outboundOrder.getCreatedAt());
+        resp.setUpdatedAt(outboundOrder.getModifiedAt());
+        resp.setUserId(outboundOrder.getCreatedBy());
+        resp.setTenantId(tenantId);
+
+        // 构建产品明细
+        List<OutBoundDetailOfProductionResp.ProductionProductItem> productItems = new ArrayList<>();
+
+        for (Long productId : productId2OutItemListMap.keySet()) {
+            List<OutboundOrderItem> outItemList = productId2OutItemListMap.get(productId);
+            if (!CollectionUtils.isEmpty(outItemList)) {
+                OutBoundDetailOfProductionResp.ProductionProductItem productItem = new OutBoundDetailOfProductionResp.ProductionProductItem();
+
+                // 设置产品基本信息
+                productItem.setProductId(productId);
+                Product product = productId2ProductMap.get(productId);
+                if (product != null) {
+                    productItem.setProductName(product.getName());
+                    productItem.setSku(product.getSku());
+                    productItem.setSpec(product.getSpec());
+                    productItem.setUnit(unitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
+                }
+
+                // 计算总数量
+                BigDecimal quantity = outItemList.stream()
+                        .map(OutboundOrderItem::getQuantity)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                productItem.setQuantity(quantity);
+
+                // 构建BOM组件信息
+                List<OutBoundDetailOfProductionResp.BomComponent> bomComponents = buildBomComponents(productId, tenantId, outboundOrder.getWarehouseId(), unitCode2UnitMap, shelfId2ShelfMap);
+                productItem.setBomComponents(bomComponents);
+
+                // 构建原料分配信息
+                List<OutBoundDetailOfProductionResp.MaterialAllocation> materialAllocations = buildMaterialAllocations(outItemList, shelfId2ShelfMap);
+                productItem.setMaterialAllocations(materialAllocations);
+
+                productItems.add(productItem);
+            }
+        }
+
+        resp.setItems(productItems);
+        return resp;
+    }
+
+    /**
+     * 构建BOM组件信息
+     */
+    private List<OutBoundDetailOfProductionResp.BomComponent> buildBomComponents(Long productId, Long tenantId, Long warehouseId,
+                                                                                 Map<String, Unit> unitCode2UnitMap,
+                                                                                 Map<Long, WarehouseShelf> shelfId2ShelfMap) {
+        List<OutBoundDetailOfProductionResp.BomComponent> bomComponents = new ArrayList<>();
+
+        try {
+            ProductBom productBom = productBomService.selectByProduectId(productId, tenantId);
+            // 1. 获取产品的BOM信息
+            List<ProductBomDetail> bomItems = productBomDetailService.selectByBomId(productBom.getId(), tenantId);
+            if (CollectionUtils.isEmpty(bomItems)) {
+                return bomComponents;
+            }
+
+            // 2. 为每个BOM组件构建信息
+            for (ProductBomDetail bomItem : bomItems) {
+                OutBoundDetailOfProductionResp.BomComponent bomComponent = new OutBoundDetailOfProductionResp.BomComponent();
+
+                // 设置组件基本信息
+                bomComponent.setComponentProductId(bomItem.getComponentProductId());
+                bomComponent.setUnitUsage(bomItem.getQuantity()); // 单件用量
+
+                // 获取组件产品的详细信息
+                Product componentProduct = productService.selectById(tenantId, bomItem.getComponentProductId());
+                if (componentProduct != null) {
+                    bomComponent.setComponentProductName(componentProduct.getName());
+                    bomComponent.setComponentProductSku(componentProduct.getSku());
+                    bomComponent.setComponentProductSpec(componentProduct.getSpec());
+
+                    // 获取单位信息
+                    Unit componentUnit = unitCode2UnitMap.getOrDefault(componentProduct.getUnitCode(), new Unit());
+                    bomComponent.setComponentProductUnit(componentUnit != null ? componentUnit.getUnitName() : "");
+                }
+
+                // 获取组件的库存批次信息
+                List<OutBoundDetailOfProductionResp.StockBatch> availableBatches = getStockBatchesForComponent(
+                        bomItem.getComponentProductId(), warehouseId, tenantId, shelfId2ShelfMap);
+                bomComponent.setAvailableBatches(availableBatches);
+
+                bomComponents.add(bomComponent);
+            }
+        } catch (Exception e) {
+            log.error("构建BOM组件信息失败, productId: {}, tenantId: {}", productId, tenantId, e);
+        }
+
+        return bomComponents;
+    }
+
+    /**
+     * 获取组件的库存批次信息
+     */
+    private List<OutBoundDetailOfProductionResp.StockBatch> getStockBatchesForComponent(Long componentProductId, Long warehouseId, Long tenantId, Map<Long, WarehouseShelf> shelfId2ShelfMap) {
+        List<OutBoundDetailOfProductionResp.StockBatch> stockBatches = new ArrayList<>();
+
+        try {
+            // 调用库存服务获取批次信息
+            List<InventoryShelf> inventoryBatches = inventoryShelfService.getBatchShelfStock(tenantId, warehouseId, componentProductId);
+
+            if (CollectionUtils.isEmpty(inventoryBatches)) {
+                return stockBatches;
+            }
+
+            // 按批次号分组
+            Map<String, List<InventoryShelf>> batchNoMap = inventoryBatches.stream()
+                    .collect(Collectors.groupingBy(InventoryShelf::getBatchNo));
+
+            for (Map.Entry<String, List<InventoryShelf>> entry : batchNoMap.entrySet()) {
+                OutBoundDetailOfProductionResp.StockBatch stockBatch = new OutBoundDetailOfProductionResp.StockBatch();
+                stockBatch.setBatchNo(entry.getKey());
+
+                // 计算批次总数量
+                BigDecimal totalQuantity = entry.getValue().stream()
+                        .map(InventoryShelf::getQuantity)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                stockBatch.setTotalQuantity(totalQuantity);
+
+                // 构建货架信息
+                List<OutBoundDetailOfProductionResp.StockShelf> shelves = entry.getValue().stream()
+                        .map(inventoryBatch -> {
+                            OutBoundDetailOfProductionResp.StockShelf shelf = new OutBoundDetailOfProductionResp.StockShelf();
+                            shelf.setShelfId(inventoryBatch.getShelfId());
+                            shelf.setShelfName(shelfId2ShelfMap.getOrDefault(inventoryBatch.getShelfId(), new WarehouseShelf()).getShelfName());
+                            shelf.setAvailableQuantity(inventoryBatch.getQuantity());
+                            return shelf;
+                        })
+                        .collect(Collectors.toList());
+                stockBatch.setShelves(shelves);
+
+                stockBatches.add(stockBatch);
+            }
+        } catch (Exception e) {
+            log.error("获取组件库存批次信息失败, componentProductId: {}, warehouseId: {}", componentProductId, warehouseId, e);
+        }
+
+        return stockBatches;
+    }
+
+    /**
+     * 构建原料分配信息
+     */
+    private List<OutBoundDetailOfProductionResp.MaterialAllocation> buildMaterialAllocations(List<OutboundOrderItem> outItemList, Map<Long, WarehouseShelf> shelfId2ShelfMap) {
+        return outItemList.stream()
+                .filter(item -> item.getBatchNo() != null) // 过滤出有批次分配的数据
+                .map(item -> {
+                    OutBoundDetailOfProductionResp.MaterialAllocation allocation = new OutBoundDetailOfProductionResp.MaterialAllocation();
+                    allocation.setComponentProductId(item.getProductId()); // 注意：这里需要根据实际情况调整
+                    allocation.setBatchNo(item.getBatchNo());
+                    allocation.setShelfId(item.getShelfLocationId());
+                    allocation.setShelfName(shelfId2ShelfMap.getOrDefault(item.getShelfLocationId(), new WarehouseShelf()).getShelfName());
+                    allocation.setAllocatedQuantity(item.getQuantity());
+                    return allocation;
+                })
+                .collect(Collectors.toList());
     }
 }

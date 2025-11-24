@@ -10,6 +10,7 @@ import com.example.entity.cangku.req.OutboundApproveOkReq;
 import com.example.entity.cangku.req.OutboundCreateReq;
 import com.example.entity.cangku.req.OutboundDeleteReq;
 import com.example.entity.cangku.req.OutboundListPageReq;
+import com.example.entity.cangku.resp.OutBoundDetailOfProductionResp;
 import com.example.entity.cangku.resp.OutBoundSaleQuantityImportResp;
 import com.example.entity.cangku.resp.OutboundDetailResp;
 import com.example.entity.cangku.resp.OutboundListPageResp;
@@ -83,6 +84,25 @@ public class OutboundContorller {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("OutboundContorller#detail,req:{}", JSON.toJSONString(orderId), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 获取出库详情 (新的)
+     * @param orderId 出库订单ID
+     * @return 返回出库详情
+     */
+    @GetMapping("/detailNew") //
+    public RespBean<OutBoundDetailOfProductionResp> detailNew(@RequestParam("orderId") Long orderId) {
+        try {
+            OutBoundDetailOfProductionResp result = outboundFacade.detailNew(orderId, UserUtil.getCurrentUser().getTenantId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("OutboundContorller#detailNew,req:{}", JSON.toJSONString(orderId), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("OutboundContorller#detailNew,req:{}", JSON.toJSONString(orderId), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

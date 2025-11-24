@@ -721,7 +721,7 @@ const handleQuantityBlur = async (index) => {
 const loadOutboundDetail = async (id) => {
   loading.value = true;
   try {
-    const res = await get(`/api/auth/outbound/detail?orderId=${id}`);
+    const res = await get(`/api/auth/outbound/detailNew?orderId=${id}`);
     console.log('出库单详情响应:', res);
     
     if (res) {
@@ -746,15 +746,29 @@ const loadOutboundDetail = async (id) => {
             sku: item.sku || '',
             spec: item.spec || '',
             unit: item.unit || '',
-            currentStock: item.currentStock || 0,
             quantity: item.quantity || 1,
-            price: item.price || 0,
-            priceUnitUsd: item.priceUnitUsd || 0,
-            batchAllocations: item.batchAllocations || [],
-            availableBatches: item.availableBatches || [],
-            remark: item.remark || '',
-            bomAllocations: item.bomAllocations || [],
-            bomData: item.bomData || []
+
+            // 映射BOM数据
+                bomData: item.bomComponents?.map(component => ({
+                  componentProductId: component.componentProductId,
+                  componentProductName: component.componentProductName,
+                  componentProductSku: component.componentProductSku,
+                  componentProductSpec: component.componentProductSpec,
+                  componentProductUnit: component.componentProductUnit,
+                  quantity: component.unitUsage,
+                  batches: component.availableBatches
+                })) || [],
+                
+                // 映射分配数据
+                bomAllocations: item.materialAllocations?.map(allocation => ({
+                  componentProductId: allocation.componentProductId,
+                  componentProductName: '', // 需要从bomData中匹配
+                  componentProductSku: '', // 需要从bomData中匹配
+                  batchNo: allocation.batchNo,
+                  shelfId: allocation.shelfId,
+                  shelfName: allocation.shelfName,
+                  quantity: allocation.allocatedQuantity
+                })) || []
           };
         });
 
