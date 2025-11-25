@@ -2,6 +2,8 @@
   <div class="outbound-create-container">
     <el-card class="form-card" shadow="never">
       <template #header>
+        <!-- 透出废弃两个字 -->
+        <span class="deprecated-tag">废弃</span>
         <div class="card-header">
           <span class="card-title">{{ isEditMode ? '编辑出库单' : '新建出库单' }}</span>
           <div class="header-actions">

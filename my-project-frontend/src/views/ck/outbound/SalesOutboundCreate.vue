@@ -64,6 +64,7 @@
                 style="width: 100%"
                 filterable
                 @change="handleWarehouseChange"
+                :disabled="isViewMode"
               >
                 <el-option
                   v-for="warehouse in warehouseList"
@@ -84,6 +85,7 @@
                 placeholder="请选择客户"
                 style="width: 100%"
                 filterable
+                :disabled="isViewMode"
               >
                 <el-option
                   v-for="customer in customerList"
@@ -102,6 +104,7 @@
                 placeholder="选择预计出库日期"
                 style="width: 100%"
                 value-format="YYYY-MM-DD"
+                :disabled="isViewMode"
               />
             </el-form-item>
           </el-col>
@@ -110,6 +113,7 @@
               <el-input
                 v-model="formData.relatedOrderNo"
                 placeholder="请输入关联单号"
+                :disabled="isViewMode"
               />
             </el-form-item>
           </el-col>
@@ -123,6 +127,7 @@
             placeholder="请输入备注信息"
             maxlength="500"
             show-word-limit
+            :disabled="isViewMode"
           />
         </el-form-item>
       </el-form>
@@ -131,7 +136,7 @@
       <div class="product-section">
         <div class="section-header">
           <h3>产品明细</h3>
-          <div class="header-right-actions">
+          <div class="header-right-actions" v-if="!isViewMode">
             <el-button 
               type="success" 
               @click="handleDownloadTemplate"
@@ -189,11 +194,12 @@
               <el-input-number
                 v-model="row.quantity"
                 :min="0"
-                :max="row.availableQuantity"
+                :max="getQuantityMax(row)"
                 controls-position="right"
                 style="width: 100%"
                 @change="() => handleQuantityChangeForAll(row)"
                 placeholder="请输入数量"
+                :disabled="isViewMode"
               />
             </template>
           </el-table-column>
@@ -205,7 +211,7 @@
                 :precision="2"
                 controls-position="right"
                 style="width: 100%"
-                :disabled="!row.quantity || row.quantity <= 0"
+                :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
               >
                 <template #prefix>¥</template>
               </el-input-number>
@@ -227,7 +233,7 @@
                 :precision="2"
                 controls-position="right"
                 style="width: 100%"
-                :disabled="!row.quantity || row.quantity <= 0"
+                :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
               >
                 <template #prefix>$</template>
               </el-input-number>
@@ -248,7 +254,7 @@
                   type="primary" 
                   link 
                   @click="openBatchDialogForProduct(row)"
-                  :disabled="!row.quantity || row.quantity <= 0"
+                  :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
                 >
                   分配批次
                 </el-button>
@@ -276,7 +282,7 @@
                 placeholder="产品备注"
                 maxlength="100"
                 show-word-limit
-                :disabled="!row.quantity || row.quantity <= 0"
+                :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
               />
             </template>
           </el-table-column>
@@ -322,7 +328,7 @@
       </div>
 
       <!-- 附件上传 -->
-      <div class="attachment-section">
+      <div class="attachment-section" v-if="!isViewMode">
         <div class="section-header">
           <h3>附件上传</h3>
           <span class="tip">支持图片、文档等格式，单个文件不超过10MB</span>
@@ -348,6 +354,25 @@
             </div>
           </template>
         </el-upload>
+      </div>
+
+      <!-- 查看模式下的附件显示 -->
+      <div class="attachment-section" v-else>
+        <div class="section-header">
+          <h3>附件</h3>
+        </div>
+        <div v-if="fileList.length > 0" class="attachment-list">
+          <div v-for="file in fileList" :key="file.name" class="attachment-item">
+            <el-icon><Document /></el-icon>
+            <span class="file-name">{{ file.name }}</span>
+            <el-button type="primary" link @click="handlePreview(file)">
+              预览
+            </el-button>
+          </div>
+        </div>
+        <div v-else class="no-attachment">
+          <span>暂无附件</span>
+        </div>
       </div>
     </el-card>
 
@@ -410,7 +435,7 @@
                       placeholder="分配数量"
                       class="shelf-input"
                       @change="(value) => handleShelfAllocationChange(batchIndex, shelfIndex, value)"
-                      :disabled="shelf.quantity < 1 || row.quantity < 1"
+                      :disabled="shelf.quantity < 1 || row.quantity < 1 || isViewMode"
                     />
                   </div>
                 </div>
@@ -425,7 +450,7 @@
               <span :class="getBatchAllocationClass(row)">{{ getBatchAllocatedTotal(row) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="100" fixed="right" align="center">
+          <el-table-column label="操作" width="100" fixed="right" align="center" v-if="!isViewMode">
             <template #default="{ row, $index }">
               <el-button
                 type="danger"
@@ -439,7 +464,7 @@
           </el-table-column>
         </el-table>
 
-        <div class="batch-actions">
+        <div class="batch-actions" v-if="!isViewMode">
           <el-button @click="autoAllocateBatches" :disabled="batchDialog.remainingQuantity <= 0">
             自动分配
           </el-button>
@@ -536,6 +561,11 @@ const isEditMode = computed(() => {
   return !!route.params.id;
 });
 
+// 判断是否是查看模式（已审核、已完成等状态）
+const isViewMode = computed(() => {
+  return formData.status > 1; // 状态大于1表示已审核、已完成等不可编辑状态
+});
+
 // 表单数据
 const formData = reactive({
   id: null,
@@ -630,6 +660,17 @@ const formRules = {
   expectedDate: [
     { required: true, message: '请选择预计出库日期', trigger: 'change' }
   ]
+};
+
+// 获取出库数量的最大值
+const getQuantityMax = (row) => {
+  // 如果是查看模式，不限制最大值，确保能显示历史数据
+  if (isViewMode.value) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  
+  // 编辑模式下，限制不能超过当前库存
+  return row.availableQuantity || 0;
 };
 
 // 加载出库单详情
@@ -1220,7 +1261,7 @@ const handleSaveDraft = async () => {
     const submitData = prepareSubmitData();
     submitData.status = 0;
     
-    const url = isEditMode.value ? '/api/auth/outbound/update' : '/api/auth/outbound/create';
+    const url = isEditMode.value ? '/api/auth/outbound/updateProductionSaleOutBound' : '/api/auth/outbound/createProductionSaleOutBound';
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新草稿成功' : '保存草稿成功');
@@ -1260,7 +1301,7 @@ const handleSubmit = async () => {
     const submitData = prepareSubmitData();
     submitData.status = 1;
     
-    const url = isEditMode.value ? '/api/auth/outbound/update' : '/api/auth/outbound/create';
+    const url = isEditMode.value ? '/api/auth/outbound/updateProductionSaleOutBound' : '/api/auth/outbound/createProductionSaleOutBound';
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新成功' : '提交成功，等待审核');
@@ -1505,6 +1546,13 @@ const handleRemoveFile = (file) => {
   }
 };
 
+// 附件预览
+const handlePreview = (file) => {
+  if (file.url) {
+    window.open(file.url, '_blank');
+  }
+};
+
 onMounted(() => {
   if (isEditMode.value) {
     loadOutboundDetail(route.params.id);
@@ -1683,6 +1731,36 @@ watch(
 
 .attachment-section {
   margin-top: 30px;
+}
+
+.attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.file-name {
+  flex: 1;
+  color: #303133;
+}
+
+.no-attachment {
+  padding: 20px;
+  text-align: center;
+  color: #909399;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px dashed #dcdfe6;
 }
 
 .batch-allocation {

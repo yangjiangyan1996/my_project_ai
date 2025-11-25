@@ -1170,7 +1170,7 @@ const handleSaveDraft = async () => {
     const submitData = prepareSubmitData();
     submitData.status = 0;
     
-    const url = isEditMode.value ? '/api/auth/outbound/update' : '/api/auth/outbound/create';
+    const url = isEditMode.value ? '/api/auth/outbound/updateProductionPickingOutBound' : '/api/auth/outbound/createProductionPickingOutBound';
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新草稿成功' : '保存草稿成功');
@@ -1208,7 +1208,7 @@ const handleSubmit = async () => {
     const submitData = prepareSubmitData();
     submitData.status = 1;
     
-    const url = isEditMode.value ? '/api/auth/outbound/update' : '/api/auth/outbound/create';
+    const url = isEditMode.value ? '/api/auth/outbound/updateProductionPickingOutBound' : '/api/auth/outbound/createProductionPickingOutBound';
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新成功' : '提交成功，等待审核');
