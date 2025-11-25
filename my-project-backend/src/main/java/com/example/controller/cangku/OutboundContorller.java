@@ -105,6 +105,27 @@ public class OutboundContorller {
     }
 
 
+    /**
+     * 获取出库详情简化版 ，数量是根据 ck_production_task 的 remaining_quantity字段
+     * 目前使用的地方是 ： 创建生产入库单时导入出库单时使用
+     * @param orderId 出库订单ID
+     * @return 返回出库详情
+     */
+    @GetMapping("/simpleDetailOfProductionOutboundDetail")
+    public RespBean<OutBoundDetailOfProductionResp> simpleDetailOfProductionOutboundDetail(@RequestParam("orderId") Long orderId) {
+        try {
+            OutBoundDetailOfProductionResp result = outboundFacade.simpleDetailOfProductionOutboundDetail(orderId, UserUtil.getCurrentUser().getTenantId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("OutboundContorller#detailNew,req:{}", JSON.toJSONString(orderId), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("OutboundContorller#detailNew,req:{}", JSON.toJSONString(orderId), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
 
     /**
      * 创建出库单

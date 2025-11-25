@@ -510,7 +510,7 @@ const handlePickingOrderChange = async (orderId) => {
   }
 
   try {
-    const res = await get(`/api/auth/outbound/detailNew?orderId=${orderId}`);
+    const res = await get(`/api/auth/outbound/simpleDetailOfProductionOutboundDetail?orderId=${orderId}`);
     if (res) {
       selectedPickingOrder.value = res.data || res;
     }
@@ -539,7 +539,7 @@ const importPickingData = async () => {
     
     // 设置基本信息（如果是第一次导入）
     if (!formData.warehouseId && pickingOrder.warehouseId) {
-      formData.warehouseId = pickingOrder.warehouseId;
+      //formData.warehouseId = pickingOrder.warehouseId;
       await loadShelfLocationList(pickingOrder.warehouseId);
     }
     

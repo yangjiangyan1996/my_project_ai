@@ -85,32 +85,37 @@ public class CkInboundFacade {
 
         //判断数量生产入库数量是否足够
         //后续要加入审核的时候，要加一个锁定库存
-        List<String> outboundNos = orderItems.stream().map(v -> v.getRelatedOutboundOrderNo()).distinct().collect(Collectors.toList());
-        List<ProductionTask> productionTasks = productionTaskService.selectByOutboundOrderNos(req.getTenantId(), outboundNos);
-        Map<String, Map<Long, ProductionTask>> outboundNo2ProductId2QuantityMap = new HashMap<>();
-        if (!CollectionUtils.isEmpty(productionTasks)) {
-            outboundNo2ProductId2QuantityMap = productionTasks.stream().collect(Collectors.groupingBy(ProductionTask::getOutboundOrderNo, Collectors.toMap(ProductionTask::getProductId, v -> v)));
-        }
-        List<ProductionTask> productionTasksToUpdate = new ArrayList<>();
-        for (InboundCreateReq.InboundDetailCreateReq item : req.getItems()) {
-            if (outboundNo2ProductId2QuantityMap.containsKey(item.getRelatedPickingOrderNo())) {
-                Map<Long, ProductionTask> productId2QuantityOfTaskMap = outboundNo2ProductId2QuantityMap.getOrDefault(item.getRelatedPickingOrderNo(), new HashMap<>());
-                ProductionTask pt = productId2QuantityOfTaskMap.getOrDefault(item.getProductId(), new ProductionTask());
-                if (pt.getRemainingQuantity().compareTo(new BigDecimal(item.getActualQuantity())) < 0) {
-                    throw new ValidationException("生产领料余额不足，生产领料剩余：" + pt.getRemainingQuantity() + "，实际入库数量：" + item.getActualQuantity());
-                } else {
-                    ProductionTask updatePt = new ProductionTask();
-                    updatePt.setId(pt.getId());
-                    updatePt.setRemainingQuantity(pt.getRemainingQuantity().subtract(new BigDecimal(item.getActualQuantity())));
-                    updatePt.setLockQuantity(pt.getLockQuantity().add(new BigDecimal(item.getActualQuantity())));
-                    productionTasksToUpdate.add(updatePt);
+        if (req.getOrderType().equals(CkInOutboundEnums.InBoundType.ProductionInbound.getCode())) {
+            List<String> outboundNos = orderItems.stream().map(v -> v.getRelatedOutboundOrderNo()).filter(StringUtils::isNotBlank).distinct().collect(Collectors.toList());
+            if (!CollectionUtils.isEmpty(outboundNos)) { // 手动创建不关联生产领料的时候，outboundNos 会存在空的情况
+                List<ProductionTask> productionTasks = productionTaskService.selectByOutboundOrderNos(req.getTenantId(), outboundNos);
+                Map<String, Map<Long, ProductionTask>> outboundNo2ProductId2QuantityMap = new HashMap<>();
+                if (!CollectionUtils.isEmpty(productionTasks)) {
+                    outboundNo2ProductId2QuantityMap = productionTasks.stream().collect(Collectors.groupingBy(ProductionTask::getOutboundOrderNo, Collectors.toMap(ProductionTask::getProductId, v -> v)));
+                }
+                List<ProductionTask> productionTasksToUpdate = new ArrayList<>();
+                for (InboundCreateReq.InboundDetailCreateReq item : req.getItems()) {
+                    if (outboundNo2ProductId2QuantityMap.containsKey(item.getRelatedPickingOrderNo())) {
+                        Map<Long, ProductionTask> productId2QuantityOfTaskMap = outboundNo2ProductId2QuantityMap.getOrDefault(item.getRelatedPickingOrderNo(), new HashMap<>());
+                        ProductionTask pt = productId2QuantityOfTaskMap.getOrDefault(item.getProductId(), new ProductionTask());
+                        if (pt.getRemainingQuantity().compareTo(new BigDecimal(item.getActualQuantity())) < 0) {
+                            throw new ValidationException("生产领料余额不足，生产领料剩余：" + pt.getRemainingQuantity() + "，实际入库数量：" + item.getActualQuantity());
+                        } else {
+                            ProductionTask updatePt = new ProductionTask();
+                            updatePt.setId(pt.getId());
+                            updatePt.setRemainingQuantity(pt.getRemainingQuantity().subtract(new BigDecimal(item.getActualQuantity())));
+                            updatePt.setLockQuantity(pt.getLockQuantity().add(new BigDecimal(item.getActualQuantity())));
+                            productionTasksToUpdate.add(updatePt);
+                        }
+                    }
+                }
+                boolean productionTasksUpdated = productionTaskService.updateBatchById(productionTasksToUpdate);
+                if (!productionTasksUpdated) {
+                    throw new ValidationException("生产任务更新失败");
                 }
             }
         }
-        boolean productionTasksUpdated = productionTaskService.updateBatchById(productionTasksToUpdate);
-        if (!productionTasksUpdated) {
-            throw new ValidationException("生产任务更新失败");
-        }
+
 
 
         // 5. 如果是已完成状态，更新库存和流水
@@ -222,17 +227,20 @@ public class CkInboundFacade {
      * 构建入库单明细实体列表
      */
     private List<InboundOrderItem> buildInboundOrderItems(InboundCreateReq req, Long orderId) {
-        List<String> outboundOrderNoList = req.getItems().stream().map(v -> v.getRelatedPickingOrderNo()).distinct().collect(Collectors.toList());
         Map<String, OutboundOrder> outboundOrderMap = new HashMap<>();
         Map<String, ProductionTask> outboundNo_productId2InfoMap = new HashMap<>();
-        if (!CollectionUtils.isEmpty(outboundOrderNoList)) {
-            List<OutboundOrder> outboundOrders = outboundOrderService.selectByOutboundOrderNos(req.getTenantId(), outboundOrderNoList);
-            outboundOrderMap = outboundOrders.stream().collect(Collectors.toMap(OutboundOrder::getOrderNo, v -> v));
+        if (req.getOrderType().equals(CkInOutboundEnums.InBoundType.ProductionInbound.getCode())) {
+            List<String> outboundOrderNoList = req.getItems().stream().map(v -> v.getRelatedPickingOrderNo()).filter(StringUtils::isNotBlank).distinct().collect(Collectors.toList());
+            if (!CollectionUtils.isEmpty(outboundOrderNoList)) {
+                List<OutboundOrder> outboundOrders = outboundOrderService.selectByOutboundOrderNos(req.getTenantId(), outboundOrderNoList);
+                outboundOrderMap = outboundOrders.stream().collect(Collectors.toMap(OutboundOrder::getOrderNo, v -> v));
 
-            List<Long> outboundIds = outboundOrders.stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
-            List<ProductionTask> taskList = productionTaskService.selectByOutBoundIds(outboundIds, req.getTenantId());
-            outboundNo_productId2InfoMap = taskList.stream().collect(Collectors.toMap(v -> v.getOutboundOrderNo() + "-" + v.getProductId(), v -> v));
+                List<Long> outboundIds = outboundOrders.stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
+                List<ProductionTask> taskList = productionTaskService.selectByOutBoundIds(outboundIds, req.getTenantId());
+                outboundNo_productId2InfoMap = taskList.stream().collect(Collectors.toMap(v -> v.getOutboundOrderNo() + "-" + v.getProductId(), v -> v));
+            }
         }
+
 
         List<InboundOrderItem> orderItems = new ArrayList<>();
         for (InboundCreateReq.InboundDetailCreateReq item : req.getItems()) {
@@ -249,6 +257,7 @@ public class CkInboundFacade {
                 orderItem.setPriceTotal(item.getPriceTotal());
                 orderItem.setProductType(CkInOutboundEnums.ProductType.Product.getCode());
                 orderItem.setRelationProductId(outboundOrderMap.getOrDefault(item.getRelatedPickingOrderNo(), new OutboundOrder()).getId());
+                orderItem.setRelatedOutboundOrderId(outboundOrderMap.getOrDefault(item.getRelatedPickingOrderNo(), new OutboundOrder()).getId());
                 orderItem.setRelatedOutboundOrderNo(item.getRelatedPickingOrderNo());
                 orderItem.setProductionTaskId(outboundNo_productId2InfoMap.getOrDefault(item.getRelatedPickingOrderNo() + "-" + item.getProductId(), new ProductionTask()).getId());
                 orderItem.setCreatedBy(req.getUserId());
@@ -893,17 +902,10 @@ public class CkInboundFacade {
         }
 
         // 按生产任务ID分组，汇总入库数量
-        Map<Long, Map<Long, BigDecimal>> taskId2OutboundId2QuantityMap = itemsWithProductionTask.stream()
-                .collect(Collectors.groupingBy(
-                        InboundOrderItem::getProductionTaskId,
-                        Collectors.toMap(
-                                InboundOrderItem::getRelatedOutboundOrderId,
-                                item -> item.getActualQuantity()
-                        )
-                ));
+        Map<Long, InboundOrderItem> taskId2InboundItemMap = itemsWithProductionTask.stream().collect(Collectors.toMap(v->v.getProductionTaskId(), v->v));
 
-        // 批量查询生产任务
-        List<Long> productionTaskIds = new ArrayList<>(taskId2OutboundId2QuantityMap.keySet());
+        // 批量查询生产任务'
+        List<Long> productionTaskIds = itemsWithProductionTask.stream().map(v -> v.getProductionTaskId()).distinct().collect(Collectors.toList());
         List<ProductionTask> productionTasks = productionTaskService.listByIds(productionTaskIds);
 
         // 记录未找到的生产任务（用于日志）
@@ -928,8 +930,8 @@ public class CkInboundFacade {
         List<String> updateLogs = new ArrayList<>();
 
         for (ProductionTask task : productionTasks) {
-            Map<Long, BigDecimal> OutboundId2QuantityMap = taskId2OutboundId2QuantityMap.get(task.getId());
-            BigDecimal inboundQuantity = OutboundId2QuantityMap.get(task.getOutboundOrderId());
+            InboundOrderItem inboundOrderItem = taskId2InboundItemMap.get(task.getId());
+            BigDecimal inboundQuantity =inboundOrderItem.getActualQuantity();
             if (inboundQuantity == null || inboundQuantity.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
