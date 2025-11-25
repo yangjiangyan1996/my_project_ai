@@ -24,9 +24,12 @@ public class OutboundCreateSaleProductReq {
     private Integer status;
     private List<OrderItemInner> items;
     private List<Object> attachments; // 根据实际情况可以定义具体的Attachment类
-    private Integer totalQuantity;
+    private BigDecimal totalQuantity;
     private BigDecimal totalAmount;
     private BigDecimal totalAmountUsd;
+
+    private Long userId;
+    private Long tenantId;
 
 
     @Data
@@ -37,8 +40,8 @@ public class OutboundCreateSaleProductReq {
         private String spec;
         private String unit;
         private String color;
-        private Integer currentStock;
-        private Integer quantity;
+        private BigDecimal currentStock;
+        private BigDecimal quantity;
         private BigDecimal price;
         private BigDecimal priceTotal;
         private BigDecimal priceUnitUsd;
@@ -52,7 +55,7 @@ public class OutboundCreateSaleProductReq {
         private String batchNo;
         private Long shelfId;
         private String shelfName;
-        private Integer quantity;
+        private BigDecimal quantity;
         private BigDecimal price;
     }
 }

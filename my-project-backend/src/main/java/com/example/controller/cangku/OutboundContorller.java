@@ -6,10 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CkOutboundFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
-import com.example.entity.cangku.req.OutboundApproveOkReq;
-import com.example.entity.cangku.req.OutboundCreateReq;
-import com.example.entity.cangku.req.OutboundDeleteReq;
-import com.example.entity.cangku.req.OutboundListPageReq;
+import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.*;
 import com.example.entity.cangku.resp.excel.OutboundOderExcelModel;
 import com.example.entity.cangku.resp.excel.OutboundSaleExcelModel;
@@ -128,53 +125,101 @@ public class OutboundContorller {
 
 
     /**
-     * 创建出库单
+     * 创建生产领料出库单
      * @param req 创建出库单请求参数
      * @return 返回是否创建成功
      */
-    @PostMapping("/create") // POST映射到/create路径
-    public RespBean<Boolean> create(@RequestBody OutboundCreateReq req) {
+    @PostMapping("/createProductionPickingOutBound") // POST映射到/create路径
+    public RespBean<Boolean> createProductionPicking(@RequestBody OutboundCreateReq req) {
         try {
             Long userId  = UserUtil.getCurrentUser().getId();
             Long tenantId = UserUtil.getCurrentUser().getTenantId();
 
             req.setUserId(userId);
             req.setTenantId(tenantId);
-            Boolean result = outboundFacade.create(req);
+            Boolean result = outboundFacade.createProductionPickingOutBound(req);
             return RespBean.success(result);
         }catch (ValidationException e) {
-            log.error("OutboundContorller#create,req:{}", JSON.toJSONString(req), e);
+            log.error("OutboundContorller#createProductionPicking,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("OutboundContorller#create,req:{}", JSON.toJSONString(req), e);
+            log.error("OutboundContorller#createProductionPicking,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
 
 
-
-
     /**
-     * 更新出库单
-     * @param req 更新出库单请求参数
-     * @return 返回是否更新成功
+     * 创建销售出库单
+     * @param req 创建出库单请求参数
+     * @return 返回是否创建成功
      */
-    @PostMapping("/update") // POST映射到/update路径
-    public RespBean<Boolean> update(@RequestBody OutboundCreateReq req) {
+    @PostMapping("/createProductionSaleOutBound") // POST映射到/create路径
+    public RespBean<Boolean> createProductionPicking(@RequestBody OutboundCreateSaleProductReq req) {
         try {
             Long userId  = UserUtil.getCurrentUser().getId();
             Long tenantId = UserUtil.getCurrentUser().getTenantId();
 
             req.setUserId(userId);
             req.setTenantId(tenantId);
-            Boolean result = outboundFacade.update(req);
+            Boolean result = outboundFacade.createProductionSaleOutBound(req);
             return RespBean.success(result);
         }catch (ValidationException e) {
-            log.error("OutboundContorller#update,req:{}", JSON.toJSONString(req), e);
+            log.error("OutboundContorller#createProductionSaleOutBound,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("OutboundContorller#update,req:{}", JSON.toJSONString(req), e);
+            log.error("OutboundContorller#createProductionSaleOutBound,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+
+    /**
+     * 更新生产领料出库单
+     * @param req 更新出库单请求参数
+     * @return 返回是否更新成功
+     */
+    @PostMapping("/updateProductionPickingOutBound") // POST映射到/update路径
+    public RespBean<Boolean> updateProductionPickingOutBound(@RequestBody OutboundCreateReq req) {
+        try {
+            Long userId  = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+            Boolean result = outboundFacade.updateProductionPickingOutBound(req);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("OutboundContorller#updateProductionPickingOutBound,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("OutboundContorller#updateProductionPickingOutBound,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 更新销售出库单
+     * @param req 更新出库单请求参数
+     * @return 返回是否更新成功
+     */
+    @PostMapping("/updateProductionSaleOutBound") // POST映射到/update路径
+    public RespBean<Boolean> updateProductionPickingOutBound(@RequestBody OutboundCreateSaleProductReq req) {
+        try {
+            Long userId  = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+            Boolean result = outboundFacade.updateProductionSaleOutBound(req);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("OutboundContorller#updateProductionSaleOutBound,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("OutboundContorller#updateProductionSaleOutBound,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

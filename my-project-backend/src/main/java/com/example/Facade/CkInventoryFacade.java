@@ -343,6 +343,7 @@ public class CkInventoryFacade {
             r.setOutUnitPerNum(productMap.get(productId).getOutUnitPerNum());
             r.setCategoryName(productCode2CategoryMap.get(productMap.get(productId).getCategoryCode()).getCategoryName());
             r.setPrice(productId2LatestInventorySactionMap.getOrDefault(productId, new InventoryTransaction()).getPriceUnit());
+            r.setPriceUnitUsd(productId2LatestInventorySactionMap.getOrDefault(productId, new InventoryTransaction()).getPriceUnitUsd());
             result.add(r);
         }
 
