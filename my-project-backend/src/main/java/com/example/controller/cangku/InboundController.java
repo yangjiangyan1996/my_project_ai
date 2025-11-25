@@ -8,6 +8,7 @@ import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.InboundDetailResp;
 import com.example.entity.cangku.resp.InboundListPageResp;
+import com.example.entity.cangku.resp.InboundProductInDetailResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -53,6 +54,25 @@ public class InboundController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("InboundController#detail,req:{}", JSON.toJSONString(orderId), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 获取 生产入库单详情
+     * @param orderId
+     * @return
+     */
+    @GetMapping("/detailOfProductionInbound")
+    public RespBean<InboundProductInDetailResp> detailOfProductionInbound(@RequestParam("orderId") Long orderId) {
+        try {
+            InboundProductInDetailResp result = ckInboundFacade.detailOfProductionInbound(orderId, UserUtil.getCurrentUser().getTenantId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("InboundController#detailOfProductionInbound,req:{}", JSON.toJSONString(orderId), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InboundController#detailOfProductionInbound,req:{}", JSON.toJSONString(orderId), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

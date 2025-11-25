@@ -1,5 +1,6 @@
 package com.example.Facade;
 
+import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson2.util.DateUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
@@ -40,6 +41,8 @@ import java.util.stream.Stream;
 @Slf4j
 public class CkOutboundFacade {
 
+    @Resource
+    CkProductionTaskService productionTaskService;
     @Resource
     CkOutboundOrderItemService outboundOrderItemService;
 
@@ -91,8 +94,14 @@ public class CkOutboundFacade {
 
         CkInOutboundEnums.OutBoundType out = CkInOutboundEnums.OutBoundType.getByCode(req.getOrderType());
         switch (Objects.requireNonNull(out)) {
-
             case ProductionOutbound:// 生产领料
+                Map<Long, Product> productId2ProductMap = new HashMap<>();
+                List<Long> productIds = req.getItems().stream().map(v -> v.getProductId()).distinct().collect(Collectors.toList());
+                List<Product> products = productService.selectByIds(req.getTenantId(), productIds);
+                if (!CollectionUtils.isEmpty(products)) {
+                    productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+                }
+
                 List<OutboundOrderItem> saveList = new ArrayList<>();
                 List<OutboundCreateReq.ProductInfoInner> items = req.getItems();
                 for (OutboundCreateReq.ProductInfoInner item : items) {
@@ -114,12 +123,44 @@ public class CkOutboundFacade {
                     }).collect(Collectors.toList());
                     saveList.addAll(orderItems);
                 }
-                // 4. 处理出库单明细
 
+                // 4. 处理出库单明细
                 boolean itemsSaved = outboundOrderItemService.saveBatch(saveList);
                 if (!itemsSaved) {
                     throw new ValidationException("出库单明细保存失败");
                 }
+
+                //处理生产任务关联信息
+                Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
+                List<ProductionTask> batchSaveProductTaskList = items.stream().map(v -> {
+                    ProductionTask pt = new ProductionTask();
+                    pt.setTenantId(req.getTenantId());
+                    pt.setTaskNo("productionTask-" + UUID.randomUUID().toString().substring(0, 8));
+                    pt.setOutboundOrderId(outboundOrder.getId());
+                    pt.setOutboundOrderNo(outboundOrder.getOrderNo());
+                    pt.setProductId(v.getProductId());
+                    pt.setProductName(finalProductId2ProductMap.getOrDefault(v.getProductId(), new Product()).getName());
+                    pt.setPlannedQuantity(v.getQuantity());
+                    pt.setMaterialQuantity(v.getQuantity());
+                    pt.setProducedQuantity(BigDecimal.ZERO);
+                    pt.setRemainingQuantity(v.getQuantity());
+                    pt.setLockQuantity(BigDecimal.ZERO);
+                    pt.setStatus(CkInOutboundEnums.ProductionTaskStatus.InProduction.getCode());
+                    pt.setWarehouseId(req.getWarehouseId());
+                    pt.setExpectedDate(DateUtil.parseDate(req.getExpectedDate()));
+                    pt.setRemark(req.getRemark());
+                    pt.setCreatedAt(new Date());
+                    pt.setCreatedBy(req.getUserId());
+                    pt.setModifiedAt(new Date());
+                    pt.setModifiedBy(req.getUserId());
+                    return pt;
+                }).collect(Collectors.toList());
+                boolean saveBatchProductionTaskResult = productionTaskService.saveBatch(batchSaveProductTaskList);
+                if (!saveBatchProductionTaskResult) {
+                    throw new ValidationException("生产任务保存失败");
+                }
+
+
                 // 5. 如果是已完成状态，更新库存和流水
                 if (req.getStatus() == 3) { // 已完成状态
                     //updateInventoryAndTransaction(req, outboundOrder.getId(), orderItems);
@@ -183,6 +224,40 @@ public class CkOutboundFacade {
         if (!itemsSaved) {
             throw new ValidationException("出库单明细保存失败");
         }
+
+        //删除原有的生产任务
+        Integer integer = productionTaskService.removeByOutBoundId(updatedOrder.getId(), req.getTenantId(), req.getUserId());
+        if (integer > 0) {
+            //处理生产任务关联信息
+            List<ProductionTask> batchSaveProductTaskList = req.getItems().stream().map(v -> {
+                ProductionTask pt = new ProductionTask();
+                pt.setTenantId(req.getTenantId());
+                pt.setTaskNo("productionTask-" + UUID.randomUUID().toString());
+                pt.setOutboundOrderId(updatedOrder.getId());
+                pt.setOutboundOrderNo(updatedOrder.getOrderNo());
+                pt.setProductId(v.getProductId());
+                //pt.setProductName(v.getProductName());
+                pt.setPlannedQuantity(v.getQuantity());
+                pt.setMaterialQuantity(v.getQuantity());
+                pt.setProducedQuantity(BigDecimal.ZERO);
+                pt.setRemainingQuantity(v.getQuantity());
+                pt.setLockQuantity(BigDecimal.ZERO);
+                pt.setStatus(CkInOutboundEnums.ProductionTaskStatus.InProduction.getCode());
+                pt.setWarehouseId(req.getWarehouseId());
+                pt.setExpectedDate(DateUtil.parseDate(req.getExpectedDate()));
+                pt.setRemark(v.getRemark());
+                pt.setCreatedAt(new Date());
+                pt.setCreatedBy(req.getUserId());
+                pt.setModifiedAt(new Date());
+                pt.setModifiedBy(req.getUserId());
+                return pt;
+            }).collect(Collectors.toList());
+            boolean saveBatchProductionTaskResult = productionTaskService.saveBatch(batchSaveProductTaskList);
+            if (!saveBatchProductionTaskResult) {
+                throw new ValidationException("生产任务保存失败");
+            }
+        }
+
 
         // 8. 如果是已完成状态，更新库存和流水
         if (req.getStatus() == 3) { // 已完成状态
@@ -683,7 +758,11 @@ public class CkOutboundFacade {
 
         // 5. 更新库存和流水
         inventoryHolder.updateSubInventoryForApprove(outboundOrder, orderItems, approveOkReq.getUserId());
-        //updateInventoryAndTransaction(req, approveOkReq.getId(), orderItems);
+
+        //更新生产任务表
+        if(CkInOutboundEnums.OutBoundType.ProductionOutbound.getCode().equals(outboundOrder.getOrderType())) {
+            productionTaskService.updateProductionTaskStatus(approveOkReq.getTenantId(), outboundOrder.getId(), CkInOutboundEnums.ProductionTaskStatus.PartialCompletion, approveOkReq.getUserId());
+        }
 
         // 6. 更新出库单状态为已完成
         outboundOrder.setStatus(3); // 3-已完成
@@ -985,6 +1064,13 @@ public class CkOutboundFacade {
             shelfId2ShelfMap = shelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
         }
 
+        //生产任务信息
+        List<ProductionTask> productionTasks = productionTaskService.selectByOutBoundId(orderId, tenantId);
+        Map<Long, ProductionTask> productId2TaskMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty(productionTasks))  {
+            productId2TaskMap = productionTasks.stream().collect(Collectors.toMap(ProductionTask::getProductId, v -> v));
+        }
+
         // 构建响应对象
         OutBoundDetailOfProductionResp resp = new OutBoundDetailOfProductionResp();
         resp.setId(outboundOrder.getId());
@@ -1024,10 +1110,11 @@ public class CkOutboundFacade {
                 }
 
                 // 计算总数量
-                BigDecimal quantity = outItemList.stream()
-                        .map(OutboundOrderItem::getQuantity)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                productItem.setQuantity(quantity);
+//                BigDecimal quantity = outItemList.stream()
+//                        .map(OutboundOrderItem::getQuantity)
+//                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+//                productItem.setQuantity(quantity);
+                productItem.setQuantity(productId2TaskMap.getOrDefault(parentProductId, new ProductionTask()).getMaterialQuantity());
 
                 // 构建BOM组件信息
                 List<OutBoundDetailOfProductionResp.BomComponent> bomComponents = buildBomComponents(parentProductId, tenantId, outboundOrder.getWarehouseId(), unitCode2UnitMap, shelfId2ShelfMap);
@@ -1166,7 +1253,21 @@ public class CkOutboundFacade {
         if (orderType == null || tenantId == null) {
             return Collections.emptyList();
         }
-        List<OutboundOrder> outboundOrders = outboundOrderService.listCompletedOutBoundProduction(tenantId, orderType);
+        List<ProductionTask> productionTasks = productionTaskService.selectRemainingQuantityBT0ByStatus(CkInOutboundEnums.ProductionTaskStatus.PartialCompletion, tenantId);
+        if (productionTasks == null || productionTasks.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<Long, Warehouse> warehouseId2WarehouseMap = new HashMap<>();
+        List<Warehouse> warehouses = warehouseService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(warehouses)) {
+            warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
+        }
+
+        List<Long> outBoundIds = productionTasks.stream().map(v -> v.getOutboundOrderId()).distinct().collect(Collectors.toList());
+        List<OutboundOrder> outboundOrders = outboundOrderService.selectByOutboundOrderIds(tenantId, outBoundIds);
+
+
+        Map<Long, Warehouse> finalWarehouseId2WarehouseMap = warehouseId2WarehouseMap;
         return outboundOrders.stream().map(outboundOrder -> {
             OutBoundComplateProductResp resp = new OutBoundComplateProductResp();
             resp.setId(outboundOrder.getId());
@@ -1174,7 +1275,7 @@ public class CkOutboundFacade {
             resp.setRelatedOrderNo(outboundOrder.getRelatedOrderNo());
             resp.setOrderType(outboundOrder.getOrderType());
             resp.setWarehouseId(outboundOrder.getWarehouseId());
-            resp.setWarehouseName(warehouseService.getById(outboundOrder.getWarehouseId()).getName());
+            resp.setWarehouseName(finalWarehouseId2WarehouseMap.getOrDefault(outboundOrder.getWarehouseId(),new Warehouse()).getName());
             resp.setTotalQuantity(outboundOrder.getTotalQuantity());
             resp.setStatus(outboundOrder.getStatus());
             resp.setRemark(outboundOrder.getRemark());

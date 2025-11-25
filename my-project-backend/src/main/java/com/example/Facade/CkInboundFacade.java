@@ -5,6 +5,7 @@ import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.InboundDetailResp;
 import com.example.entity.cangku.resp.InboundListPageResp;
+import com.example.entity.cangku.resp.InboundProductInDetailResp;
 import com.example.enums.CkInOutboundEnums;
 import com.example.holder.InventoryHolder;
 import com.example.service.*;
@@ -31,6 +32,8 @@ import java.util.stream.Collectors;
 @Service
 public class CkInboundFacade {
     @Resource
+    CkOutboundOrderService outboundOrderService;
+    @Resource
     InventoryHolder inventoryHolder;
     @Resource
     CkUnitService unitService;
@@ -55,6 +58,8 @@ public class CkInboundFacade {
     @Resource
     private CkInboundOrderItemService inboundOrderItemService;
     @Resource
+    CkProductionTaskService productionTaskService;
+    @Resource
     private CkInboundOrderService inboundOrderService;
 
     @Transactional(rollbackFor = Exception.class)
@@ -77,6 +82,36 @@ public class CkInboundFacade {
         if (!itemsSaved) {
             throw new ValidationException("入库单明细保存失败");
         }
+
+        //判断数量生产入库数量是否足够
+        //后续要加入审核的时候，要加一个锁定库存
+        List<String> outboundNos = orderItems.stream().map(v -> v.getRelatedOutboundOrderNo()).distinct().collect(Collectors.toList());
+        List<ProductionTask> productionTasks = productionTaskService.selectByOutboundOrderNos(req.getTenantId(), outboundNos);
+        Map<String, Map<Long, ProductionTask>> outboundNo2ProductId2QuantityMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty(productionTasks)) {
+            outboundNo2ProductId2QuantityMap = productionTasks.stream().collect(Collectors.groupingBy(ProductionTask::getOutboundOrderNo, Collectors.toMap(ProductionTask::getProductId, v -> v)));
+        }
+        List<ProductionTask> productionTasksToUpdate = new ArrayList<>();
+        for (InboundCreateReq.InboundDetailCreateReq item : req.getItems()) {
+            if (outboundNo2ProductId2QuantityMap.containsKey(item.getRelatedPickingOrderNo())) {
+                Map<Long, ProductionTask> productId2QuantityOfTaskMap = outboundNo2ProductId2QuantityMap.getOrDefault(item.getRelatedPickingOrderNo(), new HashMap<>());
+                ProductionTask pt = productId2QuantityOfTaskMap.getOrDefault(item.getProductId(), new ProductionTask());
+                if (pt.getRemainingQuantity().compareTo(new BigDecimal(item.getActualQuantity())) < 0) {
+                    throw new ValidationException("生产领料余额不足，生产领料剩余：" + pt.getRemainingQuantity() + "，实际入库数量：" + item.getActualQuantity());
+                } else {
+                    ProductionTask updatePt = new ProductionTask();
+                    updatePt.setId(pt.getId());
+                    updatePt.setRemainingQuantity(pt.getRemainingQuantity().subtract(new BigDecimal(item.getActualQuantity())));
+                    updatePt.setLockQuantity(pt.getLockQuantity().add(new BigDecimal(item.getActualQuantity())));
+                    productionTasksToUpdate.add(updatePt);
+                }
+            }
+        }
+        boolean productionTasksUpdated = productionTaskService.updateBatchById(productionTasksToUpdate);
+        if (!productionTasksUpdated) {
+            throw new ValidationException("生产任务更新失败");
+        }
+
 
         // 5. 如果是已完成状态，更新库存和流水
         if (req.getStatus() == 3) { // 已完成状态
@@ -146,7 +181,7 @@ public class CkInboundFacade {
             if (item.getPriceUnit() == null || item.getPriceUnit().compareTo(BigDecimal.ZERO) <= 0) {
 //                throw new ValidationException("第" + (i + 1) + "行入库单价必须大于0");
             }
-            if(StringUtils.isBlank(item.getBatchNo())) {
+            if (StringUtils.isBlank(item.getBatchNo())) {
                 throw new ValidationException("第" + (i + 1) + "行批次号不能为空");
             }
             if (item.getShelfAllocations() == null || item.getShelfAllocations().isEmpty()) {
@@ -187,6 +222,18 @@ public class CkInboundFacade {
      * 构建入库单明细实体列表
      */
     private List<InboundOrderItem> buildInboundOrderItems(InboundCreateReq req, Long orderId) {
+        List<String> outboundOrderNoList = req.getItems().stream().map(v -> v.getRelatedPickingOrderNo()).distinct().collect(Collectors.toList());
+        Map<String, OutboundOrder> outboundOrderMap = new HashMap<>();
+        Map<String, ProductionTask> outboundNo_productId2InfoMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty(outboundOrderNoList)) {
+            List<OutboundOrder> outboundOrders = outboundOrderService.selectByOutboundOrderNos(req.getTenantId(), outboundOrderNoList);
+            outboundOrderMap = outboundOrders.stream().collect(Collectors.toMap(OutboundOrder::getOrderNo, v -> v));
+
+            List<Long> outboundIds = outboundOrders.stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
+            List<ProductionTask> taskList = productionTaskService.selectByOutBoundIds(outboundIds, req.getTenantId());
+            outboundNo_productId2InfoMap = taskList.stream().collect(Collectors.toMap(v -> v.getOutboundOrderNo() + "-" + v.getProductId(), v -> v));
+        }
+
         List<InboundOrderItem> orderItems = new ArrayList<>();
         for (InboundCreateReq.InboundDetailCreateReq item : req.getItems()) {
             for (InboundCreateReq.ShelfDetailCreateReq shelf : item.getShelfAllocations()) {
@@ -201,12 +248,15 @@ public class CkInboundFacade {
                 orderItem.setPriceUnit(item.getPriceUnit());
                 orderItem.setPriceTotal(item.getPriceTotal());
                 orderItem.setProductType(CkInOutboundEnums.ProductType.Product.getCode());
+                orderItem.setRelationProductId(outboundOrderMap.getOrDefault(item.getRelatedPickingOrderNo(), new OutboundOrder()).getId());
+                orderItem.setRelatedOutboundOrderNo(item.getRelatedPickingOrderNo());
+                orderItem.setProductionTaskId(outboundNo_productId2InfoMap.getOrDefault(item.getRelatedPickingOrderNo() + "-" + item.getProductId(), new ProductionTask()).getId());
                 orderItem.setCreatedBy(req.getUserId());
                 orderItem.setModifiedBy(req.getUserId());
                 orderItem.setCreatedAt(new Date());
                 orderItem.setModifiedAt(new Date());
                 orderItem.setIsDeleted(0);
-                orderItems.add(orderItem) ;
+                orderItems.add(orderItem);
             }
         }
         return orderItems;
@@ -434,7 +484,7 @@ public class CkInboundFacade {
 
             p.setSupplierName(supplierId2SupplierMap.getOrDefault(v.getSupplierId(), new Supplier()).getSupplierName());
             p.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(v.getWarehouseId(), new Warehouse()).getName());
-            p.setItemCount(orderId2ItemListMap.getOrDefault(v.getId(), new ArrayList<>()).stream().map(s->s.getProductId()).distinct().collect(Collectors.toList()).size());
+            p.setItemCount(orderId2ItemListMap.getOrDefault(v.getId(), new ArrayList<>()).stream().map(s -> s.getProductId()).distinct().collect(Collectors.toList()).size());
             return p;
         }).collect(Collectors.toList());
 
@@ -565,7 +615,7 @@ public class CkInboundFacade {
             }
             req.setShelfAllocations(shelfAllocations);
 
-            innerList.add( req);
+            innerList.add(req);
         }
         resp.setItems(innerList);
         resp.setItemCount(CollectionUtils.isEmpty(resp.getItems()) ? 0 : resp.getItems().size());
@@ -815,69 +865,129 @@ public class CkInboundFacade {
         // 5. 更新库存和流水记录
         inventoryHolder.updateAddInventoryForApprove(inboundOrder, orderItems, req.getUserId());
 
+        //更新生产任务
+        updateProductionTask(orderItems);
+
         // 6. 更新入库单状态为已完成 3-入库已完成
         boolean statusUpdated = updateInboundOrderStatus(inboundOrder.getId(), CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.getCode(), req.getUserId());
         if (!statusUpdated) {
             throw new ValidationException("更新入库单状态失败");
         }
 
-//        CkInOutboundEnums.InBoundType inBoundType = CkInOutboundEnums.InBoundType.getByCode(inboundOrder.getOrderType());
-//        switch (inBoundType) {
-//            case PurchaseInbound:
-//                processPurchaseInbound(req, inboundOrder);
-//                break;
-//            case ProductionInbound:
-//                processProductionInbound(req, inboundOrder);
-//                break;
-//            default:
-//                throw new ValidationException("入库单类型错误");
-//        }
         return true;
     }
 
-//    private void processProductionInbound(InboundApproveOkReq req, InboundOrder inboundOrder) {
-//        // 4. 查询入库单明细
-//        List<InboundOrderItem> orderItems = inboundOrderItemService.selectByInboundOrderId(req.getTenantId(), req.getOrderId());
-//        if (CollectionUtils.isEmpty(orderItems)) {
-//            throw new ValidationException("入库单明细不能为空");
-//        }
-//
-//        // 5. 更新库存和流水记录
-//        Map<Integer, List<InboundOrderItem>> productType2ItemListMap = orderItems.stream().collect(Collectors.groupingBy(InboundOrderItem::getProductType));
-//        for (Integer puductType : productType2ItemListMap.keySet()) {
-//            List<InboundOrderItem> productItems = productType2ItemListMap.get(puductType);
-//            if (!CollectionUtils.isEmpty(productItems)) {
-//                if (puductType.equals(CkInOutboundEnums.ProductType.Product.getCode())) {
-//                    inventoryHolder.updateAddInventoryForApprove(inboundOrder, productItems, req.getUserId());
-//                }
-//            }
-//
-//        }
-//
-//        // 6. 更新入库单状态为已完成 3-入库已完成
-//        boolean statusUpdated = updateInboundOrderStatus(inboundOrder.getId(), CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.getCode(), req.getUserId());
-//        if (!statusUpdated) {
-//            throw new ValidationException("更新入库单状态失败");
-//        }
-//    }
+    private void updateProductionTask(List<InboundOrderItem> orderItems) {
+        if (CollectionUtils.isEmpty(orderItems)) {
+            return;
+        }
 
-//    private void processPurchaseInbound(InboundApproveOkReq req, InboundOrder inboundOrder) {
-//        // 4. 查询入库单明细
-//        List<InboundOrderItem> orderItems = inboundOrderItemService.selectByInboundOrderId(req.getTenantId(), req.getOrderId());
-//        if (CollectionUtils.isEmpty(orderItems)) {
-//            throw new ValidationException("入库单明细不能为空");
-//        }
-//
-//        // 5. 更新库存和流水记录
-//        inventoryHolder.updateAddInventoryForApprove(inboundOrder, orderItems, req.getUserId());
-//
-//        // 6. 更新入库单状态为已完成 3-入库已完成
-//        boolean statusUpdated = updateInboundOrderStatus(inboundOrder.getId(), CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.getCode(), req.getUserId());
-//        if (!statusUpdated) {
-//            throw new ValidationException("更新入库单状态失败");
-//        }
-//
-//    }
+        // 过滤出有生产任务关联的明细项
+        List<InboundOrderItem> itemsWithProductionTask = orderItems.stream()
+                .filter(item -> item.getProductionTaskId() != null && item.getProductionTaskId() > 0)
+                .collect(Collectors.toList());
+
+        if (CollectionUtils.isEmpty(itemsWithProductionTask)) {
+            log.info("入库单明细中没有关联生产任务的数据");
+            return;
+        }
+
+        // 按生产任务ID分组，汇总入库数量
+        Map<Long, Map<Long, BigDecimal>> taskId2OutboundId2QuantityMap = itemsWithProductionTask.stream()
+                .collect(Collectors.groupingBy(
+                        InboundOrderItem::getProductionTaskId,
+                        Collectors.toMap(
+                                InboundOrderItem::getRelatedOutboundOrderId,
+                                item -> item.getActualQuantity()
+                        )
+                ));
+
+        // 批量查询生产任务
+        List<Long> productionTaskIds = new ArrayList<>(taskId2OutboundId2QuantityMap.keySet());
+        List<ProductionTask> productionTasks = productionTaskService.listByIds(productionTaskIds);
+
+        // 记录未找到的生产任务（用于日志）
+        Set<Long> foundTaskIds = productionTasks.stream()
+                .map(ProductionTask::getId)
+                .collect(Collectors.toSet());
+        Set<Long> notFoundTaskIds = productionTaskIds.stream()
+                .filter(id -> !foundTaskIds.contains(id))
+                .collect(Collectors.toSet());
+
+        if (!notFoundTaskIds.isEmpty()) {
+            log.warn("未找到对应的生产任务数据，任务IDs: {}", notFoundTaskIds);
+        }
+
+        if (CollectionUtils.isEmpty(productionTasks)) {
+            log.warn("所有生产任务数据都未找到，任务IDs: {}", productionTaskIds);
+            return;
+        }
+
+        // 构建更新列表
+        List<ProductionTask> tasksToUpdate = new ArrayList<>();
+        List<String> updateLogs = new ArrayList<>();
+
+        for (ProductionTask task : productionTasks) {
+            Map<Long, BigDecimal> OutboundId2QuantityMap = taskId2OutboundId2QuantityMap.get(task.getId());
+            BigDecimal inboundQuantity = OutboundId2QuantityMap.get(task.getOutboundOrderId());
+            if (inboundQuantity == null || inboundQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            // 验证锁定库存是否足够
+            if (task.getLockQuantity().compareTo(inboundQuantity) < 0) {
+                log.warn("生产任务锁定库存不足，任务ID: {}, 任务编号: {}, 锁定数量: {}, 入库数量: {}",
+                        task.getId(), task.getTaskNo(), task.getLockQuantity(), inboundQuantity);
+                // 这里可以选择跳过或者使用实际锁定数量（根据业务需求）
+                // 当前逻辑：跳过该任务更新
+                throw new ValidationException("生产任务锁定库存不足");
+            }
+
+            // 更新生产任务
+            ProductionTask updateTask = new ProductionTask();
+            updateTask.setId(task.getId());
+
+            // 减少锁定库存
+            BigDecimal newLockQuantity = task.getLockQuantity().subtract(inboundQuantity);
+            updateTask.setLockQuantity(newLockQuantity);
+
+            // 更新状态
+            Integer newStatus = calculateProductionTaskStatus(newLockQuantity, task.getRemainingQuantity());
+            updateTask.setStatus(newStatus);
+
+            tasksToUpdate.add(updateTask);
+
+            // 记录更新日志
+            updateLogs.add(String.format("任务[%s]: 入库%.2f, 锁定%.2f→%.2f,  状态→%d",
+                    task.getTaskNo(), inboundQuantity,
+                    task.getLockQuantity(), newLockQuantity,
+                    newStatus));
+        }
+
+        // 批量更新生产任务
+        if (!CollectionUtils.isEmpty(tasksToUpdate)) {
+            boolean updated = productionTaskService.updateBatchById(tasksToUpdate);
+            if (!updated) {
+                log.error("生产任务批量更新失败，影响记录数: {}", tasksToUpdate.size());
+                // 这里不抛异常，避免影响审核主流程
+            } else {
+                log.info("成功更新 {} 个生产任务: {}", tasksToUpdate.size(), String.join("; ", updateLogs));
+            }
+        } else {
+            log.info("没有需要更新的生产任务");
+        }
+    }
+
+    /**
+     * 计算生产任务状态
+     */
+    private Integer calculateProductionTaskStatus(BigDecimal lockQuantity, BigDecimal remainingQuantity) {
+        if (lockQuantity.compareTo(BigDecimal.ZERO) == 0 && remainingQuantity.compareTo(BigDecimal.ZERO) == 0) {
+            return CkInOutboundEnums.ProductionTaskStatus.Completed.getCode();
+        } else {
+            return CkInOutboundEnums.ProductionTaskStatus.PartialCompletion.getCode();
+        }
+    }
 
     /**
      * 检查订单状态是否允许审核通过
@@ -910,5 +1020,100 @@ public class CkInboundFacade {
         updateOrder.setModifiedAt(new Date());
 
         return inboundOrderService.updateById(updateOrder);
+    }
+
+    public InboundProductInDetailResp detailOfProductionInbound(Long orderId, Long tenantId) {
+        InboundOrder inboundOrder = inboundOrderService.selectById(orderId, tenantId);
+        if (inboundOrder == null) {
+            throw new ValidationException("入库单不存在");
+        }
+        List<InboundOrderItem> inboundItemList = inboundOrderItemService.selectByInboundOrderId(tenantId, orderId);
+
+        //准备数据
+        Map<Long, Warehouse> warehouseId2WarehouseMap = new HashMap<>();
+        List<Warehouse> warehouses = warehouseService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(warehouses)) {
+            warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
+        }
+
+        Map<Long, Product> productId2ProductMap = new HashMap<>();
+        List<Long> productIds = inboundItemList.stream().map(v -> v.getProductId()).distinct().collect(Collectors.toList());
+        List<Product> products = productService.selectByIds(tenantId, productIds);
+        if (!CollectionUtils.isEmpty(products)) {
+            productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+        }
+
+        List<Unit> units = unitService.selectByTenantId(tenantId, 1);
+        Map<String, Unit> unitCode2UnitMap = units.stream()
+                .filter(Objects::nonNull)   // 避免空值
+                .distinct()                  // 去重
+                .collect(Collectors.toMap(Unit::getUnitCode, v -> v));
+
+        Map<Long, WarehouseShelf> shelfId2ShelfMap = new HashMap<>();
+        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(warehouseShelves)) {
+            shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        }
+
+
+        Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
+        Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
+
+        List<InboundProductInDetailResp.InboundItemDetail> items =new ArrayList<>();
+        //根据货物ID_关联领料单ID来分组
+        Map<String, List<InboundOrderItem>> productId_relationPickingOrderId2InboundItemListMap = inboundItemList.stream().collect(Collectors.groupingBy(v -> v.getProductId() + "_" + v.getRelatedOutboundOrderNo()));
+        for (String productId_relationPickingOrderId : productId_relationPickingOrderId2InboundItemListMap.keySet()) {
+            List<InboundOrderItem> inboundOrderItems = productId_relationPickingOrderId2InboundItemListMap.get(productId_relationPickingOrderId);
+            InboundOrderItem v = inboundOrderItems.get(0);
+
+            InboundProductInDetailResp.InboundItemDetail rd = new InboundProductInDetailResp.InboundItemDetail();
+            rd.setProductId(v.getProductId());
+            Product product = finalProductId2ProductMap.getOrDefault(v.getProductId(),null);
+            if (product != null) {
+                rd.setProductName(product.getName());
+                rd.setSku(product.getSku());
+                rd.setSpec(product.getSpec());
+                rd.setUnit(unitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
+            }
+            rd.setActualQuantity(v.getActualQuantity());
+            rd.setBatchNo(v.getBatchNo());
+            rd.setRemark(v.getRemark());
+            rd.setRelatedPickingOrderId(v.getRelatedOutboundOrderId());
+            rd.setRelatedPickingOrderNo(v.getRelatedOutboundOrderNo());
+            rd.setProductionTaskId(v.getProductionTaskId());
+            rd.setItemId(v.getId());
+
+            List<Long> shelfIds = inboundOrderItems.stream().map(s -> s.getShelfLocationId()).distinct().collect(Collectors.toList());
+            rd.setShelfLocationIds(shelfIds);
+
+            List<InboundProductInDetailResp.ShelfAllocationDetail> shelfAllocations = inboundOrderItems.stream().map(ioi -> {
+                InboundProductInDetailResp.ShelfAllocationDetail shelfAllocationDetail = new InboundProductInDetailResp.ShelfAllocationDetail();
+                shelfAllocationDetail.setShelfLocationId(ioi.getShelfLocationId());
+                shelfAllocationDetail.setShelfLocationName(finalShelfId2ShelfMap.getOrDefault(ioi.getShelfLocationId(), new WarehouseShelf()).getShelfName());
+                shelfAllocationDetail.setQuantity(ioi.getActualQuantity());
+                shelfAllocationDetail.setShelfCode(finalShelfId2ShelfMap.getOrDefault(ioi.getShelfLocationId(), new WarehouseShelf()).getShelfCode());
+                shelfAllocationDetail.setShelfName(finalShelfId2ShelfMap.getOrDefault(ioi.getShelfLocationId(), new WarehouseShelf()).getShelfName());
+                return shelfAllocationDetail;
+            }).collect(Collectors.toList());
+            rd.setShelfAllocations(shelfAllocations);
+
+            items.add(rd);
+        }
+
+        InboundProductInDetailResp r = new InboundProductInDetailResp();
+        r.setId(inboundOrder.getId());
+        r.setOrderNo(inboundOrder.getOrderNo());
+        r.setOrderType(inboundOrder.getOrderType());
+        r.setRelatedOrderNo(inboundOrder.getRelatedOrderNo());
+        r.setRemark(inboundOrder.getRemark());
+        r.setStatus(inboundOrder.getStatus());
+        r.setWarehouseId(inboundOrder.getWarehouseId());
+        r.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(inboundOrder.getWarehouseId(), new Warehouse()).getName());
+        r.setCreatedAt(inboundOrder.getCreatedAt());
+        r.setModifiedAt(inboundOrder.getModifiedAt());
+        r.setItems(items);
+        r.setItemCount(items.size());
+        r.setTotalQuantity(inboundOrder.getTotalQuantity());
+        return r;
     }
 }

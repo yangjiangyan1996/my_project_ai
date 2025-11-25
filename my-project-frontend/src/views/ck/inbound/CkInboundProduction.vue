@@ -51,7 +51,7 @@
             <el-option
               v-for="order in availablePickingOrders"
               :key="order.id"
-              :label="`${order.orderNo} - ${order.mainProductName || '多产品'} (${order.statusText})`"
+              :label="`${order.orderNo} - ${order.mainProductName || '多产品'} (${order.remark})`"
               :value="order.id"
             />
           </el-select>
@@ -62,7 +62,7 @@
               <el-descriptions-item label="领料单号">{{ selectedPickingOrder.orderNo }}</el-descriptions-item>
               <el-descriptions-item label="领料仓库">{{ selectedPickingOrder.warehouseName }}</el-descriptions-item>
               <el-descriptions-item label="领料日期">{{ selectedPickingOrder.expectedDate }}</el-descriptions-item>
-              <el-descriptions-item label="状态">{{ selectedPickingOrder.statusText }}</el-descriptions-item>
+              <el-descriptions-item label="备注">{{ selectedPickingOrder.remark }}</el-descriptions-item>
             </el-descriptions>
             
             <div class="picking-products">
@@ -494,7 +494,8 @@ const handleDataSourceChange = (value) => {
 const loadAvailablePickingOrders = async () => {
   try {
     const res = await get('/api/auth/outbound/listCompletedOutBoundProduction?orderType=2');
-    availablePickingOrders.value = res?.data || res || [];
+    console.log('加载生产领料单成功:', res);
+    availablePickingOrders.value =  res || [];
   } catch (error) {
     console.error('加载生产领料单失败:', error);
     availablePickingOrders.value = [];
@@ -1010,7 +1011,7 @@ const validateForm = async () => {
 const loadInboundDetail = async (id) => {
   loading.value = true;
   try {
-    const res = await get(`/api/auth/inbound/detail?orderId=${id}`);
+    const res = await get(`/api/auth/inbound/detailOfProductionInbound?orderId=${id}`);
     if (res) {
       Object.assign(formData, {
         id: res.id,

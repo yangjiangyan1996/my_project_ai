@@ -10,6 +10,35 @@ import lombok.Getter;
  */
 public class CkInOutboundEnums {
 
+    //状态:
+    // 1-等待生产, (刚申请生产领料出库单，未审核)
+    // 2-等待生产入库, (申请生产领料出库单，已审核)
+    // 3-已生产完成,(申请生产领料出库单，已审核，并且数量已经生产入库)
+    // 9-已取消，
+    @Getter
+    public enum ProductionTaskStatus {
+        InProduction(1,"等待生产"),
+        PartialCompletion(2,"等待生产入库"),
+        Completed(3,"已生产完成"),
+
+        //Cancelled(9,"已取消");
+        ;
+        ProductionTaskStatus(Integer code, String desc) {
+            this.code = code;
+            this.desc = desc;
+        }
+        private Integer code;
+        private String desc;
+        public static String getDescByCode(Integer code) {
+            for (CkInOutboundEnums.ProductionTaskStatus value : CkInOutboundEnums.ProductionTaskStatus.values()) {
+                if (value.getCode().equals(code)) {
+                    return value.getDesc();
+                }
+            }
+            return null;
+        }
+    }
+
     //产品类型（1=商品，2=原料）',
     @Getter
     public enum ProductType {

@@ -41,4 +41,13 @@ public class InboundOrderItem extends BaseModel {
      * {@link com.example.enums.CkInOutboundEnums.ProductType}
      */
     private Integer productType;
+
+    //关联的出库单ID
+    private Long relatedOutboundOrderId;
+
+    //关联的出库单号
+    private String relatedOutboundOrderNo;
+
+    //生产任务ID
+    private Long productionTaskId;
 }
