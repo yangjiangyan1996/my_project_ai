@@ -1449,7 +1449,17 @@ public class CKProductFacade {
     }
 
     private String buildProductKey(String name, String spec, String color) {
-        return name.trim() + "_" + spec.trim() + "_" + color.trim();
+        StringBuilder sb = new StringBuilder();
+        if(!StringUtils.isBlank( name)) {
+            sb.append(name.trim());
+        }
+        if(!StringUtils.isBlank( spec)) {
+            sb.append("_").append(spec.trim());
+        }
+        if(!StringUtils.isBlank( color)) {
+            sb.append("_").append(color.trim());
+        }
+        return sb.toString();
     }
 
     public List<ProductSimpleListResp> productSimpleList(UserInfo user,String keyword) {
