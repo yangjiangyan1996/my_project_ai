@@ -323,7 +323,7 @@ public class CKProductFacade {
                 return d;
             }).sorted(Comparator.comparingInt(BomDetailListResp::getSortOrder)).collect(Collectors.toList());
 
-            p.setCategoryName(whMap.get(v.getCategoryCode()).getCategoryName());
+            p.setCategoryName(whMap.getOrDefault(v.getCategoryCode(), new ProductCategory()).getCategoryName());
             p.setUnitName(unitMap.getOrDefault(v.getUnitCode(), new Unit()).getUnitName());
             p.setOutUnitName(unitMap.getOrDefault(v.getOutUnitCode(), new Unit()).getUnitName());
             p.setBomData(detail);
