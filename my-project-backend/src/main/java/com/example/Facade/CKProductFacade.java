@@ -1449,7 +1449,7 @@ public class CKProductFacade {
     }
 
     private String buildProductKey(String name, String spec, String color) {
-        return name + "_" + spec + "_" + color;
+        return name.trim() + "_" + spec.trim() + "_" + color.trim();
     }
 
     public List<ProductSimpleListResp> productSimpleList(UserInfo user,String keyword) {
@@ -1559,6 +1559,12 @@ public class CKProductFacade {
         }
         productService.saveBatch(pbomList);
 
+        //查询，如果已经存在bom，先删掉
+        ProductBom productBoms = productBomService.selectByProduectId(productId, tenantId);
+        if (productBoms != null) {
+            productBomService.deletedById(productBoms.getId(), tenantId, userId);
+            productBomDetailService.deletedByBomId(productBoms.getId(), userId, tenantId);
+        }
         //创建 bom 表数据
         ProductBom pb = new ProductBom();
         pb.setTenantId(tenantId);
@@ -1591,6 +1597,8 @@ public class CKProductFacade {
             detail.setLossRate(StringUtils.isBlank(v.getLossRate()) ? BigDecimal.ZERO : new BigDecimal(NumUtils.parsePercentStrict(v.getLossRate())));
             detail.setRemark(v.getRemark());
             detail.setType(StringUtils.isBlank(v.getTypeName()) ? 2 : v.getTypeName().contains("辅") ? 2 : 1);
+            detail.setOtherQuantity(StringUtils.isBlank(v.getOtherQuantity()) ? BigDecimal.ZERO : new BigDecimal(v.getOtherQuantity()));
+            detail.setQuantityBeforeLoss(StringUtils.isBlank(v.getQuantityBeforeLoss()) ? BigDecimal.ZERO : new BigDecimal(v.getQuantityBeforeLoss()));
             detail.setCreatedAt(new Date());
             detail.setCreatedBy(userId);
             detail.setModifiedAt(new Date());

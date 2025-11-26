@@ -29,6 +29,12 @@ public class ProductBomDetail extends BaseModel {
     //损耗率（百分比）
     private BigDecimal lossRate;
 
+    //生产一个成品所需的原料净用量数量（目前只存储，无逻辑）
+    private BigDecimal quantityBeforeLoss;
+
+    //其他数量（比如有的东西是几米的，一次用几个，目前没有逻辑相关）
+    private BigDecimal otherQuantity;
+
     //备注，比如原料替代说明
     private String remark;
 

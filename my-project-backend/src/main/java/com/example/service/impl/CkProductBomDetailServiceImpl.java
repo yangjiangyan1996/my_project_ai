@@ -55,7 +55,8 @@ public class CkProductBomDetailServiceImpl extends ServiceImpl<CkProductBomDetai
                 productBom,
                 new QueryWrapper<ProductBomDetail>()
                         .eq("bom_id", bomId)
-                        .eq("tenant_id", tenantId)) > 0;
+                        .eq("tenant_id", tenantId)
+                        .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())) > 0;
     }
 
     @Override
