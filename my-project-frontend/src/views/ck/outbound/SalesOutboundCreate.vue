@@ -1315,6 +1315,7 @@ const handleSubmit = async () => {
 };
 
 // 准备提交数据
+// 准备提交数据
 const prepareSubmitData = () => {
   let items = [];
   
@@ -1333,7 +1334,13 @@ const prepareSubmitData = () => {
       priceTotal: item.price * (item.quantity || 0),
       priceUnitUsd: item.priceUnitUsd || 0,
       priceTotalUsd: (item.priceUnitUsd || 0) * (item.quantity || 0),
-      batchAllocations: item.batchAllocations || [],
+      batchAllocations: (item.batchAllocations || []).map(allocation => ({
+        batchNo: allocation.batchNo,
+        shelfId: allocation.shelfId,
+        shelfName: allocation.shelfName,
+        quantity: allocation.quantity,
+        price: allocation.price || item.price || 0
+      })),
       remark: item.remark || ''
     }));
   

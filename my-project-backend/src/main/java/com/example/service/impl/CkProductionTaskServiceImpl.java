@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @Author YangJian
@@ -29,6 +30,15 @@ public class CkProductionTaskServiceImpl extends ServiceImpl<CkProductionTaskMap
         return baseMapper.update(productionTask,
                 new QueryWrapper<ProductionTask>()
                         .eq("outbound_order_id", outboundOrderId)
+                        .eq("tenant_id", tenantId)
+                        .eq("is_deleted", 0));
+    }
+
+    @Override
+    public List<ProductionTask> selectByIds(Set<Long> ids, Long tenantId) {
+        return baseMapper.selectList(
+                new QueryWrapper<ProductionTask>()
+                        .in("id", ids)
                         .eq("tenant_id", tenantId)
                         .eq("is_deleted", 0));
     }

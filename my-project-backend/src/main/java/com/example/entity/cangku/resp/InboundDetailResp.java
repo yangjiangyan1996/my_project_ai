@@ -42,8 +42,12 @@ public class InboundDetailResp {
         private String productName;
         private String sku;
         private String remark;
-        private Long shelfLocationId;
-        private String shelfLocationName;
+//        private Long shelfLocationId;
+//        private String shelfLocationName;
+
+        // 新增：货架位置ID数组（用于前端显示）
+        private List<Long> shelfLocationIds;
+
         private BigDecimal priceUnit;
         private BigDecimal priceTotal;
 

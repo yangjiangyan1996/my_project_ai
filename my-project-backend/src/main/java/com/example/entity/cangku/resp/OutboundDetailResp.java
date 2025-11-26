@@ -91,6 +91,8 @@ public class OutboundDetailResp {
         private Long itemId;
         private String batchNo;
         private BigDecimal quantity;
+        private Long shelfId;
+        private String shelfName;
     }
 
 }

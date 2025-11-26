@@ -5,6 +5,7 @@ import com.example.entity.cangku.dto.ProductionTask;
 import com.example.enums.CkInOutboundEnums;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * @Author YangJian
@@ -23,4 +24,6 @@ public interface CkProductionTaskService extends IService<ProductionTask> {
     Integer updateProductionTaskStatus(Long tenantId, Long outboundId, CkInOutboundEnums.ProductionTaskStatus partialCompletion, Long userId);
 
     List<ProductionTask> selectByOutboundOrderNos(Long tenantId, List<String> outboundNos);
+
+    List<ProductionTask> selectByIds(Set<Long> ids, Long tenantId);
 }

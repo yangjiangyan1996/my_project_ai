@@ -8,6 +8,7 @@ import com.example.entity.cangku.resp.InboundListPageResp;
 import com.example.entity.cangku.resp.InboundProductInDetailResp;
 import com.example.enums.CkInOutboundEnums;
 import com.example.holder.InventoryHolder;
+import com.example.holder.ProductTaskHolder;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -31,6 +32,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class CkInboundFacade {
+    @Resource
+    ProductTaskHolder productTaskHolder;
     @Resource
     CkOutboundOrderService outboundOrderService;
     @Resource
@@ -85,38 +88,7 @@ public class CkInboundFacade {
 
         //判断数量生产入库数量是否足够
         //后续要加入审核的时候，要加一个锁定库存
-        if (req.getOrderType().equals(CkInOutboundEnums.InBoundType.ProductionInbound.getCode())) {
-            List<String> outboundNos = orderItems.stream().map(v -> v.getRelatedOutboundOrderNo()).filter(StringUtils::isNotBlank).distinct().collect(Collectors.toList());
-            if (!CollectionUtils.isEmpty(outboundNos)) { // 手动创建不关联生产领料的时候，outboundNos 会存在空的情况
-                List<ProductionTask> productionTasks = productionTaskService.selectByOutboundOrderNos(req.getTenantId(), outboundNos);
-                Map<String, Map<Long, ProductionTask>> outboundNo2ProductId2QuantityMap = new HashMap<>();
-                if (!CollectionUtils.isEmpty(productionTasks)) {
-                    outboundNo2ProductId2QuantityMap = productionTasks.stream().collect(Collectors.groupingBy(ProductionTask::getOutboundOrderNo, Collectors.toMap(ProductionTask::getProductId, v -> v)));
-                }
-                List<ProductionTask> productionTasksToUpdate = new ArrayList<>();
-                for (InboundCreateReq.InboundDetailCreateReq item : req.getItems()) {
-                    if (outboundNo2ProductId2QuantityMap.containsKey(item.getRelatedPickingOrderNo())) {
-                        Map<Long, ProductionTask> productId2QuantityOfTaskMap = outboundNo2ProductId2QuantityMap.getOrDefault(item.getRelatedPickingOrderNo(), new HashMap<>());
-                        ProductionTask pt = productId2QuantityOfTaskMap.getOrDefault(item.getProductId(), new ProductionTask());
-                        if (pt.getRemainingQuantity().compareTo(new BigDecimal(item.getActualQuantity())) < 0) {
-                            throw new ValidationException("生产领料余额不足，生产领料剩余：" + pt.getRemainingQuantity() + "，实际入库数量：" + item.getActualQuantity());
-                        } else {
-                            ProductionTask updatePt = new ProductionTask();
-                            updatePt.setId(pt.getId());
-                            updatePt.setRemainingQuantity(pt.getRemainingQuantity().subtract(new BigDecimal(item.getActualQuantity())));
-                            updatePt.setLockQuantity(pt.getLockQuantity().add(new BigDecimal(item.getActualQuantity())));
-                            productionTasksToUpdate.add(updatePt);
-                        }
-                    }
-                }
-                boolean productionTasksUpdated = productionTaskService.updateBatchById(productionTasksToUpdate);
-                if (!productionTasksUpdated) {
-                    throw new ValidationException("生产任务更新失败");
-                }
-            }
-        }
-
-
+        productTaskHolder.checkProductTaskAndSave(req,orderItems);
 
         // 5. 如果是已完成状态，更新库存和流水
         if (req.getStatus() == 3) { // 已完成状态
@@ -615,6 +587,7 @@ public class CkInboundFacade {
             req.setBatchNo(inboundOrderItems.get(0).getBatchNo());
             req.setRemark(inboundOrderItems.get(0).getRemark());
             req.setPriceUnit(inboundOrderItems.get(0).getPriceUnit());
+            req.setShelfLocationIds(inboundOrderItems.stream().map(v->v.getShelfLocationId()).distinct().collect(Collectors.toList()));
             req.setPriceTotal(priceTotal);
             req.setActualQuantity(actualQuantity);
             Product product = finalProductId2ProductMap.getOrDefault(inboundOrderItems.get(0).getProductId(), null);
@@ -655,6 +628,9 @@ public class CkInboundFacade {
             throw new ValidationException("入库单主表更新失败");
         }
 
+        //查询 入库明细， 记录ID-数量 ,用于回滚productionTas数据
+        List<InboundOrderItem> items = inboundOrderItemService.selectByInboundOrderId(req.getTenantId(), req.getId());
+        Map<Long, BigDecimal> productionTaskId2QuantityMap = items.stream().filter(v->v.getProductionTaskId()!=null).collect(Collectors.toMap(v -> v.getProductionTaskId(), v -> v.getActualQuantity()));
         // 6. 处理入库单明细 - 先删除旧的，再插入新的
         boolean itemsDeleted = inboundOrderItemService.deleteByOrderId(req.getTenantId(), req.getId(), req.getUserId());
         if (!itemsDeleted) {
@@ -666,6 +642,23 @@ public class CkInboundFacade {
         if (!itemsSaved) {
             throw new ValidationException("入库单明细保存失败");
         }
+
+        //回滚productionTask数量
+        if(!productionTaskId2QuantityMap.isEmpty()) {
+            List<ProductionTask> productionTasks = productionTaskService.selectByIds(productionTaskId2QuantityMap.keySet(), req.getTenantId());
+            productionTasks.forEach(v->{
+                v.setRemainingQuantity(v.getRemainingQuantity().add(productionTaskId2QuantityMap.get(v.getId())));
+                v.setLockQuantity(v.getLockQuantity().subtract(productionTaskId2QuantityMap.get(v.getId())));
+            });
+            boolean productionTasksUpdated = productionTaskService.updateBatchById(productionTasks);
+            if (!productionTasksUpdated) {
+                throw new ValidationException("回滚生产任务数量失败");
+            }
+        }
+
+        //判断数量生产入库数量是否足够
+        //后续要加入审核的时候，要加一个锁定库存
+        productTaskHolder.checkProductTaskAndSave(req,  orderItems);
 
         // 7. 如果状态从未完成变为已完成，更新库存和流水
         if (existingOrder.getStatus() != 3 && req.getStatus() == 3) {

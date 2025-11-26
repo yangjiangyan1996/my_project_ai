@@ -901,6 +901,12 @@ public class CkOutboundFacade {
             accountId2AccountMap = accounts.stream().collect(Collectors.toMap(Account::getId, v -> v));
         }
 
+        Map<Long, WarehouseShelf> shelfId2ShelfMap = new HashMap<>();
+        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(tenantId);
+        if (!CollectionUtils.isEmpty(warehouseShelves)) {
+            shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        }
+
         OutboundDetailResp resp = new OutboundDetailResp();
         resp.setId(outboundOrder.getId());
         resp.setOrderNo(outboundOrder.getOrderNo());
@@ -921,6 +927,7 @@ public class CkOutboundFacade {
         resp.setUpdatedAt(outboundOrder.getModifiedAt());
         Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
         Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
+        Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
 
         List<OutboundDetailResp.ProductInfoInner> innerList = new ArrayList<>();
 
@@ -952,6 +959,8 @@ public class CkOutboundFacade {
                     i.setItemId(v.getId());
                     i.setBatchNo(v.getBatchNo());
                     i.setQuantity(v.getQuantity());
+                    i.setShelfId(v.getShelfLocationId());
+                    i.setShelfName(finalShelfId2ShelfMap.getOrDefault(v.getShelfLocationId(), new WarehouseShelf()).getShelfName());
                     return i;
                 }).collect(Collectors.toList());
                 req.setBatchAllocations(batchAllocations);
