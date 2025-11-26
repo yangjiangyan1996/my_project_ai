@@ -273,12 +273,32 @@ public class ProductController {
         }
     }
 
-    //获取可用商品列表
-    @GetMapping("/bom/detail")
-    public RespBean<List<BomDetailListResp>> bomDetail(@RequestParam("bomId") Long bomId) {
+    /**
+     * 这个接口现在在库存历史页面中使用， 产品详情用realDetail接口
+     * @param productId
+     * @return
+     */
+    @GetMapping("/bomDetailWholeInfo")
+    public RespBean<BomListOfProductResp> bomDetailWholeInfo(@RequestParam("productId") Long productId) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            List<BomDetailListResp> result = CKProductFacade.bomDetail(bomId, user.getTenantId());
+            BomListOfProductResp result = CKProductFacade.bomDetailWholeInfo(productId, user);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProductController#bomDetail,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#bomDetail,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    //获取可用商品列表
+    @GetMapping("/bom/detail")
+    public RespBean<List<BomDetailAndWarehouseListResp>> bomDetail(@RequestParam("bomId") Long bomId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<BomDetailAndWarehouseListResp> result = CKProductFacade.bomDetail(bomId, user.getTenantId());
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ProductController#listEnable,req:{}", e);

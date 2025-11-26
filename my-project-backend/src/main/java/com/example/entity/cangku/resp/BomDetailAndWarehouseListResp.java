@@ -12,7 +12,7 @@ import java.util.List;
  * String @Date 2025/11/6 00;
  */
 @Data
-public class BomDetailListResp {
+public class BomDetailAndWarehouseListResp {
     //bomdetail的ID
     private Long id;
     Long componentProductId;

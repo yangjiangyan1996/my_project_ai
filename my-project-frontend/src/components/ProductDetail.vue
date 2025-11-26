@@ -1,3 +1,5 @@
+[file name]: ProductDetail.vue
+[file content begin]
 <template>
   <div class="product-detail">
     <el-alert
@@ -140,6 +142,149 @@
       </el-table>
     </el-card>
 
+    <!-- 原料信息（BOM信息） -->
+    <el-card class="bom-card" shadow="never" v-if="bomData && bomData.bomId">
+      <template #header>
+        <div class="card-header">
+          <span>原料信息 (BOM)</span>
+          <el-tag :type="bomData.status === 1 ? 'success' : 'danger'" size="small">
+            {{ bomData.status === 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </div>
+      </template>
+
+      <!-- BOM基本信息 -->
+      <div class="bom-basic-info">
+        <el-descriptions :column="3" border size="small">
+          <el-descriptions-item label="BOM ID">{{ bomData.bomId || '--' }}</el-descriptions-item>
+          <el-descriptions-item label="BOM编号">{{ bomData.bomCode || '--' }}</el-descriptions-item>
+          <el-descriptions-item label="版本号">{{ bomData.version || '--' }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="bomData.status === 1 ? 'success' : 'danger'" size="small">
+              {{ bomData.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="备注" :span="2">{{ bomData.remark || '--' }}</el-descriptions-item>
+        </el-descriptions>
+      </div>
+
+      <!-- 原料明细表格 -->
+      <el-table
+        :data="bomData.list"
+        border
+        size="small"
+        empty-text="暂无原料数据"
+        class="bom-table"
+        v-loading="loadingBom"
+      >
+        <el-table-column type="index" label="序号" width="60" align="center" />
+        <el-table-column label="原料信息" min-width="200">
+          <template #default="{ row }">
+            <div class="component-info">
+              <div class="component-name">{{ row.componentProductName }}</div>
+              <div class="component-id">ID: {{ row.componentProductId }}</div>
+              <div class="bom-detail-id">明细ID: {{ row.bomDetailId }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="类型" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.type === 1 ? 'primary' : 'success'" size="small">
+              {{ row.typeName || (row.type === 1 ? '主料' : '辅料') }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="用量信息" width="200" align="center">
+          <template #default="{ row }">
+            <div class="quantity-info">
+              <div class="quantity-item">
+                <span class="label">原料数量：</span>
+                <span class="value">{{ formatNumber(row.quantity) }}</span>
+              </div>
+              <div class="quantity-item" v-if="row.quantityBeforeLoss !== null && row.quantityBeforeLoss !== undefined">
+                <span class="label">净用量：</span>
+                <span class="value">{{ formatNumber(row.quantityBeforeLoss) }}</span>
+              </div>
+              <div class="quantity-item" v-if="row.lossRate !== null && row.lossRate !== undefined">
+                <span class="label">损耗率：</span>
+                <span class="value loss-rate">{{ formatNumber(row.lossRate) }}%</span>
+              </div>
+              <div class="quantity-item" v-if="row.otherQuantity !== null && row.otherQuantity !== undefined">
+                <span class="label">其他数量：</span>
+                <span class="value">{{ formatNumber(row.otherQuantity) }}</span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="排序" width="80" align="center">
+          <template #default="{ row }">
+            <span>{{ row.sortOrder || 0 }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="150">
+          <template #default="{ row }">
+            <div class="component-remark">
+              {{ row.remark || '--' }}
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 统计信息 -->
+      <div class="bom-summary" v-if="bomData.list && bomData.list.length > 0">
+        <el-row :gutter="20">
+          <el-col :span="5">
+            <div class="summary-item">
+              <span class="label">原料总数：</span>
+              <span class="value">{{ bomData.list.length }} 种</span>
+            </div>
+          </el-col>
+          <el-col :span="5">
+            <div class="summary-item">
+              <span class="label">主料：</span>
+              <span class="value">{{ mainMaterialsCount }} 种</span>
+            </div>
+          </el-col>
+          <el-col :span="5">
+            <div class="summary-item">
+              <span class="label">辅料：</span>
+              <span class="value">{{ auxiliaryMaterialsCount }} 种</span>
+            </div>
+          </el-col>
+          <el-col :span="5">
+            <div class="summary-item">
+              <span class="label">有损耗：</span>
+              <span class="value">{{ hasLossRateCount }} 种</span>
+            </div>
+          </el-col>
+          <!-- <el-col :span="4">
+            <div class="summary-item">
+              <span class="label">有净用量：</span>
+              <span class="value">{{ hasQuantityBeforeLossCount }} 种</span>
+            </div>
+          </el-col>
+          <el-col :span="4">
+            <div class="summary-item">
+              <span class="label">有其他数量：</span>
+              <span class="value">{{ hasOtherQuantityCount }} 种</span>
+            </div>
+          </el-col> -->
+        </el-row>
+      </div>
+    </el-card>
+
+    <!-- 无BOM数据提示 -->
+    <el-card class="bom-card" shadow="never" v-else-if="!loadingBom">
+      <template #header>
+        <div class="card-header">
+          <span>原料信息 (BOM)</span>
+        </div>
+      </template>
+      <div class="no-bom-data">
+        <el-empty description="暂无BOM数据" />
+      </div>
+    </el-card>
+
     <!-- 备注信息 -->
     <el-card class="remark-card" shadow="never" v-if="productData.remark">
       <template #header>
@@ -155,7 +300,7 @@
     <!-- 操作按钮 -->
     <div class="action-section">
       <el-button @click="$emit('close')">关闭</el-button>
-      <el-button type="primary" @click="handleEdit">编辑产品</el-button>
+      <!-- <el-button type="primary" @click="handleEdit">编辑产品</el-button> -->
       <el-button @click="handlePrint">打印产品信息</el-button>
     </div>
   </div>
@@ -164,7 +309,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { post } from '@/net';
+import { post, get } from '@/net';
 
 const props = defineProps({
   productData: {
@@ -176,6 +321,8 @@ const props = defineProps({
 const emit = defineEmits(['close', 'edit']);
 
 const warehouseInventory = ref([]);
+const bomData = ref({}); // BOM数据改为对象
+const loadingBom = ref(false); // BOM加载状态
 
 // 计算属性
 const getMinStockClass = computed(() => {
@@ -200,6 +347,33 @@ const getInventoryStatusText = computed(() => {
   return '库存充足';
 });
 
+// BOM相关计算属性
+const mainMaterialsCount = computed(() => {
+  return bomData.value.list ? bomData.value.list.filter(item => item.type === 1).length : 0;
+});
+
+const auxiliaryMaterialsCount = computed(() => {
+  return bomData.value.list ? bomData.value.list.filter(item => item.type === 2).length : 0;
+});
+
+const hasLossRateCount = computed(() => {
+  return bomData.value.list ? bomData.value.list.filter(item => 
+    item.lossRate !== null && item.lossRate !== undefined && item.lossRate > 0
+  ).length : 0;
+});
+
+const hasQuantityBeforeLossCount = computed(() => {
+  return bomData.value.list ? bomData.value.list.filter(item => 
+    item.quantityBeforeLoss !== null && item.quantityBeforeLoss !== undefined && item.quantityBeforeLoss > 0
+  ).length : 0;
+});
+
+const hasOtherQuantityCount = computed(() => {
+  return bomData.value.list ? bomData.value.list.filter(item => 
+    item.otherQuantity !== null && item.otherQuantity !== undefined && item.otherQuantity > 0
+  ).length : 0;
+});
+
 // 方法
 const loadWarehouseInventory = async () => {
   try {
@@ -210,6 +384,28 @@ const loadWarehouseInventory = async () => {
   } catch (error) {
     console.error('加载仓库库存失败:', error);
     warehouseInventory.value = [];
+  }
+};
+
+// 加载BOM信息
+const loadBomData = async () => {
+  if (!props.productData.id) return;
+  
+  loadingBom.value = true;
+  try {
+    const res = await get(`/api/auth/product/bomDetailWholeInfo?productId=${props.productData.id}`);
+    console.log('BOM数据响应:', res);
+    
+    if (res && res.bomId) {
+      bomData.value = res;
+    } else {
+      bomData.value = {};
+    }
+  } catch (error) {
+    console.error('加载BOM数据失败:', error);
+    bomData.value = {};
+  } finally {
+    loadingBom.value = false;
   }
 };
 
@@ -244,6 +440,13 @@ const formatTime = (timeString) => {
   }
 };
 
+const formatNumber = (value) => {
+  if (value === null || value === undefined) return '--';
+  // 如果是数字，保留2位小数
+  const num = Number(value);
+  return isNaN(num) ? value : num.toFixed(2);
+};
+
 const padZero = (num) => {
   return num < 10 ? `0${num}` : num;
 };
@@ -263,6 +466,7 @@ const handlePrint = () => {
 
 onMounted(() => {
   loadWarehouseInventory();
+  loadBomData(); // 加载BOM数据
 });
 </script>
 
@@ -277,7 +481,7 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.info-card, .unit-card, .inventory-card, .warehouse-card, .remark-card {
+.info-card, .unit-card, .inventory-card, .warehouse-card, .bom-card, .remark-card {
   margin-bottom: 20px;
 }
 
@@ -355,7 +559,114 @@ onMounted(() => {
   font-weight: bold;
 }
 
+/* BOM相关样式 */
+.bom-basic-info {
+  margin-bottom: 16px;
+}
+
+.bom-table {
+  margin-bottom: 16px;
+}
+
+.component-info {
+  line-height: 1.4;
+}
+
+.component-name {
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.component-id, .bom-detail-id {
+  font-size: 12px;
+  color: #909399;
+}
+
+.quantity-info {
+  line-height: 1.6;
+}
+
+.quantity-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.quantity-item:last-child {
+  margin-bottom: 0;
+}
+
+.quantity-item .label {
+  color: #606266;
+}
+
+.quantity-item .value {
+  color: #303133;
+  font-weight: 500;
+}
+
+.loss-rate {
+  color: #E6A23C;
+}
+
+.component-remark {
+  font-size: 12px;
+  color: #606266;
+  line-height: 1.4;
+}
+
+.bom-summary {
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-item .label {
+  color: #606266;
+  font-size: 14px;
+}
+
+.summary-item .value {
+  color: #303133;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.no-bom-data {
+  padding: 40px 0;
+  text-align: center;
+}
+
 :deep(.el-descriptions) {
   margin-top: 0;
 }
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .bom-summary .el-col {
+    margin-bottom: 8px;
+  }
+  
+  .summary-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .quantity-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}
 </style>
+[file content end]

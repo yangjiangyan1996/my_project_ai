@@ -7,6 +7,7 @@ import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.req.excel.ProductBomExcelImportModel;
 import com.example.entity.cangku.req.excel.ProductCreateImportModel;
 import com.example.entity.cangku.resp.*;
+import com.example.enums.CkProductEnums;
 import com.example.service.*;
 import com.example.utils.*;
 import jakarta.annotation.Resource;
@@ -309,8 +310,8 @@ public class CKProductFacade {
             ProductBom bom = finalBomId2BomMap.getOrDefault(v.getId(), new ProductBom());
             List<ProductBomDetail> bomdetailList = finalBomId2BomDetailListMap.getOrDefault(bom.getId(), new ArrayList<>());
 
-            List<BomDetailListResp> detail = bomdetailList.stream().map(z -> {
-                BomDetailListResp d = new BomDetailListResp();
+            List<BomDetailAndWarehouseListResp> detail = bomdetailList.stream().map(z -> {
+                BomDetailAndWarehouseListResp d = new BomDetailAndWarehouseListResp();
                 d.setComponentProductId(z.getComponentProductId());
                 d.setComponentProductName(finalProductId2ProductMap.get(z.getComponentProductId()).getName());
                 d.setComponentProductSku(finalProductId2ProductMap.get(z.getComponentProductId()).getSku());
@@ -321,7 +322,7 @@ public class CKProductFacade {
                 d.setRemark(z.getRemark());
                 d.setSortOrder(z.getSortOrder());
                 return d;
-            }).sorted(Comparator.comparingInt(BomDetailListResp::getSortOrder)).collect(Collectors.toList());
+            }).sorted(Comparator.comparingInt(BomDetailAndWarehouseListResp::getSortOrder)).collect(Collectors.toList());
 
             p.setCategoryName(whMap.getOrDefault(v.getCategoryCode(), new ProductCategory()).getCategoryName());
             p.setUnitName(unitMap.getOrDefault(v.getUnitCode(), new Unit()).getUnitName());
@@ -524,8 +525,8 @@ public class CKProductFacade {
             if (finalProductId2BomIdMap.containsKey(productId)) {
                 Long bomId = finalProductId2BomIdMap.get(productId);
                 List<ProductBomDetail> subProductDetails = finalBomId2SubProductBomDetailMap.get(bomId);
-                List<BomDetailListResp> bomData = subProductDetails.stream().map(s -> {
-                    BomDetailListResp r = new BomDetailListResp();
+                List<BomDetailAndWarehouseListResp> bomData = subProductDetails.stream().map(s -> {
+                    BomDetailAndWarehouseListResp r = new BomDetailAndWarehouseListResp();
                     r.setId(s.getId());
                     r.setComponentProductId(s.getComponentProductId());
                     r.setComponentProductName(productId2ProductMap.getOrDefault(s.getComponentProductId(), new Product()).getName());
@@ -571,7 +572,7 @@ public class CKProductFacade {
             } else {
                 //没有bom
                 Product pp = productId2ProductMap.getOrDefault(productId, new Product());
-                BomDetailListResp r = new BomDetailListResp();
+                BomDetailAndWarehouseListResp r = new BomDetailAndWarehouseListResp();
                 r.setId(pp.getId());
                 r.setComponentProductId(pp.getId());
                 r.setComponentProductName(pp.getName());
@@ -616,7 +617,7 @@ public class CKProductFacade {
         }).collect(Collectors.toList());
     }
 
-    public List<BomDetailListResp> bomDetail(Long bomId, Long tenantId) {
+    public List<BomDetailAndWarehouseListResp> bomDetail(Long bomId, Long tenantId) {
         if (bomId == null || tenantId == null) {
             throw new ValidationException("参数错误");
         }
@@ -631,7 +632,7 @@ public class CKProductFacade {
         }
 
         return details.stream().map(v -> {
-            BomDetailListResp r = new BomDetailListResp();
+            BomDetailAndWarehouseListResp r = new BomDetailAndWarehouseListResp();
             BeanUtils.copyProperties(v, r);
             return r;
         }).collect(Collectors.toList());
@@ -1617,6 +1618,47 @@ public class CKProductFacade {
         }).collect(Collectors.toList());
         
         return productBomDetailService.saveBatch(collect);
+    }
+
+    public BomListOfProductResp bomDetailWholeInfo(Long productId, UserInfo user) {
+        ProductBom pb = productBomService.selectByProduectId(productId, user.getTenantId());
+        if (pb == null) {
+            return null;
+        }
+        List<ProductBomDetail> pbdList = productBomDetailService.selectByBomId(pb.getId(), user.getTenantId());
+
+        Map<Long, Product> productId2ProductMap = new HashMap<>();
+        List<Long> productIds = pbdList.stream().map(v -> v.getComponentProductId()).distinct().collect(Collectors.toList());
+        List<Product> products = productService.selectByIds(user.getTenantId(), productIds);
+        if (!CollectionUtils.isEmpty(products)) {
+            productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+        }
+
+        Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
+        List<BomDetailListOfProductResp> list = pbdList.stream().map(v -> {
+            BomDetailListOfProductResp r = new BomDetailListOfProductResp();
+            r.setBomDetailId(v.getId());
+            r.setComponentProductId(v.getComponentProductId());
+            r.setComponentProductName(finalProductId2ProductMap.getOrDefault(v.getComponentProductId(), new Product()).getName());
+            r.setQuantity(v.getQuantity());
+            r.setLossRate(v.getLossRate());
+            r.setQuantityBeforeLoss(v.getQuantityBeforeLoss());
+            r.setOtherQuantity(v.getOtherQuantity());
+            r.setRemark(v.getRemark());
+            r.setSortOrder(v.getSortOrder());
+            r.setType(v.getType());
+            r.setTypeName(CkProductEnums.BomDetailType.getDescByCode(v.getType()));
+            return r;
+        }).collect(Collectors.toList());
+
+        BomListOfProductResp rr = new BomListOfProductResp();
+        rr.setBomId(pb.getId());
+        rr.setBomCode(pb.getBomCode());
+        rr.setRemark(pb.getRemark());
+        rr.setVersion(pb.getVersion());
+        rr.setList(list);
+        rr.setStatus(pb.getStatus());
+        return rr;
     }
 
     /**
