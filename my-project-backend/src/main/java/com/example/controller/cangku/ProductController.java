@@ -253,6 +253,11 @@ public class ProductController {
         }
     }
 
+    /**
+     * 这个接口现在在库存历史页面中使用， 产品详情用realDetail接口
+     * @param productId
+     * @return
+     */
     @GetMapping("/detail")
     public RespBean<ProductPageListResp> detail(@RequestParam("productId") Long productId) {
         try {
