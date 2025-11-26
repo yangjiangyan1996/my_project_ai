@@ -34,6 +34,7 @@
             <el-menu-item index="supplier" @click="changeDisplayMode('supplier')">供应商管理</el-menu-item>
             <el-menu-item index="customer" @click="changeDisplayMode('customer')">客户管理</el-menu-item>
             <el-menu-item index="sku" @click="changeDisplayMode('sku')">SKU管理</el-menu-item>
+            <el-menu-item index="ckUnit" @click="changeDisplayMode('ckUnit')">单位管理</el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="product">
@@ -383,6 +384,7 @@
     <CkApproveManager v-if="displayMode === 'approveManager'" />
     <CkSupplierManage v-if="displayMode === 'supplier'" />
     <CkCustomerManage v-if="displayMode === 'customer'" />
+    <CkCkUnitManage v-if="displayMode === 'ckUnit'" />
     <CkSkuManage v-if="displayMode === 'sku'" />
     <CkProductManage v-if="displayMode === 'product'" />
     <CkInboundManage v-if="displayMode === 'inbound'" />
@@ -425,6 +427,7 @@ import CkInventoryTransaction from '@/views/ck/CkInventoryTransaction.vue';
 import CkShelfManage from '@/views/ck/CkShelfManage.vue';
 import CkUser from '@/views/ck/CkUser.vue';
 import CkSkuManage from '@/views/ck/CkSkuManage.vue';
+import CkCkUnitManage from '@/views/ck/CkUnitManage.vue';
 
 
 

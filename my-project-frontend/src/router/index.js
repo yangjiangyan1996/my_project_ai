@@ -344,7 +344,13 @@ const router = createRouter({
             path: '/index/productionPickingCreate/:id',
             name: 'ProductionPickingCreateEdit',
             component: () => import('@/views/ck/outbound/ProductionPickingCreate.vue')
-        }
+        },
+        {
+            path: '/index/ckUnitManage/',
+            name: 'ckUnitManage',
+            component: () => import('@/views/ck/CkUnitManage.vue'),
+            meta: { requiresAuth: false }
+        },
         
     ]
 })

@@ -21,5 +21,5 @@ public class Unit extends BaseModel {
     private String unitCode;
     private String unitName;
     private String remark;
-    private String status;
+    private Integer status;
 }

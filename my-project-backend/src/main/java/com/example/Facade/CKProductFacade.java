@@ -701,7 +701,7 @@ public class CKProductFacade {
             unit.setTenantId(tenantId);
             unit.setUnitCode(unitCode);
             unit.setUnitName(unitName);
-            unit.setStatus("1");
+            unit.setStatus(1);
             unit.setRemark("系统默认生成");
             unit.setCreatedBy(userId);
             unit.setModifiedBy(userId);
