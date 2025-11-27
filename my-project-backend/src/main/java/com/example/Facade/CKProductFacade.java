@@ -189,7 +189,7 @@ public class CKProductFacade {
             throw new ValidationException("参数错误");
         }
 
-        Product product = productService.selectByTenantId(req.getTenantId(), req.getSku());
+        Product product = productService.selectBySku(req.getTenantId(), req.getSku());
         if (product != null) {
             throw new ValidationException("商品sku已存在");
         }

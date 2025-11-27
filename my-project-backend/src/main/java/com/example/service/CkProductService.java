@@ -14,7 +14,8 @@ import java.util.List;
  * @Date 2025/10/30 21:52
  */
 public interface CkProductService extends IService<Product> {
-    Product selectByTenantId(Long tenantId, String skuCode);
+    Product selectBySku(Long tenantId, String skuCode);
+    List<Product> selectByTenantId(Long tenantId);
 
     Page<Product> getPage(Page<Product> page, ProductListPageReq req);
 

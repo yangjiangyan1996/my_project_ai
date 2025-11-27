@@ -21,7 +21,12 @@ import java.util.List;
 @Service
 public class CkProductServiceImpl extends ServiceImpl<CkProductMapper, Product> implements CkProductService {
     @Override
-    public Product selectByTenantId(Long tenantId, String skuCode) {
+    public List<Product> selectByTenantId(Long tenantId) {
+        return this.baseMapper.selectList(new QueryWrapper<Product>().eq("tenant_id", tenantId).eq("is_deleted", 0));
+    }
+
+    @Override
+    public Product selectBySku(Long tenantId, String skuCode) {
         return baseMapper.selectOne(new QueryWrapper<Product>().eq("tenant_id", tenantId)
                 .eq("sku", skuCode)
                 .eq("is_deleted", 0)

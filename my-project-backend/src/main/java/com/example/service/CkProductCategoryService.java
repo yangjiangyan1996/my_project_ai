@@ -12,5 +12,7 @@ public interface CkProductCategoryService extends IService<ProductCategory> {
 
     ProductCategory selectByTenantIdAndCode(Long tenantId, String code);
 
+    ProductCategory selectById(Long tenantId, Long id);
+
     List<ProductCategory> selectByTenantIdAndCodes(Long tenantId, List<String> categoryCodes);
 }

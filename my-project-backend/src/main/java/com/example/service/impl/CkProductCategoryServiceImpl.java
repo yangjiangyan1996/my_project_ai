@@ -20,8 +20,17 @@ public class CkProductCategoryServiceImpl extends ServiceImpl<CkProductCategoryM
     }
 
     @Override
+    public ProductCategory selectById(Long tenantId, Long id) {
+        return baseMapper.selectOne(new QueryWrapper<ProductCategory>()
+                .eq("tenant_id", tenantId)
+                .eq("id", id)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
     public ProductCategory selectByTenantIdAndCode(Long tenantId, String code) {
-        return baseMapper.selectOne(new QueryWrapper<ProductCategory>().eq("tenant_id", tenantId)
+        return baseMapper.selectOne(new QueryWrapper<ProductCategory>()
+                .eq("tenant_id", tenantId)
                 .eq("category_code", code)
                 .eq("is_deleted", 0));
     }

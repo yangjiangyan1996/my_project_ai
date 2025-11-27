@@ -9,6 +9,7 @@ import com.example.entity.cangku.req.OutBoundBatchAllocationCheckRequest;
 import com.example.entity.cangku.resp.*;
 import com.example.entity.dto.Account;
 import com.example.enums.CkCommonEnums;
+import com.example.enums.CkInOutboundEnums;
 import com.example.enums.CkInventoryEnums;
 import com.example.holder.InventoryHolder;
 import com.example.service.*;
@@ -70,18 +71,33 @@ public class CkInventoryFacade {
     CkInboundOrderItemService inboundOrderItemService;
 
     public Page<InventoryPageListResp> pageList(Page<Inventory> page, InventoryListPageReq req) {
+        List<Product> p = new ArrayList<>();
         if (StringUtils.isNotBlank(req.getProductName())) {
-            List<Product> productsOfName = productService.selectByProductNameLike(req.getTenantId(), req.getProductName());
-            if (!CollectionUtils.isEmpty(productsOfName)) {
-                List<Long> productIdsOfName = productsOfName.stream().map(v -> v.getId()).collect(Collectors.toList());
+            if (CollectionUtils.isEmpty(p)) {
+                p = productService.selectByTenantId(req.getTenantId());
+            }
+            if (!CollectionUtils.isEmpty(p)) {
+                List<Long> productIdsOfName = p.stream().filter(v -> v.getName().contains(req.getProductName())).map(v -> v.getId()).collect(Collectors.toList());
                 req.setProductIdsOfName(productIdsOfName);
             }
         }
         if (StringUtils.isNotBlank(req.getSku())) {
-            List<Product> productsOfSku = productService.selectByProductSkuLike(req.getTenantId(), req.getSku());
-            if (!CollectionUtils.isEmpty(productsOfSku)) {
-                List<Long> productIdsOfSku = productsOfSku.stream().map(v -> v.getId()).collect(Collectors.toList());
+            if (CollectionUtils.isEmpty(p)) {
+                p = productService.selectByTenantId(req.getTenantId());
+            }
+            if (!CollectionUtils.isEmpty(p)) {
+                List<Long> productIdsOfSku = p.stream().filter(v -> v.getSku().contains(req.getSku())).map(v -> v.getId()).collect(Collectors.toList());
                 req.setProductIdsOfSku(productIdsOfSku);
+            }
+        }
+        if (req.getCategoryId() != null) {
+            if (CollectionUtils.isEmpty(p)) {
+                p = productService.selectByTenantId(req.getTenantId());
+            }
+            if (!CollectionUtils.isEmpty(p)) {
+                ProductCategory category = productCategoryService.selectById(req.getTenantId(), req.getCategoryId());
+                List<Long> productIdsOfCategory= p.stream().filter(v -> v.getCategoryCode().equals(category.getCategoryCode())).map(v -> v.getId()).collect(Collectors.toList());
+                req.setProductIdsOfCategoryId(productIdsOfCategory);
             }
         }
 
@@ -221,7 +237,9 @@ public class CkInventoryFacade {
                     for (OutboundOrderItem item : outboundList) {
                         Long orderId = item.getOrderId();
                         OutboundOrder outboundOrder = outboundOrderId2InfoMap.getOrDefault(orderId, new OutboundOrder());
-                        if (!outboundOrder.getStatus().equals(3)) {
+                        if (CkInOutboundEnums.InOutBoundStatus.AuditPass.equals(outboundOrder.getStatus()) || CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.equals(outboundOrder.getStatus())) {
+
+                        } else {
                             continue;
                         }
 

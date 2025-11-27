@@ -15,9 +15,11 @@ import java.util.List;
 public class InventoryListPageReq extends PageReq {
     private String productName;
     private String sku;
+    private Long categoryId;
 
     private List<Long> productIdsOfSku;
     private List<Long> productIdsOfName;
+    private List<Long> productIdsOfCategoryId;
     Long userId;
     Long tenantId;
 }

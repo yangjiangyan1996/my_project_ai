@@ -35,6 +35,7 @@ public class CkInventoryServiceImpl extends ServiceImpl<CkInventoryMapper, Inven
                         .eq("is_deleted",0)
                         .in(!CollectionUtils.isEmpty(req.getProductIdsOfSku()), "product_id", req.getProductIdsOfSku())
                         .in(!CollectionUtils.isEmpty(req.getProductIdsOfName()), "product_id", req.getProductName())
+                        .in(!CollectionUtils.isEmpty(req.getProductIdsOfCategoryId()), "product_id", req.getProductIdsOfCategoryId())
                         .orderByAsc("modified_at")
         );
     }
