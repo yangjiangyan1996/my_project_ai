@@ -163,7 +163,7 @@
               </div>
               <div class="stat-content">
                 <div class="stat-value">{{ stats.completed }}</div>
-                <div class="stat-label">已完成</div>
+                <div class="stat-label">已拒绝</div>
               </div>
             </div>
           </el-col>
@@ -499,6 +499,7 @@ const handleCreate = (command) => {
   }
 };
 
+
 // 筛选表单
 const filterForm = reactive({
   relatedOrderNo: '',
@@ -600,6 +601,40 @@ const loadInboundDetail = async (id) => {
   }
 };
 
+// 新增：加载统计信息的方法
+const loadStats = async () => {
+  try {
+
+    const params = {
+      page: pagination.current,
+      size: pagination.size,
+      ...filterForm
+    };
+    
+    // 处理日期范围
+    if (filterForm.dateRange && filterForm.dateRange.length === 2) {
+      params.startDate = filterForm.dateRange[0];
+      params.endDate = filterForm.dateRange[1];
+    }
+    
+    const res = await post('/api/auth/inbound/countsOfManagePage', params);
+
+    if (res) {
+      stats.total = res.totalCount || 0;
+      stats.pending = res.waitApproveCount || 0;
+      stats.approved = res.approvePassCount || 0;
+      stats.completed = res.approveRejectCount || 0;
+    }
+  } catch (error) {
+    console.error('加载统计信息失败:', error);
+    // 失败时重置统计信息
+    stats.total = 0;
+    stats.pending = 0;
+    stats.approved = 0;
+    stats.completed = 0;
+  }
+};
+
 // 方法
 const loadInboundList = async () => {
   loading.value = true;
@@ -636,8 +671,7 @@ const loadInboundList = async () => {
       }));
       pagination.total = res.total || 0;
       
-      // 更新统计信息
-      updateStats();
+      
     } else {
       inboundList.value = [];
       pagination.total = 0;
@@ -671,21 +705,18 @@ const loadSupplierList = async () => {
   }
 };
 
-const updateStats = () => {
-  stats.total = pagination.total;
-  stats.pending = inboundList.value.filter(item => item.status === 1).length;
-  stats.approved = inboundList.value.filter(item => item.status === 2).length;
-  stats.completed = inboundList.value.filter(item => item.status === 3).length;
-};
+
 
 const refreshList = () => {
   pagination.current = 1;
   loadInboundList();
+  loadStats(); // 新增：刷新统计信息
 };
 
 const handleSearch = () => {
   pagination.current = 1;
   loadInboundList();
+  loadStats(); // 新增：搜索时更新统计信息
 };
 
 const handleReset = () => {
@@ -699,6 +730,7 @@ const handleReset = () => {
   });
   pagination.current = 1;
   loadInboundList();
+  loadStats(); // 新增：重置时更新统计信息
 };
 
 const handleSizeChange = (size) => {
@@ -890,6 +922,7 @@ onMounted(() => {
   loadInboundList();
   loadWarehouseList();
   loadSupplierList();
+  loadStats(); // 新增：组件挂载时加载统计信息
 });
 </script>
 

@@ -116,156 +116,204 @@
           </el-button>
         </div>
 
-        <el-table
-          :data="formData.items"
-          border
-          class="product-table"
-          empty-text="请添加产品明细"
-        >
-          <!-- 表格列定义与原来相同 -->
-          <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column label="产品信息" min-width="200">
-            <template #default="{ row, $index }">
-              <el-select
-                v-model="row.productId"
-                placeholder="选择产品"
-                style="width: 100%"
-                filterable
-                @change="(value) => handleProductChange(value, $index)"
-              >
-                <el-option
-                  v-for="product in productList"
-                  :key="product.id"
-                  :label="`${product.sku} - ${product.name}`"
-                  :value="product.id"
-                />
-              </el-select>
-            </template>
-          </el-table-column>
-          <!-- 其他列保持不变 -->
-          <el-table-column label="规格型号" width="120">
-            <template #default="{ row }">
-              <span>{{ row.spec || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="单位" width="80" align="center">
-            <template #default="{ row }">
-              <span>{{ row.unit || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="实际数量" width="120">
-            <template #default="{ row, $index }">
-              <el-input-number
-                v-model="row.actualQuantity"
-                :min="1"
-                :precision="0"
-                controls-position="right"
-                style="width: 100%"
-                @change="(value) => handleActualQuantityChange(value, $index)"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column label="单价" width="120">
-            <template #default="{ row, $index }">
-              <el-input-number
-                v-model="row.priceUnit"
-                :min="0"
-                :precision="4"
-                :step="0.01"
-                controls-position="right"
-                style="width: 100%"
-                @change="() => calculateItemTotal($index)"
-              >
-                <template #prefix>¥</template>
-              </el-input-number>
-            </template>
-          </el-table-column>
-          <el-table-column label="总价" width="120" align="right">
-            <template #default="{ row }">
-              <span class="price-total">¥ {{ (row.priceTotal || 0).toFixed(2) }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="批次号" width="150">
-            <template #default="{ row, $index }">
-              <el-input
-                v-model="row.batchNo"
-                placeholder="批次号"
-                @blur="() => validateBatchNo(row.batchNo, $index)"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column label="货架位置" width="200">
-            <template #default="{ row, $index }">
-              <el-select
-                v-model="row.shelfLocationIds"
-                placeholder="选择位置"
-                style="width: 100%"
-                filterable
-                multiple
-                collapse-tags
-                collapse-tags-tooltip
-                :max-collapse-tags="2"
-                @change="() => handleShelfLocationChange($index)"
-              >
-                <el-option
-                  v-for="location in shelfLocationList"
-                  :key="location.id"
-                  :label="getShelfLocationLabel(location)"
-                  :value="location.id"
-                />
-              </el-select>
-              <el-button 
-                v-if="row.shelfLocationIds && row.shelfLocationIds.length > 0"
-                type="primary" 
-                link 
-                size="small"
-                @click="openShelfAllocationDialog($index)"
-                class="allocation-btn"
-              >
-                分配数量
-              </el-button>
-            </template>
-          </el-table-column>
-          <el-table-column label="货架分配" width="150">
-            <template #default="{ row }">
-              <div v-if="row.shelfAllocations && row.shelfAllocations.length > 0" class="shelf-allocation-summary">
-                <el-tag
-                  v-for="allocation in row.shelfAllocations"
-                  :key="allocation.shelfLocationId"
+         <!-- 外层容器添加水平滚动 -->
+        <div class="table-container">
+          <el-table
+            :data="formData.items"
+            border
+            class="product-table"
+            empty-text="请添加产品明细"
+            style="min-width: 1200px"  
+          >
+            <!-- 序号列 -->
+            <el-table-column type="index" label="序号" width="60" align="center" fixed="left" />
+            
+            <!-- 产品信息列 - 增加宽度并提供更好的展示 -->
+            <el-table-column label="产品信息" min-width="220" fixed="left">
+              <template #default="{ row, $index }">
+                <div class="product-info-cell">
+                  <el-select
+                    v-model="row.productId"
+                    placeholder="选择产品"
+                    style="width: 100%"
+                    filterable
+                    @change="(value) => handleProductChange(value, $index)"
+                  >
+                    <el-option
+                      v-for="product in productList"
+                      :key="product.id"
+                      :label="`${product.sku} - ${product.name}`"
+                      :value="product.id"
+                    />
+                  </el-select>
+                  <div v-if="row.productName" class="product-details">
+                    <div class="product-name">{{ row.productName }}</div>
+                    <div class="product-sku">{{ row.sku }}</div>
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
+
+            <!-- 规格型号 - 适当增加宽度 -->
+            <el-table-column label="规格型号" min-width="120" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span class="cell-content">{{ row.spec || '-' }}</span>
+              </template>
+            </el-table-column>
+
+            <!-- 单位 - 保持原样 -->
+            <el-table-column label="单位" width="80" align="center">
+              <template #default="{ row }">
+                <span class="cell-content">{{ row.unit || '-' }}</span>
+              </template>
+            </el-table-column>
+
+            <!-- 实际数量列 - 改为普通输入框 -->
+            <el-table-column label="实际数量" width="130" align="center">
+              <template #default="{ row, $index }">
+                <el-input
+                  v-model="row.actualQuantity"
+                  placeholder="数量"
                   size="small"
-                  class="shelf-tag"
+                  type="number"
+                  min="1"
+                  style="width: 100%"
+                  @blur="handleActualQuantityBlur($index)"
+                />
+              </template>
+            </el-table-column>
+
+            <!-- 单价列 - 改为普通输入框 -->
+            <el-table-column label="单价" width="130" align="center">
+              <template #default="{ row, $index }">
+                <el-input
+                  v-model="row.priceUnit"
+                  placeholder="单价"
+                  size="small"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  style="width: 100%"
+                  @blur="handlePriceUnitBlur($index)"
                 >
-                  {{ getShelfName(allocation.shelfLocationId) }}: {{ allocation.quantity }}
-                </el-tag>
-              </div>
-              <div v-else class="allocation-empty">
-                <span class="empty-text">未分配</span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="备注" min-width="150">
-            <template #default="{ row, $index }">
-              <el-input
-                v-model="row.remark"
-                placeholder="产品备注"
-                maxlength="100"
-                show-word-limit
-              />
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="80" fixed="right" align="center">
-            <template #default="{ $index }">
-              <el-button
-                type="danger"
-                link
-                :icon="Delete"
-                @click="handleRemoveProduct($index)"
-              >
-                删除
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+                  <template #prefix>¥</template>
+                </el-input>
+              </template>
+            </el-table-column>
+
+            <!-- 总价 - 突出显示 -->
+            <el-table-column label="总价" width="120" align="right">
+              <template #default="{ row }">
+                <span class="price-total">¥ {{ (row.priceTotal || 0).toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+
+            <!-- 批次号 - 增加宽度 -->
+            <el-table-column label="批次号" min-width="150">
+              <template #default="{ row, $index }">
+                <el-input
+                  v-model="row.batchNo"
+                  placeholder="批次号"
+                  size="small"
+                  @blur="() => validateBatchNo(row.batchNo, $index)"
+                />
+              </template>
+            </el-table-column>
+
+            <!-- 货架位置 - 优化多选显示 -->
+            <el-table-column label="货架位置" min-width="180">
+              <template #default="{ row, $index }">
+                <div class="shelf-location-cell">
+                  <el-select
+                    v-model="row.shelfLocationIds"
+                    placeholder="选择位置"
+                    style="width: 100%"
+                    filterable
+                    multiple
+                    collapse-tags
+                    collapse-tags-tooltip
+                    :max-collapse-tags="1"
+                    size="small"
+                    @change="() => handleShelfLocationChange($index)"
+                  >
+                    <el-option
+                      v-for="location in shelfLocationList"
+                      :key="location.id"
+                      :label="getShelfLocationLabel(location)"
+                      :value="location.id"
+                    />
+                  </el-select>
+                  <el-button 
+                    v-if="row.shelfLocationIds && row.shelfLocationIds.length > 0"
+                    type="primary" 
+                    link 
+                    size="small"
+                    @click="openShelfAllocationDialog($index)"
+                    class="allocation-btn"
+                  >
+                    分配数量
+                  </el-button>
+                </div>
+              </template>
+            </el-table-column>
+
+            <!-- 货架分配 - 优化显示 -->
+            <el-table-column label="货架分配" min-width="160">
+              <template #default="{ row }">
+                <div v-if="row.shelfAllocations && row.shelfAllocations.length > 0" class="shelf-allocation-summary">
+                  <div 
+                    v-for="allocation in row.shelfAllocations" 
+                    :key="allocation.shelfLocationId"
+                    class="allocation-item"
+                  >
+                    <el-tooltip
+                      :content="`${getShelfName(allocation.shelfLocationId)}: ${allocation.quantity}`"
+                      placement="top"
+                    >
+                      <span class="allocation-text">
+                        {{ getShelfName(allocation.shelfLocationId) }}: {{ allocation.quantity }}
+                      </span>
+                    </el-tooltip>
+                  </div>
+                </div>
+                <div v-else class="allocation-empty">
+                  <span class="empty-text">未分配</span>
+                </div>
+              </template>
+            </el-table-column>
+
+            <!-- 备注 - 增加宽度并提供更好的输入体验 -->
+            <el-table-column label="备注" min-width="180">
+              <template #default="{ row, $index }">
+                <el-input
+                  v-model="row.remark"
+                  placeholder="产品备注"
+                  maxlength="100"
+                  show-word-limit
+                  size="small"
+                  type="textarea"
+                  :rows="2"
+                  resize="none"
+                />
+              </template>
+            </el-table-column>
+
+            <!-- 操作列 - 固定在右侧 -->
+            <el-table-column label="操作" width="80" fixed="right" align="center">
+              <template #default="{ $index }">
+                <el-button
+                  type="danger"
+                  link
+                  :icon="Delete"
+                  @click="handleRemoveProduct($index)"
+                  size="small"
+                >
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
 
         <!-- 统计信息 -->
         <div class="summary-info" v-if="formData.items.length > 0">
@@ -428,6 +476,28 @@ const shelfLocationList = ref([]);
 const totalActualQuantity = computed(() => {
   return formData.items.reduce((sum, item) => sum + (parseInt(item.actualQuantity) || 0), 0);
 });
+
+// 处理实际数量输入框失去焦点
+const handleActualQuantityBlur = (index) => {
+  const item = formData.items[index];
+  // 确保数量是有效数字
+  const quantity = parseInt(item.actualQuantity) || 1;
+  item.actualQuantity = Math.max(1, quantity);
+  
+  // 调用原有的数量变化处理逻辑
+  handleActualQuantityChange(quantity, index);
+};
+
+// 处理单价输入框失去焦点
+const handlePriceUnitBlur = (index) => {
+  const item = formData.items[index];
+  // 确保单价是有效数字
+  const price = parseFloat(item.priceUnit) || 0;
+  item.priceUnit = Math.max(0, price);
+  
+  // 重新计算总价
+  calculateItemTotal(index);
+};
 
 // 打开货架分配对话框
 const openShelfAllocationDialog = (index) => {
@@ -1249,5 +1319,179 @@ watch(
     width: 100%;
     justify-content: space-between;
   }
+}
+
+/* 表格容器 - 添加水平滚动 */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+
+/* 产品信息单元格优化 */
+.product-info-cell {
+  min-height: 60px;
+}
+
+.product-details {
+  margin-top: 8px;
+  padding: 4px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.product-name {
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-sku {
+  color: #909399;
+  font-size: 11px;
+}
+
+/* 单元格内容优化 */
+.cell-content {
+  display: block;
+  padding: 4px 0;
+  word-break: break-word;
+}
+
+/* 货架位置单元格优化 */
+.shelf-location-cell {
+  min-height: 70px;
+}
+
+/* 货架分配显示优化 */
+.shelf-allocation-summary {
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.allocation-item {
+  margin-bottom: 4px;
+  padding: 2px 4px;
+  background-color: #f0f7ff;
+  border-radius: 2px;
+  border-left: 2px solid #409eff;
+}
+
+.allocation-text {
+  font-size: 12px;
+  color: #409eff;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.allocation-empty {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.empty-text {
+  color: #c0c4cc;
+  font-size: 12px;
+}
+
+/* 响应式优化 */
+@media (max-width: 1200px) {
+  .table-container {
+    font-size: 12px;
+  }
+  
+  .product-info-cell {
+    min-height: 50px;
+  }
+}
+
+@media (max-width: 768px) {
+  .table-container {
+    border: none;
+  }
+  
+  .product-table {
+    min-width: 1400px; /* 在小屏幕上需要更宽的最小宽度 */
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+}
+
+/* 输入框在表格内的优化 */
+:deep(.el-table .el-input .el-input__inner) {
+  height: 32px;
+  line-height: 32px;
+}
+
+:deep(.el-table .el-input-number) {
+  width: 100%;
+}
+
+:deep(.el-table .el-input-number .el-input__inner) {
+  text-align: center;
+  padding-left: 8px;
+  padding-right: 40px;
+}
+
+:deep(.el-table .el-textarea .el-textarea__inner) {
+  min-height: 60px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+:deep(.el-table .el-select .el-tag) {
+  margin: 1px;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 固定列的阴影效果 */
+:deep(.el-table .el-table__fixed-right) {
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.el-table .el-table__fixed-left) {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 确保输入框内容完全显示 */
+:deep(.el-table .el-input .el-input__inner) {
+  height: 32px;
+  line-height: 32px;
+  text-align: center;
+  padding: 0 8px;
+  width: 100%;
+}
+
+/* 数字输入框移除上下箭头 */
+:deep(.el-table input[type="number"]::-webkit-outer-spin-button),
+:deep(.el-table input[type="number"]::-webkit-inner-spin-button) {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+:deep(.el-table input[type="number"]) {
+  -moz-appearance: textfield;
+}
+
+/* 单价输入框前缀样式 */
+:deep(.el-table .el-input__prefix) {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  left: 8px;
+  pointer-events: none;
 }
 </style>

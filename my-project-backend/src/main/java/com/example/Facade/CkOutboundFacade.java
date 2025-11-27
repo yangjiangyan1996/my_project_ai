@@ -716,7 +716,7 @@ public class CkOutboundFacade {
         }
 
         // 6. 更新出库单状态为已完成
-        outboundOrder.setStatus(3); // 3-已完成
+        outboundOrder.setStatus(CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode());
         outboundOrder.setModifiedBy(approveOkReq.getUserId());
         outboundOrder.setModifiedAt(new Date());
         boolean updated = outboundOrderService.updateById(outboundOrder);

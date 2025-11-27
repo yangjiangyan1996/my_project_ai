@@ -3,6 +3,7 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.*;
+import com.example.entity.cangku.resp.InboundCountOfManagePageResp;
 import com.example.entity.cangku.resp.InboundDetailResp;
 import com.example.entity.cangku.resp.InboundListPageResp;
 import com.example.entity.cangku.resp.InboundProductInDetailResp;
@@ -871,7 +872,7 @@ public class CkInboundFacade {
         updateProductionTask(orderItems);
 
         // 6. 更新入库单状态为已完成 3-入库已完成
-        boolean statusUpdated = updateInboundOrderStatus(inboundOrder.getId(), CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.getCode(), req.getUserId());
+        boolean statusUpdated = updateInboundOrderStatus(inboundOrder.getId(), CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode(), req.getUserId());
         if (!statusUpdated) {
             throw new ValidationException("更新入库单状态失败");
         }
@@ -1109,6 +1110,30 @@ public class CkInboundFacade {
         r.setItems(items);
         r.setItemCount(items.size());
         r.setTotalQuantity(inboundOrder.getTotalQuantity());
+        return r;
+    }
+
+    /**
+     * 获取数量
+     * @param tenantId
+     * @return
+     */
+    public InboundCountOfManagePageResp countsOfManagePage(InboundListPageReq req) {
+        List<InboundOrder> inboundOrders = inboundOrderService.selectCountsByInboundListPageReq(req);
+        if (CollectionUtils.isEmpty(inboundOrders)) {
+            return new InboundCountOfManagePageResp();
+        }
+        InboundCountOfManagePageResp r = new InboundCountOfManagePageResp();
+        r.setTotalCount(inboundOrders.size());
+
+        List<InboundOrder> inboundOrdersOfWaiting = inboundOrders.stream().filter(v ->  CkInOutboundEnums.InOutBoundStatus.WaitSubmit.getCode().equals(v.getStatus())).collect(Collectors.toList());
+        r.setWaitApproveCount(inboundOrdersOfWaiting.size());
+
+        List<InboundOrder> appPassList = inboundOrders.stream().filter(v ->  CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode().equals(v.getStatus())).collect(Collectors.toList());
+        r.setApprovePassCount(appPassList.size());
+
+        List<InboundOrder> appRejectList = inboundOrders.stream().filter(v ->  CkInOutboundEnums.InOutBoundStatus.Reject.getCode().equals(v.getStatus())).collect(Collectors.toList());
+        r.setApproveRejectCount(appRejectList.size());
         return r;
     }
 }

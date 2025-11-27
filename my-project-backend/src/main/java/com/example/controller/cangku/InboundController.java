@@ -6,6 +6,7 @@ import com.example.Facade.CkInboundFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
+import com.example.entity.cangku.resp.InboundCountOfManagePageResp;
 import com.example.entity.cangku.resp.InboundDetailResp;
 import com.example.entity.cangku.resp.InboundListPageResp;
 import com.example.entity.cangku.resp.InboundProductInDetailResp;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 public class InboundController {
     @Resource
     CkInboundFacade ckInboundFacade;
+
 
     @PostMapping("/approveOk")
     public RespBean<Boolean> approveOk(@RequestBody InboundApproveOkReq req) {
@@ -60,6 +62,7 @@ public class InboundController {
 
     /**
      * 获取 生产入库单详情
+     *
      * @param orderId
      * @return
      */
@@ -110,6 +113,33 @@ public class InboundController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+
+    /**
+     * 入库管理页面展示数量
+     *
+     * @param req
+     * @return
+     */
+    @PostMapping("/countsOfManagePage")
+    public RespBean<InboundCountOfManagePageResp> list(@RequestBody InboundListPageReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            req.setTenantId(tenantId);
+            req.setUserId(user.getId());
+
+            InboundCountOfManagePageResp result = ckInboundFacade.countsOfManagePage(req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("InboundController#list", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InboundController#list", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
 
     @PostMapping("/pageList")
     public RespBean<Page<InboundListPageResp>> pageList(@RequestBody InboundListPageReq req) {

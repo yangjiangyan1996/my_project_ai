@@ -36,12 +36,12 @@
             <el-menu-item index="sku" @click="changeDisplayMode('sku')">SKU管理</el-menu-item>
             <el-menu-item index="ckUnit" @click="changeDisplayMode('ckUnit')">单位管理</el-menu-item>
             <el-menu-item index="warehouse" @click="changeDisplayMode('warehouse')">仓库管理</el-menu-item>
+            <el-menu-item index="shelf" @click="changeDisplayMode('shelf')">货架管理</el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="product">
             <template #title>产品管理</template>
             <el-menu-item index="product" @click="changeDisplayMode('product')">产品管理</el-menu-item>
-            <el-menu-item index="shelf" @click="changeDisplayMode('shelf')">货架管理</el-menu-item>
           </el-sub-menu>
           
           <!-- 审批管理 -->

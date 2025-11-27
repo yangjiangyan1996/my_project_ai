@@ -14,4 +14,6 @@ public interface CkInboundOrderService extends IService<InboundOrder> {
     InboundOrder selectById(Long orderId, Long tenantId);
 
     List<InboundOrder> selectByInboundOrderIds(Long tenantId, List<Long> inboundOrderIds);
+
+    List<InboundOrder> selectCountsByInboundListPageReq(InboundListPageReq tenantId);
 }

@@ -18,6 +18,22 @@ import java.util.List;
 public class CkInboundOrderServiceImpl extends ServiceImpl<CkInboundOrderMapper, InboundOrder> implements CkInboundOrderService {
 
     @Override
+    public List<InboundOrder> selectCountsByInboundListPageReq(InboundListPageReq req) {
+        return baseMapper.selectList(new QueryWrapper<InboundOrder>()
+                .eq(req.getStatus() != null, "status", req.getStatus())
+                .ge(StringUtils.isNotBlank(req.getStartDate()), "created_at", req.getStartDate())
+                .le(StringUtils.isNotBlank(req.getEndDate()), "created_at", req.getEndDate())
+                .like(StringUtils.isNotBlank(req.getOrderNo()), "order_no", req.getOrderNo())
+                .like(StringUtils.isNotBlank(req.getRelatedOrderNo()), "order_no", req.getOrderNo())
+                .eq(req.getOrderType() !=null , "order_type", req.getOrderType())
+                .like(req.getWarehouseId() != null, "warehouse_id", req.getWarehouseId())
+                .like(req.getSupplierId() != null, "supplier_id", req.getSupplierId())
+                .eq("tenant_id", req.getTenantId())
+                .eq("is_deleted", 0)
+                .orderByDesc("created_at"));
+    }
+
+    @Override
     public List<InboundOrder> selectByInboundOrderIds(Long tenantId, List<Long> inboundOrderIds) {
         if (inboundOrderIds == null || inboundOrderIds.isEmpty()) {
             return Collections.emptyList();
