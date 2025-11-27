@@ -1,5 +1,6 @@
 package com.example.utils;
 
+import com.example.constants.CkCommonConstant;
 import org.apache.commons.lang3.StringUtils;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -44,7 +45,7 @@ public class SmartSkuGenerator {
         String serialNumber = generateSerialNumber();
 
         // 6. 组合SKU
-        return buildFinalSku(productCode, colorCode, specCode, dateCode, serialNumber);
+        return CkCommonConstant.PREFIX_SKU + buildFinalSku(productCode, colorCode, specCode, dateCode, serialNumber);
     }
 
     /**

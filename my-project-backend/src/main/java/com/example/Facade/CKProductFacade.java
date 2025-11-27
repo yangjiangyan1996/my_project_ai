@@ -1,6 +1,7 @@
 package com.example.Facade;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.constants.CkCommonConstant;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.*;
@@ -1490,12 +1491,12 @@ public class CKProductFacade {
             throw new ValidationException("Excel文件数据不足");
         }
         //获取或者保存分类
-        ProductCategory commonBom = productCategoryService.selectByTenantIdAndCode(tenantId, "common_bom");
+        ProductCategory commonBom = productCategoryService.selectByTenantIdAndCode(tenantId, CkCommonConstant.COMMON_CATEGORY_YL_CODE);
         if (commonBom == null) {
             commonBom = new ProductCategory();
             commonBom.setTenantId(tenantId);
-            commonBom.setCategoryCode("common_bom");
-            commonBom.setCategoryName("通用原料分类");
+            commonBom.setCategoryCode(CkCommonConstant.COMMON_CATEGORY_YL_CODE);
+            commonBom.setCategoryName(CkCommonConstant.COMMON_CATEGORY_YL_NAME);
             commonBom.setCreatedAt(new Date());
             commonBom.setCreatedBy(userId);
             commonBom.setModifiedAt(new Date());
@@ -1551,7 +1552,7 @@ public class CKProductFacade {
             Product pBom = new Product();
             pBom.setTenantId(tenantId);
             pBom.setSku(StringUtils.isNotBlank(v.getSku()) ? v.getSku() : generateSmartSku(v.getName(), v.getColor(), v.getSpec()));
-            pBom.setBarcode("barCode-" + generateSmartSku(v.getName(), v.getColor(), v.getSpec()));
+            pBom.setBarcode(CkCommonConstant.PREFIX_BAR_CODE + generateSmartSku(v.getName(), v.getColor(), v.getSpec()));
             pBom.setName(v.getName());
             pBom.setSpec(v.getSpec());
             pBom.setColor(v.getColor());
@@ -1559,7 +1560,7 @@ public class CKProductFacade {
             pBom.setUnitCode(finalUnitName2UnitMap.getOrDefault(v.getUnitName(), new Unit()).getUnitCode());
             pBom.setWeightPerUnit(StringUtils.isNotBlank(v.getWeightPerUnit()) ? new BigDecimal(v.getWeightPerUnit()) : BigDecimal.ZERO);
             pBom.setMinStock(StringUtils.isNotBlank(v.getMinStock()) ?
-                    new BigDecimal(v.getMinStock()).longValue() : 100L);
+                    new BigDecimal(v.getMinStock()).longValue() : CkCommonConstant.NUM_MIN_STOCK_QUANTITY);
             pBom.setRemark(v.getRemark());
             pBom.setStatus(1);
             pBom.setCreatedAt(new Date());
@@ -1580,7 +1581,7 @@ public class CKProductFacade {
         ProductBom pb = new ProductBom();
         pb.setTenantId(tenantId);
         pb.setProductId(productId);
-        pb.setBomCode(product.getSku() + "_BOM");
+        pb.setBomCode(CkCommonConstant.PREFIX_BOM + product.getSku());
         pb.setVersion("V1.0");
         pb.setStatus(1);
         boolean save = productBomService.save(pb);
@@ -1605,9 +1606,9 @@ public class CKProductFacade {
             } else {
                 detail.setQuantity(new BigDecimal(v.getQuantity()));
             }
-            detail.setLossRate(StringUtils.isBlank(v.getLossRate()) ? BigDecimal.ZERO : new BigDecimal(NumUtils.parsePercentStrict(v.getLossRate())));
+            detail.setLossRate(StringUtils.isBlank(v.getLossRate()) ? BigDecimal.ZERO : NumUtils.parsePercentStrict(v.getLossRate()));
             detail.setRemark(v.getRemark());
-            detail.setType(StringUtils.isBlank(v.getTypeName()) ? 2 : v.getTypeName().contains("辅") ? 2 : 1);
+            detail.setType(CkProductEnums.BomDetailType.getNameLike(v.getTypeName()));
             detail.setOtherQuantity(StringUtils.isBlank(v.getOtherQuantity()) ? BigDecimal.ZERO : new BigDecimal(v.getOtherQuantity()));
             detail.setQuantityBeforeLoss(StringUtils.isBlank(v.getQuantityBeforeLoss()) ? BigDecimal.ZERO : new BigDecimal(v.getQuantityBeforeLoss()));
             detail.setCreatedAt(new Date());
@@ -1687,12 +1688,12 @@ public class CKProductFacade {
             categoryName2CategoryMap = categoryList.stream().collect(Collectors.toMap(ProductCategory::getCategoryName, v -> v));
         }
 
-        if (CollectionUtils.isEmpty(categoryName2CategoryMap) || !categoryName2CategoryMap.containsKey("通用成品分类")) {
+        if (CollectionUtils.isEmpty(categoryName2CategoryMap) || !categoryName2CategoryMap.containsKey(CkCommonConstant.COMMON_CATEGORY_CP_NAME)) {
             ProductCategory commonCategory = new ProductCategory();
             commonCategory.setTenantId(tenantId);
-            commonCategory.setCategoryName("通用成品分类");
+            commonCategory.setCategoryName(CkCommonConstant.COMMON_CATEGORY_CP_NAME);
             commonCategory.setParentCode(0+"");
-            commonCategory.setCategoryCode("common-category-cp");
+            commonCategory.setCategoryCode(CkCommonConstant.COMMON_CATEGORY_CP_CODE);
             commonCategory.setLevel(1);
             commonCategory.setStatus(1);
             commonCategory.setSortOrder(1);
@@ -1700,10 +1701,10 @@ public class CKProductFacade {
             commonCategory.setCreatedBy(userId);
             commonCategory.setModifiedAt(new Date());
             commonCategory.setModifiedBy(userId);
-            commonCategory.setRemark("系统自动生成");
+            commonCategory.setRemark(CkCommonConstant.AUTO_GENERATE);
             boolean result = productCategoryService.save(commonCategory);
             if (result) {
-                categoryName2CategoryMap.put("通用成品分类", commonCategory);
+                categoryName2CategoryMap.put(CkCommonConstant.COMMON_CATEGORY_CP_NAME, commonCategory);
             }
         }
 
@@ -1713,25 +1714,25 @@ public class CKProductFacade {
             unitName2UnitMap = unitList.stream().collect(Collectors.toMap(Unit::getUnitName, v -> v));
         }
 
-        if (CollectionUtils.isEmpty(unitName2UnitMap) || !unitName2UnitMap.containsKey("个")) {
+        if (CollectionUtils.isEmpty(unitName2UnitMap) || !unitName2UnitMap.containsKey(CkCommonConstant.DEFAULT_UNIT_NAME_GE)) {
             Unit unitOfPer = new Unit();
             unitOfPer.setTenantId(tenantId);
-            unitOfPer.setUnitName("个");
-            unitOfPer.setUnitCode("ge");
+            unitOfPer.setUnitName(CkCommonConstant.DEFAULT_UNIT_NAME_GE);
+            unitOfPer.setUnitCode(CkCommonConstant.DEFAULT_UNIT_CODE_GE);
             unitOfPer.setStatus(1);
-            unitOfPer.setRemark("系统自动生成");
+            unitOfPer.setRemark(CkCommonConstant.AUTO_GENERATE);
             boolean result = unitService.save(unitOfPer);
             if (result) {
                 unitName2UnitMap.put(unitOfPer.getUnitName(), unitOfPer);
             }
         }
-        if (CollectionUtils.isEmpty(unitName2UnitMap) || !unitName2UnitMap.containsKey("箱")) {
+        if (CollectionUtils.isEmpty(unitName2UnitMap) || !unitName2UnitMap.containsKey(CkCommonConstant.DEFAULT_UNIT_NAME_XIANG)) {
             Unit unitOfPer = new Unit();
             unitOfPer.setTenantId(tenantId);
-            unitOfPer.setUnitName("箱");
-            unitOfPer.setUnitCode("xiang");
+            unitOfPer.setUnitName(CkCommonConstant.DEFAULT_UNIT_NAME_XIANG);
+            unitOfPer.setUnitCode(CkCommonConstant.DEFAULT_UNIT_CODE_XIANG);
             unitOfPer.setStatus(1);
-            unitOfPer.setRemark("系统自动生成");
+            unitOfPer.setRemark(CkCommonConstant.AUTO_GENERATE);
             boolean result = unitService.save(unitOfPer);
             if (result) {
                 unitName2UnitMap.put(unitOfPer.getUnitName(), unitOfPer);
@@ -1762,16 +1763,16 @@ public class CKProductFacade {
             Product r = new Product();
             r.setTenantId(tenantId);
             r.setSku(v.getSku());
-            r.setBarcode("BarCode-" + v.getSku());
+            r.setBarcode(CkCommonConstant.PREFIX_BAR_CODE + v.getSku());
             r.setName(StringUtils.isNotBlank(v.getName()) ? v.getName() : v.getEnglishName());
             r.setSpec(v.getSpec());
-            r.setCategoryCode(finalCategoryName2CategoryMap.getOrDefault("通用成品分类", new ProductCategory()).getCategoryCode());
-            r.setUnitCode(finalUnitName2UnitMap.getOrDefault("个", new Unit()).getUnitCode());
-            r.setOutUnitCode(finalUnitName2UnitMap.getOrDefault("箱", new Unit()).getUnitCode());
+            r.setCategoryCode(finalCategoryName2CategoryMap.getOrDefault(CkCommonConstant.COMMON_CATEGORY_CP_NAME, new ProductCategory()).getCategoryCode());
+            r.setUnitCode(finalUnitName2UnitMap.getOrDefault(CkCommonConstant.DEFAULT_UNIT_NAME_GE, new Unit()).getUnitCode());
+            r.setOutUnitCode(finalUnitName2UnitMap.getOrDefault(CkCommonConstant.DEFAULT_UNIT_NAME_XIANG, new Unit()).getUnitCode());
             r.setOutUnitPerNum(StringUtils.isNotBlank(v.getOutUnitPerNum()) ? new BigDecimal(v.getOutUnitPerNum()) : BigDecimal.ONE);
             r.setWeightPerUnit(StringUtils.isNotBlank(v.getWeightPerUnit()) ? new BigDecimal(v.getWeightPerUnit()) : BigDecimal.ONE);
             r.setColor(v.getColor());
-            r.setMinStock(StringUtils.isNotBlank(v.getMinStock()) ? Long.valueOf(v.getMinStock()) : 100);
+            r.setMinStock(StringUtils.isNotBlank(v.getMinStock()) ? Long.valueOf(v.getMinStock()) : CkCommonConstant.NUM_MIN_STOCK_QUANTITY);
             r.setRemark(v.getRemark());
             r.setStatus(1);
             r.setEnglishName(v.getEnglishName());

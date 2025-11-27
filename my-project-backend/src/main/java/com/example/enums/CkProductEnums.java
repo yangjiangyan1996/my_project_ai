@@ -10,21 +10,39 @@ import lombok.Getter;
  */
 public class CkProductEnums {
 
-    //`type` tinyint DEFAULT '2' COMMENT '1=主料，2=辅料',
+    //`type` tinyint DEFAULT '2' COMMENT '0=空标签 1=主料， 2=布料，10=辅料,  20=五金 999=包装，
 
     /**
      *  bom详情类型
      */
     @Getter
     public enum BomDetailType {
-        BOM_DETAIL_TYPE_MAIN_MATERIAL(1, "主料"),
-        BOM_DETAIL_TYPE_ACCESSORY(2, "辅料");
+
+        BOM_DETAIL_TYPE_EMPTY(0, "空"),
+        BOM_DETAIL_TYPE_MAIN_MATERIAL(1, "主"),
+        BOM_DETAIL_TYPE_FABRIC(2, "布"),
+        BOM_DETAIL_TYPE_ACCESSORY(10, "辅"),
+        BOM_DETAIL_TYPE_HARDWARE(20, "五金"),
+        BOM_DETAIL_TYPE_PACKAGE(100, "包装"),
+        ;
 
         private Integer code;
         private String desc;
         BomDetailType(Integer code, String desc) {
             this.code = code;
             this.desc = desc;
+        }
+
+        public static Integer getNameLike(String name) {
+            if (name == null) {
+                return BOM_DETAIL_TYPE_EMPTY.getCode();
+            }
+            for (CkProductEnums.BomDetailType value : CkProductEnums.BomDetailType.values()) {
+                if (name.contains(value.getDesc())) {
+                    return value.getCode();
+                }
+            }
+            return BOM_DETAIL_TYPE_EMPTY.getCode();
         }
 
         public static String getDescByCode(Integer code) {
