@@ -1687,10 +1687,55 @@ public class CKProductFacade {
             categoryName2CategoryMap = categoryList.stream().collect(Collectors.toMap(ProductCategory::getCategoryName, v -> v));
         }
 
+        if (CollectionUtils.isEmpty(categoryName2CategoryMap) || !categoryName2CategoryMap.containsKey("通用成品分类")) {
+            ProductCategory commonCategory = new ProductCategory();
+            commonCategory.setTenantId(tenantId);
+            commonCategory.setCategoryName("通用成品分类");
+            commonCategory.setParentCode(0+"");
+            commonCategory.setCategoryCode("common-category-cp");
+            commonCategory.setLevel(1);
+            commonCategory.setStatus(1);
+            commonCategory.setSortOrder(1);
+            commonCategory.setCreatedAt(new Date());
+            commonCategory.setCreatedBy(userId);
+            commonCategory.setModifiedAt(new Date());
+            commonCategory.setModifiedBy(userId);
+            commonCategory.setRemark("系统自动生成");
+            boolean result = productCategoryService.save(commonCategory);
+            if (result) {
+                categoryName2CategoryMap.put("通用成品分类", commonCategory);
+            }
+        }
+
         Map<String, Unit> unitName2UnitMap = new HashMap<>();
         List<Unit> unitList = unitService.selectByTenantId(tenantId, 1);
         if (!CollectionUtils.isEmpty(unitList)) {
             unitName2UnitMap = unitList.stream().collect(Collectors.toMap(Unit::getUnitName, v -> v));
+        }
+
+        if (CollectionUtils.isEmpty(unitName2UnitMap) || !unitName2UnitMap.containsKey("个")) {
+            Unit unitOfPer = new Unit();
+            unitOfPer.setTenantId(tenantId);
+            unitOfPer.setUnitName("个");
+            unitOfPer.setUnitCode("ge");
+            unitOfPer.setStatus(1);
+            unitOfPer.setRemark("系统自动生成");
+            boolean result = unitService.save(unitOfPer);
+            if (result) {
+                unitName2UnitMap.put(unitOfPer.getUnitName(), unitOfPer);
+            }
+        }
+        if (CollectionUtils.isEmpty(unitName2UnitMap) || !unitName2UnitMap.containsKey("箱")) {
+            Unit unitOfPer = new Unit();
+            unitOfPer.setTenantId(tenantId);
+            unitOfPer.setUnitName("箱");
+            unitOfPer.setUnitCode("xiang");
+            unitOfPer.setStatus(1);
+            unitOfPer.setRemark("系统自动生成");
+            boolean result = unitService.save(unitOfPer);
+            if (result) {
+                unitName2UnitMap.put(unitOfPer.getUnitName(), unitOfPer);
+            }
         }
 
 
@@ -1720,8 +1765,8 @@ public class CKProductFacade {
             r.setBarcode("BarCode-" + v.getSku());
             r.setName(StringUtils.isNotBlank(v.getName()) ? v.getName() : v.getEnglishName());
             r.setSpec(v.getSpec());
-            r.setCategoryCode(finalCategoryName2CategoryMap.getOrDefault("通用分类", new ProductCategory()).getCategoryCode());
-            r.setUnitCode(finalUnitName2UnitMap.getOrDefault("件", new Unit()).getUnitCode());
+            r.setCategoryCode(finalCategoryName2CategoryMap.getOrDefault("通用成品分类", new ProductCategory()).getCategoryCode());
+            r.setUnitCode(finalUnitName2UnitMap.getOrDefault("个", new Unit()).getUnitCode());
             r.setOutUnitCode(finalUnitName2UnitMap.getOrDefault("箱", new Unit()).getUnitCode());
             r.setOutUnitPerNum(StringUtils.isNotBlank(v.getOutUnitPerNum()) ? new BigDecimal(v.getOutUnitPerNum()) : BigDecimal.ONE);
             r.setWeightPerUnit(StringUtils.isNotBlank(v.getWeightPerUnit()) ? new BigDecimal(v.getWeightPerUnit()) : BigDecimal.ONE);
