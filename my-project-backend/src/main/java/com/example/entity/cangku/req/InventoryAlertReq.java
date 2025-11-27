@@ -1,6 +1,7 @@
 package com.example.entity.cangku.req;
 
 import com.example.entity.base.PageReq;
+import com.example.enums.CkInventoryEnums;
 import lombok.Data;
 
 /**
@@ -12,6 +13,10 @@ import lombok.Data;
 @Data
 public class InventoryAlertReq  extends PageReq {
     Long warehouseId;
+    /**
+     * {@link CkInventoryEnums.ChartsWarningLevel}
+     */
+    String alertLevel;
     Long userId;
     Long tenantId;
 

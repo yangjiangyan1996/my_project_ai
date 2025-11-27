@@ -11,6 +11,35 @@ import java.math.BigDecimal;
  * @Date 2025/11/5 20:07
  */
 public class CkInventoryEnums {
+
+    @Getter
+    public enum ChartsWarningLevel {
+        ALL("all", "全部",9),
+        URGENT("urgent", "紧急预警",0),
+        WARNING("warning", "一般预警",1),
+        NORMAL("normal", "库存正常",8);
+
+        private String code;
+        private String desc;
+        private Integer sort;
+
+        ChartsWarningLevel(String code, String desc, Integer sort) {
+            this.code = code;
+            this.desc = desc;
+            this.sort = sort;
+        }
+
+        public static String getDescByCode(String code) {
+            for (ChartsWarningLevel value : ChartsWarningLevel.values()) {
+                if (value.getCode().equals(code)) {
+                    return value.getDesc();
+                }
+            }
+            return "";
+        }
+    }
+
+
     @Getter
     public enum StockStatus {
         IN_STOCK(1, "有货"),

@@ -1356,37 +1356,46 @@ public class CkInventoryFacade {
 
         for (Product product : products) {
             Long minStock = product.getMinStock();
+            BigDecimal minStockBig = minStock == null ? BigDecimal.ZERO : new BigDecimal(minStock);
             BigDecimal inventoryQuantity = product2InventoryQuantity.getOrDefault(product.getId(), BigDecimal.ZERO);
-            if (inventoryQuantity == null || inventoryQuantity.compareTo(new BigDecimal(minStock)) <= 0) {
-                InventoryAlertResp r = new InventoryAlertResp();
-                r.setProductId(product.getId());
-                r.setProductName(product.getName());
-                r.setSku(product.getSku());
-                r.setWarehouseId(req.getWarehouseId());
-                r.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(req.getWarehouseId(), new Warehouse()).getName());
-                r.setCurrentStock(inventoryQuantity);
-                r.setWarningThreshold(product.getMinStock() == null ? BigDecimal.ZERO : new BigDecimal(product.getMinStock()));
-                r.setUrgentThreshold(product.getMinStock() == null ? BigDecimal.ZERO : new BigDecimal(product.getMinStock()).divide(new BigDecimal(2), RoundingMode.HALF_UP));
-                String level = "";
-                Integer levelSort = 2;
-                if (r.getCurrentStock().compareTo(r.getWarningThreshold()) > 0) {
-                    level = "normal";
-                    levelSort = 2;
-                } else if (r.getCurrentStock().compareTo(r.getUrgentThreshold()) > 0) {
-                    level = "warning";
-                    levelSort = 1;
-                } else {
-                    level = "urgent";
-                    levelSort = 0;
-                }
-                r.setAlertLevel(level);
-                r.setAlertLevelSort(levelSort);
-                //r.setLastUpdateTime(DateUtil.formatDateTime(inventory.getModifiedAt()));
-                inventoryAlerts.add(r);
+//            if (inventoryQuantity == null || inventoryQuantity.compareTo(new BigDecimal(minStock)) <= 0) {
+            InventoryAlertResp r = new InventoryAlertResp();
+            r.setProductId(product.getId());
+            r.setProductName(product.getName());
+            r.setSku(product.getSku());
+            r.setSpec(product.getSpec());
+            r.setColor(product.getColor());
+            r.setWarehouseId(req.getWarehouseId());
+            r.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(req.getWarehouseId(), new Warehouse()).getName());
+            r.setCurrentStock(inventoryQuantity);
+            r.setWarningThreshold(product.getMinStock() == null ? BigDecimal.ZERO : new BigDecimal(product.getMinStock()));
+            r.setUrgentThreshold(product.getMinStock() == null ? BigDecimal.ZERO : new BigDecimal(product.getMinStock()).divide(new BigDecimal(2), RoundingMode.HALF_UP));
+            String level = CkInventoryEnums.ChartsWarningLevel.NORMAL.getCode();
+            Integer levelSort = CkInventoryEnums.ChartsWarningLevel.NORMAL.getSort();
+            if (inventoryQuantity.compareTo(r.getWarningThreshold()) > 0) {
+                level = CkInventoryEnums.ChartsWarningLevel.NORMAL.getCode();
+                levelSort = CkInventoryEnums.ChartsWarningLevel.NORMAL.getSort();
+            } else if (inventoryQuantity.compareTo(r.getUrgentThreshold()) > 0) {
+                level = CkInventoryEnums.ChartsWarningLevel.WARNING.getCode();
+                levelSort = CkInventoryEnums.ChartsWarningLevel.WARNING.getSort();
+            } else {
+                level = CkInventoryEnums.ChartsWarningLevel.URGENT.getCode();
+                levelSort = CkInventoryEnums.ChartsWarningLevel.URGENT.getSort();
             }
+            r.setAlertLevel(level);
+            r.setAlertLevelSort(levelSort);
+            //r.setLastUpdateTime(DateUtil.formatDateTime(inventory.getModifiedAt()));
+
+            if (StringUtils.isNotBlank(req.getAlertLevel())) {
+                if (!r.getAlertLevel().equals(req.getAlertLevel())) {
+                    continue;
+                }
+            }
+            inventoryAlerts.add(r);
+//            }
         }
 
-        inventoryAlerts.sort(Comparator.comparingInt(InventoryAlertResp::getAlertLevelSort).reversed());
+        inventoryAlerts.sort(Comparator.comparingInt(InventoryAlertResp::getAlertLevelSort));
         return inventoryAlerts;
     }
 }

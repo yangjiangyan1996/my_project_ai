@@ -15,6 +15,10 @@ public class InventoryAlertResp {
     private Long productId;
     private String productName;
     private String sku;
+    //规格
+    private String spec;
+    //颜色
+    private String color;
     private Long warehouseId;
     private String warehouseName;
     private BigDecimal currentStock;
