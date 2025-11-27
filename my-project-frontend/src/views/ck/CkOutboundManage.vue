@@ -13,14 +13,11 @@
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item 
-                    v-for="item in orderTypeOptions" 
-                    :key="item.value" 
-                    :command="item.value"
-                    :icon="getTypeIcon(item.value)"
-                  >
-                    {{ item.label }}
-                  </el-dropdown-item>
+                  <el-dropdown-item command="1">销售出库</el-dropdown-item>
+                  <el-dropdown-item command="2">生产领料</el-dropdown-item>
+                  <el-dropdown-item command="3">退货出库</el-dropdown-item>
+                  <el-dropdown-item command="4">调拨出库</el-dropdown-item>
+                  <el-dropdown-item command="5">其他出库</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -556,7 +553,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Refresh, Document, Clock, CircleCheck, Finished } from '@element-plus/icons-vue';
+import { Plus, Refresh, Document, Clock, CircleCheck, Finished, ArrowDown } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 import axios from 'axios';
 import { accessHeader } from '@/net'; 
@@ -898,9 +895,20 @@ const handleCurrentChange = (page) => {
 };
 
 // 修改：新建出库单处理
+// 修改：新建出库单处理
 const handleCreate = (orderType) => {
-  const path = getRoutePathByType(orderType);
-  router.push(path);
+  const routeMap = {
+    1: '/index/salesOutboundCreate',      // 销售出库
+    2: '/index/productionPickingCreate',  // 生产领料
+    // 3: '/index/ckOutboundCreateReturn',    // 退货出库
+    // 4: '/index/ckOutboundCreateTransfer',  // 调拨出库
+    // 5: '/index/ckOutboundCreateOther'      // 其他出库
+  };
+  
+  const targetRoute = routeMap[orderType] || '/index/ckOutboundCreate';
+  if (targetRoute) {
+    router.push(targetRoute);
+  }
 };
 
 
@@ -1660,5 +1668,22 @@ onMounted(() => {
 
 .outbound-table :deep(.el-table__row:hover) {
   background-color: #f5f7fa;
+}
+
+/* 调整下拉菜单样式 */
+:deep(.el-dropdown-menu) {
+  min-width: 120px !important;
+  text-align: center;
+}
+
+:deep(.el-dropdown-menu__item) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 16px;
+}
+
+:deep(.el-dropdown-menu__item .el-icon) {
+  margin-right: 8px;
 }
 </style>
