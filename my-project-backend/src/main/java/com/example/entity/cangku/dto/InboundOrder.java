@@ -8,6 +8,7 @@ import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.Date;
 
 //入库单主表
 @Data
@@ -35,5 +36,7 @@ public class InboundOrder extends BaseModel {
     private BigDecimal totalAmount;
     //备注
     private String remark;
+    //预计入库时间
+    private Date expectedDate;
 
 }

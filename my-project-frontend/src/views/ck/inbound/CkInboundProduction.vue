@@ -69,6 +69,9 @@
               <h4>领料产品明细</h4>
               <el-table :data="selectedPickingOrder.items" size="small" border>
                 <el-table-column prop="productName" label="产品名称" min-width="120" />
+                <el-table-column prop="sku" label="SKU" min-width="120" />
+                <el-table-column prop="spec" label="规格" min-width="120" />
+                <el-table-column prop="color" label="颜色" width="100" align="center" />
                 <el-table-column prop="quantity" label="领料数量" width="100" align="center" />
                 <el-table-column prop="unit" label="单位" width="80" align="center" />
               </el-table>
@@ -192,7 +195,7 @@
             empty-text="请添加产品明细"
           >
             <el-table-column type="index" label="序号" width="60" align="center" />
-            <el-table-column label="产品信息" min-width="200">
+            <el-table-column label="产品信息" min-width="100">
               <template #default="{ row, $index }">
                 <el-select
                   v-model="row.productId"
@@ -208,11 +211,20 @@
                     :value="product.id"
                   />
                 </el-select>
+                 <div v-if="row.productName" class="product-details">
+                  <div class="product-name">name:{{ row.productName }}</div>
+                  <div class="product-sku">sku:{{ row.sku }}</div>
+                </div>
               </template>
             </el-table-column>
-            <el-table-column label="规格型号" width="120">
+            <el-table-column label="规格" width="80">
               <template #default="{ row }">
                 <span>{{ row.spec || '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="颜色" width="80">
+              <template #default="{ row }">
+                <span>{{ row.color || '-' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="单位" width="80" align="center">
@@ -545,12 +557,14 @@ const importPickingData = async () => {
     
     // 导入产品数据 - 基于BOM反向推导产成品
     const finishedProducts = deriveFinishedProducts(pickingOrder.items);
+    console.log("finishedProducts:", finishedProducts);
     const newItems = finishedProducts.map(product => ({
       productId: product.id,
       productName: product.name,
       sku: product.sku,
       spec: product.spec,
       unit: product.unit,
+      color: product.color,
       actualQuantity: product.quantity,
       relatedPickingOrderNo: pickingOrder.orderNo, // 关联单号放到产品明细
       shelfLocationIds: [],
@@ -606,6 +620,7 @@ const deriveFinishedProducts = (pickingItems) => {
     id: item.productId,
     name: item.productName,
     sku: item.sku,
+    color: item.color,
     spec: item.spec,
     unit: item.unit,
     quantity: Math.floor(item.quantity) // 简化计算
@@ -830,10 +845,12 @@ const handleRemoveProduct = (index) => {
 const handleProductChange = (productId, index) => {
   const product = productList.value.find(p => p.id === productId);
   if (product) {
+    console.log("111"+product);
     const item = formData.items[index];
     item.productName = product.name;
     item.sku = product.sku;
     item.spec = product.spec;
+    item.color = product.color;
     item.unit = product.unitName;
   }
 };
@@ -1405,5 +1422,13 @@ watch(
     width: 100%;
     justify-content: space-between;
   }
+}
+
+.product-details {
+  margin-top: 8px;
+  padding: 4px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  font-size: 12px;
 }
 </style>

@@ -1074,6 +1074,7 @@ public class CkOutboundFacade {
                     productItem.setProductName(product.getName());
                     productItem.setSku(product.getSku());
                     productItem.setSpec(product.getSpec());
+                    productItem.setColor(product.getColor());
                     productItem.setUnit(unitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
                 }
 
@@ -1338,6 +1339,7 @@ public class CkOutboundFacade {
                     productItem.setSku(product.getSku());
                     productItem.setSpec(product.getSpec());
                     productItem.setUnit(unitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
+                    productItem.setColor(product.getColor());
                 }
 
                 productItem.setQuantity(productId2TaskMap.getOrDefault(parentProductId, new ProductionTask()).getRemainingQuantity());

@@ -48,6 +48,7 @@ public class OutBoundDetailOfProductionResp {
         private String sku;
         private String spec;
         private String unit;
+        private String color;
         private BigDecimal quantity;
 
         // BOM相关数据

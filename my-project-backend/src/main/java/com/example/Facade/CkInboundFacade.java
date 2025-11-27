@@ -1,5 +1,6 @@
 package com.example.Facade;
 
+import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.*;
@@ -186,6 +187,7 @@ public class CkInboundFacade {
         order.setStatus(req.getStatus());
         order.setTotalQuantity(new BigDecimal(req.getTotalQuantity()));
         order.setTenantId(req.getTenantId());
+        order.setExpectedDate(DateUtil.parseDate(req.getExpectedDate()));
         order.setTotalAmount(req.getTotalAmount());
         order.setCreatedBy(req.getUserId());
         order.setModifiedBy(req.getUserId());
@@ -1105,6 +1107,7 @@ public class CkInboundFacade {
         r.setStatus(inboundOrder.getStatus());
         r.setWarehouseId(inboundOrder.getWarehouseId());
         r.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(inboundOrder.getWarehouseId(), new Warehouse()).getName());
+        r.setExpectedDate(inboundOrder.getExpectedDate());
         r.setCreatedAt(inboundOrder.getCreatedAt());
         r.setModifiedAt(inboundOrder.getModifiedAt());
         r.setItems(items);

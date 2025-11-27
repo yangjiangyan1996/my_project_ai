@@ -21,7 +21,7 @@ public class InboundProductInDetailResp {// 基本信息字段
     private Integer status;
     private Long warehouseId;
     private String warehouseName;
-    private String expectedDate;     // 新增：预计入库日期（字符串格式 YYYY-MM-DD）
+    private java.util.Date expectedDate;     // 新增：预计入库日期（字符串格式 YYYY-MM-DD）
     private java.util.Date createdAt;
     private java.util.Date modifiedAt;
 
