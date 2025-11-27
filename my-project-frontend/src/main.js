@@ -22,3 +22,12 @@ app.config.globalProperties.$uploadAction = (path = 'api/auth/common/upload') =>
 app.use(router)
 
 app.mount('#app')
+
+
+/**
+ *    子页面的跳转代码
+      router.replace({
+        path: '/',
+        query: { mode: 'inbound' } // 返回到入库管理页面
+      });
+ */
