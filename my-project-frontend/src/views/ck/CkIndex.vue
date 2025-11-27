@@ -525,15 +525,23 @@ const userInitial = computed(() => {
 });
 
 // 监听路由变化，根据路由参数切换显示模式
-watch(
-  () => route.query.mode,
-  (newMode) => {
-    if (newMode) {
-      changeDisplayMode(newMode);
-    }
-  },
-  { immediate: true }
-);
+// watch(
+//   () => route.query.mode,
+//   (newMode) => {
+//     if (newMode) {
+//       changeDisplayMode(newMode);
+//     }
+//   },
+//   { immediate: true }
+// );
+
+watch(displayMode, async (newMode) => {
+  if (newMode === 'dashboard') {
+    // 切换到工作台时，重新加载图表数据
+    await nextTick();
+    loadInventoryAlerts();
+  }
+});
 
 // 核心方法：切换显示模式
 function changeDisplayMode(mode) {
