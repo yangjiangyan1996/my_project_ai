@@ -61,6 +61,13 @@ public class CkWareHouseServiceImpl extends ServiceImpl<CkWareHouseMapper, Wareh
     }
 
     @Override
+    public Long selectCountsOfWareHouses(Long tenantId) {
+        return baseMapper.selectCount(new QueryWrapper<Warehouse>()
+                .eq("is_deleted", 0)
+                .eq("tenant_id", tenantId));
+    }
+
+    @Override
     public List<Warehouse> selectByTenantId(Long tenantId) {
         return baseMapper.selectList(new QueryWrapper<Warehouse>()
                 .eq("is_deleted", 0)

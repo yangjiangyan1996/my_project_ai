@@ -6,12 +6,14 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.OutboundOrder;
 import com.example.entity.cangku.req.OutboundListPageReq;
 import com.example.enums.CkCommonEnums;
+import com.example.enums.CkInOutboundEnums;
 import com.example.mapper.CkOutboundOrderMapper;
 import com.example.service.CkOutboundOrderService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 // CkOutboundOrderServiceImpl.java
@@ -26,6 +28,26 @@ public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMappe
                         .in("product_id", productIds)
                         .eq("status", status)
                         .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
+    public Long selectCountsOfApprovals(Long tenantId) {
+        return baseMapper.selectCount(
+                new QueryWrapper<OutboundOrder>()
+                        .eq("tenant_id", tenantId)
+                        .eq("status", CkInOutboundEnums.InOutBoundStatus.WaitSubmit.getCode())
+                        .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+        );
+    }
+
+    @Override
+    public Long selectCountsOfOutboundOrders(Long tenantId, Date date) {
+        return baseMapper.selectCount(
+                new QueryWrapper<OutboundOrder>()
+                        .eq("tenant_id", tenantId)
+                        .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+                        .gt("created_at", date)
         );
     }
 

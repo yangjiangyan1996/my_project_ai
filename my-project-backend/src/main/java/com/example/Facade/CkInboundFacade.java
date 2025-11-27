@@ -127,6 +127,9 @@ public class CkInboundFacade {
         if (req.getUserId() == null) {
             throw new ValidationException("用户ID不能为空");
         }
+//        if(StringUtils.isEmpty(req.getExpectedDate())) {
+//            throw new ValidationException("入库单的预计入库时间不能为空");
+//        }
 
         // 采购入库必须要有供应商
         if (req.getOrderType() == 1 && req.getSupplierId() == null) {
@@ -185,9 +188,11 @@ public class CkInboundFacade {
         order.setRelatedOrderNo(req.getRelatedOrderNo());
         order.setRemark(req.getRemark());
         order.setStatus(req.getStatus());
+        if (req.getExpectedDate() != null) {
+            order.setExpectedDate(DateUtil.parseDate(req.getExpectedDate()));
+        }
         order.setTotalQuantity(new BigDecimal(req.getTotalQuantity()));
         order.setTenantId(req.getTenantId());
-        order.setExpectedDate(DateUtil.parseDate(req.getExpectedDate()));
         order.setTotalAmount(req.getTotalAmount());
         order.setCreatedBy(req.getUserId());
         order.setModifiedBy(req.getUserId());

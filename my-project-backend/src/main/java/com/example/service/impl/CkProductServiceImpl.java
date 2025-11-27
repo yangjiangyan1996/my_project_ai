@@ -44,6 +44,13 @@ public class CkProductServiceImpl extends ServiceImpl<CkProductMapper, Product> 
     }
 
     @Override
+    public Long selectCountsOfProducts(Long tenantId) {
+        return baseMapper.selectCount(new QueryWrapper<Product>()
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
     public List<Product> selectByProductSkuLike(Long tenantId, String sku) {
         return baseMapper.selectList(
                 new QueryWrapper<Product>()

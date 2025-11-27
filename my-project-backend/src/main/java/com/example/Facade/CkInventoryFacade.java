@@ -1338,7 +1338,7 @@ public class CkInventoryFacade {
         List<Product> products = productService.selectByTenantId(req.getTenantId());
 
         Map<Long, BigDecimal> product2InventoryQuantity = new HashMap<>();
-        if(req.getWarehouseId() == null) {
+        if (req.getWarehouseId() == null) {
             List<Inventory> inventories = inventoryService.selectByTenantId(req.getTenantId());
             product2InventoryQuantity = inventories.stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getQuantity()));
         } else {
@@ -1397,5 +1397,41 @@ public class CkInventoryFacade {
 
         inventoryAlerts.sort(Comparator.comparingInt(InventoryAlertResp::getAlertLevelSort));
         return inventoryAlerts;
+    }
+
+    public InventoryCountsOfIndexPageResp countsOfIndexPage(Long tenantId) {
+        InventoryCountsOfIndexPageResp r = new InventoryCountsOfIndexPageResp();
+
+        Long totalProducts = productService.selectCountsOfProducts(tenantId);
+        r.setTotalProducts(totalProducts);
+
+        Long totalWarehouses = wareHouseService.selectCountsOfWareHouses(tenantId);
+        r.setTotalWarehouses(totalWarehouses);
+
+        Long todayInbound = inboundOrderService.selectCountsOfInboundOrders(tenantId, new Date());
+        r.setTodayInbound(todayInbound);
+
+        Long todayOutbound = outboundOrderService.selectCountsOfOutboundOrders(tenantId, new Date());
+        r.setTodayOutbound(todayOutbound);
+
+        Long inboundApproval = inboundOrderService.selectCountsOfApprovals(tenantId);
+        r.setTodoInBoundApproval(inboundApproval);
+        Long outboundApproval = outboundOrderService.selectCountsOfApprovals(tenantId);
+        r.setTodoOutBoundApproval(outboundApproval);
+
+        List<Product> products = productService.selectByTenantId(tenantId);
+        List<Inventory> inventories = inventoryService.selectByTenantId(tenantId);
+        Map<Long, BigDecimal> productId2InventoryQuantityMap = inventories.stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getQuantity()));
+        Long lowStock = 0L;
+        for (Product product : products) {
+            BigDecimal inventoryQuantity = productId2InventoryQuantityMap.getOrDefault(product.getId(), BigDecimal.ZERO);
+            BigDecimal minStock = product.getMinStock() == null ? BigDecimal.ZERO : new BigDecimal(product.getMinStock());
+            if (minStock.compareTo(inventoryQuantity) >= 0) {
+                lowStock += 1;
+            }
+        }
+        r.setLowStock(lowStock);
+
+        return r;
     }
 }

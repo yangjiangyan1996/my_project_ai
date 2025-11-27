@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.InboundOrder;
 import com.example.entity.cangku.req.InboundListPageReq;
 
+import java.util.Date;
 import java.util.List;
 
 // CkInboundOrderService.java
@@ -16,4 +17,8 @@ public interface CkInboundOrderService extends IService<InboundOrder> {
     List<InboundOrder> selectByInboundOrderIds(Long tenantId, List<Long> inboundOrderIds);
 
     List<InboundOrder> selectCountsByInboundListPageReq(InboundListPageReq tenantId);
+
+    Long selectCountsOfInboundOrders(Long tenantId, Date date);
+
+    Long selectCountsOfApprovals(Long tenantId);
 }

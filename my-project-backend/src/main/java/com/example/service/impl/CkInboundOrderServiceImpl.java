@@ -5,17 +5,35 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.InboundOrder;
 import com.example.entity.cangku.req.InboundListPageReq;
+import com.example.enums.CkInOutboundEnums;
 import com.example.mapper.CkInboundOrderMapper;
 import com.example.service.CkInboundOrderService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 // CkInboundOrderServiceImpl.java
 @Service
 public class CkInboundOrderServiceImpl extends ServiceImpl<CkInboundOrderMapper, InboundOrder> implements CkInboundOrderService {
+
+    @Override
+    public Long selectCountsOfApprovals(Long tenantId) {
+        return baseMapper.selectCount(new QueryWrapper<InboundOrder>()
+                .eq("status", CkInOutboundEnums.InOutBoundStatus.WaitSubmit.getCode())
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", 0));
+    }
+
+    @Override
+    public Long selectCountsOfInboundOrders(Long tenantId, Date date) {
+        return baseMapper.selectCount(new QueryWrapper<InboundOrder>()
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", 0)
+                .ge(date != null, "created_at", date));
+    }
 
     @Override
     public List<InboundOrder> selectCountsByInboundListPageReq(InboundListPageReq req) {

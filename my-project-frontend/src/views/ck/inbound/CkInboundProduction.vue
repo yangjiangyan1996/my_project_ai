@@ -927,7 +927,12 @@ const handleSaveDraft = async () => {
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新草稿成功' : '保存草稿成功');
-      router.push('/index/ckInboundManage');
+      // router.push('/index/ckInboundManage');
+      // 修改这里：使用路由参数方式返回，而不是完全跳转
+      router.replace({
+        path: '/',
+        query: { mode: 'inbound' } // 返回到入库管理页面
+      });
     }
   } catch (error) {
     ElMessage.error(isEditMode.value ? '更新草稿失败' : '保存草稿失败');
@@ -962,7 +967,11 @@ const handleSubmit = async () => {
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新成功' : '提交成功，等待审核');
-      router.push('/index/ckInboundManage');
+      //router.push('/index/ckInboundManage');
+      router.replace({
+        path: '/',
+        query: { mode: 'inbound' } // 返回到入库管理页面
+      });
     }
   } catch (error) {
     ElMessage.error(isEditMode.value ? '更新失败' : '提交失败');

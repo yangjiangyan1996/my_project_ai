@@ -222,4 +222,27 @@ public class InventoryController {
     }
 
 
+    /**
+     * 获取库存预警统计
+     */
+    @GetMapping("/countsOfIndexPage")
+    public RespBean<InventoryCountsOfIndexPageResp> countsOfIndexPage() {
+        try {
+            InventoryAlertReq req = new InventoryAlertReq();
+
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            req.setTenantId(tenantId);
+            InventoryCountsOfIndexPageResp result = inventoryFacade.countsOfIndexPage(tenantId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("InventoryController#countsOfIndexPage", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#countsOfIndexPage", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+
 }

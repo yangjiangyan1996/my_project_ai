@@ -166,88 +166,36 @@
     <!-- 主内容区域 - 根据 displayMode 显示不同组件 -->
     <div class="main-content" v-if="displayMode === 'dashboard'">
       <!-- 数据概览 -->
-      <div class="overview-cards">
-        <el-row :gutter="20">
-          <el-col :xs="12" :sm="6" :lg="3">
-            <el-card class="stat-card" shadow="hover">
-              <div class="stat-content">
-                <div class="stat-icon" style="background-color: #409EFF;">
-                  <el-icon><Box /></el-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ overviewData.totalProducts }}</div>
-                  <div class="stat-label">产品总数</div>
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-          <el-col :xs="12" :sm="6" :lg="3">
-            <el-card class="stat-card" shadow="hover">
-              <div class="stat-content">
-                <div class="stat-icon" style="background-color: #67C23A;">
-                  <el-icon><OfficeBuilding /></el-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ overviewData.totalWarehouses }}</div>
-                  <div class="stat-label">仓库数量</div>
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-          <el-col :xs="12" :sm="6" :lg="3">
-            <el-card class="stat-card" shadow="hover">
-              <div class="stat-content">
-                <div class="stat-icon" style="background-color: #E6A23C;">
-                  <el-icon><TrendCharts /></el-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ overviewData.todayInbound }}</div>
-                  <div class="stat-label">今日入库</div>
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-          <el-col :xs="12" :sm="6" :lg="3">
-            <el-card class="stat-card" shadow="hover">
-              <div class="stat-content">
-                <div class="stat-icon" style="background-color: #F56C6C;">
-                  <el-icon><TrendCharts /></el-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ overviewData.todayOutbound }}</div>
-                  <div class="stat-label">今日出库</div>
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-          <el-col :xs="12" :sm="6" :lg="3">
-            <el-card class="stat-card" shadow="hover">
-              <div class="stat-content">
-                <div class="stat-icon" style="background-color: #909399;">
-                  <el-icon><Clock /></el-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ overviewData.pendingApprovals }}</div>
-                  <div class="stat-label">待办审批</div>
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-          <el-col :xs="12" :sm="6" :lg="3">
-            <el-card class="stat-card" shadow="hover">
-              <div class="stat-content">
-                <div class="stat-icon" style="background-color: #9b59b6;">
-                  <el-icon><Warning /></el-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ overviewData.lowStockItems }}</div>
-                  <div class="stat-label">低库存预警</div>
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-        </el-row>
-      </div>
+       <div class="chart-stats">
+          <div class="stat-item">
+            <span class="stat-label">产品总数</span>
+            <span class="stat-value">{{ indexPageStats.totalProducts || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">仓库数量</span>
+            <span class="stat-value">{{ indexPageStats.totalWarehouses || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">今日入库</span>
+            <span class="stat-value" style="color: #67C23A;">{{ indexPageStats.todayInbound || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">今日出库</span>
+            <span class="stat-value" style="color: #F56C6C;">{{ indexPageStats.todayOutbound || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">入库待办</span>
+            <span class="stat-value" style="color: #E6A23C;">{{ indexPageStats.todoInBoundApproval || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">出库待办</span>
+            <span class="stat-value" style="color: #E6A23C;">{{ indexPageStats.todoOutBoundApproval || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">低库存</span>
+            <span class="stat-value urgent">{{ indexPageStats.lowStock || 0 }}</span>
+          </div>
+        </div>
 
       <!-- 快捷操作 -->
       <el-card class="quick-actions-card" shadow="never">
@@ -458,12 +406,19 @@
     <CkShelfManage v-if="displayMode === 'shelf'" />
     <CkUser v-if="displayMode === 'profile'" />
 
+    <!-- 添加快捷操作对应的组件 -->
+    <CkInboundCreate v-if="displayMode === 'inbound-create'" />
+    <CkOutboundCreate v-if="displayMode === 'outbound-create'" />
+    <CkTransferCreate v-if="displayMode === 'transfer-create'" />
+    <CkStockTakeCreate v-if="displayMode === 'stock-take-create'" />
+    <CkApprovalTask v-if="displayMode === 'approval-task'" />
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, computed, nextTick, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { post, get } from '@/net';
 import { logout } from '@/net';
@@ -491,7 +446,15 @@ import CkUser from '@/views/ck/CkUser.vue';
 import CkSkuManage from '@/views/ck/CkSkuManage.vue';
 import CkCkUnitManage from '@/views/ck/CkUnitManage.vue';
 
+// 导入快捷操作组件
+import CkInboundCreate from '@/views/ck/CkInboundCreate.vue';
+import CkOutboundCreate from '@/views/ck/CkOutboundCreate.vue';
+import CkTransferCreate from '@/views/ck/CkTransferCreate.vue';
+import CkStockTakeCreate from '@/views/ck/CkStockTakeCreate.vue';
+import CkApprovalTask from '@/views/ck/CkApprovalTask.vue';
+
 const router = useRouter();
+const route = useRoute();
 
 // 响应式数据
 const activeNav = ref('dashboard');
@@ -525,6 +488,17 @@ const userInfo = ref({
   role: ''
 });
 
+// 首页统计数据
+const indexPageStats = ref({
+  totalProducts: 0,
+  totalWarehouses: 0,
+  todayInbound: 0,
+  todayOutbound: 0,
+  todoInBoundApproval: 0,
+  todoOutBoundApproval: 0,
+  lowStock: 0
+});
+
 // 概览数据
 const overviewData = ref({
   totalProducts: 0,
@@ -550,31 +524,75 @@ const userInitial = computed(() => {
   return userInfo.value.realName ? userInfo.value.realName.charAt(0) : '用户';
 });
 
+// 监听路由变化，根据路由参数切换显示模式
+watch(
+  () => route.query.mode,
+  (newMode) => {
+    if (newMode) {
+      changeDisplayMode(newMode);
+    }
+  },
+  { immediate: true }
+);
+
 // 核心方法：切换显示模式
 function changeDisplayMode(mode) {
   console.log('切换显示模式:', mode);
   displayMode.value = mode;
   activeNav.value = mode; // 更新导航激活状态
+  
+  // 更新URL参数，但不触发页面跳转
+  router.replace({
+    path: '/', // 使用当前路径
+    query: { ...route.query, mode }
+  });
 }
 
-// 快捷操作处理方法 - 使用路由跳转
+// 快捷操作处理方法 - 使用模式切换
 const handleQuickAction = (action) => {
   console.log('快捷操作:', action);
   
-  const routeMap = {
-    'inbound': '/index/ckInboundCreate',
-    'outbound': '/index/ckOutboundCreate', 
-    'transfer': '/index/ckTransferCreate',
-    'stock-take': '/index/ckStockTakeCreate',
-    'approval': '/index/ckApprovalTask'
+  const modeMap = {
+    'inbound': 'inbound-create',
+    'outbound': 'outbound-create', 
+    'transfer': 'transfer-create',
+    'stock-take': 'stock-take-create',
+    'approval': 'approval-task'
   };
   
-  const targetRoute = routeMap[action];
-  if (targetRoute) {
-    // 使用路由跳转到具体页面
-    router.push(targetRoute);
+  const targetMode = modeMap[action];
+  if (targetMode) {
+    changeDisplayMode(targetMode);
   } else {
     ElMessage.warning('该功能暂未开放');
+  }
+};
+
+// 加载首页统计数据
+const loadIndexPageStats = async () => {
+  try {
+    const res = await get('/api/auth/inventory/countsOfIndexPage');
+    if (res) {
+      indexPageStats.value = {
+        totalProducts: res.totalProducts || 0,
+        totalWarehouses: res.totalWarehouses || 0,
+        todayInbound: res.todayInbound || 0,
+        todayOutbound: res.todayOutbound || 0,
+        todoInBoundApproval: res.todoInBoundApproval || 0,
+        todoOutBoundApproval: res.todoOutBoundApproval || 0,
+        lowStock: res.lowStock || 0
+      };
+      
+      // 同时更新概览数据
+      overviewData.value.totalProducts = res.totalProducts || 0;
+      overviewData.value.totalWarehouses = res.totalWarehouses || 0;
+      overviewData.value.todayInbound = res.todayInbound || 0;
+      overviewData.value.todayOutbound = res.todayOutbound || 0;
+      overviewData.value.pendingApprovals = (res.todoInBoundApproval || 0) + (res.todoOutBoundApproval || 0);
+      overviewData.value.lowStockItems = res.lowStock || 0;
+    }
+  } catch (error) {
+    console.error('加载首页统计数据失败:', error);
   }
 };
 
@@ -1076,6 +1094,7 @@ const fetchUnreadCount = async () => {
 
 onMounted(() => {
   loadUserInfo();
+  loadIndexPageStats(); // 新增这行
   loadOverviewData();
   loadRecentActions();
   fetchUnreadCount();

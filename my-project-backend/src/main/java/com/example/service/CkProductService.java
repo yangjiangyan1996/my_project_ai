@@ -29,4 +29,6 @@ public interface CkProductService extends IService<Product> {
     List<Product> selectByProductNameLike(Long tenantId, String productName);
 
     List<Product> selectByProductSkuLike(Long tenantId, String sku);
+
+    Long selectCountsOfProducts(Long tenantId);
 }
