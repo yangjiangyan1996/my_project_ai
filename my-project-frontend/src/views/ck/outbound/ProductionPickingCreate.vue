@@ -150,11 +150,21 @@
                   :value="product.id"
                 />
               </el-select>
+               <div v-if="row.productName" class="product-details">
+                  <div class="product-name">name:{{ row.productName }}</div>
+                  <div class="product-sku">sku:{{ row.sku }}</div>
+                </div>
             </template>
           </el-table-column>
-          <el-table-column label="规格型号" width="120">
+          <el-table-column label="规格" width="100">
             <template #default="{ row }">
               <span>{{ row.spec || '-' }}</span>
+            </template>
+          </el-table-column>
+          <!-- 新增颜色列 -->
+          <el-table-column label="颜色" width="100" align="center">
+            <template #default="{ row }">
+              <span>{{ row.color || '-' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="单位" width="80" align="center">
@@ -162,7 +172,7 @@
               <span>{{ row.unit || '-' }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="领料数量" width="120">
+          <el-table-column label="领料数量" width="200">
             <template #default="{ row, $index }">
               <el-input-number
                 v-model="row.quantity"
@@ -173,7 +183,7 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="80" fixed="right" align="center">
+          <el-table-column label="操作" width="100" fixed="right" align="center">
             <template #default="{ $index }">
               <el-button
                 type="danger"
@@ -469,10 +479,12 @@ const allocationCheckStatusClass = computed(() => {
 
 // 生产领料可用产品
 const productionProducts = computed(() => {
+  console.log("productionProductList", productionProductList.value)
   return productionProductList.value.map(product => ({
     id: product.id,
     sku: product.sku,
     name: product.name,
+    color: product.color,
     spec: product.spec,
     unit: product.unitName,
     bomData: product.bomData || []
@@ -913,7 +925,7 @@ const handleAddProduct = () => {
     quantity: 1,
     price: 0,
     priceUnitUsd: 0,
-    batchAllocations: [],
+    // batchAllocations: [],
     availableBatches: [],
     remark: '',
     bomAllocations: [],
@@ -934,6 +946,7 @@ const handleProductChange = async (productId, index) => {
     item.productId = product.id;
     item.productName = product.name;
     item.sku = product.sku;
+    item.color = product.color;
     item.spec = product.spec;
     item.unit = product.unit;
     item.quantity = item.quantity || 1;
@@ -1281,7 +1294,7 @@ const prepareSubmitData = () => {
       price: item.price,
       priceUnitUsd: item.priceUnitUsd || 0,
       priceTotalUsd: (item.priceUnitUsd || 0) * (item.quantity || 0),
-      batchAllocations: item.batchAllocations || [],
+      // batchAllocations: item.batchAllocations || [],
       remark: item.remark || '',
       bomAllocations: finalBomAllocations
     };
@@ -1739,5 +1752,143 @@ watch(
     flex-direction: column;
     gap: 2px;
   }
+}
+
+/* 产品表格样式优化 */
+:deep(.product-table) {
+  font-size: 14px;
+}
+
+:deep(.product-table .el-table__body) {
+  font-size: 13px;
+}
+
+/* 优化表格行高，确保内容可见 */
+:deep(.product-table .el-table__row) {
+  height: 60px !important;
+}
+
+:deep(.product-table .el-table__row td) {
+  padding: 8px 4px !important;
+  vertical-align: middle;
+}
+
+/* 优化选择器样式 */
+:deep(.product-table .el-select) {
+  width: 100%;
+}
+
+:deep(.product-table .el-select .el-input__inner) {
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 13px;
+  padding: 0 8px;
+}
+
+:deep(.product-table .el-select .el-input__suffix) {
+  display: flex;
+  align-items: center;
+}
+
+/* 优化数字输入框样式 */
+:deep(.product-table .el-input-number) {
+  width: 100%;
+}
+
+:deep(.product-table .el-input-number .el-input__inner) {
+  height: 36px !important;
+  line-height: 36px !important;
+  text-align: center;
+  font-size: 13px;
+  padding: 0 8px;
+}
+
+:deep(.product-table .el-input-number .el-input-number__decrease),
+:deep(.product-table .el-input-number .el-input-number__increase) {
+  width: 24px;
+  height: 18px;
+  line-height: 18px;
+}
+
+/* 确保表格内容不换行，使用省略号 */
+:deep(.product-table .el-table__cell) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 产品选择器下拉菜单优化 */
+:deep(.product-table .el-select-dropdown__item) {
+  height: 36px !important;
+  line-height: 36px !important;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+/* 优化表格固定列样式 */
+:deep(.product-table .el-table__fixed-right) {
+  height: 100% !important;
+}
+
+/* 响应式优化 */
+@media (max-width: 1200px) {
+  :deep(.product-table) {
+    font-size: 13px;
+  }
+  
+  :deep(.product-table .el-table__row) {
+    height: 55px !important;
+  }
+  
+  :deep(.product-table .el-select .el-input__inner) {
+    height: 32px !important;
+    line-height: 32px !important;
+    font-size: 12px;
+  }
+  
+  :deep(.product-table .el-input-number .el-input__inner) {
+    height: 32px !important;
+    line-height: 32px !important;
+    font-size: 12px;
+  }
+}
+
+/* 鼠标悬停时显示完整内容 */
+:deep(.product-table .el-table__cell) {
+  position: relative;
+}
+
+:deep(.product-table .el-table__cell:hover::after) {
+  content: attr(title);
+  position: absolute;
+  left: 0;
+  top: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: normal;
+  z-index: 9999;
+  max-width: 300px;
+  word-break: break-all;
+}
+
+/* 确保操作按钮可见 */
+:deep(.product-table .el-button--link) {
+  padding: 4px;
+  font-size: 12px;
+}
+
+:deep(.product-table .el-button--link .el-icon) {
+  font-size: 14px;
+}
+
+.product-details {
+  margin-top: 8px;
+  padding: 4px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  font-size: 12px;
 }
 </style>

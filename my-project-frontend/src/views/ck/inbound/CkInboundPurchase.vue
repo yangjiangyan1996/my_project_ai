@@ -147,22 +147,29 @@
                     />
                   </el-select>
                   <div v-if="row.productName" class="product-details">
-                    <div class="product-name">{{ row.productName }}</div>
-                    <div class="product-sku">{{ row.sku }}</div>
+                    <div class="product-name">name:{{ row.productName }}</div>
+                    <div class="product-sku">sku:{{ row.sku }}</div>
                   </div>
                 </div>
               </template>
             </el-table-column>
 
             <!-- 规格型号 - 适当增加宽度 -->
-            <el-table-column label="规格型号" min-width="120" show-overflow-tooltip>
+            <el-table-column label="规格" min-width="80" show-overflow-tooltip>
               <template #default="{ row }">
                 <span class="cell-content">{{ row.spec || '-' }}</span>
               </template>
             </el-table-column>
 
+             <!-- 规格型号 - 适当增加宽度 -->
+            <el-table-column label="颜色" min-width="60" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span class="cell-content">{{ row.color || '-' }}</span>
+              </template>
+            </el-table-column>
+
             <!-- 单位 - 保持原样 -->
-            <el-table-column label="单位" width="80" align="center">
+            <el-table-column label="单位" width="60" align="center">
               <template #default="{ row }">
                 <span class="cell-content">{{ row.unit || '-' }}</span>
               </template>
@@ -773,6 +780,7 @@ const handleProductChange = (productId, index) => {
   if (product) {
     const item = formData.items[index];
     item.productName = product.name;
+    item.color = product.color;
     item.sku = product.sku;
     item.spec = product.spec;
     item.unit = product.unitName;

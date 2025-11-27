@@ -30,6 +30,23 @@ public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMappe
     }
 
     @Override
+    public List<OutboundOrder> selectCountsByInboundListPageReq(OutboundListPageReq req) {
+        return baseMapper.selectList(
+                new QueryWrapper<OutboundOrder>()
+                        .eq(req.getWarehouseId()!= null, "warehouse_id", req.getWarehouseId())
+                        .eq(req.getCustomerId()!=null, "customer_id", req.getCustomerId())
+                        .eq(req.getStatus()!=null, "status", req.getStatus())
+                        .eq(req.getOrderType()!=null, "order_type", req.getOrderType())
+                        .gt(req.getStartDate()!=null, "created_at", req.getStartDate())
+                        .lt(req.getEndDate()!=null, "created_at", req.getEndDate())
+                        .like(StringUtils.isNotBlank(req.getOrderNo()), "order_no", req.getOrderNo())
+                        .eq("tenant_id", req.getTenantId())
+                        .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+                        .orderByDesc("created_at")
+        );
+    }
+
+    @Override
     public List<OutboundOrder> selectByOutboundOrderNos(Long tenantId, List<String> outboundOrderNoList) {
         return baseMapper.selectList(
                 new QueryWrapper<OutboundOrder>()

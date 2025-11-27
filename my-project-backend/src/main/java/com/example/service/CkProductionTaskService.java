@@ -26,4 +26,6 @@ public interface CkProductionTaskService extends IService<ProductionTask> {
     List<ProductionTask> selectByOutboundOrderNos(Long tenantId, List<String> outboundNos);
 
     List<ProductionTask> selectByIds(Set<Long> ids, Long tenantId);
+
+    Boolean delectByOutBoundId(Long outBoundId, Long tenantId, Long userId);
 }

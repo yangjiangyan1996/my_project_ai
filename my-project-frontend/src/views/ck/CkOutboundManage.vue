@@ -166,7 +166,7 @@
               </div>
               <div class="stat-content">
                 <div class="stat-value">{{ stats.completed }}</div>
-                <div class="stat-label">已完成</div>
+                <div class="stat-label">已拒绝</div>
               </div>
             </div>
           </el-col>
@@ -644,6 +644,38 @@ const getRoutePathByType = (orderType, id = null, isEdit = false) => {
   return path;
 };
 
+// 新增：加载统计信息的方法
+const loadStats = async () => {
+  try {
+    const params = {
+      page: pagination.current,
+      size: pagination.size,
+      ...filterForm
+    };
+    
+    // 处理日期范围
+    if (filterForm.dateRange && filterForm.dateRange.length === 2) {
+      params.startDate = filterForm.dateRange[0];
+      params.endDate = filterForm.dateRange[1];
+    }
+    
+    const res = await post('/api/auth/outbound/countsOfManagePage', params);
+    if (res) {
+      stats.total = res.totalCount || 0;
+      stats.pending = res.waitApproveCount || 0;
+      stats.approved = res.approvePassCount || 0;
+      stats.completed = res.approveRejectCount || 0;
+    }
+  } catch (error) {
+    console.error('加载统计信息失败:', error);
+    // 失败时重置统计信息
+    stats.total = 0;
+    stats.pending = 0;
+    stats.approved = 0;
+    stats.completed = 0;
+  }
+};
+
 // 加载出库单详情
 const loadOutboundDetail = async (id) => {
   try {
@@ -814,8 +846,7 @@ const loadOutboundList = async () => {
       }));
       pagination.total = res.total || 0;
       
-      // 更新统计信息
-      updateStats();
+    
     } else {
       outboundList.value = [];
       pagination.total = 0;
@@ -849,21 +880,16 @@ const loadCustomerList = async () => {
   }
 };
 
-const updateStats = () => {
-  stats.total = outboundList.value.length;
-  stats.pending = pendingOutbounds.value.length;
-  stats.approved = approvedOutbounds.value.length;
-  stats.completed = completedOutbounds.value.length;
-};
-
 const refreshList = () => {
   pagination.current = 1;
   loadOutboundList();
+  loadStats(); // 新增：刷新统计信息
 };
 
 const handleSearch = () => {
   pagination.current = 1;
   loadOutboundList();
+  loadStats(); // 新增：刷新统计信息
 };
 
 const handleReset = () => {
@@ -877,6 +903,7 @@ const handleReset = () => {
   });
   pagination.current = 1;
   loadOutboundList();
+  loadStats(); // 新增：重置时更新统计信息
 };
 
 const handleExport = () => {
@@ -938,6 +965,7 @@ const handleSubmit = async (outbound) => {
     if (res) {
       ElMessage.success('提交成功');
       refreshList();
+      loadStats(); // 新增：操作成功后更新统计信息
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -965,6 +993,7 @@ const handleDelete = async (outbound) => {
     if (res) {
       ElMessage.success('删除成功');
       refreshList();
+      loadStats(); // 新增：操作成功后更新统计信息
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -988,6 +1017,7 @@ const handleCancel = async (outbound) => {
     if (res) {
       ElMessage.success('取消成功');
       refreshList();
+      loadStats(); // 新增：操作成功后更新统计信息
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -998,6 +1028,8 @@ const handleCancel = async (outbound) => {
 
 const handleComplete = async (outbound) => {
   try {
+    ElMessage.success('功能还待开发');
+    return;
     await ElMessageBox.confirm(
       `确定要完成出库单"${outbound.orderNo}"吗？完成后将更新库存数量。`,
       '完成确认',
@@ -1011,6 +1043,7 @@ const handleComplete = async (outbound) => {
     if (res) {
       ElMessage.success('出库完成');
       refreshList();
+      loadStats(); // 新增：操作成功后更新统计信息
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -1124,6 +1157,7 @@ onMounted(() => {
   loadOutboundList();
   loadWarehouseList();
   loadCustomerList();
+  loadStats(); // 新增：组件挂载时加载统计信息
 });
 </script>
 

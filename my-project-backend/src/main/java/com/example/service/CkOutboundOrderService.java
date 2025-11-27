@@ -21,4 +21,5 @@ public interface CkOutboundOrderService extends IService<OutboundOrder> {
 
     List<OutboundOrder> selectByOutboundOrderNos(Long tenantId, List<String> outboundOrderNoList);
 
+    List<OutboundOrder> selectCountsByInboundListPageReq(OutboundListPageReq req);
 }

@@ -35,6 +35,19 @@ public class CkProductionTaskServiceImpl extends ServiceImpl<CkProductionTaskMap
     }
 
     @Override
+    public Boolean delectByOutBoundId(Long outBoundId, Long tenantId, Long userId) {
+        ProductionTask t = new ProductionTask();
+        t.setIsDeleted(1);
+        t.setModifiedBy(userId);
+        t.setModifiedAt(new Date());
+        return baseMapper.update(t, new QueryWrapper<ProductionTask>()
+                .eq("outbound_order_id", outBoundId)
+                .eq("tenant_id", tenantId)
+                .eq("status", CkInOutboundEnums.ProductionTaskStatus.InProduction.getCode())
+                .eq("is_deleted", 0)) > 0;
+    }
+
+    @Override
     public List<ProductionTask> selectByIds(Set<Long> ids, Long tenantId) {
         return baseMapper.selectList(
                 new QueryWrapper<ProductionTask>()

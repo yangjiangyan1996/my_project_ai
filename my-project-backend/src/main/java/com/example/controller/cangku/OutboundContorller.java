@@ -366,4 +366,30 @@ public class OutboundContorller {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+
+    /**
+     * 入库管理页面展示数量
+     *
+     * @param req
+     * @return
+     */
+    @PostMapping("/countsOfManagePage")
+    public RespBean<OutboundCountOfManagePageResp> countsOfManagePage(@RequestBody OutboundListPageReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            req.setTenantId(tenantId);
+            req.setUserId(user.getId());
+
+            OutboundCountOfManagePageResp result = outboundFacade.countsOfManagePage(req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("OutboundContorller#countsOfManagePage", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("OutboundContorller#countsOfManagePage", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 }

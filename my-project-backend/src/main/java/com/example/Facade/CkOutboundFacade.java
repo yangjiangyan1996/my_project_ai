@@ -753,7 +753,17 @@ public class CkOutboundFacade {
         save.setIsDeleted(1);
         save.setModifiedAt(new Date());
         save.setModifiedBy(req.getUserId());
-        return outboundOrderService.updateById(save);
+        boolean r = outboundOrderService.updateById(save);
+        if (!r) {
+              throw new ValidationException("出库单删除失败");
+        }
+
+        int i = outboundOrderItemService.deleteByOrderId(p.getId(), req.getTenantId(), req.getUserId());
+        if (i <= 0) {
+            throw new ValidationException("出库单明细删除失败");
+        }
+
+        return productionTaskService.delectByOutBoundId(p.getId(), req.getTenantId(), req.getUserId());
     }
 
     public List<OutboundSaleExcelModel> getOutboundSaleExportData(Long tenantId, Long warehouseId) {
@@ -1339,9 +1349,142 @@ public class CkOutboundFacade {
         return resp;
     }
 
+    /**
+     * 校验生产领料单创建/编辑请求参数
+     * @param req 请求参数
+     * @return 错误信息列表，如果为空表示校验通过
+     */
+    public void validateOutboundCreateReq(OutboundCreateReq req) {
+        // 1. 基础信息校验
+        validateBasicInfo(req);
+
+        // 2. 产品明细校验
+        validateItems(req.getItems());
+
+        // 3. 数值范围校验
+        validateNumericalValues(req);
+    }
+
+    /**
+     * 基础信息校验
+     */
+    private void validateBasicInfo(OutboundCreateReq req) {
+        // 订单号校验
+        if (StringUtils.isBlank(req.getOrderNo())) {
+            throw new ValidationException("出库单号不能为空");
+        } else if (req.getOrderNo().length() > 100) {
+            throw new ValidationException("出库单号长度不能超过100个字符");
+        }
+
+        // 订单类型校验
+        if (req.getOrderType() == null) {
+            throw new ValidationException("出库类型不能为空");
+        } else if (req.getOrderType() != CkInOutboundEnums.OutBoundType.ProductionOutbound.getCode()) {
+            throw new ValidationException("生产领料单的订单类型必须为2");
+        }
+
+        // 仓库ID校验
+        if (req.getWarehouseId() == null) {
+            throw new ValidationException("请选择出库仓库");
+        }
+
+        // 预计出库日期校验
+        if (StringUtils.isBlank(req.getExpectedDate())) {
+            throw new ValidationException("请选择预计出库日期");
+        }
+
+        // 关联单号长度校验
+        if (!StringUtils.isBlank(req.getRelatedOrderNo()) && req.getRelatedOrderNo().length() > 100) {
+            throw new ValidationException("关联单号长度不能超过100个字符");
+        }
+
+        // 备注长度校验
+        if (!StringUtils.isBlank(req.getRemark()) && req.getRemark().length() > 200) {
+            throw new ValidationException("备注长度不能超过500个字符");
+        }
+    }
+
+    /**
+     * 产品明细校验
+     */
+    private void validateItems(List<OutboundCreateReq.ProductInfoInner> items) {
+        if (CollectionUtils.isEmpty(items)) {
+            throw new ValidationException("请至少添加一个产品");
+        }
+
+        for (int i = 0; i < items.size(); i++) {
+            OutboundCreateReq.ProductInfoInner item = items.get(i);
+            int itemIndex = i + 1;
+
+            // 产品ID校验
+            if (item.getProductId() == null) {
+                throw new ValidationException("第" + itemIndex + "个产品的产品ID不能为空");
+            }
+
+            // 数量校验
+            if (item.getQuantity() == null) {
+                throw new ValidationException("第" + itemIndex + "个产品的数量不能为空");
+            } else if (item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("第" + itemIndex + "个产品的数量必须大于0");
+            }
+
+            // BOM分配数据校验
+            validateBomAllocations(item.getBomAllocations(), itemIndex);
+        }
+    }
+
+    /**
+     * BOM分配数据校验
+     */
+    private void validateBomAllocations(List<BomAllocationCreateReq> bomAllocations, int itemIndex) {
+        if (CollectionUtils.isEmpty(bomAllocations)) {
+            // BOM分配可以为空，表示没有分配原料
+            return;
+        }
+
+        for (int i = 0; i < bomAllocations.size(); i++) {
+            BomAllocationCreateReq allocation = bomAllocations.get(i);
+            int allocationIndex = i + 1;
+
+            // 组件产品ID校验
+            if (Objects.isNull(allocation.getComponentProductId())) {
+                throw new ValidationException("第" + itemIndex + "个产品的第" + allocationIndex + "个BOM分配的组件产品ID不能为空");
+            }
+
+            // 批次号校验
+            if (StringUtils.isBlank(allocation.getBatchNo())) {
+                throw new ValidationException("第" + itemIndex + "个产品的第" + allocationIndex + "个BOM分配的批次号不能为空");
+            } else if (allocation.getBatchNo().length() > 100) {
+                throw new ValidationException("第" + itemIndex + "个产品的第" + allocationIndex + "个BOM分配的批次号长度不能超过100个字符");
+            }
+
+            // 货架ID校验
+            if (allocation.getShelfId() == null) {
+                throw new ValidationException("第" + itemIndex + "个产品的第" + allocationIndex + "个BOM分配的货架ID不能为空");
+            }
+
+            // 分配数量校验
+            if (allocation.getQuantity() == null) {
+                throw new ValidationException("第" + itemIndex + "个产品的第" + allocationIndex + "个BOM分配的分配数量不能为空");
+            } else if (allocation.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("第" + itemIndex + "个产品的第" + allocationIndex + "个BOM分配的分配数量必须大于0");
+            }
+        }
+    }
+
+    /**
+     * 数值范围校验
+     */
+    private void validateNumericalValues(OutboundCreateReq req) {
+        // 总数量校验
+        if (req.getTotalQuantity() != null && req.getTotalQuantity().compareTo(BigDecimal.ZERO) < 0) {
+            throw new ValidationException("总数量不能为负数");
+        }
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public Boolean createProductionPickingOutBound(OutboundCreateReq req) {
-
+        validateOutboundCreateReq(req);
         // 2. 构建出库单主表实体
         OutboundOrder outboundOrder = buildOutboundOrder(req);
 
@@ -1472,6 +1615,9 @@ public class CkOutboundFacade {
 
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateProductionPickingOutBound( OutboundCreateReq req) {
+        // 1. 基础信息校验
+        validateOutboundCreateReq(req);
+
         // 1. 校验出库单是否存在且状态可更新
         OutboundOrder existingOrder = outboundOrderService.getById(req.getId());
         if (existingOrder == null) {
@@ -1620,5 +1766,24 @@ public class CkOutboundFacade {
         }
 
         return true;
+    }
+
+    public OutboundCountOfManagePageResp countsOfManagePage(OutboundListPageReq req) {
+        List<OutboundOrder> outboundOrders = outboundOrderService.selectCountsByInboundListPageReq(req);
+        if (CollectionUtils.isEmpty(outboundOrders)) {
+            return new OutboundCountOfManagePageResp();
+        }
+        OutboundCountOfManagePageResp r = new OutboundCountOfManagePageResp();
+        r.setTotalCount(outboundOrders.size());
+
+        List<OutboundOrder> inboundOrdersOfWaiting = outboundOrders.stream().filter(v ->  CkInOutboundEnums.InOutBoundStatus.WaitSubmit.getCode().equals(v.getStatus())).collect(Collectors.toList());
+        r.setWaitApproveCount(inboundOrdersOfWaiting.size());
+
+        List<OutboundOrder> appPassList = outboundOrders.stream().filter(v ->  CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode().equals(v.getStatus())).collect(Collectors.toList());
+        r.setApprovePassCount(appPassList.size());
+
+        List<OutboundOrder> appRejectList = outboundOrders.stream().filter(v ->  CkInOutboundEnums.InOutBoundStatus.Reject.getCode().equals(v.getStatus())).collect(Collectors.toList());
+        r.setApproveRejectCount(appRejectList.size());
+        return r;
     }
 }

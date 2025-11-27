@@ -785,6 +785,7 @@ const handleSubmit = async (inbound) => {
     if (res) {
       ElMessage.success('提交成功');
       refreshList();
+      loadStats(); // 新增：组件挂载时加载统计信息
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -816,6 +817,7 @@ const handleDelete = async (inbound) => {
     if (res) {
       ElMessage.success('删除成功');
       refreshList();
+      loadStats(); // 新增：组件挂载时加载统计信息
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -840,6 +842,7 @@ const handleCancel = async (inbound) => {
     if (res) {
       ElMessage.success('取消成功');
       refreshList();
+      loadStats(); // 新增：组件挂载时加载统计信息
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -864,6 +867,7 @@ const handleComplete = async (inbound) => {
     if (res) {
       ElMessage.success('入库完成');
       refreshList();
+      loadStats(); // 新增：组件挂载时加载统计信息
     }
   } catch (error) {
     if (error !== 'cancel') {
