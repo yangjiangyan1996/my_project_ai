@@ -305,37 +305,83 @@
         </div>
       </el-card>
 
-      <!-- 图表和表格区域 -->
-      <el-row :gutter="20" class="chart-section">
-        <el-col :xs="24" :lg="12">
-          <el-card class="chart-card" shadow="never">
-            <template #header>
-              <div class="card-header">
-                <span class="card-title">库存预警监控</span>
-                <div class="chart-actions">
-                  <el-button type="text" @click="refreshLowStockChart">刷新</el-button>
-                  <el-select 
-                    v-model="selectedProduct" 
-                    placeholder="选择产品" 
-                    style="width: 150px; margin-left: 10px;"
-                    @change="handleProductChange"
-                  >
-                    <el-option
-                      v-for="product in productList"
-                      :key="product.id"
-                      :label="product.productName"
-                      :value="product.id"
-                    />
-                  </el-select>
-                </div>
-              </div>
-            </template>
-            <div class="chart-container">
-              <div ref="lowStockChart" style="width: 100%; height: 320px;"></div>
+      <!-- 库存预警监控 - 整行显示 -->
+      <!-- 库存预警监控 - 整行显示 -->
+      <el-card class="low-stock-alert-card" shadow="never">
+        <template #header>
+          <div class="card-header">
+            <div class="card-title-section">
+              <span class="card-title">库存预警监控</span>
+              <span class="card-subtitle">实时监控库存状态，及时预警</span>
             </div>
-          </el-card>
-        </el-col>
-        
+            <div class="chart-actions">
+              <el-button type="primary" link @click="refreshLowStockChart">
+                <el-icon><Refresh /></el-icon>
+                刷新数据
+              </el-button>
+              <el-button type="primary" link @click="exportLowStockData">
+                <el-icon><Download /></el-icon>
+                导出数据
+              </el-button>
+              <el-select 
+                v-model="alertFilter" 
+                placeholder="预警级别" 
+                style="width: 120px; margin-left: 10px;"
+                @change="handleAlertFilterChange"
+              >
+                <el-option label="全部" value="all" />
+                <el-option label="紧急预警" value="urgent" />
+                <el-option label="一般预警" value="warning" />
+                <el-option label="库存正常" value="normal" />
+              </el-select>
+              <el-select 
+                v-model="selectedWarehouse" 
+                placeholder="选择仓库" 
+                style="width: 150px; margin-left: 10px;"
+                @change="handleWarehouseChange"
+              >
+                <el-option
+                  v-for="warehouse in warehouseList"
+                  :key="warehouse.id"
+                  :label="warehouse.name"
+                  :value="warehouse.id"
+                />
+              </el-select>
+            </div>
+          </div>
+        </template>
+        <div class="chart-container-full">
+          <div v-if="loading" class="chart-loading">
+            <el-empty description="加载中..." :image-size="80" />
+          </div>
+          <div v-else-if="inventoryAlerts.length === 0" class="chart-empty">
+            <el-empty description="暂无库存预警数据" :image-size="80" />
+          </div>
+          <!-- <div v-else ref="lowStockChart" style="width: 100%; height: 500px;"></div> -->
+           <div v-show="!loading && inventoryAlerts.length > 0" ref="lowStockChart" style="width: 100%; height: 500px;"></div>
+        </div>
+        <div class="chart-stats">
+          <div class="stat-item">
+            <span class="stat-label">监控产品总数</span>
+            <span class="stat-value">{{ chartStats.totalProducts || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">紧急预警</span>
+            <span class="stat-value urgent">{{ chartStats.urgentAlerts || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">一般预警</span>
+            <span class="stat-value warning">{{ chartStats.warningAlerts || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">库存正常</span>
+            <span class="stat-value normal">{{ chartStats.normalProducts || 0 }}</span>
+          </div>
+        </div>
+      </el-card>
+
+      <!-- 其他图表区域 -->
+      <el-row :gutter="20" class="chart-section">
         <el-col :xs="24" :lg="12">
           <el-card class="chart-card" shadow="never">
             <template #header>
@@ -344,9 +390,23 @@
               </div>
             </template>
             <div class="chart-container">
-              <!-- 这里可以接入 ECharts 图表 -->
               <div class="chart-placeholder">
                 <el-empty description="出入库统计图表" :image-size="100" />
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+        
+        <el-col :xs="24" :lg="12">
+          <el-card class="chart-card" shadow="never">
+            <template #header>
+              <div class="card-header">
+                <span class="card-title">库存周转分析</span>
+              </div>
+            </template>
+            <div class="chart-container">
+              <div class="chart-placeholder">
+                <el-empty description="库存周转分析图表" :image-size="100" />
               </div>
             </div>
           </el-card>
@@ -408,8 +468,8 @@ import { logout } from '@/net';
 import * as echarts from 'echarts';
 import { 
   Bell, CircleCheck, ArrowDown, User, Setting, SwitchButton,
-  Box, OfficeBuilding,   TrendCharts, Clock, Warning,
-  Plus, Minus, Refresh, DocumentChecked, Finished
+  Box, OfficeBuilding, TrendCharts, Clock, Warning,
+  Plus, Minus, Refresh, DocumentChecked, Finished, Download
 } from '@element-plus/icons-vue';
 
 // 导入组件
@@ -429,8 +489,6 @@ import CkUser from '@/views/ck/CkUser.vue';
 import CkSkuManage from '@/views/ck/CkSkuManage.vue';
 import CkCkUnitManage from '@/views/ck/CkUnitManage.vue';
 
-
-
 const router = useRouter();
 
 // 响应式数据
@@ -440,8 +498,21 @@ const activeMessageTab = ref('approval');
 const unreadCount = ref(0);
 const displayMode = ref('dashboard');
 const lowStockChart = ref(null);
-const selectedProduct = ref('');
-const productList = ref([]);
+const alertFilter = ref('all');
+const selectedWarehouse = ref('');
+const warehouseList = ref([]);
+const loading = ref(false);
+
+// 库存预警数据
+const inventoryAlerts = ref([]);
+
+// 图表统计信息
+const chartStats = ref({
+  totalProducts: 0,
+  urgentAlerts: 0,
+  warningAlerts: 0,
+  normalProducts: 0
+});
 
 // 用户信息
 const userInfo = ref({
@@ -505,73 +576,189 @@ const handleQuickAction = (action) => {
   }
 };
 
+
+// 加载库存预警数据
+const loadInventoryAlerts = async () => {
+  try {
+    loading.value = true;
+    const req = {
+      warehouseId: selectedWarehouse.value || undefined,
+      page: 1,
+      size: 100
+    };
+    
+    const res = await post('/api/auth/inventory/alerts', req);
+    console.log('库存预警数据:', res);
+    if (res && Array.isArray(res)) {
+      inventoryAlerts.value = res;
+      
+      // 如果数据不为空，初始化图表
+      if (inventoryAlerts.value.length > 0) {
+        console.log('初始化图表数据:', inventoryAlerts.value);
+        // 等待DOM更新后初始化图表
+        await nextTick();
+        initLowStockChart();
+      }
+      
+      // 加载统计信息
+      loadAlertStats();
+    } else {
+      console.warn('库存预警数据格式不正确:', res);
+      inventoryAlerts.value = [];
+    }
+  } catch (error) {
+    console.error('加载库存预警数据失败:', error);
+    inventoryAlerts.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 加载预警统计信息
+const loadAlertStats = async () => {
+  try {
+    const res = await get('/api/auth/inventory/alertStats');
+    if (res && res.success) {
+      chartStats.value = res.data;
+      overviewData.value.lowStockItems = (res.data.urgentAlerts || 0) + (res.data.warningAlerts || 0);
+    }
+  } catch (error) {
+    console.error('加载预警统计信息失败:', error);
+  }
+};
+
+// 从本地数据计算统计信息
+const calculateStatsFromLocalData = () => {
+  if (!inventoryAlerts.value.length) return;
+  
+  chartStats.value.totalProducts = inventoryAlerts.value.length;
+  chartStats.value.urgentAlerts = inventoryAlerts.value.filter(item => item.alertLevel === 'urgent').length;
+  chartStats.value.warningAlerts = inventoryAlerts.value.filter(item => item.alertLevel === 'warning').length;
+  chartStats.value.normalProducts = inventoryAlerts.value.filter(item => item.alertLevel === 'normal').length;
+  
+  overviewData.value.lowStockItems = chartStats.value.urgentAlerts + chartStats.value.warningAlerts;
+};
+
+// 降级方案：使用模拟数据
+const useMockData = () => {
+  inventoryAlerts.value = [
+    { productId: 1, productName: 'iPhone 15 Pro Max', currentStock: 15, warningThreshold: 30, urgentThreshold: 10, alertLevel: 'warning' },
+    { productId: 2, productName: 'MacBook Air M3', currentStock: 8, warningThreshold: 20, urgentThreshold: 5, alertLevel: 'urgent' },
+    { productId: 3, productName: 'AirPods Pro 2', currentStock: 45, warningThreshold: 50, urgentThreshold: 20, alertLevel: 'normal' },
+    { productId: 4, productName: 'iPad Pro 12.9', currentStock: 12, warningThreshold: 25, urgentThreshold: 8, alertLevel: 'warning' },
+    { productId: 5, productName: 'Apple Watch Series 9', currentStock: 28, warningThreshold: 30, urgentThreshold: 10, alertLevel: 'normal' },
+    { productId: 6, productName: 'iPhone 14', currentStock: 5, warningThreshold: 15, urgentThreshold: 3, alertLevel: 'urgent' }
+  ];
+  initLowStockChart();
+  calculateStatsFromLocalData();
+};
+
 // 库存预警图表相关方法
 const initLowStockChart = () => {
-  if (!lowStockChart.value) return;
+  // 检查必要的条件
+  if (!lowStockChart.value) {
+    console.warn('图表容器未找到');
+    return;
+  }
+  
+  if (!inventoryAlerts.value || inventoryAlerts.value.length === 0) {
+    console.warn('没有库存预警数据可显示');
+    return;
+  }
+
+  // 销毁之前的图表实例
+  if (chartInstance) {
+    chartInstance.dispose();
+    chartInstance = null;
+  }
   
   chartInstance = echarts.init(lowStockChart.value);
   
-  // 模拟数据
-  const dates = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月'];
-  const stockData = [45, 38, 52, 48, 25, 18, 32, 28]; // 当前库存数据
-  const minStockThreshold = 30; // 最低库存阈值
-  
+    
+  const productNames = inventoryAlerts.value.map(item => item.productName);
+  const currentStocks = inventoryAlerts.value.map(item => Number(item.currentStock));
+  const warningThresholds = inventoryAlerts.value.map(item => Number(item.warningThreshold));
+  const urgentThresholds = inventoryAlerts.value.map(item => Number(item.urgentThreshold));
+    
   const option = {
     title: {
-      text: '库存趋势与预警',
+      text: '库存预警监控',
       left: 'center',
       textStyle: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold'
       }
     },
     tooltip: {
       trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      },
       formatter: function(params) {
-        let result = `${params[0].axisValue}<br/>`;
+        const productIndex = params[0].dataIndex;
+        const product = inventoryAlerts.value[productIndex];
+        let result = `<div style="font-weight: bold; margin-bottom: 8px;">${product.productName}</div>`;
+        
         params.forEach(param => {
           const value = param.value;
           let status = '';
           let color = '#333';
+          let icon = '';
           
           if (param.seriesName === '当前库存') {
-            if (value < minStockThreshold) {
-              status = '⚠️ 低于安全库存';
+            if (value <= product.urgentThreshold) {
+              status = '🔴 紧急缺货';
               color = '#F56C6C';
-            } else if (value < minStockThreshold * 1.5) {
-              status = '⚠️ 接近安全库存';
+              icon = '🔴';
+            } else if (value <= product.warningThreshold) {
+              status = '🟡 库存预警';
               color = '#E6A23C';
+              icon = '🟡';
             } else {
-              status = '✅ 库存充足';
+              status = '🟢 库存正常';
               color = '#67C23A';
+              icon = '🟢';
             }
           }
           
-          result += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${param.color}"></span>`;
-          result += `${param.seriesName}: <span style="color:${color};font-weight:bold">${value}</span>`;
-          if (param.seriesName === '当前库存') {
-            result += ` <span style="color:${color}">${status}</span>`;
-          }
-          result += '<br/>';
+          result += `<div style="display: flex; align-items: center; margin: 4px 0;">
+            <span style="display:inline-block;margin-right:8px;border-radius:10px;width:12px;height:12px;background-color:${param.color}"></span>
+            <span style="flex: 1;">${param.seriesName}:</span>
+            <span style="color:${color};font-weight:bold; margin-right: 8px;">${value}</span>
+            ${param.seriesName === '当前库存' ? `<span style="color:${color}">${icon} ${status}</span>` : ''}
+          </div>`;
         });
+        
+        result += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
+          <div style="color:#E6A23C">⚠️ 预警库存: ${product.warningThreshold}</div>
+          <div style="color:#F56C6C">🚨 紧急库存: ${product.urgentThreshold}</div>
+        </div>`;
         return result;
       }
     },
     legend: {
-      data: ['当前库存', '安全库存线', '预警区域'],
-      top: 30
+      data: ['当前库存', '预警库存线', '紧急库存线'],
+      top: 40,
+      textStyle: {
+        fontSize: 12
+      }
     },
     grid: {
       left: '3%',
       right: '4%',
-      bottom: '3%',
-      top: '15%',
+      bottom: '10%',
+      top: '20%',
       containLabel: true
     },
     xAxis: {
       type: 'category',
-      boundaryGap: false,
-      data: dates,
+      data: productNames,
+      axisLabel: {
+        interval: 0,
+        rotate: 45,
+        fontSize: 11,
+        margin: 10
+      },
       axisLine: {
         lineStyle: {
           color: '#999'
@@ -597,43 +784,48 @@ const initLowStockChart = () => {
     series: [
       {
         name: '当前库存',
-        type: 'line',
-        data: stockData,
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 8,
-        lineStyle: {
-          width: 3,
-          color: '#5470C6'
-        },
+        type: 'bar',
+        data: currentStocks,
+        barWidth: '40%',
         itemStyle: {
-          color: '#5470C6',
-          borderWidth: 2,
-          borderColor: '#fff'
-        },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(84, 112, 198, 0.3)' },
-            { offset: 1, color: 'rgba(84, 112, 198, 0.1)' }
-          ])
-        },
-        markPoint: {
-          data: [
-            { type: 'max', name: '最大值' },
-            { type: 'min', name: '最小值' }
-          ],
-          label: {
-            color: '#fff',
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            borderRadius: 4,
-            padding: [4, 8]
+          color: function(params) {
+            const product = inventoryAlerts.value[params.dataIndex];
+            const currentStock = Number(product.currentStock);
+            const urgentThreshold = Number(product.urgentThreshold);
+            const warningThreshold = Number(product.warningThreshold);
+            
+            if (currentStock <= urgentThreshold) {
+              return '#F56C6C'; // 红色：紧急缺货
+            } else if (currentStock <= warningThreshold) {
+              return '#E6A23C'; // 黄色：库存预警
+            } else {
+              return '#67C23A'; // 绿色：库存正常
+            }
           }
+        },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: function(params) {
+            const product = inventoryAlerts.value[params.dataIndex];
+            const currentStock = Number(product.currentStock);
+            const urgentThreshold = Number(product.urgentThreshold);
+            const warningThreshold = Number(product.warningThreshold);
+            
+            if (currentStock <= urgentThreshold) {
+              return '🚨';
+            } else if (currentStock <= warningThreshold) {
+              return '⚠️';
+            }
+            return params.value;
+          },
+          fontSize: 14
         }
       },
       {
-        name: '安全库存线',
+        name: '预警库存线',
         type: 'line',
-        data: Array(dates.length).fill(minStockThreshold),
+        data: warningThresholds,
         lineStyle: {
           type: 'dashed',
           width: 2,
@@ -641,52 +833,48 @@ const initLowStockChart = () => {
         },
         symbol: 'none',
         markLine: {
-          data: [
-            {
-              yAxis: minStockThreshold,
-              name: '安全库存',
-              lineStyle: {
-                type: 'dashed',
-                color: '#E6A23C'
-              },
-              label: {
-                position: 'end',
-                formatter: '安全库存: {c}'
-              }
-            }
-          ]
+          silent: true,
+          lineStyle: {
+            type: 'dashed',
+            color: '#E6A23C'
+          },
+          label: {
+            formatter: '预警线'
+          }
         }
       },
       {
-        name: '预警区域',
+        name: '紧急库存线',
         type: 'line',
-        data: Array(dates.length).fill(0),
+        data: urgentThresholds,
         lineStyle: {
-          width: 0
+          type: 'dashed',
+          width: 2,
+          color: '#F56C6C'
         },
-        stack: '预警',
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(245, 108, 108, 0.3)' },
-            { offset: 1, color: 'rgba(245, 108, 108, 0.1)' }
-          ])
-        },
-        markArea: {
-          itemStyle: {
-            color: 'rgba(245, 108, 108, 0.1)'
+        symbol: 'none',
+        markLine: {
+          silent: true,
+          lineStyle: {
+            type: 'dashed',
+            color: '#F56C6C'
           },
-          data: [
-            [
-              { yAxis: 0 },
-              { yAxis: minStockThreshold }
-            ]
-          ]
+          label: {
+            formatter: '紧急线'
+          }
         }
       }
     ],
     dataZoom: [
       {
         type: 'inside',
+        start: 0,
+        end: 100
+      },
+      {
+        type: 'slider',
+        show: true,
+        bottom: 20,
         start: 0,
         end: 100
       }
@@ -701,58 +889,42 @@ const initLowStockChart = () => {
   });
 };
 
-const refreshLowStockChart = () => {
-  if (chartInstance) {
-    chartInstance.dispose();
-  }
-  nextTick(() => {
-    initLowStockChart();
-  });
-  ElMessage.success('图表数据已刷新');
+const refreshLowStockChart = async () => {
+  await loadInventoryAlerts();
+  ElMessage.success('库存预警数据已刷新');
 };
 
-const handleProductChange = (productId) => {
-  // 当选择不同产品时，重新加载该产品的库存数据
-  loadProductStockData(productId);
+const exportLowStockData = () => {
+  ElMessage.info('导出库存预警数据功能开发中...');
 };
 
-const loadProductStockData = async (productId) => {
+const handleAlertFilterChange = (filter) => {
+  // 这里可以根据筛选条件重新加载数据或过滤本地数据
+  ElMessage.info(`已筛选预警级别: ${filter}`);
+  // 实际项目中可以调用接口重新加载数据
+  // loadInventoryAlerts();
+};
+
+const handleWarehouseChange = (warehouseId) => {
+  ElMessage.info(`已选择仓库: ${warehouseId}`);
+  // 重新加载该仓库的库存预警数据
+  loadInventoryAlerts();
+};
+
+const loadWarehouseList = async () => {
   try {
-    // 这里调用API获取具体产品的库存历史数据
-    // const res = await get(`/api/auth/product/stockHistory?productId=${productId}`);
-    // 暂时使用模拟数据
-    ElMessage.info(`已切换到产品 ${productId} 的库存数据`);
-  } catch (error) {
-    console.error('加载产品库存数据失败:', error);
-  }
-};
-
-const loadProductList = async () => {
-  try {
-    // 调用接口获取产品列表
-    // const res = await get('/api/auth/product/list?page=1&size=100');
-    // 模拟数据
-    productList.value = [
-      { id: 1, productName: 'iPhone 15 Pro Max' },
-      { id: 2, productName: 'MacBook Air M3' },
-      { id: 3, productName: 'AirPods Pro 2' },
-      { id: 4, productName: 'iPad Pro 12.9' },
-      { id: 5, productName: 'Apple Watch Series 9' }
+    // 模拟仓库数据，实际项目中应该调用仓库列表接口
+    warehouseList.value = [
+      { id: 1, name: '北京总仓' },
+      { id: 2, name: '上海分仓' },
+      { id: 3, name: '广州分仓' },
+      { id: 4, name: '成都分仓' }
     ];
-    if (productList.value.length > 0) {
-      selectedProduct.value = productList.value[0].id;
+    if (warehouseList.value.length > 0) {
+      selectedWarehouse.value = warehouseList.value[0].id;
     }
   } catch (error) {
-    console.error('加载产品列表失败:', error);
-    // 使用模拟数据
-    productList.value = [
-      { id: 1, productName: 'iPhone 15 Pro Max' },
-      { id: 2, productName: 'MacBook Air M3' },
-      { id: 3, productName: 'AirPods Pro 2' }
-    ];
-    if (productList.value.length > 0) {
-      selectedProduct.value = productList.value[0].id;
-    }
+    console.error('加载仓库列表失败:', error);
   }
 };
 
@@ -866,7 +1038,7 @@ const loadOverviewData = async () => {
     todayInbound: 24,
     todayOutbound: 18,
     pendingApprovals: 5,
-    lowStockItems: 3
+    lowStockItems: 12
   };
 };
 
@@ -918,11 +1090,11 @@ onMounted(() => {
   loadOverviewData();
   loadRecentActions();
   fetchUnreadCount();
-  loadProductList();
+  loadWarehouseList();
   
-  // 初始化图表
+  // 初始化图表 - 等待DOM渲染完成后加载数据
   nextTick(() => {
-    initLowStockChart();
+    loadInventoryAlerts();
   });
 });
 
@@ -937,6 +1109,15 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 原有的样式保持不变，只添加新的加载样式 */
+.chart-loading {
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 其他样式保持不变... */
 .dashboard-container {
   height: 100vh;
   background-color: #f5f7fa;
@@ -1106,6 +1287,83 @@ onUnmounted(() => {
   font-size: 24px;
 }
 
+/* 库存预警卡片样式 */
+.low-stock-alert-card {
+  margin-bottom: 20px;
+  border-radius: 12px;
+  border: 1px solid #e6ebf5;
+}
+
+.low-stock-alert-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e6ebf5;
+}
+
+.card-title-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-title-section .card-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.card-title-section .card-subtitle {
+  font-size: 14px;
+  color: #909399;
+}
+
+.chart-container-full {
+  height: 500px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 8px;
+  margin: 0 20px;
+}
+
+.chart-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 16px 20px;
+  background-color: #f8fafc;
+  border-top: 1px solid #e6ebf5;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.stat-value.urgent {
+  color: #F56C6C;
+}
+
+.stat-value.warning {
+  color: #E6A23C;
+}
+
+.stat-value.normal {
+  color: #67C23A;
+}
+
 .chart-section {
   margin-bottom: 20px;
 }
@@ -1264,5 +1522,29 @@ onUnmounted(() => {
     flex-direction: column;
     gap: 8px;
   }
+  
+  .low-stock-alert-card .card-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .chart-container-full {
+    height: 400px;
+    margin: 0 10px;
+    padding: 10px;
+  }
+  
+  .chart-stats {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+}
+
+.chart-loading,
+.chart-empty {
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

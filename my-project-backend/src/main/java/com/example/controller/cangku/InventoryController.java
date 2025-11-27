@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CkInventoryFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
+import com.example.entity.cangku.req.InventoryAlertReq;
 import com.example.entity.cangku.req.InventoryListPageReq;
 import com.example.entity.cangku.req.InventoryTransactionListPageReq;
 import com.example.entity.cangku.req.OutBoundBatchAllocationCheckRequest;
@@ -171,5 +172,54 @@ public class InventoryController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+
+    /**
+     * 获取库存预警数据
+     */
+    @PostMapping("/alerts")
+    public RespBean<List<InventoryAlertResp>> getInventoryAlerts(@RequestBody InventoryAlertReq req) {
+        try {
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            req.setTenantId(tenantId);
+            List<InventoryAlertResp> result = inventoryFacade.getInventoryAlerts(req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("InventoryController#getInventoryAlerts", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#getInventoryAlerts", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 获取库存预警统计
+     */
+    @GetMapping("/alertStats")
+    public RespBean<InventoryAlertStatsResp> getAlertStats() {
+        try {
+            InventoryAlertReq req = new InventoryAlertReq();
+
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            req.setTenantId(tenantId);
+            List<InventoryAlertResp> result = inventoryFacade.getInventoryAlerts(req);
+
+            InventoryAlertStatsResp resp = new InventoryAlertStatsResp();
+            resp.setTotalProducts(result.size());
+            resp.setUrgentAlerts(result.stream().filter(item -> "urgent".equals(item.getAlertLevel())).count());
+            resp.setNormalProducts(result.stream().filter(item -> "normal".equals(item.getAlertLevel())).count());
+            resp.setWarningAlerts(result.stream().filter(item -> "warning".equals(item.getAlertLevel())).count());
+
+            return RespBean.success(resp);
+        } catch (ValidationException e) {
+            log.error("InventoryController#getInventoryAlerts", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#getInventoryAlerts", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
 
 }

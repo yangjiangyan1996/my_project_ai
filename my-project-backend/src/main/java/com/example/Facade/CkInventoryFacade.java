@@ -3,6 +3,7 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.dto.*;
+import com.example.entity.cangku.req.InventoryAlertReq;
 import com.example.entity.cangku.req.InventoryListPageReq;
 import com.example.entity.cangku.req.InventoryTransactionListPageReq;
 import com.example.entity.cangku.req.OutBoundBatchAllocationCheckRequest;
@@ -96,7 +97,7 @@ public class CkInventoryFacade {
             }
             if (!CollectionUtils.isEmpty(p)) {
                 ProductCategory category = productCategoryService.selectById(req.getTenantId(), req.getCategoryId());
-                List<Long> productIdsOfCategory= p.stream().filter(v -> v.getCategoryCode().equals(category.getCategoryCode())).map(v -> v.getId()).collect(Collectors.toList());
+                List<Long> productIdsOfCategory = p.stream().filter(v -> v.getCategoryCode().equals(category.getCategoryCode())).map(v -> v.getId()).collect(Collectors.toList());
                 req.setProductIdsOfCategoryId(productIdsOfCategory);
             }
         }
@@ -919,7 +920,6 @@ public class CkInventoryFacade {
 //            }
 //        }
 //    }
-
     public void sortBatchAllocations(OutBoundBatchAllocationCheckRequest request,
                                      List<OutBoundBatchAllocationCheckRequest.BomAllocationDTO> batchAllocations) {
 
@@ -943,7 +943,7 @@ public class CkInventoryFacade {
                 (bomAlloc.getShelfId() != null && bomAlloc.getShelfId().equals(request.getCurrentShelfId()));
     }
 
-//    新的
+    //    新的
     public OutBoundBatchAllocationCheckResponse checkBatchAllocation(OutBoundBatchAllocationCheckRequest request) {
         OutBoundBatchAllocationCheckResponse response = new OutBoundBatchAllocationCheckResponse();
 
@@ -1334,4 +1334,59 @@ public class CkInventoryFacade {
     }
 
 
+    public List<InventoryAlertResp> getInventoryAlerts(InventoryAlertReq req) {
+        List<Product> products = productService.selectByTenantId(req.getTenantId());
+
+        Map<Long, BigDecimal> product2InventoryQuantity = new HashMap<>();
+        if(req.getWarehouseId() == null) {
+            List<Inventory> inventories = inventoryService.selectByTenantId(req.getTenantId());
+            product2InventoryQuantity = inventories.stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getQuantity()));
+        } else {
+            List<InventoryWarehouse> inventoryWarehouses = inventoryWarehouseService.selectByWarehourseId(req.getWarehouseId(), req.getTenantId());
+            product2InventoryQuantity = inventoryWarehouses.stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getQuantity()));
+        }
+
+        Map<Long, Warehouse> warehouseId2WarehouseMap = new HashMap<>();
+        List<Warehouse> warehouses = wareHouseService.selectByTenantId(req.getTenantId());
+        if (!CollectionUtils.isEmpty(warehouses)) {
+            warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
+        }
+
+        List<InventoryAlertResp> inventoryAlerts = new ArrayList<>();
+
+        for (Product product : products) {
+            Long minStock = product.getMinStock();
+            BigDecimal inventoryQuantity = product2InventoryQuantity.getOrDefault(product.getId(), BigDecimal.ZERO);
+            if (inventoryQuantity == null || inventoryQuantity.compareTo(new BigDecimal(minStock)) <= 0) {
+                InventoryAlertResp r = new InventoryAlertResp();
+                r.setProductId(product.getId());
+                r.setProductName(product.getName());
+                r.setSku(product.getSku());
+                r.setWarehouseId(req.getWarehouseId());
+                r.setWarehouseName(warehouseId2WarehouseMap.getOrDefault(req.getWarehouseId(), new Warehouse()).getName());
+                r.setCurrentStock(inventoryQuantity);
+                r.setWarningThreshold(product.getMinStock() == null ? BigDecimal.ZERO : new BigDecimal(product.getMinStock()));
+                r.setUrgentThreshold(product.getMinStock() == null ? BigDecimal.ZERO : new BigDecimal(product.getMinStock()).divide(new BigDecimal(2), RoundingMode.HALF_UP));
+                String level = "";
+                Integer levelSort = 2;
+                if (r.getCurrentStock().compareTo(r.getWarningThreshold()) > 0) {
+                    level = "normal";
+                    levelSort = 2;
+                } else if (r.getCurrentStock().compareTo(r.getUrgentThreshold()) > 0) {
+                    level = "warning";
+                    levelSort = 1;
+                } else {
+                    level = "urgent";
+                    levelSort = 0;
+                }
+                r.setAlertLevel(level);
+                r.setAlertLevelSort(levelSort);
+                //r.setLastUpdateTime(DateUtil.formatDateTime(inventory.getModifiedAt()));
+                inventoryAlerts.add(r);
+            }
+        }
+
+        inventoryAlerts.sort(Comparator.comparingInt(InventoryAlertResp::getAlertLevelSort).reversed());
+        return inventoryAlerts;
+    }
 }

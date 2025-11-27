@@ -51,7 +51,7 @@
               <el-option
                 v-for="category in categoryList"
                 :key="category.id"
-                :label="category.name"
+                :label="category.categoryName"
                 :value="category.id"
               />
             </el-select>
