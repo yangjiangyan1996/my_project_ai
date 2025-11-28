@@ -1516,7 +1516,7 @@ public class CKProductFacade {
                 .filter(v-> !finalUnitName2UnitMap1.containsKey(v.getUnitName()))
                 .map(v -> v.getUnitName()).distinct().collect(Collectors.toList());
 
-        List<Unit> unitCreateList = unitNameNeedCreate.stream().map(v -> {
+        List<Unit> unitCreateList = unitNameNeedCreate.stream().filter(v -> !StringUtils.isBlank(v)).map(v -> {
             Unit unit = new Unit();
             unit.setTenantId(tenantId);
             unit.setUnitCode(ChineseUtils.chineseToPinyin(v));

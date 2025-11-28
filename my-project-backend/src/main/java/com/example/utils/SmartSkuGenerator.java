@@ -1,6 +1,7 @@
 package com.example.utils;
 
 import com.example.constants.CkCommonConstant;
+import jakarta.validation.ValidationException;
 import org.apache.commons.lang3.StringUtils;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -26,7 +27,7 @@ public class SmartSkuGenerator {
      */
     public static String generateSmartSku(String productName, String color, String spec) {
         if (StringUtils.isBlank(productName)) {
-            throw new IllegalArgumentException("产品名称不能为空");
+            throw new ValidationException("生产sku时产品名称不能为空");
         }
 
         // 1. 提取产品关键词
