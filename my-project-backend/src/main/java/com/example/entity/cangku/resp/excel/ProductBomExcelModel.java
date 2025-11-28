@@ -28,13 +28,15 @@ public class ProductBomExcelModel {
     @ExcelProperty("规格")
     private String spec;
 
+    //其他数量（比如有的东西是几米的，一次用几个，目前没有逻辑相关）
+    @ExcelProperty("数量")
+    private String otherQuantity;
+
     //颜色
     @ExcelProperty("颜色")
     private String color;
 
-    //其他数量（比如有的东西是几米的，一次用几个，目前没有逻辑相关）
-    @ExcelProperty("数量")
-    private String otherQuantity;
+
 
     //生产一个成品所需的原料净用量数量（目前只存储，无逻辑）
     @ExcelProperty("净用量")
