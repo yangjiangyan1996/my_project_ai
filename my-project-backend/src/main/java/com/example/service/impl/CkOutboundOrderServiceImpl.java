@@ -41,12 +41,22 @@ public class CkOutboundOrderServiceImpl extends ServiceImpl<CkOutboundOrderMappe
         );
     }
 
+/**
+ * 查询指定租户在指定日期之后的出库订单数量
+ * @param tenantId 租户ID，用于区分不同租户的数据
+ * @param date 查询的起始日期，将查询大于此日期的出库订单
+ * @return 返回符合条件的出库订单数量
+ */
     @Override
     public Long selectCountsOfOutboundOrders(Long tenantId, Date date) {
+    // 使用QueryWrapper构建查询条件，查询出库订单的数量
         return baseMapper.selectCount(
                 new QueryWrapper<OutboundOrder>()
+                    // 添加租户ID条件，确保查询的是指定租户的数据
                         .eq("tenant_id", tenantId)
+                    // 添加未删除条件，只查询未被标记为已删除的记录
                         .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+                    // 添加创建时间条件，查询大于指定日期的记录
                         .gt("created_at", date)
         );
     }

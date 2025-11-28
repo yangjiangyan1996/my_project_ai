@@ -1537,16 +1537,18 @@ public class CKProductFacade {
 
 
         //先保存不存在的原料
-        List<Product> products = productService.listWareHouseEnable(tenantId);
-        Map<String, Product>  productNameSpecColorExist2InfoMap = products.stream().collect(Collectors.toMap(v -> buildProductKey(v.getName(), v.getSpec(), v.getColor()), v -> v));
-        if (!CollectionUtils.isEmpty( products)) {
-            productNameSpecColorExist2InfoMap = products.stream().collect(Collectors.toMap(v -> buildProductKey(v.getName(), v.getSpec(), v.getColor()), v -> v));
-        }
+        Map<String, Product>  productNameSpecColorExist2InfoMap = getProductNameSpecColorExist2InfoMap(tenantId);
         ProductCategory finalCommonBom = commonBom;
         Map<String, Unit> finalUnitName2UnitMap = unitName2UnitMap;
         List< Product> pbomList = new ArrayList<>();
+
+        //去重
+        Set<String> duplicateProductNameSpecColor = new HashSet<>();
         for (ProductBomExcelImportModel v : importDataList) {
             if (productNameSpecColorExist2InfoMap.containsKey(buildProductKey(v.getName(), v.getSpec(), v.getColor()))) {
+                continue;
+            }
+            if (!duplicateProductNameSpecColor.add(buildProductKey(v.getName(), v.getSpec(), v.getColor()))){
                 continue;
             }
             Product pBom = new Product();
@@ -1568,6 +1570,7 @@ public class CKProductFacade {
             pBom.setModifiedAt(new Date());
             pBom.setModifiedBy(userId);
             pbomList.add(pBom);
+
         }
         productService.saveBatch(pbomList);
 
@@ -1619,6 +1622,15 @@ public class CKProductFacade {
         }).collect(Collectors.toList());
         
         return productBomDetailService.saveBatch(collect);
+    }
+
+    private Map<String, Product> getProductNameSpecColorExist2InfoMap (Long tenantId){
+        List<Product> products = productService.listWareHouseEnable(tenantId);
+        Map<String, Product>  productNameSpecColorExist2InfoMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty( products)) {
+            productNameSpecColorExist2InfoMap = products.stream().collect(Collectors.toMap(v -> buildProductKey(v.getName(), v.getSpec(), v.getColor()), v -> v));
+        }
+        return productNameSpecColorExist2InfoMap;
     }
 
     public BomListOfProductResp bomDetailWholeInfo(Long productId, UserInfo user) {
@@ -1739,12 +1751,17 @@ public class CKProductFacade {
             }
         }
 
+        //过滤重复的
+        Map<String, Product> productNameSpecColorExist2InfoMap = getProductNameSpecColorExist2InfoMap(tenantId);
 
         Set<String> duplicateSkuSet = new HashSet<>();
         Set<String> duplicateNameSpecColorSet = new HashSet<>();
         Map<String, ProductCategory> finalCategoryName2CategoryMap = categoryName2CategoryMap;
         Map<String, Unit> finalUnitName2UnitMap = unitName2UnitMap;
         List<Product> saveList = importDataList.stream().map(v -> {
+            if (productNameSpecColorExist2InfoMap.containsKey(buildProductKey(v.getName(), v.getSpec(), v.getColor()))) {
+                return null;
+            }
             if(StringUtils.isBlank(v.getSku())) {
                 throw new ValidationException("SKU不能为空:" + v.getName());
             }
@@ -1780,7 +1797,7 @@ public class CKProductFacade {
             r.setOutUnitLength(StringUtils.isNotBlank(v.getOutUnitLength()) ? new BigDecimal(v.getOutUnitLength()) : BigDecimal.ZERO);
             r.setOutUnitWidth(StringUtils.isNotBlank(v.getOutUnitWidth()) ? new BigDecimal(v.getOutUnitWidth()) : BigDecimal.ZERO);
             return r;
-        }).collect(Collectors.toList());
+        }).filter(Objects::nonNull).collect(Collectors.toList());
 
         return productService.saveBatch(saveList);
     }
