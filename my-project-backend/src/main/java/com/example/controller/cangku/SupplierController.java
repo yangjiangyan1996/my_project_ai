@@ -58,7 +58,7 @@ public class SupplierController {
             req.setTenantId(tenantId);
             req.setUserId(user.getId());
 
-            Page<SupplierPageListResp> result = supplierFacade.pageList(Page.of(req.getPage() - 1, req.getSize()), req);
+            Page<SupplierPageListResp> result = supplierFacade.pageList(Page.of(req.getPage() , req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("SupplierController#pageList,req:{}", e);

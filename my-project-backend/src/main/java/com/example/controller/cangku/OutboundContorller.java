@@ -50,7 +50,7 @@ public class OutboundContorller {
             req.setTenantId(tenantId);
             req.setUserId(user.getId());
 
-            Page<OutboundListPageResp> result = outboundFacade.pageList(Page.of(req.getPage() - 1, req.getSize()), req);
+            Page<OutboundListPageResp> result = outboundFacade.pageList(Page.of(req.getPage(), req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("OutboundContorller#pageList,req:{}", e);

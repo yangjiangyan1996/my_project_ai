@@ -111,7 +111,7 @@ public class ProductController {
             req.setTenantId(tenantId);
             req.setUserId(user.getId());
 
-            Page<ProductPageListResp> result = CKProductFacade.pageList(Page.of(req.getPage() - 1, req.getSize()), req);
+            Page<ProductPageListResp> result = CKProductFacade.pageList(Page.of(req.getPage() , req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ProductController#pageList,req:{}", e);

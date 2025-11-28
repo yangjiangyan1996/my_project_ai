@@ -149,7 +149,7 @@ public class InboundController {
             req.setTenantId(tenantId);
             req.setUserId(user.getId());
 
-            Page<InboundListPageResp> result = ckInboundFacade.pageList(Page.of(req.getPage() - 1, req.getSize()), req);
+            Page<InboundListPageResp> result = ckInboundFacade.pageList(Page.of(req.getPage(), req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("InboundController#pageList,req:{}", e);

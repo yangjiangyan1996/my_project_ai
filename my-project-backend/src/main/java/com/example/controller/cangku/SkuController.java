@@ -45,7 +45,7 @@ public class SkuController {
             Long tenantId = UserUtil.getCurrentUser().getTenantId();
             req.setTenantId(tenantId);
             req.setUserId(user.getId());
-            Page<SkuPageListResp> result = skuFacade.pageList(Page.of(req.getPage() - 1, req.getSize()), req);
+            Page<SkuPageListResp> result = skuFacade.pageList(Page.of(req.getPage(), req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("SkuController#pageList,req:{}", JSON.toJSONString(req), e);

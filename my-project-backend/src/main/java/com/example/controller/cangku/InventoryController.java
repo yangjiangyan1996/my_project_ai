@@ -93,7 +93,7 @@ public class InventoryController {
             req.setTenantId(tenantId);
             req.setUserId(user.getId());
 
-            Page<InventoryPageListResp> result = inventoryFacade.pageList(Page.of(req.getPage() - 1, req.getSize()), req);
+            Page<InventoryPageListResp> result = inventoryFacade.pageList(Page.of(req.getPage(), req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("InventoryController#pageList,req:{}", e);
@@ -112,7 +112,7 @@ public class InventoryController {
             req.setTenantId(tenantId);
             req.setUserId(user.getId());
 
-            Page<InventoryComprehensiveHistoryResp> result = inventoryFacade.comprehensiveHistory(Page.of(req.getPage() - 1, req.getSize()), req);
+            Page<InventoryComprehensiveHistoryResp> result = inventoryFacade.comprehensiveHistory(Page.of(req.getPage(), req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("InventoryController#transactionPageList,req:{}", e);

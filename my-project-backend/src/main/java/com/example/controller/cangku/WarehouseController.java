@@ -133,7 +133,7 @@ public class WarehouseController {
             req.setTenantId(tenantId);
             req.setUserId(user.getId());
 
-            Page<WareHouseResp> result = ckWarehouseFacade.listOfWareHouse(Page.of(req.getPage() - 1, req.getSize()), req);
+            Page<WareHouseResp> result = ckWarehouseFacade.listOfWareHouse(Page.of(req.getPage(), req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("WarehouseController#listOfWareHouse,req:{}", e);

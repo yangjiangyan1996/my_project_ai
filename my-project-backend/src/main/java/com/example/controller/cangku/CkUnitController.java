@@ -38,7 +38,7 @@ public class CkUnitController {
             req.setTenantId(tenantId);
             req.setUserId(user.getId());
 
-            Page<UnitPageListResp> result = ckUnitFacade.pageList(Page.of(req.getPage() - 1, req.getSize()), req);
+            Page<UnitPageListResp> result = ckUnitFacade.pageList(Page.of(req.getPage(), req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("CkUnitController#pageList,req:{}", JSON.toJSONString(req), e);
