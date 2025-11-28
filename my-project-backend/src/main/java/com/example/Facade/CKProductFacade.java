@@ -1664,8 +1664,8 @@ public class CKProductFacade {
                 r.setComponentProductColor(componentProduct.getColor());
             }
             r.setQuantity(v.getQuantity());
-            r.setLossRate(v.getLossRate());
-            r.setQuantityBeforeLoss(NumUtils.toPercentString(v.getQuantityBeforeLoss(),4));
+            r.setLossRate(NumUtils.toPercentString(v.getLossRate(),4));
+            r.setQuantityBeforeLoss(v.getQuantityBeforeLoss());
             r.setOtherQuantity(v.getOtherQuantity());
             r.setRemark(v.getRemark());
             r.setSortOrder(v.getSortOrder());
