@@ -1,5 +1,6 @@
 package com.example.Facade;
 
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.constants.CkCommonConstant;
 import com.example.entity.base.UserInfo;
@@ -675,7 +676,7 @@ public class CKProductFacade {
 
         // 初始化单位
         holder.unitOfPer = getOrCreateUnit(tenantId, userId, "件", "jian");
-        holder.unitOfBox = getOrCreateUnit(tenantId, userId, "箱子", "box");
+        holder.unitOfBox = getOrCreateUnit(tenantId, userId, "箱子", "xiang");
 
         // 初始化供应商、客户、分类
         holder.commonSupplier = getOrCreateSupplier(tenantId, userId, "通用供应商", "common");
@@ -1559,6 +1560,9 @@ public class CKProductFacade {
             pBom.setSpec(v.getSpec());
             pBom.setColor(v.getColor());
             pBom.setCategoryCode(finalCommonBom.getCategoryCode());
+            if (finalUnitName2UnitMap.getOrDefault(v.getUnitName(), new Unit()).getUnitCode() == null) {
+                log.info("单位不存在：{}, v;{},finalUnitName2UnitMap:{}", v.getUnitName(), JSON.toJSONString(v),JSON.toJSONString(finalUnitName2UnitMap));
+            }
             pBom.setUnitCode(finalUnitName2UnitMap.getOrDefault(v.getUnitName(), new Unit()).getUnitCode());
             pBom.setWeightPerUnit(StringUtils.isNotBlank(v.getWeightPerUnit()) ? new BigDecimal(v.getWeightPerUnit()) : BigDecimal.ZERO);
             pBom.setMinStock(StringUtils.isNotBlank(v.getMinStock()) ?
