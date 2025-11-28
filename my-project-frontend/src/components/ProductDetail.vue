@@ -159,12 +159,12 @@
           <el-descriptions-item label="BOM ID">{{ bomData.bomId || '--' }}</el-descriptions-item>
           <el-descriptions-item label="BOM编号">{{ bomData.bomCode || '--' }}</el-descriptions-item>
           <el-descriptions-item label="版本号">{{ bomData.version || '--' }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
+          <!-- <el-descriptions-item label="状态">
             <el-tag :type="bomData.status === 1 ? 'success' : 'danger'" size="small">
               {{ bomData.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="备注" :span="2">{{ bomData.remark || '--' }}</el-descriptions-item>
+          <el-descriptions-item label="备注" :span="2">{{ bomData.remark || '--' }}</el-descriptions-item> -->
         </el-descriptions>
       </div>
 
@@ -182,9 +182,15 @@
           <template #default="{ row }">
             <div class="component-info">
               <div class="component-name">{{ row.componentProductName }}</div>
-              <div class="component-id">ID: {{ row.componentProductId }}</div>
-              <div class="bom-detail-id">明细ID: {{ row.bomDetailId }}</div>
+              <!-- <div class="component-id">ID: {{ row.componentProductId }}</div> -->
+              <div class="bom-detail-id">sku: {{ row.componentProductSku }}</div>
+              <div class="component-id">颜色: {{ row.componentProductColor }}</div>
             </div>
+          </template>
+        </el-table-column>
+         <el-table-column label="规格" width="80" align="center">
+          <template #default="{ row }">
+            <span>{{ row.componentProductSpec || 0 }}</span>
           </template>
         </el-table-column>
         <el-table-column label="类型" width="100" align="center">
@@ -214,11 +220,6 @@
                 <span class="value">{{ formatNumber(row.otherQuantity) }}</span>
               </div>
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="排序" width="80" align="center">
-          <template #default="{ row }">
-            <span>{{ row.sortOrder || 0 }}</span>
           </template>
         </el-table-column>
         <el-table-column label="备注" min-width="150">

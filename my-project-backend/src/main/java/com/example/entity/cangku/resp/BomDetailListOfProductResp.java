@@ -14,11 +14,20 @@ import java.math.BigDecimal;
 public class BomDetailListOfProductResp {
     private Long bomDetailId;
 
+    //原料产品SKU
+    private String componentProductSku;
+
     //原料产品ID（对应 ck_product.id）
     private Long componentProductId;
 
     //原料产品名称
     private String componentProductName;
+
+    //原料规格
+    private String componentProductSpec;
+
+    //原料颜色
+    private String componentProductColor;
 
     //生产一个成品所需的原料数量
     private BigDecimal quantity;
@@ -27,7 +36,7 @@ public class BomDetailListOfProductResp {
     private BigDecimal lossRate;
 
     //生产一个成品所需的原料净用量数量（目前只存储，无逻辑）
-    private BigDecimal quantityBeforeLoss;
+    private String quantityBeforeLoss;
 
     //其他数量（比如有的东西是几米的，一次用几个，目前没有逻辑相关）
     private BigDecimal otherQuantity;

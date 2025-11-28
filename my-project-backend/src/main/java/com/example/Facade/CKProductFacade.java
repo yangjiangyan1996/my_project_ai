@@ -1656,10 +1656,16 @@ public class CKProductFacade {
             BomDetailListOfProductResp r = new BomDetailListOfProductResp();
             r.setBomDetailId(v.getId());
             r.setComponentProductId(v.getComponentProductId());
-            r.setComponentProductName(finalProductId2ProductMap.getOrDefault(v.getComponentProductId(), new Product()).getName());
+            Product componentProduct = finalProductId2ProductMap.getOrDefault(v.getComponentProductId(), new Product());
+            if (componentProduct != null) {
+                r.setComponentProductName(componentProduct.getName());
+                r.setComponentProductSku(componentProduct.getSku());
+                r.setComponentProductSpec(componentProduct.getSpec());
+                r.setComponentProductColor(componentProduct.getColor());
+            }
             r.setQuantity(v.getQuantity());
             r.setLossRate(v.getLossRate());
-            r.setQuantityBeforeLoss(v.getQuantityBeforeLoss());
+            r.setQuantityBeforeLoss(NumUtils.toPercentString(v.getQuantityBeforeLoss(),4));
             r.setOtherQuantity(v.getOtherQuantity());
             r.setRemark(v.getRemark());
             r.setSortOrder(v.getSortOrder());
