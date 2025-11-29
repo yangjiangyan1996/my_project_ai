@@ -142,7 +142,7 @@
                     <el-option
                       v-for="product in productList"
                       :key="product.id"
-                      :label="`${product.sku} - ${product.name}`"
+                      :label="`${product.sku} - ${product.name} ${product.spec || ''} ${product.color === null ? '' :  product.color}`"
                       :value="product.id"
                     />
                   </el-select>
@@ -842,7 +842,7 @@ const loadSupplierList = async () => {
 
 const loadProductList = async () => {
   try {
-    const res = await get('/api/auth/product/listEnable');
+    const res = await get('/api/auth/product/listEnableNotBom');
     productList.value = res || [];
   } catch (error) {
     ElMessage.error('加载产品列表失败');

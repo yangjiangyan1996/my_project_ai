@@ -481,12 +481,6 @@ public class CKProductFacade {
             bomId2SubProductBomDetailMap = bomDetails.stream().collect(Collectors.groupingBy(ProductBomDetail::getBomId));
         }
 
-        Map<Long, Inventory> productId2InventoryMap = new HashMap<>();
-        List<Inventory> inventories = inventoryService.selectByTenantId(user.getTenantId());
-        if (!CollectionUtils.isEmpty(inventories)) {
-            productId2InventoryMap = inventories.stream().collect(Collectors.toMap(Inventory::getProductId, v -> v));
-        }
-
         Map<Long, List<InventoryWarehouse>> productId2InventoryWarehouseMap = new HashMap<>();
         List<InventoryWarehouse> inventoryWarehouses = inventoryWarehouseService.selectByTenantId(user.getTenantId());
         if (!CollectionUtils.isEmpty(inventoryWarehouses)) {
@@ -615,6 +609,29 @@ public class CKProductFacade {
                 }
                 p.setBomData(Collections.singletonList(r));
             }
+            return p;
+        }).collect(Collectors.toList());
+    }
+
+    public List<ProductPageListResp> listEnableNotBom(UserInfo user) {
+        List<Product> list = productService.listWareHouseEnable(user.getTenantId());
+        if (list.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<String, Unit> unitCode2UnitMap = new HashMap<>();
+        List<Unit> units = unitService.selectByTenantId(user.getTenantId(), 1);
+        if (!CollectionUtils.isEmpty(units)) {
+            unitCode2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
+        }
+
+
+
+        Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
+        return list.stream().map(v -> {
+            ProductPageListResp p = new ProductPageListResp();
+            BeanUtils.copyProperties(v, p);
+            p.setUnitName(finalUnitCode2UnitMap.getOrDefault(v.getUnitCode(), new Unit()).getUnitName());
+            p.setOutUnitName(finalUnitCode2UnitMap.getOrDefault(v.getOutUnitCode(), new Unit()).getUnitName());
             return p;
         }).collect(Collectors.toList());
     }

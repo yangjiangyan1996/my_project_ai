@@ -204,7 +204,7 @@ public class ProductController {
     }
 
 
-    //获取可用所有商品列表
+    //获取可用所有商品列表， 成品包含原料时，原料也会展示到bom中
     @GetMapping("/listEnable")
     public RespBean<List<ProductPageListResp>> listEnable() {
         try {
@@ -212,20 +212,36 @@ public class ProductController {
             List<ProductPageListResp> result = CKProductFacade.listEnable(user);
             return RespBean.success(result);
         } catch (ValidationException e) {
-            log.error("ProductController#listEnable,req:{}", e);
+            log.error("ProductController#listEnable,", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("ProductController#listEnable,req:{}", e);
+            log.error("ProductController#listEnable,", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
 
-    //获取可用成品商品列表
+    //获取可用所有商品列表， 成品包含原料时，原料也会展示到bom中
+    @GetMapping("/listEnableNotBom")
+    public RespBean<List<ProductPageListResp>> listEnableNotBom() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<ProductPageListResp> result = CKProductFacade.listEnable(user);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProductController#listEnableNotBom", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#listEnableNotBom,", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    //没有地方用
     @GetMapping("/finishedProductListEnable")
     public RespBean<List<ProductPageListResp>> finishedProductListEnable() {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            List<ProductPageListResp> productPageListResps = CKProductFacade.listEnable(user);
+            List<ProductPageListResp> productPageListResps = CKProductFacade.listEnableNotBom(user);
             List<ProductPageListResp> result = productPageListResps.stream().filter(productPageListResp -> CollectionUtils.isEmpty(productPageListResp.getBomData())).collect(Collectors.toList());
             return RespBean.success(result);
         } catch (ValidationException e) {
