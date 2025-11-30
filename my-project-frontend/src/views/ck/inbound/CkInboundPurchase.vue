@@ -140,10 +140,11 @@
                     @change="(value) => handleProductChange(value, $index)"
                   >
                     <el-option
-                      v-for="product in productList"
+                      v-for="product in getAvailableProducts($index)"
                       :key="product.id"
                       :label="`${product.sku} - ${product.name} ${product.spec || ''} ${product.color === null ? '' :  product.color}`"
                       :value="product.id"
+                      :disabled="isProductDisabled(product.id, $index)"
                     />
                   </el-select>
                   <div v-if="row.productName" class="product-details">
@@ -483,6 +484,35 @@ const shelfLocationList = ref([]);
 const totalActualQuantity = computed(() => {
   return formData.items.reduce((sum, item) => sum + (parseInt(item.actualQuantity) || 0), 0);
 });
+
+// 获取已选中的产品ID列表
+const selectedProductIds = computed(() => {
+  return formData.items
+    .filter(item => item.productId)
+    .map(item => item.productId);
+});
+
+// 获取可用的产品列表（过滤掉已选中的产品）
+const getAvailableProducts = (currentIndex) => {
+  return productList.value.filter(product => {
+    // 当前行已选中的产品始终可用
+    if (formData.items[currentIndex]?.productId === product.id) {
+      return true;
+    }
+    // 其他行已选中的产品不可用
+    return !selectedProductIds.value.includes(product.id);
+  });
+};
+
+// 判断产品是否禁用
+const isProductDisabled = (productId, currentIndex) => {
+  // 当前行已选中的产品不禁用
+  if (formData.items[currentIndex]?.productId === productId) {
+    return false;
+  }
+  // 其他行已选中的产品禁用
+  return selectedProductIds.value.includes(productId);
+};
 
 // 处理实际数量输入框失去焦点
 const handleActualQuantityBlur = (index) => {
