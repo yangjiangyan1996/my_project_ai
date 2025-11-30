@@ -535,13 +535,30 @@ const userInitial = computed(() => {
 //   { immediate: true }
 // );
 
-watch(displayMode, async (newMode) => {
-  if (newMode === 'dashboard') {
-    // 切换到工作台时，重新加载图表数据
-    await nextTick();
-    loadInventoryAlerts();
-  }
-});
+// watch(displayMode, async (newMode) => {
+//   if (newMode === 'dashboard') {
+//     // 切换到工作台时，重新加载图表数据
+//     await nextTick();
+//     loadInventoryAlerts();
+//   }
+// });
+watch(
+  [() => route.query.mode, displayMode],
+  async ([newQueryMode, newDisplayMode], [oldQueryMode, oldDisplayMode]) => {
+    // 处理路由参数变化
+    if (newQueryMode && newQueryMode !== oldQueryMode) {
+      changeDisplayMode(newQueryMode);
+    }
+    
+    // 处理显示模式变化
+    if (newDisplayMode !== oldDisplayMode && newDisplayMode === 'dashboard') {
+      // 切换到工作台时，重新加载图表数据
+      await nextTick();
+      loadInventoryAlerts();
+    }
+  },
+  { immediate: true }
+);
 
 // 核心方法：切换显示模式
 function changeDisplayMode(mode) {
