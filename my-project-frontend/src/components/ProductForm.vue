@@ -286,7 +286,7 @@
                   <el-option label="布料" :value="2" />
                   <el-option label="辅料" :value="10" />
                   <el-option label="五金" :value="20" />
-                  <el-option label="包装" :value="999" />
+                  <el-option label="包装" :value="100" />
                 </el-select>
               </template>
             </el-table-column>
