@@ -830,6 +830,7 @@ const handleEdit = (product) => {
       componentProductSpec: item.componentProductSpec,
       componentProductUnit: item.componentProductUnit,
       quantity: item.quantity,
+      type: item.type,
       lossRate: item.lossRate,
       remark: item.remark,
       sortOrder: item.sortOrder

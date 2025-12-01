@@ -245,6 +245,7 @@ public class CKProductFacade {
                 detail.setComponentProductId(v.getComponentProductId());
                 detail.setQuantity(new BigDecimal(v.getQuantity()));
                 detail.setLossRate(new BigDecimal(v.getLossRate()));
+                detail.setType(v.getType());
                 detail.setRemark(v.getRemark());
                 detail.setSortOrder(v.getSortOrder());
                 detail.setCreatedAt(new Date());
@@ -319,6 +320,7 @@ public class CKProductFacade {
                 d.setComponentProductSku(finalProductId2ProductMap.get(z.getComponentProductId()).getSku());
                 d.setComponentProductSpec(finalProductId2ProductMap.get(z.getComponentProductId()).getSpec());
                 d.setComponentProductUnit(finalProductId2ProductMap.get(z.getComponentProductId()).getUnitCode());
+                d.setType(z.getType());
                 d.setQuantity(z.getQuantity());
                 d.setLossRate(z.getLossRate());
                 d.setRemark(z.getRemark());
@@ -357,7 +359,7 @@ public class CKProductFacade {
         if (Objects.nonNull(req.getBomData())) {
             ProductBom pb = productBomService.selectByProduectId(save.getId(), req.getTenantId());
             if (!Objects.isNull(pb)) {
-                Boolean deltedbyproductid = productBomService.deltedbyproductid(save.getId(), req.getUserId(), req.getTenantId());
+                Boolean deltedbyproductid = productBomService.deltedById(pb.getId(), req.getUserId(), req.getTenantId());
                 if (!deltedbyproductid) {
                     throw new ValidationException("删除商品BOM失败");
                 }
@@ -393,6 +395,7 @@ public class CKProductFacade {
                 detail.setQuantity(new BigDecimal(v.getQuantity()));
                 detail.setLossRate(new BigDecimal(v.getLossRate()));
                 detail.setRemark(v.getRemark());
+                detail.setType(v.getType());
                 detail.setSortOrder(v.getSortOrder());
                 detail.setCreatedAt(new Date());
                 detail.setCreatedBy(req.getUserId());
@@ -529,6 +532,7 @@ public class CKProductFacade {
                     r.setComponentProductSku(productId2ProductMap.getOrDefault(s.getComponentProductId(), new Product()).getSku());
                     r.setComponentProductUnit(finalUnitCode2UnitMap.getOrDefault(productId2ProductMap.getOrDefault(s.getComponentProductId(), new Product()).getUnitCode(), new Unit()).getUnitName());
                     r.setComponentProductSpec(productId2ProductMap.getOrDefault(s.getComponentProductId(), new Product()).getSpec());
+                    r.setType(s.getType());
                     r.setQuantity(s.getQuantity());
                     r.setLossRate(s.getLossRate());
                     r.setRemark(s.getRemark());

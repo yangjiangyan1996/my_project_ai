@@ -71,7 +71,7 @@ public class CkProductBomServiceImpl extends ServiceImpl<CkProductBomMapper, Pro
     }
 
     @Override
-    public Boolean deltedbyproductid(Long productId, Long userId, Long tenantId) {
+    public Boolean deltedById(Long id, Long userId, Long tenantId) {
         ProductBom productBom = new ProductBom();
         productBom.setModifiedAt(new Date());
         productBom.setModifiedBy(userId);
@@ -81,7 +81,7 @@ public class CkProductBomServiceImpl extends ServiceImpl<CkProductBomMapper, Pro
         return baseMapper.update(
                 productBom,
                 new QueryWrapper<ProductBom>()
-                        .eq("product_id", productId)
+                        .eq("id", id)
                         .eq("tenant_id", tenantId)) > 0;
     }
 }

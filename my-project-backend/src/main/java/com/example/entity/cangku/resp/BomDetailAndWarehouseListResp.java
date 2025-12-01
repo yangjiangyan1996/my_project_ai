@@ -21,6 +21,7 @@ public class BomDetailAndWarehouseListResp {
     String componentProductSpec;
     String componentProductUnit;
     BigDecimal quantity;
+    Integer type;
     BigDecimal lossRate;
     String remark;
     Integer sortOrder;

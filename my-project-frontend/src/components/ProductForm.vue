@@ -272,6 +272,25 @@
                 </el-select>
               </template>
             </el-table-column>
+
+            <el-table-column label="类型" width="120" align="center">
+              <template #default="{ row, $index }">
+                <el-select
+                  v-model="row.type"
+                  placeholder="选择类型"
+                  style="width: 100%"
+                  
+                >
+                  <el-option label="空白标签" :value="0" />
+                  <el-option label="主料" :value="1" />
+                  <el-option label="布料" :value="2" />
+                  <el-option label="辅料" :value="10" />
+                  <el-option label="五金" :value="20" />
+                  <el-option label="包装" :value="999" />
+                </el-select>
+              </template>
+            </el-table-column>
+
             <el-table-column label="规格型号" width="120">
               <template #default="{ row }">
                 {{ row.componentProductSpec || '-' }}
@@ -282,6 +301,7 @@
                 {{ row.componentProductUnit || '-' }}
               </template>
             </el-table-column>
+            
             <el-table-column label="所需数量" width="120">
               <template #default="{ row, $index }">
                 <el-input-number
@@ -517,7 +537,7 @@ const formModel = reactive({
 watchEffect(() => {
   if (props.formData) {
     const formData = { ...props.formData };
-    
+    console.log('原始 formData:', formData);
     // 统一处理 BOM 数据字段
     if (!formData.bomDetails) {
       if (formData.bomData && Array.isArray(formData.bomData)) {
@@ -529,6 +549,7 @@ watchEffect(() => {
           componentProductSpec: item.componentProductSpec,
           componentProductUnit: item.componentProductUnit,
           quantity: item.quantity,
+          type: item.type || 1, // 确保类型字段有值
           lossRate: item.lossRate,
           remark: item.remark,
           sortOrder: item.sortOrder
@@ -712,6 +733,7 @@ const handleAddComponent = () => {
     componentProductSpec: '',
     componentProductUnit: '',
     quantity: 1,
+    type: 1, // 默认选择主料
     lossRate: 0,
     remark: '',
     sortOrder: formModel.bomDetails.length
@@ -803,6 +825,11 @@ const handleSubmit = async () => {
           ElMessage.warning(`请输入第 ${i + 1} 行配件的有效数量`);
           return;
         }
+         // 新增类型验证
+        if (detail.type === undefined || detail.type === null) {
+          ElMessage.warning(`请选择第 ${i + 1} 行配件的类型`);
+          return;
+        }
       }
     }
     
@@ -840,6 +867,7 @@ const handleSubmit = async () => {
           componentProductId: detail.componentProductId,
           quantity: detail.quantity,
           lossRate: detail.lossRate,
+          type: detail.type, // 新增类型字段
           remark: detail.remark,
           sortOrder: detail.sortOrder
         }))

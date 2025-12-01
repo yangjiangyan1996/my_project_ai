@@ -15,7 +15,7 @@ public interface CkProductBomService extends IService<ProductBom> {
     ProductBom selectByBomId(Long bomId, Long tenantId);
     List<ProductBom> selectByBomIds(List<Long> bomIds, Long tenantId);
 
-    Boolean deltedbyproductid(Long productId, Long userId, Long tenantId);
+    Boolean deltedById(Long id, Long userId, Long tenantId);
 
     ProductBom selectByProduectId(Long productId, Long tenantId);
     List<ProductBom> selectByProduectIds(List<Long> productId, Long tenantId);
