@@ -316,10 +316,14 @@ public class CKProductFacade {
             List<BomDetailAndWarehouseListResp> detail = bomdetailList.stream().map(z -> {
                 BomDetailAndWarehouseListResp d = new BomDetailAndWarehouseListResp();
                 d.setComponentProductId(z.getComponentProductId());
-                d.setComponentProductName(finalProductId2ProductMap.get(z.getComponentProductId()).getName());
-                d.setComponentProductSku(finalProductId2ProductMap.get(z.getComponentProductId()).getSku());
-                d.setComponentProductSpec(finalProductId2ProductMap.get(z.getComponentProductId()).getSpec());
-                d.setComponentProductUnit(finalProductId2ProductMap.get(z.getComponentProductId()).getUnitCode());
+                if (finalProductId2ProductMap.get(z.getComponentProductId()) != null) {
+                    Product subProduct = finalProductId2ProductMap.get(z.getComponentProductId());
+                    d.setComponentProductName(subProduct.getName());
+                    d.setComponentProductSku(subProduct.getSku());
+                    d.setComponentProductSpec(subProduct.getSpec());
+                    d.setComponentProductUnit(subProduct.getUnitCode());
+                    d.setComponentProductColor(subProduct.getColor());
+                }
                 d.setType(z.getType());
                 d.setQuantity(z.getQuantity());
                 d.setLossRate(z.getLossRate());
@@ -528,10 +532,13 @@ public class CKProductFacade {
                     BomDetailAndWarehouseListResp r = new BomDetailAndWarehouseListResp();
                     r.setId(s.getId());
                     r.setComponentProductId(s.getComponentProductId());
-                    r.setComponentProductName(productId2ProductMap.getOrDefault(s.getComponentProductId(), new Product()).getName());
-                    r.setComponentProductSku(productId2ProductMap.getOrDefault(s.getComponentProductId(), new Product()).getSku());
-                    r.setComponentProductUnit(finalUnitCode2UnitMap.getOrDefault(productId2ProductMap.getOrDefault(s.getComponentProductId(), new Product()).getUnitCode(), new Unit()).getUnitName());
-                    r.setComponentProductSpec(productId2ProductMap.getOrDefault(s.getComponentProductId(), new Product()).getSpec());
+                    if (productId2ProductMap.get(s.getComponentProductId()) != null) {
+                        Product product = productId2ProductMap.get(s.getComponentProductId());
+                        r.setComponentProductName(product.getName());
+                        r.setComponentProductSku(product.getSku());
+                        r.setComponentProductUnit(finalUnitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
+                        r.setComponentProductSpec(product.getSpec());
+                    }
                     r.setType(s.getType());
                     r.setQuantity(s.getQuantity());
                     r.setLossRate(s.getLossRate());
@@ -577,6 +584,173 @@ public class CKProductFacade {
                 r.setComponentProductId(pp.getId());
                 r.setComponentProductName(pp.getName());
                 r.setComponentProductSku(pp.getSku());
+                r.setComponentProductColor(pp.getColor());
+                r.setComponentProductUnit(finalUnitCode2UnitMap.getOrDefault(pp.getUnitCode(), new Unit()).getUnitName());
+                r.setComponentProductSpec(pp.getSpec());
+                r.setQuantity(new BigDecimal(1));
+                r.setLossRate(new BigDecimal(1));
+                r.setRemark(pp.getRemark());
+                r.setSortOrder(0);
+
+                List<InventoryWarehouse> inventoryWarehouseList = finalProductId2InventoryWarehouseMap.getOrDefault(pp.getId(), null);
+                if (!CollectionUtils.isEmpty(inventoryWarehouseList)) {
+                    List<ProductWarehouseQuantityResp> productWarehouseQuantityRespStream = inventoryWarehouseList.stream().map(inventoryWarehouse -> {
+                        ProductWarehouseQuantityResp pwqr = new ProductWarehouseQuantityResp();
+                        pwqr.setWarehouseId(inventoryWarehouse.getWarehouseId());
+                        pwqr.setWarehouseName(finalWarehouseId2WarehouseMap.getOrDefault(inventoryWarehouse.getWarehouseId(), new Warehouse()).getName());
+                        pwqr.setWarehouseQuantity(inventoryWarehouse.getQuantity());
+                        pwqr.setWarehouseAvailableQuantity(inventoryWarehouse.getQuantity().subtract(inventoryWarehouse.getLockedQuantity()));
+
+                        List<InventoryShelf> inventoryShelfList = finalProductId2InventoryShelfMap.getOrDefault(pp.getId(), null);
+                        if (!CollectionUtils.isEmpty(inventoryShelfList)) {
+                            List<ProductShelfQuantityResp> psqrList = inventoryShelfList.stream()
+                                    .filter(inventoryShelf -> inventoryShelf.getWarehouseId().equals(inventoryWarehouse.getWarehouseId()))
+                                    .map(inventoryShelf -> {
+                                        ProductShelfQuantityResp psqr = new ProductShelfQuantityResp();
+                                        psqr.setShelfId(inventoryShelf.getShelfId());
+                                        psqr.setShelfName(finalShelfId2ShelfMap.getOrDefault(inventoryShelf.getShelfId(), new WarehouseShelf()).getShelfName());
+                                        psqr.setShelfQuantity(inventoryShelf.getQuantity());
+                                        psqr.setShelfAvailableQuantity(inventoryShelf.getQuantity().subtract(inventoryShelf.getLockedQuantity()));
+                                        return psqr;
+                                    }).collect(Collectors.toList());
+                            pwqr.setShelfQuantityList(psqrList);
+                        }
+                        return pwqr;
+                    }).collect(Collectors.toList());
+                    r.setWarehouseQuantityList(productWarehouseQuantityRespStream);
+                }
+                p.setBomData(Collections.singletonList(r));
+            }
+            return p;
+        }).collect(Collectors.toList());
+    }
+
+
+    public List<ProductPageListResp> listEnableNoPackaging(UserInfo user) {
+        List<Product> list = productService.listWareHouseEnable(user.getTenantId());
+        if (list.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<Long, Product> productId2ProductMap = list.stream().collect(Collectors.toMap(Product::getId, v -> v));
+
+        Map<String, Unit> unitCode2UnitMap = new HashMap<>();
+        List<Unit> units = unitService.selectByTenantId(user.getTenantId(), 1);
+        if (!CollectionUtils.isEmpty(units)) {
+            unitCode2UnitMap = units.stream().collect(Collectors.toMap(Unit::getUnitCode, v -> v));
+        }
+
+        Map<Long, Long> productId2BomIdMap = new HashMap<>();
+        List<ProductBom> boms = productBomService.selectByTenantId(user.getTenantId());
+        if (!CollectionUtils.isEmpty(boms)) {
+            productId2BomIdMap = boms.stream().collect(Collectors.toMap(ProductBom::getProductId, v -> v.getId()));
+        }
+
+        Map<Long, List<ProductBomDetail>> bomId2SubProductBomDetailMap = new HashMap<>();
+        List<ProductBomDetail> bomDetails = productBomDetailService.selectByTenantId(user.getTenantId());
+        if (!CollectionUtils.isEmpty(bomDetails)) {
+            bomId2SubProductBomDetailMap = bomDetails.stream().collect(Collectors.groupingBy(ProductBomDetail::getBomId));
+        }
+
+        Map<Long, List<InventoryWarehouse>> productId2InventoryWarehouseMap = new HashMap<>();
+        List<InventoryWarehouse> inventoryWarehouses = inventoryWarehouseService.selectByTenantId(user.getTenantId());
+        if (!CollectionUtils.isEmpty(inventoryWarehouses)) {
+            productId2InventoryWarehouseMap = inventoryWarehouses.stream().collect(Collectors.groupingBy(InventoryWarehouse::getProductId));
+        }
+
+        Map<Long, List<InventoryShelf>> productId2InventoryShelfMap = new HashMap<>();
+        List<InventoryShelf> inventoryShelves = inventoryShelfService.selectByTenantId(user.getTenantId());
+        if (!CollectionUtils.isEmpty(inventoryShelves)) {
+            productId2InventoryShelfMap = inventoryShelves.stream().collect(Collectors.groupingBy(InventoryShelf::getProductId));
+        }
+
+        Map<Long, Warehouse> warehouseId2WarehouseMap = new HashMap<>();
+        List<Warehouse> warehouses = warehouseService.selectByTenantId(user.getTenantId());
+        if (!CollectionUtils.isEmpty(warehouses)) {
+            warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
+        }
+
+        Map<Long, WarehouseShelf> shelfId2ShelfMap = new HashMap<>();
+        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(user.getTenantId());
+        if (!CollectionUtils.isEmpty(warehouseShelves)) {
+            shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        }
+
+        Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
+        Map<Long, Long> finalProductId2BomIdMap = productId2BomIdMap;
+        Map<Long, List<ProductBomDetail>> finalBomId2SubProductBomDetailMap = bomId2SubProductBomDetailMap;
+        Map<Long, List<InventoryWarehouse>> finalProductId2InventoryWarehouseMap = productId2InventoryWarehouseMap;
+        Map<Long, Warehouse> finalWarehouseId2WarehouseMap = warehouseId2WarehouseMap;
+        Map<Long, List<InventoryShelf>> finalProductId2InventoryShelfMap = productId2InventoryShelfMap;
+        Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
+        return list.stream().map(v -> {
+            ProductPageListResp p = new ProductPageListResp();
+            BeanUtils.copyProperties(v, p);
+            p.setUnitName(finalUnitCode2UnitMap.getOrDefault(v.getUnitCode(), new Unit()).getUnitName());
+            p.setOutUnitName(finalUnitCode2UnitMap.getOrDefault(v.getOutUnitCode(), new Unit()).getUnitName());
+            Long productId = v.getId();
+            if (finalProductId2BomIdMap.containsKey(productId)) {
+                Long bomId = finalProductId2BomIdMap.get(productId);
+                List<ProductBomDetail> subProductDetails = finalBomId2SubProductBomDetailMap.get(bomId);
+                List<BomDetailAndWarehouseListResp> bomData = subProductDetails.stream().map(s -> {
+                    if (CkProductEnums.BomDetailType.BOM_DETAIL_TYPE_PACKAGE.getCode().equals(s.getType())) {
+                        return null;
+                    }
+                    BomDetailAndWarehouseListResp r = new BomDetailAndWarehouseListResp();
+                    r.setId(s.getId());
+                    r.setComponentProductId(s.getComponentProductId());
+                    if (productId2ProductMap.get(s.getComponentProductId()) != null) {
+                        Product product = productId2ProductMap.get(s.getComponentProductId());
+                        r.setComponentProductName(product.getName());
+                        r.setComponentProductSku(product.getSku());
+                        r.setComponentProductUnit(finalUnitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
+                        r.setComponentProductSpec(product.getSpec());
+                    }
+                    r.setType(s.getType());
+                    r.setQuantity(s.getQuantity());
+                    r.setLossRate(s.getLossRate());
+                    r.setRemark(s.getRemark());
+                    r.setSortOrder(s.getSortOrder());
+
+
+                    List<InventoryWarehouse> inventoryWarehouseList = finalProductId2InventoryWarehouseMap.getOrDefault(s.getComponentProductId(), null);
+                    if (!CollectionUtils.isEmpty(inventoryWarehouseList)) {
+                        List<ProductWarehouseQuantityResp> productWarehouseQuantityRespStream = inventoryWarehouseList.stream().map(inventoryWarehouse -> {
+                            ProductWarehouseQuantityResp pwqr = new ProductWarehouseQuantityResp();
+                            pwqr.setWarehouseId(inventoryWarehouse.getWarehouseId());
+                            pwqr.setWarehouseName(finalWarehouseId2WarehouseMap.getOrDefault(inventoryWarehouse.getWarehouseId(), new Warehouse()).getName());
+                            pwqr.setWarehouseQuantity(inventoryWarehouse.getQuantity());
+                            pwqr.setWarehouseAvailableQuantity(inventoryWarehouse.getQuantity().subtract(inventoryWarehouse.getLockedQuantity()));
+
+                            List<InventoryShelf> inventoryShelfList = finalProductId2InventoryShelfMap.getOrDefault(s.getComponentProductId(), null);
+                            if (!CollectionUtils.isEmpty(inventoryShelfList)) {
+                                List<ProductShelfQuantityResp> psqrList = inventoryShelfList.stream()
+                                        .filter(inventoryShelf -> inventoryShelf.getWarehouseId().equals(inventoryWarehouse.getWarehouseId()))
+                                        .map(inventoryShelf -> {
+                                            ProductShelfQuantityResp psqr = new ProductShelfQuantityResp();
+                                            psqr.setShelfId(inventoryShelf.getShelfId());
+                                            psqr.setShelfName(finalShelfId2ShelfMap.getOrDefault(inventoryShelf.getShelfId(), new WarehouseShelf()).getShelfName());
+                                            psqr.setShelfQuantity(inventoryShelf.getQuantity());
+                                            psqr.setShelfAvailableQuantity(inventoryShelf.getQuantity().subtract(inventoryShelf.getLockedQuantity()));
+                                            return psqr;
+                                        }).collect(Collectors.toList());
+                                pwqr.setShelfQuantityList(psqrList);
+                            }
+                            return pwqr;
+                        }).collect(Collectors.toList());
+                        r.setWarehouseQuantityList(productWarehouseQuantityRespStream);
+                    }
+                    return r;
+                }).filter(Objects::nonNull).collect(Collectors.toList());
+                p.setBomData(bomData);
+            } else {
+                //没有bom
+                Product pp = productId2ProductMap.getOrDefault(productId, new Product());
+                BomDetailAndWarehouseListResp r = new BomDetailAndWarehouseListResp();
+                r.setId(pp.getId());
+                r.setComponentProductId(pp.getId());
+                r.setComponentProductName(pp.getName());
+                r.setComponentProductSku(pp.getSku());
+                r.setComponentProductColor(pp.getColor());
                 r.setComponentProductUnit(finalUnitCode2UnitMap.getOrDefault(pp.getUnitCode(), new Unit()).getUnitName());
                 r.setComponentProductSpec(pp.getSpec());
                 r.setQuantity(new BigDecimal(1));

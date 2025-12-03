@@ -299,8 +299,8 @@
     <el-dialog
       v-model="editDialogVisible"
       :title="`${isEdit ? '编辑' : '新增'}产品`"
-      width="800px"
-      top="5vh"
+      width="85%" 
+      top="2vh"    
       :close-on-click-modal="false"
     >
       <ProductForm
@@ -316,8 +316,8 @@
     <el-dialog
       v-model="detailDialogVisible"
       :title="`产品详情 - ${currentProduct?.name}`"
-      width="700px"
-      top="5vh"
+      width="75%" 
+      top="2vh"    
     >
       <ProductDetail
         v-if="detailDialogVisible && currentProduct"
@@ -828,6 +828,7 @@ const handleEdit = (product) => {
       componentProductName: item.componentProductName,
       componentProductSku: item.componentProductSku,
       componentProductSpec: item.componentProductSpec,
+      componentProductColor: item.componentProductColor,
       componentProductUnit: item.componentProductUnit,
       quantity: item.quantity,
       type: item.type,
@@ -960,6 +961,8 @@ onMounted(() => {
   padding: 20px;
   background-color: #f5f7fa;
   min-height: calc(100vh - 60px);
+   width: 95% !important;
+  max-width: 95% !important;
 }
 
 .manage-card {
@@ -1127,6 +1130,8 @@ onMounted(() => {
 @media (max-width: 768px) {
   .product-manage-container {
     padding: 10px;
+    width: 95% !important;
+  max-width: 95% !important;
   }
   
   .card-header {

@@ -265,7 +265,7 @@
                   <el-option
                     v-for="product in availableComponentProducts"
                     :key="product.id"
-                    :label="`${product.sku} - ${product.name}`"
+                    :label="`${product.name}`"
                     :value="product.id"
                     :disabled="isComponentSelected(product.id)"
                   />
@@ -291,11 +291,18 @@
               </template>
             </el-table-column>
 
-            <el-table-column label="规格型号" width="120">
+            <el-table-column label="规格" width="120">
               <template #default="{ row }">
                 {{ row.componentProductSpec || '-' }}
               </template>
             </el-table-column>
+
+             <el-table-column label="颜色" width="120">
+              <template #default="{ row }">
+                {{ row.componentProductColor || '-' }}
+              </template>
+            </el-table-column>
+
             <el-table-column label="单位" width="80" align="center">
               <template #default="{ row }">
                 {{ row.componentProductUnit || '-' }}
@@ -547,6 +554,7 @@ watchEffect(() => {
           componentProductName: item.componentProductName,
           componentProductSku: item.componentProductSku,
           componentProductSpec: item.componentProductSpec,
+          componentProductColor: item.componentProductColor,
           componentProductUnit: item.componentProductUnit,
           quantity: item.quantity,
           type: item.type || 1, // 确保类型字段有值
@@ -731,6 +739,7 @@ const handleAddComponent = () => {
     componentProductName: '',
     componentProductSku: '',
     componentProductSpec: '',
+    componentProductColor: '',
     componentProductUnit: '',
     quantity: 1,
     type: 1, // 默认选择主料
@@ -755,6 +764,7 @@ const handleComponentChange = (productId, index) => {
     detail.componentProductName = product.name;
     detail.componentProductSku = product.sku;
     detail.componentProductSpec = product.spec;
+    detail.componentProductColor = product.color;
     detail.componentProductUnit = product.unitName;
   }
 };
@@ -1003,5 +1013,14 @@ onMounted(() => {
   .bom-header .el-button {
     align-self: flex-end;
   }
+}
+
+
+.product-details {
+  margin-top: 8px;
+  padding: 4px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  font-size: 12px;
 }
 </style>

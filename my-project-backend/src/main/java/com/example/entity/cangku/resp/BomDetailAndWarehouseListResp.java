@@ -19,6 +19,7 @@ public class BomDetailAndWarehouseListResp {
     String componentProductName;
     String componentProductSku;
     String componentProductSpec;
+    String componentProductColor;
     String componentProductUnit;
     BigDecimal quantity;
     Integer type;

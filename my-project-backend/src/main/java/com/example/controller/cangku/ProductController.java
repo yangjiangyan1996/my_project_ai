@@ -220,6 +220,23 @@ public class ProductController {
         }
     }
 
+
+    //获取可用所有商品列表， 成品包含原料时，原料也会展示到bom中, 但是没有包装件的产品列表
+    @GetMapping("/listEnableNoPackaging")
+    public RespBean<List<ProductPageListResp>> listEnableNoPackaging() {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<ProductPageListResp> result = CKProductFacade.listEnableNoPackaging(user);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProductController#listEnable,", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#listEnable,", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     //获取可用所有商品列表， 成品包含原料时，原料也会展示到bom中
     @GetMapping("/listEnableNotBom")
     public RespBean<List<ProductPageListResp>> listEnableNotBom() {

@@ -146,7 +146,7 @@
                 <el-option
                   v-for="product in productionProducts"
                   :key="product.id"
-                  :label="`${product.sku} - ${product.name}`"
+                  :label="`${product.sku}-${product.name}-${product.spec}-${product.color || '-'}`"
                   :value="product.id"
                 />
               </el-select>
@@ -1347,6 +1347,7 @@ const validateForm = async () => {
   }
 };
 
+
 // 数据加载方法
 const loadWarehouseList = async () => {
   try {
@@ -1359,7 +1360,7 @@ const loadWarehouseList = async () => {
 
 const loadProductionProducts = async () => {
   try {
-    const res = await get('/api/auth/product/listEnable');
+    const res = await get('/api/auth/product/listEnableNoPackaging');
     productionProductList.value = res?.data || res || [];
   } catch (error) {
     console.error('加载生产产品列表失败:', error);
