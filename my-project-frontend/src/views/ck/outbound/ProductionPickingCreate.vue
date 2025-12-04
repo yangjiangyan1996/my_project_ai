@@ -578,6 +578,7 @@ const updateLatestAllocationData = (batchAllocatedList) => {
   });
   
   latestAllocationData.value = newData;
+  console.log('更新最新的分配数据:', newData);
 };
 
 // 获取实时可用信息
@@ -709,59 +710,78 @@ const loadOutboundDetail = async (id) => {
             bomAllocations: []
           };
           
-          // 处理 BOM 组件数据
+          // 关键修复：构建完整的BOM数据和分配数据
           if (itemData.bomComponents && itemData.bomComponents.length > 0) {
-            newItem.bomData = itemData.bomComponents.map(component => ({
-              componentProductId: component.componentProductId,
-              componentProductName: component.componentProductName,
-              componentProductSku: component.componentProductSku,
-              componentProductSpec: component.componentProductSpec,
-              componentProductUnit: component.componentProductUnit,
-              quantity: parseFloat(component.unitUsage) || 0
-            }));
-          }
-          
-          // 处理物料分配数据
-          if (itemData.materialAllocations && itemData.materialAllocations.length > 0) {
-            newItem.bomAllocations = itemData.materialAllocations.map(allocation => ({
-              componentProductId: allocation.componentProductId,
-              componentProductName: allocation.componentProductName || '',
-              componentProductSku: '',
-              batchNo: allocation.batchNo,
-              shelfId: allocation.shelfId,
-              shelfName: allocation.shelfName,
-              quantity: parseFloat(allocation.allocatedQuantity) || 0
-            }));
+            // 按组件产品ID分组分配数据
+            const allocationsByComponent = {};
+            if (itemData.materialAllocations) {
+              itemData.materialAllocations.forEach(allocation => {
+                const key = `${allocation.componentProductId}_${allocation.batchNo}_${allocation.shelfId}`;
+                allocationsByComponent[key] = allocation;
+              });
+            }
+            
+            // 构建BOM数据，包含批次和分配信息
+            newItem.bomData = itemData.bomComponents.map(component => {
+              // 构建批次数据
+              const batches = [];
+              if (component.availableBatches) {
+                component.availableBatches.forEach(batch => {
+                  const batchWithAllocations = {
+                    batchNo: batch.batchNo,
+                    quantity: parseFloat(batch.totalQuantity) || 0,
+                    shelfList: []
+                  };
+                  
+                  // 构建货架数据，包含分配数量
+                  if (batch.shelves) {
+                    batch.shelves.forEach(shelf => {
+                      const allocationKey = `${component.componentProductId}_${batch.batchNo}_${shelf.shelfId}`;
+                      const allocation = allocationsByComponent[allocationKey];
+                      
+                      batchWithAllocations.shelfList.push({
+                        shelfId: shelf.shelfId,
+                        shelfName: shelf.shelfName || `货架${shelf.shelfId}`,
+                        quantity: parseFloat(shelf.availableQuantity) || 0,
+                        allocatedQuantity: allocation ? parseFloat(allocation.allocatedQuantity) : 0
+                      });
+                      
+                      // 同时构建bomAllocations数组
+                      if (allocation) {
+                        newItem.bomAllocations.push({
+                          componentProductId: component.componentProductId,
+                          componentProductName: component.componentProductName,
+                          componentProductSku: component.componentProductSku,
+                          batchNo: batch.batchNo,
+                          shelfId: shelf.shelfId,
+                          shelfName: shelf.shelfName || `货架${shelf.shelfId}`,
+                          quantity: parseFloat(allocation.allocatedQuantity) || 0
+                        });
+                      }
+                    });
+                  }
+                  
+                  batches.push(batchWithAllocations);
+                });
+              }
+              
+              return {
+                componentProductId: component.componentProductId,
+                componentProductName: component.componentProductName,
+                componentProductSku: component.componentProductSku,
+                componentProductSpec: component.componentProductSpec,
+                componentProductUnit: component.componentProductUnit,
+                quantity: parseFloat(component.unitUsage) || 0,
+                batches: batches
+              };
+            });
           }
           
           formData.items.push(newItem);
-          
-          // 为每个产品加载批次信息
-          if (newItem.productId) {
-            await loadBatchInfoForProduction(newItem.productId, formData.items.length - 1);
-          }
         }
-
-        // 等待 DOM 更新后触发库存检查
-        await nextTick();
-        await checkBatchAllocation(null, null, null);
         
-      } else {
-        formData.items = [];
-        dataLoaded.value = true;
-      }
-
-
-      
-
-      // 处理附件数据
-      if (detailData.attachments && detailData.attachments.length > 0) {
-        fileList.value = detailData.attachments.map(att => ({
-          name: att.fileName,
-          url: att.filePath,
-          status: 'success'
-        }));
-        formData.attachments = detailData.attachments;
+        // 触发库存检查以初始化latestAllocationData
+        await checkBatchAllocation(null, null, null);
       }
       
       ElMessage.success('数据加载成功');
@@ -769,7 +789,6 @@ const loadOutboundDetail = async (id) => {
   } catch (error) {
     console.error('加载出库单详情失败:', error);
     ElMessage.error('加载数据失败');
-    router.back();
   } finally {
     loading.value = false;
   }
