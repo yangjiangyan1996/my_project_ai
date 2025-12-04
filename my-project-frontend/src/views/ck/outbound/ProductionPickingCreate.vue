@@ -598,15 +598,20 @@ const updateLatestAllocationData = (batchAllocatedList) => {
           newData[key] = {
             shelfAvailableQuantity: shelf.shelfAvailableQuantity,
             availableBatchQuantity: batch.availableBatchQuantity,
-            allocatedQuantity: shelf.allocatedQuantity
+            allocatedQuantity: shelf.allocatedQuantity || 0  // 接口返回的实际可分配数量
           };
+          
+          console.log(`接口返回分配数据 key=${key}:`, {
+            allocatedQuantity: shelf.allocatedQuantity,
+            shelfAvailableQuantity: shelf.shelfAvailableQuantity
+          });
         });
       });
     });
   });
   
   latestAllocationData.value = newData;
-  console.log('更新最新的分配数据:', newData);
+  console.log('更新最新的分配数据（共', Object.keys(newData).length, '条）');
 };
 
 // 获取实时可用信息
@@ -632,13 +637,28 @@ const getRealTimeAvailableInfo = (parentProductId, componentProductId, batchNo, 
   return '0.0000';
 };
 
-// 获取分配数量
+
+// 获取分配数量 - 优先使用接口返回的allocatedQuantity
+// 获取分配数量 - 优先使用接口返回的allocatedQuantity
 const getAllocationQuantity = (itemIndex, componentProductId, batchNo, shelfId) => {
   const item = formData.items[itemIndex];
   
-  if (!item) return 0;
+  if (!item) {
+    return 0;
+  }
   
-  // 从本地分配数据中查找
+  const parentProductId = item.productId;
+  const key = `${parentProductId}_${componentProductId}_${batchNo}_${shelfId}`;
+  
+  // 1. 首先从接口返回的latestAllocationData中查找
+  const apiData = latestAllocationData.value[key];
+  if (apiData && apiData.allocatedQuantity !== undefined) {
+    const apiQuantity = parseFloat(apiData.allocatedQuantity);
+    console.log(`getAllocationQuantity [${key}]: 使用接口数据 ${apiQuantity}`);
+    return !isNaN(apiQuantity) ? apiQuantity : 0;
+  }
+  
+  // 2. 如果没有接口数据，从本地分配数据中查找
   if (item.bomAllocations && item.bomAllocations.length > 0) {
     const allocation = item.bomAllocations.find(a => 
       a.componentProductId === componentProductId &&
@@ -646,19 +666,24 @@ const getAllocationQuantity = (itemIndex, componentProductId, batchNo, shelfId) 
       a.shelfId === shelfId
     );
     
-    if (allocation && allocation.quantity > 0) {
-      return parseFloat(allocation.quantity) || 0;
+    if (allocation) {
+      const localQuantity = parseFloat(allocation.quantity) || 0;
+      console.log(`getAllocationQuantity [${key}]: 使用本地数据 ${localQuantity}`);
+      return localQuantity;
     }
   }
   
   return 0;
 };
 
-// 更新分配数量
+
+// 更新分配数量 - 只更新本地数据，不影响接口返回的数据
+// 更新分配数量 - 只更新本地数据，不影响接口返回的数据
 const updateAllocationQuantity = (value, itemIndex, bomRow, batch, shelf, productId) => {
   const quantity = parseFloat(value) || 0;
   const item = formData.items[itemIndex];
   
+  // 确保bomAllocations存在
   if (!item.bomAllocations) {
     item.bomAllocations = [];
   }
@@ -669,26 +694,138 @@ const updateAllocationQuantity = (value, itemIndex, bomRow, batch, shelf, produc
     a.shelfId === shelf.shelfId
   );
 
-  // 修改：无论数量是多少，都保留分配记录
+  // 更新或创建本地分配记录
+  const allocationData = {
+    componentProductId: bomRow.componentProductId,
+    componentProductName: bomRow.componentProductName,
+    componentProductSku: bomRow.componentProductSku,
+    batchNo: batch.batchNo,
+    shelfId: shelf.shelfId,
+    shelfName: shelf.shelfName || '默认货架',
+    quantity: quantity
+  };
+
   if (allocationIndex >= 0) {
-    item.bomAllocations[allocationIndex].quantity = quantity;
+    item.bomAllocations[allocationIndex] = allocationData;
   } else {
-    item.bomAllocations.push({
-      componentProductId: bomRow.componentProductId,
-      componentProductName: bomRow.componentProductName,
-      componentProductSku: bomRow.componentProductSku,
-      batchNo: batch.batchNo,
-      shelfId: shelf.shelfId,
-      shelfName: shelf.shelfName || '默认货架',
-      quantity: quantity  // 可以是0
+    item.bomAllocations.push(allocationData);
+  }
+  
+  // 注意：这里不更新latestAllocationData，等待接口返回
+};
+
+
+// 在编辑态时保护现有分配数据
+const protectEditModeData = () => {
+  if (isEditMode.value) {
+    console.log('编辑模式，保护现有分配数据不被覆盖');
+    
+    // 确保每个item都有正确的bomAllocations数据
+    formData.items.forEach((item, index) => {
+      if (!item.bomAllocations) {
+        item.bomAllocations = [];
+      }
+      
+      // 如果有从接口加载的分配数据，优先使用
+      if (item.bomData && item.bomData.length > 0) {
+        item.bomData.forEach(bomItem => {
+          if (bomItem.batches) {
+            bomItem.batches.forEach(batch => {
+              if (batch.shelfList) {
+                batch.shelfList.forEach(shelf => {
+                  // 尝试从latestAllocationData获取接口数据
+                  const key = `${item.productId}_${bomItem.componentProductId}_${batch.batchNo}_${shelf.shelfId}`;
+                  const apiData = latestAllocationData.value[key];
+                  
+                  if (apiData && apiData.allocatedQuantity > 0) {
+                    // 确保本地数据与接口数据一致
+                    const existingAllocation = item.bomAllocations.find(a => 
+                      a.componentProductId === bomItem.componentProductId &&
+                      a.batchNo === batch.batchNo &&
+                      a.shelfId === shelf.shelfId
+                    );
+                    
+                    if (!existingAllocation) {
+                      item.bomAllocations.push({
+                        componentProductId: bomItem.componentProductId,
+                        componentProductName: bomItem.componentProductName,
+                        componentProductSku: bomItem.componentProductSku,
+                        batchNo: batch.batchNo,
+                        shelfId: shelf.shelfId,
+                        shelfName: shelf.shelfName || '默认货架',
+                        quantity: apiData.allocatedQuantity
+                      });
+                    }
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
     });
   }
-  // 删除 else if (allocationIndex >= 0) 的移除逻辑
 };
 
 // 原料分配输入框失去焦点处理
+// 原料分配输入框失去焦点处理
 const handleAllocationBlur = async (itemIndex, bomRow, batch, shelf, productId) => {
-  await checkBatchAllocation(productId, batch.batchNo, shelf.shelfId);
+  console.log('原料分配输入框失去焦点，调用检查接口');
+  
+  // 先获取当前输入的值
+  const currentQuantity = getAllocationQuantity(itemIndex, bomRow.componentProductId, batch.batchNo, shelf.shelfId);
+  console.log('当前输入框的值:', currentQuantity);
+  
+  // 调用检查接口
+  const result = await checkBatchAllocation(productId, batch.batchNo, shelf.shelfId);
+  
+  if (result && result.success) {
+    console.log('接口调用成功，等待数据更新');
+    
+    // 等待数据更新完成
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // 获取接口返回的数量
+    const key = `${productId}_${bomRow.componentProductId}_${batch.batchNo}_${shelf.shelfId}`;
+    const apiData = latestAllocationData.value[key];
+    
+    if (apiData && apiData.allocatedQuantity !== undefined) {
+      const apiQuantity = parseFloat(apiData.allocatedQuantity) || 0;
+      console.log(`接口返回的allocatedQuantity: ${apiQuantity} (key: ${key})`);
+      
+      // 如果接口返回的数量与当前显示的不同，更新输入框
+      if (Math.abs(apiQuantity - currentQuantity) > 0.0001) {
+        console.log(`接口返回的值(${apiQuantity})与当前值(${currentQuantity})不同，更新输入框`);
+        
+        // 更新本地数据以匹配接口返回的值
+        const item = formData.items[itemIndex];
+        const allocationIndex = item.bomAllocations.findIndex(a => 
+          a.componentProductId === bomRow.componentProductId &&
+          a.batchNo === batch.batchNo &&
+          a.shelfId === shelf.shelfId
+        );
+        
+        if (allocationIndex >= 0) {
+          item.bomAllocations[allocationIndex].quantity = apiQuantity;
+        } else {
+          item.bomAllocations.push({
+            componentProductId: bomRow.componentProductId,
+            componentProductName: bomRow.componentProductName,
+            componentProductSku: bomRow.componentProductSku,
+            batchNo: batch.batchNo,
+            shelfId: shelf.shelfId,
+            shelfName: shelf.shelfName || '默认货架',
+            quantity: apiQuantity
+          });
+        }
+        
+        // 强制更新组件
+        await nextTick();
+      }
+    } else {
+      console.log(`没有找到接口返回的数据 key=${key}`);
+    }
+  }
 };
 
 // 领料数量输入框失去焦点处理
@@ -696,6 +833,7 @@ const handleQuantityBlur = async (index) => {
   const item = formData.items[index];
   await checkBatchAllocation(item.productId, null, null);
 };
+
 
 // 加载出库单详情 - 关键修复
 const loadOutboundDetail = async (id) => {
@@ -808,6 +946,9 @@ const loadOutboundDetail = async (id) => {
         
         // 触发库存检查以初始化latestAllocationData
         await checkBatchAllocation(null, null, null);
+        
+        // 编辑态数据保护
+        protectEditModeData();
       }
       
       ElMessage.success('数据加载成功');
