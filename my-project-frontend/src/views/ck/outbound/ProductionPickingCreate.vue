@@ -482,11 +482,15 @@ const formRules = {
 };
 
 // 构建检查请求数据
+// 构建检查请求数据
 const buildAllocationCheckRequest = (currentProductId = null, currentBatchNo = null, currentShelfId = null) => {
   const productAllocations = formData.items.map((item, index) => {
     const productInfo = productionProductList.value.find(p => p.id === item.productId);
     
-    const bomAllocationsWithTotal = (item.bomAllocations || []).map(allocation => {
+    // 确保bomAllocations有数据（即使为空数组）
+    const bomAllocations = item.bomAllocations || [];
+    
+    const bomAllocationsWithTotal = bomAllocations.map(allocation => {
       const bomItem = item.bomData?.find(b => b.componentProductId === allocation.componentProductId);
       const totalBomQuantity = bomItem ? calculateRequiredQuantity(bomItem.quantity, item.quantity) : 0;
       
@@ -520,6 +524,7 @@ const buildAllocationCheckRequest = (currentProductId = null, currentBatchNo = n
 };
 
 // 检查分配数量
+// 检查分配数量
 const checkBatchAllocation = async (currentProductId = null, currentBatchNo = null, currentShelfId = null) => {
   if (!formData.warehouseId || formData.items.length === 0) {
     return { success: true };
@@ -532,6 +537,28 @@ const checkBatchAllocation = async (currentProductId = null, currentBatchNo = nu
   loadingCheck.value = true;
   try {
     const requestData = buildAllocationCheckRequest(currentProductId, currentBatchNo, currentShelfId);
+    
+    // 确保productAllocations不为空
+    if (requestData.productAllocations.length === 0) {
+      console.log('没有产品分配数据，跳过检查');
+      return { success: true };
+    }
+    
+    // 检查是否有有效的bomAllocations
+    const hasValidAllocations = requestData.productAllocations.some(item => 
+      item.bomAllocations && item.bomAllocations.length > 0
+    );
+    
+    console.log('发送检查请求:', {
+      requestData,
+      hasValidAllocations,
+      productAllocations: requestData.productAllocations.map(p => ({
+        productId: p.productId,
+        productName: p.productName,
+        bomAllocationsCount: p.bomAllocations?.length || 0
+      }))
+    });
+    
     const res = await post('/api/auth/inventory/checkBatchAllocation', requestData);
     
     if (res) {
@@ -557,6 +584,7 @@ const checkBatchAllocation = async (currentProductId = null, currentBatchNo = nu
     loadingCheck.value = false;
   }
 };
+
 
 // 更新最新的分配数据
 const updateLatestAllocationData = (batchAllocatedList) => {
@@ -641,23 +669,21 @@ const updateAllocationQuantity = (value, itemIndex, bomRow, batch, shelf, produc
     a.shelfId === shelf.shelfId
   );
 
-  if (quantity > 0) {
-    if (allocationIndex >= 0) {
-      item.bomAllocations[allocationIndex].quantity = quantity;
-    } else {
-      item.bomAllocations.push({
-        componentProductId: bomRow.componentProductId,
-        componentProductName: bomRow.componentProductName,
-        componentProductSku: bomRow.componentProductSku,
-        batchNo: batch.batchNo,
-        shelfId: shelf.shelfId,
-        shelfName: shelf.shelfName || '默认货架',
-        quantity: quantity
-      });
-    }
-  } else if (allocationIndex >= 0) {
-    item.bomAllocations.splice(allocationIndex, 1);
+  // 修改：无论数量是多少，都保留分配记录
+  if (allocationIndex >= 0) {
+    item.bomAllocations[allocationIndex].quantity = quantity;
+  } else {
+    item.bomAllocations.push({
+      componentProductId: bomRow.componentProductId,
+      componentProductName: bomRow.componentProductName,
+      componentProductSku: bomRow.componentProductSku,
+      batchNo: batch.batchNo,
+      shelfId: shelf.shelfId,
+      shelfName: shelf.shelfName || '默认货架',
+      quantity: quantity  // 可以是0
+    });
   }
+  // 删除 else if (allocationIndex >= 0) 的移除逻辑
 };
 
 // 原料分配输入框失去焦点处理
@@ -845,15 +871,75 @@ const handleProductChange = async (productId, index) => {
     item.spec = product.spec;
     item.unit = product.unit;
     item.quantity = 1;
+    
+    // 先清空现有分配数据
     item.bomAllocations = [];
     
+    // 加载批次信息
     await loadBatchInfoForProduction(productId, index);
     
-    // 触发库存检查
+    // 构建初始的bomAllocations数据（即使数量为0）
+    await buildInitialAllocations(item, index);
+    
+    // 触发库存检查 - 使用初始数据
     setTimeout(async () => {
       await checkBatchAllocation(productId, null, null);
     }, 300);
   }
+};
+
+
+// 构建初始分配数据
+const buildInitialAllocations = async (item, itemIndex) => {
+  if (!item.bomData || item.bomData.length === 0) {
+    item.bomAllocations = [];
+    return;
+  }
+  
+  const initialAllocations = [];
+  
+  // 遍历每个BOM组件
+  for (const bomItem of item.bomData) {
+    // 获取该组件的批次信息
+    const batches = bomItem.batches || [];
+    
+    // 为每个批次的每个货架创建初始分配记录（数量为0）
+    for (const batch of batches) {
+      const shelfList = batch.shelfList || [];
+      
+      if (shelfList.length > 0) {
+        // 有货架信息的情况
+        for (const shelf of shelfList) {
+          initialAllocations.push({
+            componentProductId: bomItem.componentProductId,
+            componentProductName: bomItem.componentProductName,
+            componentProductSku: bomItem.componentProductSku,
+            batchNo: batch.batchNo,
+            shelfId: shelf.shelfId,
+            shelfName: shelf.shelfName || `货架${shelf.shelfId}`,
+            quantity: 0 // 初始数量为0
+          });
+        }
+      } else {
+        // 无货架信息的情况，创建一个默认货架分配
+        initialAllocations.push({
+          componentProductId: bomItem.componentProductId,
+          componentProductName: bomItem.componentProductName,
+          componentProductSku: bomItem.componentProductSku,
+          batchNo: batch.batchNo,
+          shelfId: null,
+          shelfName: '默认货架',
+          quantity: 0 // 初始数量为0
+        });
+      }
+    }
+  }
+  
+  // 赋值给item
+  item.bomAllocations = initialAllocations;
+  
+  // 打印调试信息
+  console.log(`构建了 ${initialAllocations.length} 个初始分配记录`, initialAllocations);
 };
 
 // BOM相关方法
@@ -867,6 +953,7 @@ const getBomData = (productId) => {
   return product?.bomData || [];
 };
 
+// 为生产领料加载批次信息的方法
 // 为生产领料加载批次信息的方法
 const loadBatchInfoForProduction = async (productId, index) => {
   try {
@@ -887,6 +974,9 @@ const loadBatchInfoForProduction = async (productId, index) => {
           batches = await loadBatchInfoForComponent(bomItem.componentProductId);
           if (batches && batches.length > 0) {
             batchInfoCache.value[cacheKey] = batches;
+          } else {
+            // 如果没有批次数据，返回空数组
+            batches = [];
           }
         }
 
@@ -905,11 +995,16 @@ const loadBatchInfoForProduction = async (productId, index) => {
     
     item.bomData = bomDataWithBatches;
     
+    // 返回数据用于调试
+    return bomDataWithBatches;
+    
   } catch (error) {
     console.error('加载生产领料批次信息失败:', error);
     formData.items[index].bomData = [];
+    return [];
   }
 };
+
 
 // 获取原料组件的批次数据（关联特定产品）
 const getBatchDataForComponent = (componentProductId, parentProductId) => {
