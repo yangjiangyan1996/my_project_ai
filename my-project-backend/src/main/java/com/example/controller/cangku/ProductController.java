@@ -223,10 +223,10 @@ public class ProductController {
 
     //获取可用所有商品列表， 成品包含原料时，原料也会展示到bom中, 但是没有包装件的产品列表
     @GetMapping("/listEnableNoPackaging")
-    public RespBean<List<ProductPageListResp>> listEnableNoPackaging() {
+    public RespBean<List<ProductListNoPackageResp>> listEnableNoPackaging() {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            List<ProductPageListResp> result = CKProductFacade.listEnableNoPackaging(user);
+            List<ProductListNoPackageResp> result = CKProductFacade.listEnableNoPackaging(user);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ProductController#listEnable,", e);
