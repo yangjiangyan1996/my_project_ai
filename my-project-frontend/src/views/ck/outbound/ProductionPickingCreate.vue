@@ -1,4 +1,6 @@
-<!-- ProductionPickingCreate.vue - 修复版本 -->
+<!-- 
+不行，影响了数据回显，我重新复述要求，要求是在原料分配中，用户在原料的批次货架输入框中输入数量后，会调用api/auth/inventory/checkBatchAllocation接口，接口中会返回allocatedQuantity字段，这个数据是java后端计算的能够分配的数据，要求吧这个allocatedQuantity字段的数据回显到输入框中，比如成品A有两个原料，分别是原料A，原料B， 原料A有批次z,批次x, 批次z有货架1，货架2，此时原料A总需求量是100，当我第一次在原料A的批次Z的货架1输入50时，此时api/auth/inventory/checkBatchAllocation接口返回的allocatedQuantity数据是50，需要原料A的批次Z的货架1的输入框在回显50， 当我第二次在原料A的批次Z的货架2输入60时 ，此时api/auth/inventory/checkBatchAllocation接口返回的allocatedQuantity数据通过计算是40，需要吧40渲染到原料A的批次Z的货架2， 原料B有批次q,批次w,当我第三次在原料B的批次q的货架1输入30时 ，此时api/auth/inventory/checkBatchAllocation接口返回的allocatedQuantity数据通过计算是20，需要吧20渲染到原料B的批次q的货架1中，要做到不同成品的相同原料在输入的时候互不影响，并且，在改动的时候，一定不能影响页面在编辑态时，成品数据，原料数据，原料数据中批次货架数据分配的渲染 ，我怀疑现在数据问题是本地缓存 影响，要不然在每次提交的时候，把所有的原料数据都交给/api/auth/inventory/checkBatchAllocation接口，通过后端计算，渲染接口给的正确数量，不要使用缓存,一定不能影响页面在编辑态时，成品数据，原料数据，原料数据中批次货架数据分配的渲染，请提供具体的修改步骤 
+-->
 <template>
   <div class="outbound-create-container">
     <el-card class="form-card" shadow="never">
