@@ -59,15 +59,20 @@ public class OutBoundDetailOfProductionResp {
     @Data
     public static class BomComponent {
         // 原料组件信息
+        private Long id;
         private Long componentProductId;
         private String componentProductName;
         private String componentProductSku;
         private String componentProductSpec;
         private String componentProductUnit;
         private BigDecimal unitUsage; // 单件用量
+        private Integer typeForSort;
 
         // 库存批次信息
         private List<StockBatch> availableBatches;
+
+        //相同原料合并的详情
+        List<UsageDetail> usageDetailList;
     }
 
     @Data
@@ -92,5 +97,18 @@ public class OutBoundDetailOfProductionResp {
         private Long shelfId;
         private String shelfName;
         private BigDecimal allocatedQuantity;
+    }
+
+    /**
+     * bomdetail的合并相同原料的用量信息
+     */
+    @Data
+    public static class UsageDetail {
+        private Long bomDetailId;
+        private BigDecimal quantity;
+        private Integer type;
+        private BigDecimal lossRate;
+        private String remark;
+        private Integer sortOrder;
     }
 }

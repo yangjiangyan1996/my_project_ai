@@ -1,5 +1,7 @@
 <!-- 
-不行，影响了数据回显，我重新复述要求，要求是在原料分配中，用户在原料的批次货架输入框中输入数量后，会调用api/auth/inventory/checkBatchAllocation接口，接口中会返回allocatedQuantity字段，这个数据是java后端计算的能够分配的数据，要求吧这个allocatedQuantity字段的数据回显到输入框中，比如成品A有两个原料，分别是原料A，原料B， 原料A有批次z,批次x, 批次z有货架1，货架2，此时原料A总需求量是100，当我第一次在原料A的批次Z的货架1输入50时，此时api/auth/inventory/checkBatchAllocation接口返回的allocatedQuantity数据是50，需要原料A的批次Z的货架1的输入框在回显50， 当我第二次在原料A的批次Z的货架2输入60时 ，此时api/auth/inventory/checkBatchAllocation接口返回的allocatedQuantity数据通过计算是40，需要吧40渲染到原料A的批次Z的货架2， 原料B有批次q,批次w,当我第三次在原料B的批次q的货架1输入30时 ，此时api/auth/inventory/checkBatchAllocation接口返回的allocatedQuantity数据通过计算是20，需要吧20渲染到原料B的批次q的货架1中，要做到不同成品的相同原料在输入的时候互不影响，并且，在改动的时候，一定不能影响页面在编辑态时，成品数据，原料数据，原料数据中批次货架数据分配的渲染 ，我怀疑现在数据问题是本地缓存 影响，要不然在每次提交的时候，把所有的原料数据都交给/api/auth/inventory/checkBatchAllocation接口，通过后端计算，渲染接口给的正确数量，不要使用缓存,一定不能影响页面在编辑态时，成品数据，原料数据，原料数据中批次货架数据分配的渲染，请提供具体的修改步骤 
+不行，影响了数据回显，我重新复述要求，要求是在原料分配中，用户在原料的批次货架输入框中输入数量后，会调用api/auth/inventory/checkBatchAllocation接口，接口中会返回allocatedQuantity字段，这个数据是java后端计算的能够分配的数据，要求吧这个allocatedQuantity字段的数据回显到输入框中，比如成品A有两个原料，分别是原料A，原料B， 原料A有批次z,批次x, 批次z有货架1，货架2，此时原料A总需求量是100，当我第一次在原料A的批次Z的货架1输入50时，此时api/auth/inventory/checkBatchAllocation接口返回的allocatedQuantity数据是50，需要原料A的批次Z的货架1的输入框在回显50， 当我第二次在原料A的批次Z的货架2输入60时 ，此时api/auth/inventory/checkBatchAllocation接口返回的allocatedQuantity数据通过计算是40，需要吧40渲染到原料A的批次Z的货架2， 原料B有批次q,批次w,当我第三次在原料B的批次q的货架1输入30时 ，此时api/auth/inventory/checkBatchAllocation接口返回的allocatedQuantity数据通过计算是20，需要吧20渲染到原料B的批次q的货架1中，要做到不同成品的相同原料在输入的时候互不影响，并且，在改动的时候，一定不能影响页面在编辑态时，成品数据，原料数据，原料数据中批次货架数据分配的渲染 ，我怀疑现在数据问题是本地缓存 影响，要不然在每次提交的时候，把所有的原料数据都交给/api/auth/inventory/checkBatchAllocation接口，通过后端计算，渲染接口给的正确数量，
+不要使用缓存,
+一定不能影响页面在编辑态时，成品数据，原料数据，原料数据中批次货架数据分配的渲染，请提供具体的修改步骤 
 -->
 <template>
   <div class="outbound-create-container">
@@ -230,11 +232,55 @@
               v-if="getBomData(item.productId)?.length"
             >
               <el-table-column type="index" label="序号" width="60" align="center" />
-              <el-table-column label="原料信息" min-width="100">
+              
+
+              <!-- 修改原料信息列的模板 -->
+              <el-table-column label="原料信息" min-width="150">
                 <template #default="{ row }">
                   <div>
-                    <div>{{ row.componentProductName }}</div>
+                    <div class="component-product-name">
+                      {{ row.componentProductName }}
+                      <!-- 如果有合并项，显示展开/收起按钮 -->
+                      <el-button
+                        v-if="row.usageDetailList && row.usageDetailList.length > 1"
+                        type="primary"
+                        link
+                        size="small"
+                        @click="toggleUsageDetails(row)"
+                        class="toggle-usage-btn"
+                      >
+                        <el-icon v-if="row.showUsageDetails">
+                          <ArrowUp />
+                        </el-icon>
+                        <el-icon v-else>
+                          <ArrowDown />
+                        </el-icon>
+                        {{ row.showUsageDetails ? '收起' : '展开' }}详情
+                      </el-button>
+                    </div>
                     <div class="sku-text">{{ row.componentProductSku }}</div>
+                    
+                    <!-- 合并详情展开区域 -->
+                    <el-collapse-transition>
+                      <div 
+                        v-if="row.showUsageDetails && row.usageDetailList && row.usageDetailList.length > 1"
+                        class="usage-details-container"
+                      >
+                        <div class="usage-details-title">合并详情:</div>
+                        <div 
+                          v-for="(usageDetail, usageIndex) in row.usageDetailList" 
+                          :key="usageDetail.bomDetailId || usageIndex"
+                          class="usage-detail-item"
+                        >
+                          <div class="usage-detail-content">
+                            <span class="usage-quantity">数量: {{ formatNumber(usageDetail.quantity) }}</span>
+                            <span class="usage-type" v-if="getUsageTypeText(usageDetail.type)">用途: {{ getUsageTypeText(usageDetail.type) }}</span>
+                            <span class="usage-remark" v-if="usageDetail.remark">备注: {{ usageDetail.remark }}</span>
+                            <span class="usage-loss-rate" v-if="usageDetail.lossRate">损耗率: {{ formatNumber(usageDetail.lossRate) }}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </el-collapse-transition>
                   </div>
                 </template>
               </el-table-column>
@@ -387,7 +433,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Delete, Upload } from '@element-plus/icons-vue';
+import { Plus, Delete, Upload,  ArrowUp, ArrowDown} from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
 const router = useRouter();
@@ -419,6 +465,8 @@ const formData = reactive({
   items: [],
   attachments: []
 });
+
+
 
 // 选项数据
 const warehouseList = ref([]);
@@ -523,6 +571,35 @@ const buildAllocationCheckRequest = (currentProductId = null, currentBatchNo = n
     currentShelfId: currentShelfId,
     productAllocations: productAllocations
   };
+};
+
+// 添加格式数字的方法
+const formatNumber = (value) => {
+  if (!value) return '0';
+  const num = parseFloat(value);
+  return isNaN(num) ? '0' : num.toFixed(4);
+};
+
+
+// 切换使用详情显示状态
+const toggleUsageDetails = (row) => {
+  // 使用Vue.set或直接赋值确保响应性
+  row.showUsageDetails = !row.showUsageDetails;
+};
+
+
+// 获取用途类型文本
+const getUsageTypeText = (type) => {
+  if (!type) return '';
+  const typeMap = {
+    0: '空',
+    1: '主料', 
+    2: '布料',
+    10: '辅料',
+    20:"五金",
+    100:"包装"
+  };
+  return typeMap[type] || `类型${type}`;
 };
 
 // 检查分配数量
@@ -938,6 +1015,8 @@ const loadOutboundDetail = async (id) => {
                 componentProductSpec: component.componentProductSpec,
                 componentProductUnit: component.componentProductUnit,
                 quantity: parseFloat(component.unitUsage) || 0,
+                usageDetailList: component.usageDetailList || [], // 添加usageDetailList
+                showUsageDetails: false, // 默认不展开
                 batches: batches
               };
             });
@@ -1020,6 +1099,15 @@ const handleProductChange = async (productId, index) => {
     
     // 加载批次信息
     await loadBatchInfoForProduction(productId, index);
+
+    // 确保BOM数据有正确的结构
+    if (item.bomData) {
+      item.bomData = item.bomData.map(bomItem => ({
+        ...bomItem,
+        showUsageDetails: false, // 初始化显示状态
+        usageDetailList: bomItem.usageDetailList || [] // 确保usageDetailList存在
+      }));
+    }
     
     // 构建初始的bomAllocations数据（即使数量为0）
     await buildInitialAllocations(item, index);
@@ -1085,15 +1173,26 @@ const buildInitialAllocations = async (item, itemIndex) => {
   console.log(`构建了 ${initialAllocations.length} 个初始分配记录`, initialAllocations);
 };
 
-// BOM相关方法
+// 修改BOM数据处理方法，确保usageDetailList存在
 const getBomData = (productId) => {
   const itemWithBomData = formData.items.find(item => item.productId === productId && item.bomData);
   if (itemWithBomData && itemWithBomData.bomData.length > 0) {
-    return itemWithBomData.bomData;
+    // 确保每个BOM项都有showUsageDetails属性
+    return itemWithBomData.bomData.map(item => ({
+      ...item,
+      showUsageDetails: item.showUsageDetails || false
+    }));
   }
   
   const product = productionProductList.value.find(p => p.id === productId);
-  return product?.bomData || [];
+  if (product?.bomData) {
+    return product.bomData.map(item => ({
+      ...item,
+      showUsageDetails: item.showUsageDetails || false
+    }));
+  }
+  
+  return [];
 };
 
 // 为生产领料加载批次信息的方法
@@ -1131,6 +1230,8 @@ const loadBatchInfoForProduction = async (productId, index) => {
           componentProductSpec: bomItem.componentProductSpec,
           componentProductUnit: bomItem.componentProductUnit,
           quantity: parseFloat(bomItem.quantity) || 0,
+          usageDetailList: bomItem.usageDetailList || [], // 确保usageDetailList存在
+          showUsageDetails: false, // 默认不展开
           batches: batches || []
         };
       })
@@ -1326,10 +1427,30 @@ const handleSubmit = async () => {
     return;
   }
   
+  // 提交前数据检查日志（调试用）
+  console.log('提交前分配数据检查:');
+  formData.items.forEach((item, index) => {
+    console.log(`产品 ${item.productName || '未命名'} (index: ${index}):`);
+    console.log('- 原始分配记录数:', item.bomAllocations?.length || 0);
+    console.log('- 非零分配记录数:', item.bomAllocations?.filter(a => parseFloat(a.quantity) > 0)?.length || 0);
+    console.log('- 分配明细:', item.bomAllocations?.map(a => ({
+      原料: a.componentProductName,
+      批次: a.batchNo,
+      货架: a.shelfName,
+      数量: a.quantity
+    })) || []);
+  });
+  
   loading.value = true;
   try {
     const submitData = prepareSubmitData();
     submitData.status = 1;
+    
+    // 提交数据检查日志（调试用）
+    console.log('提交数据检查:');
+    submitData.items.forEach((item, index) => {
+      console.log(`提交的产品 ${item.productName} 分配记录数:`, item.bomAllocations?.length || 0);
+    });
     
     const url = isEditMode.value ? '/api/auth/outbound/updateProductionPickingOutBound' : '/api/auth/outbound/createProductionPickingOutBound';
     const res = await post(url, submitData);
@@ -1344,20 +1465,23 @@ const handleSubmit = async () => {
   }
 };
 
+
 // 准备提交数据
 const prepareSubmitData = () => {
   const items = formData.items.map(item => {
     const productInfo = productionProductList.value.find(p => p.id === item.productId);
     
-    // 构建BOM分配数据
-    const bomAllocations = (item.bomAllocations || []).map(allocation => ({
-      componentProductId: allocation.componentProductId,
-      componentProductName: allocation.componentProductName,
-      batchNo: allocation.batchNo,
-      shelfId: allocation.shelfId,
-      shelfName: allocation.shelfName,
-      quantity: parseFloat(allocation.quantity) || 0
-    }));
+    // 构建BOM分配数据，过滤掉数量为0的数据
+    const bomAllocations = (item.bomAllocations || [])
+      .filter(allocation => parseFloat(allocation.quantity) > 0)  // 只保留数量大于0的分配
+      .map(allocation => ({
+        componentProductId: allocation.componentProductId,
+        componentProductName: allocation.componentProductName,
+        batchNo: allocation.batchNo,
+        shelfId: allocation.shelfId,
+        shelfName: allocation.shelfName,
+        quantity: parseFloat(allocation.quantity) || 0
+      }));
     
     return {
       productId: item.productId,
@@ -1392,6 +1516,8 @@ const prepareSubmitData = () => {
     tenantId: 1
   };
 };
+
+
 
 const validateForm = async () => {
   if (!formRef.value) return false;
@@ -1970,5 +2096,76 @@ watch(
   background-color: #f8f9fa;
   border-radius: 4px;
   font-size: 12px;
+}
+
+/* 添加以下样式到style部分 */
+.component-product-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.toggle-usage-btn {
+  padding: 0;
+  height: auto;
+  margin-left: 8px;
+}
+
+.usage-details-container {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.usage-details-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #409eff;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed #dcdfe6;
+}
+
+.usage-detail-item {
+  margin-bottom: 4px;
+  padding: 4px;
+  background-color: white;
+  border-radius: 2px;
+}
+
+.usage-detail-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.usage-quantity {
+  color: #e6a23c;
+  font-weight: bold;
+}
+
+.usage-type {
+  color: #409eff;
+}
+
+.usage-remark {
+  color: #909399;
+  flex: 1;
+  min-width: 100px;
+}
+
+.usage-loss-rate {
+  color: #f56c6c;
+}
+
+.sku-text {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
 }
 </style>

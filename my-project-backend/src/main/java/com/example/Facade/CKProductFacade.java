@@ -698,7 +698,10 @@ public class CKProductFacade {
                 for (Long componentProductId : componentProductId2ProductBomDetailListMap.keySet()) {
                     List<ProductBomDetail> productBomDetails = componentProductId2ProductBomDetailListMap.get(componentProductId);
                     BomDetailAndWarehouseListNoPackageResp r = new BomDetailAndWarehouseListNoPackageResp();
-                    r.setId(productBomDetails.get(0).getId());
+                    r.setId(productBomDetails.stream().map(ProductBomDetail::getId).min(Comparator.comparingLong(v1 -> v1)).get());
+
+                    //获取 productBomDetails 最小的type
+                    r.setTypeForSort(productBomDetails.stream().map(ProductBomDetail::getType).min(Comparator.comparingInt(v1 -> v1)).get());
                     r.setComponentProductId(componentProductId);
                     if (productId2ProductMap.get(componentProductId) != null) {
                         Product product = productId2ProductMap.get(componentProductId);
@@ -727,6 +730,8 @@ public class CKProductFacade {
                     r.setUsageDetailList(collect);
                     bomList.add(r);
                 }
+                //bomList 按照 typeForSort 从小到大排序,然后按照id排序
+                bomList.sort(Comparator.comparingInt(BomDetailAndWarehouseListNoPackageResp::getTypeForSort).thenComparing(BomDetailAndWarehouseListNoPackageResp::getId));
                 p.setBomData(bomList);
             } else {
                 return null;

@@ -12,6 +12,7 @@ import com.example.entity.cangku.resp.excel.OutboundOderExcelModel;
 import com.example.entity.cangku.resp.excel.OutboundSaleExcelModel;
 import com.example.entity.dto.Account;
 import com.example.enums.CkInOutboundEnums;
+import com.example.enums.CkProductEnums;
 import com.example.holder.InventoryHolder;
 import com.example.service.*;
 import com.example.utils.ExcelUtils;
@@ -1112,21 +1113,35 @@ public class CkOutboundFacade {
         try {
             ProductBom productBom = productBomService.selectByProduectId(productId, tenantId);
             // 1. 获取产品的BOM信息
-            List<ProductBomDetail> bomItems = productBomDetailService.selectByBomId(productBom.getId(), tenantId);
-            if (CollectionUtils.isEmpty(bomItems)) {
+            List<ProductBomDetail> subProductDetails = productBomDetailService.selectByBomId(productBom.getId(), tenantId);
+            if (CollectionUtils.isEmpty(subProductDetails)) {
                 return bomComponents;
             }
 
             // 2. 为每个BOM组件构建信息
-            for (ProductBomDetail bomItem : bomItems) {
+            Map<Long, List<ProductBomDetail>> componentProductId2ProductBomDetailListMap = subProductDetails.stream()
+                    .filter(e-> !CkProductEnums.BomDetailType.BOM_DETAIL_TYPE_PACKAGE.getCode().equals(e.getType()))
+                    .collect(Collectors.groupingBy(ProductBomDetail::getComponentProductId));
+            List<BomDetailAndWarehouseListNoPackageResp> bomList = new ArrayList<>();
+
+            for (Long componentProductId : componentProductId2ProductBomDetailListMap.keySet()) {
                 OutBoundDetailOfProductionResp.BomComponent bomComponent = new OutBoundDetailOfProductionResp.BomComponent();
 
+                List<ProductBomDetail> productBomDetails = componentProductId2ProductBomDetailListMap.getOrDefault(componentProductId, new ArrayList<>());
                 // 设置组件基本信息
-                bomComponent.setComponentProductId(bomItem.getComponentProductId());
-                bomComponent.setUnitUsage(bomItem.getQuantity()); // 单件用量
+                bomComponent.setId(productBomDetails.stream().map(ProductBomDetail::getId).min(Comparator.comparingLong(v1 -> v1)).get());
+                bomComponent.setComponentProductId(componentProductId);
+                bomComponent.setTypeForSort(productBomDetails.stream().map(ProductBomDetail::getType).min(Comparator.comparingInt(v1 -> v1)).get());
+
+                //对 productBomDetails 的quantity求和
+                BigDecimal quantityOfSameProduct = BigDecimal.ZERO;
+                for (ProductBomDetail productBomDetail : productBomDetails) {
+                    quantityOfSameProduct = quantityOfSameProduct.add(productBomDetail.getQuantity());
+                }
+                bomComponent.setUnitUsage(quantityOfSameProduct); // 单件用量
 
                 // 获取组件产品的详细信息
-                Product componentProduct = productService.selectById(tenantId, bomItem.getComponentProductId());
+                Product componentProduct = productService.selectById(tenantId, componentProductId);
                 if (componentProduct != null) {
                     bomComponent.setComponentProductName(componentProduct.getName());
                     bomComponent.setComponentProductSku(componentProduct.getSku());
@@ -1139,15 +1154,29 @@ public class CkOutboundFacade {
 
                 // 获取组件的库存批次信息
                 List<OutBoundDetailOfProductionResp.StockBatch> availableBatches = getStockBatchesForComponent(
-                        bomItem.getComponentProductId(), warehouseId, tenantId, shelfId2ShelfMap);
+                        componentProductId, warehouseId, tenantId, shelfId2ShelfMap);
                 bomComponent.setAvailableBatches(availableBatches);
 
+                List<OutBoundDetailOfProductionResp.UsageDetail> collect = productBomDetails.stream().map(z -> {
+                    OutBoundDetailOfProductionResp.UsageDetail usageDetail = new OutBoundDetailOfProductionResp.UsageDetail();
+                    usageDetail.setBomDetailId(z.getId());
+                    usageDetail.setQuantity(z.getQuantity());
+                    usageDetail.setType(z.getType());
+                    usageDetail.setLossRate(z.getLossRate());
+                    usageDetail.setRemark(z.getRemark());
+                    usageDetail.setSortOrder(z.getSortOrder());
+                    return usageDetail;
+                }).collect(Collectors.toList());
+                bomComponent.setUsageDetailList(collect);
                 bomComponents.add(bomComponent);
             }
         } catch (Exception e) {
             log.error("构建BOM组件信息失败, productId: {}, tenantId: {}", productId, tenantId, e);
         }
+        //bomList 按照 typeForSort 从小到大排序,然后按照id排序
+        bomComponents.sort(Comparator.comparingInt(OutBoundDetailOfProductionResp.BomComponent::getTypeForSort).thenComparing(OutBoundDetailOfProductionResp.BomComponent::getId));
 
+        bomComponents.sort(Comparator.comparing(OutBoundDetailOfProductionResp.BomComponent::getComponentProductName));
         return bomComponents;
     }
 

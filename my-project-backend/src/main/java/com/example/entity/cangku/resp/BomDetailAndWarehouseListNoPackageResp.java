@@ -21,6 +21,8 @@ public class BomDetailAndWarehouseListNoPackageResp {
     String componentProductSpec;
     String componentProductColor;
     String componentProductUnit;
+    //这里放type，仅用来排序
+    Integer typeForSort;
     BigDecimal quantity;
     //相同原料合并的详情
     List<UsageDetail> usageDetailList;
