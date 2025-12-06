@@ -35,4 +35,6 @@ public class RecommendRuleItem extends BaseModel {
     private BigDecimal confidence;
     //显示顺序
     private Integer sequence;
+
+    private String remark;
 }

@@ -9,10 +9,9 @@ import lombok.Data;
  * @Date 2025/10/29 23:21
  */
 @Data
-public class WareHourseUpdateStatusReq {
+public class RecommendRuleUpdateStatusReq {
     private Long id;
     private Integer status;
     private Long userId;
     private Long tenantId;
-
 }

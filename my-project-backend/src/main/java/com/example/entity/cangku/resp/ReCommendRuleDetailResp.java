@@ -1,23 +1,18 @@
-package com.example.entity.cangku.dto;
+package com.example.entity.cangku.resp;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * @Author YangJian
  * @Description
  * @Email 1776080295@qq.com
- * @Date 2025/12/6 15:31
+ * @Date 2025/11/16 23:20
  */
 @Data
-@TableName("ck_recommend_rule")
-public class RecommendRule extends BaseModel {
-    @TableId(type = IdType.AUTO)
+public class ReCommendRuleDetailResp {
     private Long id;
     //租户ID
     private Long tenantId;
@@ -27,6 +22,14 @@ public class RecommendRule extends BaseModel {
     private String ruleName;
     //客户ID（NULL表示适用所有客户）
     private Long customerId;
+    //客户名称
+    private String customerName;
+    //触发产品名称
+    private String triggerProductName;
+    //触发产品规格
+    private String triggerProductSpec;
+    //触发产品颜色
+    private String triggerProductColor;
     //触发产品ID
     private Long triggerProductId;
     //最小触发数量
@@ -45,4 +48,6 @@ public class RecommendRule extends BaseModel {
     private BigDecimal confidence;
     //备注
     private String remark;
+
+    private List<RecommendRuleItemDetailResp> ruleItems;
 }

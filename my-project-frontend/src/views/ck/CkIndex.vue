@@ -37,6 +37,7 @@
             <el-menu-item index="ckUnit" @click="changeDisplayMode('ckUnit')">单位管理</el-menu-item>
             <el-menu-item index="warehouse" @click="changeDisplayMode('warehouse')">仓库管理</el-menu-item>
             <el-menu-item index="shelf" @click="changeDisplayMode('shelf')">货架管理</el-menu-item>
+            <el-menu-item index="ckRecommendRule" @click="changeDisplayMode('ckRecommendRule')">推荐规则管理</el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="product">
@@ -405,6 +406,7 @@
     <CkStockTake v-if="displayMode === 'stock-take'" />
     <CkShelfManage v-if="displayMode === 'shelf'" />
     <CkUser v-if="displayMode === 'profile'" />
+    <CkRecommendRuleManage v-if="displayMode === 'ckRecommendRule'" />
 
     <!-- 添加快捷操作对应的组件 -->
     <CkInboundCreate v-if="displayMode === 'inbound-create'" />
@@ -445,6 +447,9 @@ import CkShelfManage from '@/views/ck/CkShelfManage.vue';
 import CkUser from '@/views/ck/CkUser.vue';
 import CkSkuManage from '@/views/ck/CkSkuManage.vue';
 import CkCkUnitManage from '@/views/ck/CkUnitManage.vue';
+import CkRecommendRuleManage from '@/views/ck/CkRecommendRuleManage.vue';
+
+
 
 // 导入快捷操作组件
 import CkInboundCreate from '@/views/ck/CkInboundCreate.vue';
