@@ -602,7 +602,7 @@ const getUsageTypeText = (type) => {
   return typeMap[type] || `类型${type}`;
 };
 
-// 检查分配数量
+
 // 检查分配数量
 const checkBatchAllocation = async (currentProductId = null, currentBatchNo = null, currentShelfId = null) => {
   if (!formData.warehouseId || formData.items.length === 0) {
@@ -644,6 +644,9 @@ const checkBatchAllocation = async (currentProductId = null, currentBatchNo = nu
       // 存储接口返回的最新数据
       if (res.batchAllocatedList) {
         updateLatestAllocationData(res.batchAllocatedList);
+        
+        // 新增：同步更新本地分配数据
+        syncLocalAllocationsWithApi(res.batchAllocatedList);
       }
       
       allocationCheckResult.value = {
@@ -662,6 +665,71 @@ const checkBatchAllocation = async (currentProductId = null, currentBatchNo = nu
   } finally {
     loadingCheck.value = false;
   }
+};
+
+// 同步本地分配数据与接口返回数据
+const syncLocalAllocationsWithApi = (batchAllocatedList) => {
+  batchAllocatedList.forEach(parentDto => {
+    const productId = parentDto.productParentId;
+    
+    // 找到对应的产品项
+    const itemIndex = formData.items.findIndex(item => item.productId == productId);
+    if (itemIndex === -1) return;
+    
+    const item = formData.items[itemIndex];
+    
+    parentDto.productSonDtoList?.forEach(sonDto => {
+      const componentProductId = sonDto.productSonId;
+      
+      sonDto.batchList?.forEach(batch => {
+        const batchNo = batch.batchNo;
+        
+        batch.shelfList?.forEach(shelf => {
+          const shelfId = shelf.shelfId;
+          const allocatedQuantity = shelf.allocatedQuantity || 0;
+          
+          // 如果接口返回了可分配数量，更新本地数据
+          if (allocatedQuantity > 0) {
+            // 确保item有bomAllocations数组
+            if (!item.bomAllocations) {
+              item.bomAllocations = [];
+            }
+            
+            // 查找现有的分配记录
+            const allocationIndex = item.bomAllocations.findIndex(a => 
+              a.componentProductId == componentProductId &&
+              a.batchNo === batchNo &&
+              a.shelfId == shelfId
+            );
+            
+            if (allocationIndex >= 0) {
+              // 更新现有记录
+              item.bomAllocations[allocationIndex].quantity = allocatedQuantity;
+              console.log(`同步本地数据: 产品${productId} 原料${componentProductId} 批次${batchNo} 货架${shelfId} 数量${allocatedQuantity}`);
+            } else {
+              // 创建新记录（如果需要）
+              // 注意：这里可能需要从bomData获取产品信息
+              const bomItem = item.bomData?.find(b => b.componentProductId == componentProductId);
+              if (bomItem) {
+                item.bomAllocations.push({
+                  componentProductId: componentProductId,
+                  componentProductName: bomItem.componentProductName,
+                  componentProductSku: bomItem.componentProductSku,
+                  batchNo: batchNo,
+                  shelfId: shelfId,
+                  shelfName: shelf.shelfName || `货架${shelfId}`,
+                  quantity: allocatedQuantity
+                });
+                console.log(`创建本地数据: 产品${productId} 原料${componentProductId} 批次${batchNo} 货架${shelfId} 数量${allocatedQuantity}`);
+              }
+            }
+          }
+        });
+      });
+    });
+  });
+  
+  console.log('本地分配数据已与接口数据同步');
 };
 
 
@@ -716,8 +784,6 @@ const getRealTimeAvailableInfo = (parentProductId, componentProductId, batchNo, 
   return '0.0000';
 };
 
-
-// 获取分配数量 - 优先使用接口返回的allocatedQuantity
 // 获取分配数量 - 优先使用接口返回的allocatedQuantity
 const getAllocationQuantity = (itemIndex, componentProductId, batchNo, shelfId) => {
   const item = formData.items[itemIndex];
@@ -846,14 +912,14 @@ const protectEditModeData = () => {
   }
 };
 
-// 原料分配输入框失去焦点处理
+
 // 原料分配输入框失去焦点处理
 const handleAllocationBlur = async (itemIndex, bomRow, batch, shelf, productId) => {
   console.log('原料分配输入框失去焦点，调用检查接口');
   
-  // 先获取当前输入的值
-  const currentQuantity = getAllocationQuantity(itemIndex, bomRow.componentProductId, batch.batchNo, shelf.shelfId);
-  console.log('当前输入框的值:', currentQuantity);
+  // 获取当前输入框的DOM值（可能还没有更新到响应式数据）
+  const currentInputValue = getAllocationQuantity(itemIndex, bomRow.componentProductId, batch.batchNo, shelf.shelfId);
+  console.log('当前输入框的值:', currentInputValue);
   
   // 调用检查接口
   const result = await checkBatchAllocation(productId, batch.batchNo, shelf.shelfId);
@@ -872,35 +938,22 @@ const handleAllocationBlur = async (itemIndex, bomRow, batch, shelf, productId) 
       const apiQuantity = parseFloat(apiData.allocatedQuantity) || 0;
       console.log(`接口返回的allocatedQuantity: ${apiQuantity} (key: ${key})`);
       
-      // 如果接口返回的数量与当前显示的不同，更新输入框
-      if (Math.abs(apiQuantity - currentQuantity) > 0.0001) {
-        console.log(`接口返回的值(${apiQuantity})与当前值(${currentQuantity})不同，更新输入框`);
-        
-        // 更新本地数据以匹配接口返回的值
-        const item = formData.items[itemIndex];
-        const allocationIndex = item.bomAllocations.findIndex(a => 
-          a.componentProductId === bomRow.componentProductId &&
-          a.batchNo === batch.batchNo &&
-          a.shelfId === shelf.shelfId
-        );
-        
-        if (allocationIndex >= 0) {
-          item.bomAllocations[allocationIndex].quantity = apiQuantity;
-        } else {
-          item.bomAllocations.push({
-            componentProductId: bomRow.componentProductId,
-            componentProductName: bomRow.componentProductName,
-            componentProductSku: bomRow.componentProductSku,
-            batchNo: batch.batchNo,
-            shelfId: shelf.shelfId,
-            shelfName: shelf.shelfName || '默认货架',
-            quantity: apiQuantity
-          });
-        }
-        
-        // 强制更新组件
-        await nextTick();
+      // 同步本地数据（syncLocalAllocationsWithApi应该已经处理了）
+      // 这里可以添加一个检查，确保本地数据已更新
+      const item = formData.items[itemIndex];
+      const allocation = item.bomAllocations?.find(a => 
+        a.componentProductId === bomRow.componentProductId &&
+        a.batchNo === batch.batchNo &&
+        a.shelfId === shelf.shelfId
+      );
+      
+      if (allocation && Math.abs(parseFloat(allocation.quantity) - apiQuantity) > 0.0001) {
+        console.log(`本地数据未同步，手动更新: ${allocation.quantity} -> ${apiQuantity}`);
+        allocation.quantity = apiQuantity;
       }
+      
+      // 强制更新视图
+      await nextTick();
     } else {
       console.log(`没有找到接口返回的数据 key=${key}`);
     }
@@ -1466,22 +1519,29 @@ const handleSubmit = async () => {
 };
 
 
+
 // 准备提交数据
 const prepareSubmitData = () => {
   const items = formData.items.map(item => {
     const productInfo = productionProductList.value.find(p => p.id === item.productId);
     
-    // 构建BOM分配数据，过滤掉数量为0的数据
+    // 构建BOM分配数据，使用同步后的本地数据
+    // 注意：这里直接使用item.bomAllocations，它应该已经被syncLocalAllocationsWithApi更新
     const bomAllocations = (item.bomAllocations || [])
       .filter(allocation => parseFloat(allocation.quantity) > 0)  // 只保留数量大于0的分配
-      .map(allocation => ({
-        componentProductId: allocation.componentProductId,
-        componentProductName: allocation.componentProductName,
-        batchNo: allocation.batchNo,
-        shelfId: allocation.shelfId,
-        shelfName: allocation.shelfName,
-        quantity: parseFloat(allocation.quantity) || 0
-      }));
+      .map(allocation => {
+        // 调试日志
+        console.log(`准备提交: ${item.productName} -> ${allocation.componentProductName}, 批次${allocation.batchNo}, 货架${allocation.shelfId}, 数量${allocation.quantity}`);
+        
+        return {
+          componentProductId: allocation.componentProductId,
+          componentProductName: allocation.componentProductName,
+          batchNo: allocation.batchNo,
+          shelfId: allocation.shelfId,
+          shelfName: allocation.shelfName,
+          quantity: parseFloat(allocation.quantity) || 0
+        };
+      });
     
     return {
       productId: item.productId,
@@ -1498,6 +1558,10 @@ const prepareSubmitData = () => {
       bomAllocations: bomAllocations
     };
   });
+  
+  // 提交前的最后检查
+  console.log('提交数据检查 - bomAllocations总数:', 
+    items.reduce((sum, item) => sum + (item.bomAllocations?.length || 0), 0));
   
   return {
     id: formData.id,
@@ -1516,6 +1580,7 @@ const prepareSubmitData = () => {
     tenantId: 1
   };
 };
+
 
 
 
