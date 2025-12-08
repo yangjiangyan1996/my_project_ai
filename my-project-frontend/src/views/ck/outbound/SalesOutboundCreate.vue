@@ -86,6 +86,7 @@
                 style="width: 100%"
                 filterable
                 :disabled="isViewMode"
+                @change="handleCustomerChange"
               >
                 <el-option
                   v-for="customer in customerList"
@@ -132,77 +133,97 @@
         </el-form-item>
       </el-form>
 
-      <!-- 产品明细 -->
-      <div class="product-section">
+      <!-- 智能推荐区域 -->
+      <div class="recommendation-section" v-if="!isViewMode && showRecommendations && recommendations.length > 0">
         <div class="section-header">
-          <h3>产品明细</h3>
-          <div class="header-right-actions" v-if="!isViewMode">
-            <el-button 
-              type="success" 
-              @click="handleDownloadTemplate"
-              :loading="downloadLoading"
-            >
-              <el-icon><Download /></el-icon>
-              下载模板
+          <div class="recommendation-header-left">
+            <h3>
+              <el-icon><MagicStick /></el-icon>
+              智能推荐
+            </h3>
+            <span class="tip">基于该客户的购买习惯，系统为您推荐以下产品</span>
+          </div>
+          <div class="recommendation-header-right">
+            <el-button type="text" @click="addAllRecommendations" :disabled="!hasValidRecommendations">
+              一键添加全部
             </el-button>
-            <el-button 
-              type="warning" 
-              @click="handleImportExcel"
-            >
-              <el-icon><Upload /></el-icon>
-              导入模板
+            <el-button type="text" @click="closeRecommendations">
+              <el-icon><Close /></el-icon>
             </el-button>
           </div>
         </div>
-
-        <!-- 销售出库的产品表格 -->
-        <el-table
-          v-if="formData.warehouseId"
-          :data="allInventoryProducts"
-          border
-          class="product-table"
-          empty-text="请先选择仓库"
-        >
-          <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column label="产品信息" min-width="200">
+        
+        <el-table :data="recommendations" border class="recommendation-table" v-loading="loadingRecommendations">
+          <el-table-column label="推荐产品" min-width="200">
             <template #default="{ row }">
-              <div>
+              <div class="product-info">
                 <div class="product-name">{{ row.productName }}</div>
                 <div class="sku-text">{{ row.sku }}</div>
+                <div class="spec-text">{{ row.spec || '-' }}</div>
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="规格型号" width="120">
+          
+          <el-table-column label="推荐理由" width="140">
             <template #default="{ row }">
-              <span>{{ row.spec || '-' }}</span>
+              <div class="recommend-reason">
+                <el-tag size="small" :type="row.reasonType || 'info'">
+                  {{ row.reasonText }}
+                </el-tag>
+                <div class="confidence" v-if="row.confidence">
+                  置信度: {{ (row.confidence * 100).toFixed(0) }}%
+                </div>
+              </div>
             </template>
           </el-table-column>
-          <el-table-column label="颜色" width="60">
+          
+          <el-table-column label="通常搭配" width="120">
             <template #default="{ row }">
-              <span>{{ row.color || '-' }}</span>
+              <div class="trigger-products">
+                <el-popover
+                  placement="top"
+                  :width="200"
+                  trigger="hover"
+                  v-if="row.triggerProducts && row.triggerProducts.length > 0"
+                >
+                  <template #reference>
+                    <el-tag size="small" type="success">
+                      搭配{{ row.triggerProducts.length }}个产品
+                    </el-tag>
+                  </template>
+                  <div class="trigger-list">
+                    <div v-for="trigger in row.triggerProducts" :key="trigger.productId" class="trigger-item">
+                      {{ trigger.productName }}
+                    </div>
+                  </div>
+                </el-popover>
+                <span v-else class="no-trigger">通用推荐</span>
+              </div>
             </template>
           </el-table-column>
-          <el-table-column label="当前库存" width="100" align="center">
+          
+          <el-table-column label="库存" width="80" align="center">
             <template #default="{ row }">
-              <span :class="getStockClass(row.availableQuantity, row.quantity)">
+              <span :class="getStockClass(row.availableQuantity, row.recommendQuantity)">
                 {{ row.availableQuantity }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="出库数量" width="120">
+          
+          <el-table-column label="推荐数量" width="120">
             <template #default="{ row }">
               <el-input-number
-                v-model="row.quantity"
+                v-model="row.recommendQuantity"
                 :min="0"
-                :max="getQuantityMax(row)"
+                :max="row.availableQuantity"
                 controls-position="right"
-                style="width: 100%"
-                @change="() => handleQuantityChangeForAll(row)"
-                placeholder="请输入数量"
-                :disabled="isViewMode"
+                size="small"
+                @change="() => handleRecommendQuantityChange(row)"
+                :disabled="row.availableQuantity <= 0"
               />
             </template>
           </el-table-column>
+          
           <el-table-column label="单价" width="120">
             <template #default="{ row }">
               <el-input-number
@@ -210,21 +231,14 @@
                 :min="0"
                 :precision="2"
                 controls-position="right"
-                style="width: 100%"
-                :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
+                size="small"
+                :disabled="row.recommendQuantity <= 0 || row.availableQuantity <= 0"
               >
                 <template #prefix>¥</template>
               </el-input-number>
             </template>
           </el-table-column>
-          <el-table-column label="金额" width="120" align="right">
-            <template #default="{ row }">
-              <span v-if="row.quantity > 0">¥ {{ ((row.price || 0) * (row.quantity || 0)).toFixed(2) }}</span>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-
-          <!-- USD单价字段 -->
+          
           <el-table-column label="USD单价" width="120">
             <template #default="{ row }">
               <el-input-number
@@ -232,17 +246,313 @@
                 :min="0"
                 :precision="2"
                 controls-position="right"
-                style="width: 100%"
-                :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
+                size="small"
+                :disabled="row.recommendQuantity <= 0 || row.availableQuantity <= 0"
               >
                 <template #prefix>$</template>
               </el-input-number>
             </template>
           </el-table-column>
-          <!-- USD总额字段 -->
+          
+          <el-table-column label="操作" width="120" align="center" fixed="right">
+            <template #default="{ row }">
+              <div class="recommend-actions">
+                <el-button
+                  type="primary"
+                  link
+                  @click="addRecommendToOrder(row)"
+                  :disabled="row.recommendQuantity <= 0 || row.availableQuantity <= 0 || row.added"
+                >
+                  {{ row.added ? '已添加' : '添加' }}
+                </el-button>
+                <el-button
+                  type="text"
+                  size="small"
+                  @click="ignoreRecommendation(row)"
+                >
+                  忽略
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 产品明细 -->
+      <div class="product-section">
+        <div class="section-header">
+          <div class="section-header-left">
+            <h3>产品明细</h3>
+            <el-button 
+              type="success" 
+              @click="loadRecommendations"
+              :loading="loadingRecommendations"
+              v-if="!isViewMode && formData.customerId && formData.warehouseId"
+              class="recommend-btn"
+            >
+              <el-icon><MagicStick /></el-icon>
+              智能推荐
+            </el-button>
+          </div>
+          <div class="header-right-actions" v-if="!isViewMode">
+            <!-- 产品搜索 -->
+            <el-input
+              v-model="productSearch"
+              placeholder="搜索产品..."
+              clearable
+              style="width: 200px; margin-right: 10px;"
+              @input="filterProducts"
+              size="small"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+            
+            <el-dropdown @command="handleBatchCommand" trigger="click">
+              <el-button type="primary" size="small">
+                <el-icon><Operation /></el-icon>
+                批量操作
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="clearAll" :disabled="!hasProductsWithQuantity">
+                    <el-icon><Delete /></el-icon>
+                    清空所有数量
+                  </el-dropdown-item>
+                  <el-dropdown-item command="resetPrices" :disabled="!hasProductsWithQuantity">
+                    <el-icon><Refresh /></el-icon>
+                    重置价格
+                  </el-dropdown-item>
+                  <el-dropdown-item command="clearBatches" :disabled="!hasBatchAllocations">
+                    <el-icon><CloseBold /></el-icon>
+                    清空批次分配
+                  </el-dropdown-item>
+                  <el-dropdown-item command="exportData">
+                    <el-icon><Download /></el-icon>
+                    导出当前数据
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            
+            <el-button 
+              type="success" 
+              @click="handleDownloadTemplate"
+              :loading="downloadLoading"
+              size="small"
+            >
+              <el-icon><Download /></el-icon>
+              下载模板
+            </el-button>
+            <el-button 
+              type="warning" 
+              @click="handleImportExcel"
+              size="small"
+            >
+              <el-icon><Upload /></el-icon>
+              导入模板
+            </el-button>
+          </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="quick-stats" v-if="filteredProducts.length > 0">
+          <el-row :gutter="10">
+            <el-col :span="3">
+              <div class="stat-item">
+                <span class="stat-label">筛选:</span>
+                <span class="stat-value">{{ filteredProducts.length }} 项</span>
+              </div>
+            </el-col>
+            <el-col :span="3">
+              <div class="stat-item">
+                <span class="stat-label">已选:</span>
+                <span class="stat-value" :class="selectedProductCount > 0 ? 'stat-active' : ''">
+                  {{ selectedProductCount }} 项
+                </span>
+              </div>
+            </el-col>
+            <el-col :span="4">
+              <div class="stat-item">
+                <span class="stat-label">总数量:</span>
+                <span class="stat-value">{{ totalQuantity }} 个</span>
+              </div>
+            </el-col>
+            <el-col :span="4">
+              <div class="stat-item">
+                <span class="stat-label">总金额:</span>
+                <span class="stat-value">¥ {{ totalAmount.toFixed(2) }}</span>
+              </div>
+            </el-col>
+            <el-col :span="4">
+              <div class="stat-item">
+                <span class="stat-label">USD总额:</span>
+                <span class="stat-value">$ {{ totalAmountUsd.toFixed(2) }}</span>
+              </div>
+            </el-col>
+            <el-col :span="4">
+              <div class="stat-item">
+                <span class="stat-label">批次状态:</span>
+                <span class="stat-value" :class="batchStatusClass">
+                  {{ batchStatusText }}
+                </span>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
+
+        <!-- 销售出库的产品表格 -->
+        <el-table
+          v-if="formData.warehouseId"
+          :data="filteredProducts"
+          border
+          class="product-table"
+          empty-text="请先选择仓库"
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column type="selection" width="55" align="center" />
+          <el-table-column type="index" label="序号" width="60" align="center" />
+          
+          <el-table-column label="产品信息" min-width="200" fixed="left">
+            <template #header>
+              <div class="table-header">
+                <span>产品信息</span>
+                <el-tooltip content="点击产品名称查看历史价格" placement="top">
+                  <el-icon class="header-icon"><InfoFilled /></el-icon>
+                </el-tooltip>
+              </div>
+            </template>
+            <template #default="{ row }">
+              <div class="product-info-cell">
+                <div class="product-name" @click="showProductHistory(row)">
+                  {{ row.productName }}
+                  <el-tag v-if="row.isRecommend" size="small" type="success" class="recommend-tag">
+                    推荐
+                  </el-tag>
+                </div>
+                <div class="product-details">
+                  <div class="sku-text">{{ row.sku }}</div>
+                  <div class="spec-text">{{ row.spec || '-' }}</div>
+                  <div class="color-text">{{ row.color || '-' }}</div>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="单位" width="60" align="center">
+            <template #default="{ row }">
+              <span>{{ row.unitName || '-' }}</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="库存" width="100" align="center">
+            <template #default="{ row }">
+              <div class="stock-info">
+                <span :class="getStockClass(row.availableQuantity, row.quantity)">
+                  {{ row.availableQuantity }}
+                </span>
+                <el-progress 
+                  v-if="row.availableQuantity > 0 && row.quantity > 0" 
+                  :percentage="Math.min(100, (row.quantity / row.availableQuantity) * 100)" 
+                  :stroke-width="6"
+                  :show-text="false"
+                  :color="getStockColor(row.availableQuantity, row.quantity)"
+                  class="stock-progress"
+                />
+              </div>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="历史价格" width="140">
+            <template #default="{ row }">
+              <div class="price-history" v-if="row.historyPrice">
+                <div class="history-price-item">
+                  <span class="price-label">最近:</span>
+                  <span class="price-value">¥ {{ row.historyPrice.lastPrice?.toFixed(2) || '-' }}</span>
+                </div>
+                <div class="history-price-item">
+                  <span class="price-label">平均:</span>
+                  <span class="price-value">¥ {{ row.historyPrice.avgPrice?.toFixed(2) || '-' }}</span>
+                </div>
+              </div>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="出库数量" width="130">
+            <template #default="{ row }">
+              <div class="quantity-cell">
+                <el-input-number
+                  v-model="row.quantity"
+                  :min="0"
+                  :max="getQuantityMax(row)"
+                  controls-position="right"
+                  size="small"
+                  @change="() => handleQuantityChangeForAll(row)"
+                  placeholder="数量"
+                  :disabled="isViewMode || row.availableQuantity <= 0"
+                  class="quantity-input"
+                />
+                <el-button
+                  v-if="!isViewMode && row.availableQuantity > 0"
+                  type="text"
+                  size="small"
+                  @click="setMaxQuantity(row)"
+                  class="max-btn"
+                >
+                  最大
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="单价" width="130">
+            <template #default="{ row }">
+              <el-input-number
+                v-model="row.price"
+                :min="0"
+                :precision="2"
+                controls-position="right"
+                size="small"
+                :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
+                class="price-input"
+              >
+                <template #prefix>¥</template>
+              </el-input-number>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="金额" width="120" align="right">
+            <template #default="{ row }">
+              <span v-if="row.quantity > 0" class="amount-text">
+                ¥ {{ ((row.price || 0) * (row.quantity || 0)).toFixed(2) }}
+              </span>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="USD单价" width="130">
+            <template #default="{ row }">
+              <el-input-number
+                v-model="row.priceUnitUsd"
+                :min="0"
+                :precision="2"
+                controls-position="right"
+                size="small"
+                :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
+                class="price-input"
+              >
+                <template #prefix>$</template>
+              </el-input-number>
+            </template>
+          </el-table-column>
+          
           <el-table-column label="USD总额" width="120" align="right">
             <template #default="{ row }">
-              <span v-if="row.quantity > 0">$ {{ ((row.priceUnitUsd || 0) * (row.quantity || 0)).toFixed(2) }}</span>
+              <span v-if="row.quantity > 0" class="amount-text">
+                $ {{ ((row.priceUnitUsd || 0) * (row.quantity || 0)).toFixed(2) }}
+              </span>
               <span v-else>-</span>
             </template>
           </el-table-column>
@@ -254,28 +564,43 @@
                   type="primary" 
                   link 
                   @click="openBatchDialogForProduct(row)"
-                  :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
+                  :disabled="!row.quantity || row.quantity <= 0 || isViewMode || row.availableQuantity <= 0"
+                  class="batch-btn"
                 >
                   分配批次
                 </el-button>
                 <div v-if="row.batchAllocations && row.batchAllocations.length > 0" class="batch-summary">
-                  <el-tag
-                    v-for="allocation in row.batchAllocations"
-                    :key="`${allocation.batchNo}-${allocation.shelfId}`"
-                    size="small"
-                    class="batch-tag"
+                  <el-popover
+                    placement="top"
+                    :width="300"
+                    trigger="hover"
                   >
-                    {{ allocation.batchNo }}({{ allocation.shelfName }}): {{ allocation.quantity }}个
-                  </el-tag>
+                    <template #reference>
+                      <el-tag size="small" type="success" class="batch-tag">
+                        {{ row.batchAllocations.length }}个批次
+                      </el-tag>
+                    </template>
+                    <div class="batch-detail">
+                      <div v-for="allocation in row.batchAllocations" :key="`${allocation.batchNo}-${allocation.shelfId}`" class="batch-detail-item">
+                        <span class="batch-no">{{ allocation.batchNo }}</span>
+                        <span class="shelf-name">{{ allocation.shelfName }}</span>
+                        <span class="batch-quantity">{{ allocation.quantity }}个</span>
+                      </div>
+                    </div>
+                  </el-popover>
+                  <span class="allocation-total">
+                    已分配: {{ row.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0) }}个
+                  </span>
                 </div>
                 <div v-else class="batch-empty">
-                  <span class="empty-text" v-if="row.quantity > 0">未分配批次</span>
+                  <span class="empty-text" v-if="row.quantity > 0 && row.availableQuantity > 0">未分配批次</span>
                   <span class="empty-text" v-else>-</span>
                 </div>
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="备注" min-width="150">
+          
+          <el-table-column label="备注" min-width="150" fixed="right">
             <template #default="{ row }">
               <el-input
                 v-model="row.remark"
@@ -283,15 +608,29 @@
                 maxlength="100"
                 show-word-limit
                 :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
+                size="small"
               />
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="操作" width="80" fixed="right" align="center" v-if="!isViewMode">
+            <template #default="{ row }">
+              <el-button
+                type="danger"
+                link
+                @click="clearProductRow(row)"
+                :disabled="row.quantity <= 0"
+              >
+                清空
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
 
-        <!-- 统计信息 -->
-        <div class="summary-info" v-if="allInventoryProducts.some(p => p.quantity > 0)">
+        <!-- 底部统计信息 -->
+        <div class="summary-info" v-if="hasProductsWithQuantity">
           <el-row :gutter="20">
-            <el-col :span="4">
+            <el-col :span="3">
               <div class="summary-item">
                 <span class="label">产品种类：</span>
                 <span class="value">{{ productTypeCount }} 种</span>
@@ -306,21 +645,30 @@
             <el-col :span="4">
               <div class="summary-item">
                 <span class="label">总金额：</span>
-                <span class="value">¥ {{ totalAmount.toFixed(2) }}</span>
+                <span class="value highlight">¥ {{ totalAmount.toFixed(2) }}</span>
               </div>
             </el-col>
             <el-col :span="4">
               <div class="summary-item">
                 <span class="label">USD总额：</span>
-                <span class="value">$ {{ totalAmountUsd.toFixed(2) }}</span>
+                <span class="value highlight">$ {{ totalAmountUsd.toFixed(2) }}</span>
               </div>
             </el-col>
             <el-col :span="4">
               <div class="summary-item">
-                <span class="label">库存状态：</span>
-                <span class="value" :class="stockStatusClass">
-                  {{ stockStatusText }}
+                <span class="label">批次状态：</span>
+                <span class="value" :class="batchStatusClass">
+                  {{ batchStatusText }}
+                  <el-tooltip v-if="hasInsufficientStock" content="存在批次分配不足的产品" placement="top">
+                    <el-icon class="status-icon"><Warning /></el-icon>
+                  </el-tooltip>
                 </span>
+              </div>
+            </el-col>
+            <el-col :span="5">
+              <div class="summary-item">
+                <span class="label">推荐产品：</span>
+                <span class="value">{{ recommendedProductCount }} 个</span>
               </div>
             </el-col>
           </el-row>
@@ -380,8 +728,9 @@
     <el-dialog
       v-model="batchDialog.visible"
       :title="`批次分配 - ${batchDialog.productName}`"
-      width="800px"
+      width="900px"
       destroy-on-close
+      @closed="handleBatchDialogClosed"
     >
       <div class="batch-dialog-content">
         <div class="batch-info">
@@ -399,11 +748,63 @@
             <span class="label">剩余数量：</span>
             <span class="value">{{ batchDialog.remainingQuantity }}</span>
           </div>
+          <div class="info-item">
+            <el-button 
+              type="primary" 
+              link 
+              @click="showAllocationStrategy = !showAllocationStrategy"
+              size="small"
+            >
+              <el-icon><SetUp /></el-icon>
+              分配策略
+            </el-button>
+          </div>
+        </div>
+
+        <!-- 分配策略面板 -->
+        <div class="allocation-strategy" v-if="showAllocationStrategy">
+          <div class="strategy-header">
+            <span>分配策略</span>
+            <el-button type="text" @click="showAllocationStrategy = false">
+              <el-icon><ArrowUp /></el-icon>
+            </el-button>
+          </div>
+          <div class="strategy-options">
+            <el-radio-group v-model="allocationStrategy" size="small">
+              <el-radio :label="'FIFO'">先进先出</el-radio>
+              <el-radio :label="'NEAR_EXPIRE'">近效期优先</el-radio>
+              <el-radio :label="'MIN_SHELF'">最少货架优先</el-radio>
+              <el-radio :label="'MANUAL'">手动分配</el-radio>
+            </el-radio-group>
+            <el-button 
+              type="primary" 
+              size="small" 
+              @click="applyAllocationStrategy"
+              :loading="applyingStrategy"
+            >
+              应用策略
+            </el-button>
+          </div>
         </div>
 
         <!-- 批次分配表格 -->
-        <el-table :data="batchDialog.batches" border class="batch-table">
+        <el-table 
+          :data="batchDialog.batches" 
+          border 
+          class="batch-table"
+          v-loading="loadingBatches"
+        >
           <el-table-column label="批次号" prop="batchNo" width="120" fixed="left" />
+          <el-table-column label="生产日期" width="100">
+            <template #default="{ row }">
+              <span>{{ row.productionDate || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="有效期" width="100">
+            <template #default="{ row }">
+              <span :class="getExpiryClass(row.expiryDate)">{{ formatDate(row.expiryDate) || '-' }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="总可用数量" width="100" align="center">
             <template #default="{ row }">
               <span :class="row.quantity < 1 ? 'text-disabled' : ''">{{ row.quantity }}</span>
@@ -529,14 +930,62 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 产品历史价格对话框 -->
+    <el-dialog
+      v-model="historyDialog.visible"
+      :title="`价格历史 - ${historyDialog.productName}`"
+      width="600px"
+    >
+      <div class="history-dialog-content" v-loading="loadingHistory">
+        <div class="history-summary">
+          <div class="summary-item">
+            <span class="label">最近价格：</span>
+            <span class="value">¥ {{ historyDialog.lastPrice?.toFixed(2) || '-' }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">平均价格：</span>
+            <span class="value">¥ {{ historyDialog.avgPrice?.toFixed(2) || '-' }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">最高价格：</span>
+            <span class="value">¥ {{ historyDialog.maxPrice?.toFixed(2) || '-' }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">最低价格：</span>
+            <span class="value">¥ {{ historyDialog.minPrice?.toFixed(2) || '-' }}</span>
+          </div>
+        </div>
+        
+        <el-table :data="historyDialog.priceList" border class="history-table">
+          <el-table-column label="日期" prop="date" width="120" />
+          <el-table-column label="客户" prop="customerName" width="150" />
+          <el-table-column label="单价" prop="price" width="100" align="right">
+            <template #default="{ row }">
+              ¥ {{ row.price?.toFixed(2) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="数量" prop="quantity" width="80" align="center" />
+          <el-table-column label="总金额" width="120" align="right">
+            <template #default="{ row }">
+              ¥ {{ ((row.price || 0) * (row.quantity || 0)).toFixed(2) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Delete, Upload, Download,  Document, Close  } from '@element-plus/icons-vue';
+import { 
+  Plus, Delete, Upload, Download, Document, Close, Search, 
+  Operation, MagicStick, Warning, InfoFilled, Refresh, 
+  CloseBold, SetUp, ArrowUp 
+} from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 import axios from 'axios';
 import { accessHeader } from '@/net'; 
@@ -547,6 +996,35 @@ const formRef = ref();
 const uploadRef = ref();
 const loading = ref(false);
 const downloadLoading = ref(false);
+
+// 智能推荐相关
+const showRecommendations = ref(false);
+const loadingRecommendations = ref(false);
+const recommendations = ref([]);
+
+// 产品搜索和筛选
+const productSearch = ref('');
+const filteredProducts = ref([]);
+const selectedProducts = ref([]);
+
+// 批次分配策略
+const showAllocationStrategy = ref(false);
+const allocationStrategy = ref('FIFO');
+const applyingStrategy = ref(false);
+const loadingBatches = ref(false);
+
+// 历史价格对话框
+const historyDialog = reactive({
+  visible: false,
+  productName: '',
+  productId: null,
+  lastPrice: null,
+  avgPrice: null,
+  maxPrice: null,
+  minPrice: null,
+  priceList: []
+});
+const loadingHistory = ref(false);
 
 const importDialog = reactive({
   visible: false
@@ -638,12 +1116,38 @@ const hasInsufficientStock = computed(() => {
   });
 });
 
-const stockStatusText = computed(() => {
+const batchStatusText = computed(() => {
   return hasInsufficientStock.value ? '批次分配不足' : '分配完成';
 });
 
-const stockStatusClass = computed(() => {
+const batchStatusClass = computed(() => {
   return hasInsufficientStock.value ? 'status-warning' : 'status-success';
+});
+
+const selectedProductCount = computed(() => {
+  return selectedProducts.value.length;
+});
+
+const hasProductsWithQuantity = computed(() => {
+  return allInventoryProducts.value.some(p => p.quantity > 0);
+});
+
+const hasBatchAllocations = computed(() => {
+  return allInventoryProducts.value.some(item => 
+    item.batchAllocations && item.batchAllocations.length > 0
+  );
+});
+
+const hasValidRecommendations = computed(() => {
+  return recommendations.value.some(r => 
+    r.recommendQuantity > 0 && 
+    r.availableQuantity > 0 && 
+    !r.added
+  );
+});
+
+const recommendedProductCount = computed(() => {
+  return allInventoryProducts.value.filter(p => p.isRecommend).length;
 });
 
 // 表单验证规则
@@ -758,6 +1262,7 @@ const loadOutboundDetail = async (id) => {
 const updateInventoryProducts = () => {
   if (!formData.warehouseId || !inventoryList.value.length) {
     allInventoryProducts.value = [];
+    filteredProducts.value = [];
     return;
   }
   
@@ -772,14 +1277,22 @@ const updateInventoryProducts = () => {
       ...item,
       quantity: existingProduct ? existingProduct.quantity : 0,
       price: displayPrice,
+      priceUnitUsd: existingProduct ? existingProduct.priceUnitUsd : (item.priceUnitUsd || 0),
       remark: existingProduct ? existingProduct.remark : '',
       batchAllocations: existingProduct ? existingProduct.batchAllocations : [],
       availableBatches: existingProduct ? existingProduct.availableBatches : [],
       // 保存接口原始价格，用于导入时的逻辑判断
       originalPrice: item.price || 0,
-      originalPriceUnitUsd: item.priceUnitUsd || 0
+      originalPriceUnitUsd: item.priceUnitUsd || 0,
+      // 是否为推荐产品
+      isRecommend: existingProduct ? existingProduct.isRecommend : false,
+      // 历史价格
+      historyPrice: existingProduct ? existingProduct.historyPrice : null
     };
   });
+  
+  // 初始化筛选结果
+  filterProducts();
 };
 
 // 方法
@@ -801,10 +1314,32 @@ const handleWarehouseChange = async (warehouseId) => {
       allInventoryProducts.value.forEach(product => {
         product.quantity = 0;
         product.price = 0;
+        product.priceUnitUsd = 0;
         product.remark = '';
         product.batchAllocations = [];
+        product.isRecommend = false;
       });
     }
+    
+    // 清空推荐
+    showRecommendations.value = false;
+    recommendations.value = [];
+  }
+};
+
+const handleCustomerChange = (customerId) => {
+  // 客户变化时清空推荐
+  showRecommendations.value = false;
+  recommendations.value = [];
+  
+  // 如果已有仓库，可以预加载推荐
+  if (customerId && formData.warehouseId) {
+    // 延迟加载推荐，避免频繁请求
+    setTimeout(() => {
+      if (formData.customerId === customerId) {
+        loadRecommendations();
+      }
+    }, 500);
   }
 };
 
@@ -821,12 +1356,17 @@ const handleQuantityChangeForAll = (row) => {
     }
     
     // 如果接口返回了价格，使用接口价格（仅在价格为空时自动填充）
-    if (row.priceFromApi && row.priceFromApi > 0 && (!row.price || row.price === 0)) {
-      row.price = row.priceFromApi;
+    if (row.originalPrice && row.originalPrice > 0 && (!row.price || row.price === 0)) {
+      row.price = row.originalPrice;
     }
     // 如果接口返回了USD价格，使用接口USD价格（仅在USD价格为空时自动填充）
     if (row.originalPriceUnitUsd && row.originalPriceUnitUsd > 0 && (!row.priceUnitUsd || row.priceUnitUsd === 0)) {
       row.priceUnitUsd = row.originalPriceUnitUsd;
+    }
+    
+    // 加载历史价格
+    if (!row.historyPrice && formData.customerId) {
+      loadProductHistoryPrice(row);
     }
   } else {
     // 如果数量设为0，清空相关数据
@@ -836,6 +1376,299 @@ const handleQuantityChangeForAll = (row) => {
     row.remark = '';
     row.batchAllocations = [];
   }
+  
+  // 更新筛选列表
+  filterProducts();
+};
+
+// 智能推荐相关方法
+const loadRecommendations = async () => {
+  if (!formData.customerId || !formData.warehouseId) {
+    ElMessage.warning('请先选择客户和仓库');
+    return;
+  }
+  
+  loadingRecommendations.value = true;
+  try {
+    const res = await get(
+      `/api/auth/recommend/sales?customerId=${formData.customerId}&warehouseId=${formData.warehouseId}`
+    );
+    
+    if (res && res.data && res.data.length > 0) {
+      // 过滤掉已经在出库单中的产品
+      const existingProductIds = allInventoryProducts.value
+        .filter(p => p.quantity > 0)
+        .map(p => p.productId);
+      
+      recommendations.value = res.data
+        .filter(item => !existingProductIds.includes(item.productId))
+        .map(item => ({
+          ...item,
+          recommendQuantity: item.recommendQuantity || 1,
+          price: item.price || 0,
+          priceUnitUsd: item.priceUnitUsd || 0,
+          originalPrice: item.price || 0,
+          triggerProducts: item.triggerProducts || [],
+          reasonText: getRecommendReasonText(item),
+          reasonType: getRecommendReasonType(item),
+          added: false,
+          availableQuantity: productStockMap.value[item.productId] || 0
+        }));
+      
+      if (recommendations.value.length > 0) {
+        showRecommendations.value = true;
+        ElMessage.success(`发现 ${recommendations.value.length} 条推荐`);
+        
+        // 滚动到推荐区域
+        nextTick(() => {
+          const element = document.querySelector('.recommendation-section');
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      } else {
+        ElMessage.info('所有推荐产品已存在于出库单中');
+        showRecommendations.value = false;
+      }
+    } else {
+      ElMessage.info('暂无推荐产品');
+      showRecommendations.value = false;
+    }
+  } catch (error) {
+    console.error('加载推荐失败:', error);
+    ElMessage.error('获取推荐失败');
+    showRecommendations.value = false;
+  } finally {
+    loadingRecommendations.value = false;
+  }
+};
+
+const getRecommendReasonText = (item) => {
+  if (item.ruleType === 1) return '配置规则';
+  if (item.isRequired === 1) return '强制搭配';
+  if (item.confidence > 0.9) return '高频搭配';
+  if (item.confidence > 0.7) return '通常搭配';
+  return '建议搭配';
+};
+
+const getRecommendReasonType = (item) => {
+  if (item.isRequired === 1) return 'danger'; // 强制推荐
+  if (item.confidence > 0.9) return 'success'; // 高置信度
+  if (item.confidence > 0.7) return 'warning'; // 中置信度
+  return 'info'; // 普通建议
+};
+
+const handleRecommendQuantityChange = (row) => {
+  if (row.recommendQuantity > row.availableQuantity) {
+    row.recommendQuantity = row.availableQuantity;
+    ElMessage.warning(`推荐数量不能超过库存数量 ${row.availableQuantity}`);
+  }
+};
+
+const addRecommendToOrder = (recommend) => {
+  // 查找是否已在产品列表中
+  let product = allInventoryProducts.value.find(p => p.productId === recommend.productId);
+  
+  if (product) {
+    // 如果产品已存在，更新数量
+    if (product.quantity === 0) {
+      product.quantity = recommend.recommendQuantity;
+      product.price = recommend.price;
+      product.priceUnitUsd = recommend.priceUnitUsd;
+      product.isRecommend = true;
+      ElMessage.success(`已添加 ${recommend.productName} 到出库单`);
+    } else {
+      // 如果已有数量，询问是否覆盖
+      ElMessageBox.confirm(
+        `产品 ${recommend.productName} 已有数量 ${product.quantity}，是否替换为推荐数量 ${recommend.recommendQuantity}？`,
+        '确认替换',
+        {
+          confirmButtonText: '替换',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      ).then(() => {
+        product.quantity = recommend.recommendQuantity;
+        product.price = recommend.price;
+        product.priceUnitUsd = recommend.priceUnitUsd;
+        product.isRecommend = true;
+        ElMessage.success('已替换数量');
+      });
+    }
+  } else {
+    // 如果产品不存在（可能不在当前仓库），提示用户
+    ElMessage.warning(`产品 ${recommend.productName} 不在当前仓库库存中`);
+  }
+  
+  // 标记为已添加
+  recommend.added = true;
+  
+  // 更新筛选列表
+  filterProducts();
+};
+
+const addAllRecommendations = () => {
+  const validRecommendations = recommendations.value.filter(r => 
+    r.recommendQuantity > 0 && 
+    r.availableQuantity > 0 && 
+    !r.added
+  );
+  
+  if (validRecommendations.length === 0) {
+    ElMessage.warning('没有可添加的推荐产品');
+    return;
+  }
+  
+  let addedCount = 0;
+  validRecommendations.forEach(recommend => {
+    const product = allInventoryProducts.value.find(p => p.productId === recommend.productId);
+    if (product && product.availableQuantity >= recommend.recommendQuantity) {
+      // 如果产品已有数量，累加
+      product.quantity = (product.quantity || 0) + recommend.recommendQuantity;
+      product.price = recommend.price;
+      product.priceUnitUsd = recommend.priceUnitUsd;
+      product.isRecommend = true;
+      recommend.added = true;
+      addedCount++;
+    }
+  });
+  
+  if (addedCount > 0) {
+    ElMessage.success(`成功添加 ${addedCount} 个推荐产品`);
+    filterProducts();
+  } else {
+    ElMessage.warning('未能添加任何推荐产品');
+  }
+};
+
+const ignoreRecommendation = (recommend) => {
+  const index = recommendations.value.indexOf(recommend);
+  if (index > -1) {
+    recommendations.value.splice(index, 1);
+  }
+  
+  if (recommendations.value.length === 0) {
+    showRecommendations.value = false;
+  }
+};
+
+const closeRecommendations = () => {
+  showRecommendations.value = false;
+};
+
+// 产品搜索和筛选
+const filterProducts = () => {
+  if (!productSearch.value.trim()) {
+    filteredProducts.value = [...allInventoryProducts.value];
+    return;
+  }
+  
+  const searchText = productSearch.value.toLowerCase().trim();
+  filteredProducts.value = allInventoryProducts.value.filter(product => {
+    return (
+      (product.productName && product.productName.toLowerCase().includes(searchText)) ||
+      (product.sku && product.sku.toLowerCase().includes(searchText)) ||
+      (product.spec && product.spec.toLowerCase().includes(searchText)) ||
+      (product.color && product.color.toLowerCase().includes(searchText))
+    );
+  });
+};
+
+// 批量操作
+const handleBatchCommand = async (command) => {
+  switch (command) {
+    case 'clearAll':
+      if (selectedProducts.value.length > 0) {
+        // 只清空选中的产品
+        selectedProducts.value.forEach(row => {
+          row.quantity = 0;
+          row.price = 0;
+          row.priceUnitUsd = 0;
+          row.remark = '';
+          row.batchAllocations = [];
+          row.isRecommend = false;
+        });
+        ElMessage.success(`已清空 ${selectedProducts.value.length} 个产品的数量`);
+      } else {
+        // 清空所有有数量的产品
+        const count = allInventoryProducts.value.filter(p => p.quantity > 0).length;
+        allInventoryProducts.value.forEach(product => {
+          product.quantity = 0;
+          product.price = 0;
+          product.priceUnitUsd = 0;
+          product.remark = '';
+          product.batchAllocations = [];
+          product.isRecommend = false;
+        });
+        if (count > 0) {
+          ElMessage.success(`已清空 ${count} 个产品的数量`);
+        }
+      }
+      filterProducts();
+      break;
+      
+    case 'resetPrices':
+      if (selectedProducts.value.length > 0) {
+        selectedProducts.value.forEach(row => {
+          if (row.quantity > 0) {
+            row.price = row.originalPrice || 0;
+            row.priceUnitUsd = row.originalPriceUnitUsd || 0;
+          }
+        });
+        ElMessage.success(`已重置 ${selectedProducts.value.length} 个产品的价格`);
+      } else {
+        allInventoryProducts.value.forEach(product => {
+          if (product.quantity > 0) {
+            product.price = product.originalPrice || 0;
+            product.priceUnitUsd = product.originalPriceUnitUsd || 0;
+          }
+        });
+        ElMessage.success('已重置所有产品的价格');
+      }
+      break;
+      
+    case 'clearBatches':
+      if (selectedProducts.value.length > 0) {
+        selectedProducts.value.forEach(row => {
+          row.batchAllocations = [];
+        });
+        ElMessage.success(`已清空 ${selectedProducts.value.length} 个产品的批次分配`);
+      } else {
+        allInventoryProducts.value.forEach(product => {
+          product.batchAllocations = [];
+        });
+        ElMessage.success('已清空所有产品的批次分配');
+      }
+      break;
+      
+    case 'exportData':
+      exportCurrentData();
+      break;
+  }
+};
+
+const handleSelectionChange = (selection) => {
+  selectedProducts.value = selection;
+};
+
+const clearProductRow = (row) => {
+  row.quantity = 0;
+  row.price = 0;
+  row.priceUnitUsd = 0;
+  row.remark = '';
+  row.batchAllocations = [];
+  row.isRecommend = false;
+  ElMessage.success('已清空该产品数据');
+  filterProducts();
+};
+
+const setMaxQuantity = (row) => {
+  row.quantity = row.availableQuantity || 0;
+  if (row.quantity > 0) {
+    row.price = row.originalPrice || 0;
+    row.priceUnitUsd = row.originalPriceUnitUsd || 0;
+  }
+  ElMessage.success('已设置为最大库存数量');
 };
 
 const getStockClass = (currentStock, quantity) => {
@@ -843,6 +1676,67 @@ const getStockClass = (currentStock, quantity) => {
   if (quantity > currentStock) return 'stock-insufficient';
   if (currentStock < 10) return 'stock-low';
   return 'stock-sufficient';
+};
+
+const getStockColor = (currentStock, quantity) => {
+  if (!currentStock || currentStock <= 0) return '#909399';
+  if (quantity > currentStock) return '#f56c6c';
+  const percentage = (quantity / currentStock) * 100;
+  if (percentage > 80) return '#f56c6c';
+  if (percentage > 50) return '#e6a23c';
+  return '#67c23a';
+};
+
+// 产品历史价格
+const showProductHistory = async (row) => {
+  if (!row.productId) return;
+  
+  historyDialog.visible = true;
+  historyDialog.productName = row.productName;
+  historyDialog.productId = row.productId;
+  
+  if (!row.historyPrice) {
+    await loadProductHistoryPrice(row, true);
+  }
+  
+  if (row.historyPrice) {
+    historyDialog.lastPrice = row.historyPrice.lastPrice;
+    historyDialog.avgPrice = row.historyPrice.avgPrice;
+    historyDialog.maxPrice = row.historyPrice.maxPrice;
+    historyDialog.minPrice = row.historyPrice.minPrice;
+    historyDialog.priceList = row.historyPrice.priceList || [];
+  }
+};
+
+const loadProductHistoryPrice = async (row, force = false) => {
+  if (!row.productId || (!force && row.historyPrice)) return;
+  
+  try {
+    const params = {
+      productId: row.productId,
+      customerId: formData.customerId || undefined,
+      limit: 10
+    };
+    
+    const queryString = Object.entries(params)
+      .filter(([_, value]) => value !== undefined)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('&');
+    
+    const res = await get(`/api/auth/price/history?${queryString}`);
+    
+    if (res && res.data) {
+      row.historyPrice = {
+        lastPrice: res.data.lastPrice,
+        avgPrice: res.data.avgPrice,
+        maxPrice: res.data.maxPrice,
+        minPrice: res.data.minPrice,
+        priceList: res.data.priceList || []
+      };
+    }
+  } catch (error) {
+    console.error('加载历史价格失败:', error);
+  }
 };
 
 // 批次分配相关方法
@@ -957,6 +1851,7 @@ const clearBatchAllocation = (batchIndex) => {
     });
   }
   updateBatchDialogCalculations();
+  ElMessage.success('已清空该批次分配');
 };
 
 const updateBatchDialogCalculations = () => {
@@ -977,6 +1872,104 @@ const updateBatchDialogCalculations = () => {
   }
 };
 
+const getExpiryClass = (expiryDate) => {
+  if (!expiryDate) return '';
+  
+  const expiry = new Date(expiryDate);
+  const now = new Date();
+  const daysDiff = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+  
+  if (daysDiff < 0) return 'expiry-expired';
+  if (daysDiff < 30) return 'expiry-soon';
+  if (daysDiff < 90) return 'expiry-near';
+  return '';
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toISOString().split('T')[0];
+};
+
+const applyAllocationStrategy = () => {
+  applyingStrategy.value = true;
+  
+  // 清空现有分配
+  batchDialog.batches.forEach(batch => {
+    if (batch.shelfList) {
+      batch.shelfList.forEach(shelf => {
+        shelf.allocated = 0;
+      });
+    }
+  });
+  
+  let remaining = batchDialog.totalQuantity;
+  
+  // 根据策略排序批次
+  let sortedBatches = [...batchDialog.batches];
+  
+  switch (allocationStrategy.value) {
+    case 'FIFO':
+      // 先进先出：按生产日期排序
+      sortedBatches.sort((a, b) => {
+        if (!a.productionDate && !b.productionDate) return 0;
+        if (!a.productionDate) return 1;
+        if (!b.productionDate) return -1;
+        return new Date(a.productionDate) - new Date(b.productionDate);
+      });
+      break;
+      
+    case 'NEAR_EXPIRE':
+      // 近效期优先：按有效期排序
+      sortedBatches.sort((a, b) => {
+        if (!a.expiryDate && !b.expiryDate) return 0;
+        if (!a.expiryDate) return 1;
+        if (!b.expiryDate) return -1;
+        return new Date(a.expiryDate) - new Date(b.expiryDate);
+      });
+      break;
+      
+    case 'MIN_SHELF':
+      // 最少货架优先：按货架数量排序
+      sortedBatches.sort((a, b) => {
+        const aShelves = a.shelfList ? a.shelfList.length : 0;
+        const bShelves = b.shelfList ? b.shelfList.length : 0;
+        return aShelves - bShelves;
+      });
+      break;
+  }
+  
+  // 应用分配
+  for (const batch of sortedBatches) {
+    if (remaining <= 0) break;
+    
+    if (batch.quantity < 1 || !batch.shelfList) continue;
+    
+    for (const shelf of batch.shelfList) {
+      if (remaining <= 0) break;
+      
+      if (shelf.quantity < 1) continue;
+      
+      const allocate = Math.min(shelf.quantity, remaining);
+      if (allocate > 0) {
+        shelf.allocated = allocate;
+        remaining -= allocate;
+      }
+    }
+  }
+  
+  updateBatchDialogCalculations();
+  
+  setTimeout(() => {
+    applyingStrategy.value = false;
+    if (remaining === 0) {
+      ElMessage.success('分配策略应用完成');
+    } else {
+      ElMessage.warning(`分配策略应用完成，仍有 ${remaining} 个无法分配`);
+    }
+  }, 300);
+};
+
 const autoAllocateBatches = () => {
   let remaining = batchDialog.remainingQuantity;
   
@@ -985,12 +1978,11 @@ const autoAllocateBatches = () => {
     return;
   }
   
+  // 清空现有分配
   batchDialog.batches.forEach(batch => {
-    if (batch.quantity >= 1 && batch.shelfList) {
+    if (batch.shelfList) {
       batch.shelfList.forEach(shelf => {
-        if (shelf.quantity >= 1) {
-          shelf.allocated = 0;
-        }
+        shelf.allocated = 0;
       });
     }
   });
@@ -998,7 +1990,15 @@ const autoAllocateBatches = () => {
   updateBatchDialogCalculations();
   remaining = batchDialog.remainingQuantity;
   
-  for (const batch of batchDialog.batches) {
+  // 按有效期排序分配（默认策略）
+  const sortedBatches = [...batchDialog.batches].sort((a, b) => {
+    if (!a.expiryDate && !b.expiryDate) return 0;
+    if (!a.expiryDate) return 1;
+    if (!b.expiryDate) return -1;
+    return new Date(a.expiryDate) - new Date(b.expiryDate);
+  });
+  
+  for (const batch of sortedBatches) {
     if (remaining <= 0) break;
     
     if (batch.quantity < 1) continue;
@@ -1040,7 +2040,9 @@ const openBatchDialogForProduct = async (row) => {
   batchDialog.productName = row.productName;
   batchDialog.totalQuantity = row.quantity;
   
+  loadingBatches.value = true;
   await loadBatchInfoForProduct(row.productId, formData.warehouseId, row);
+  loadingBatches.value = false;
   
   batchDialog.batches = row.availableBatches.map(batch => ({
     ...batch,
@@ -1081,6 +2083,11 @@ const loadBatchInfoForProduct = async (productId, warehouseId, row) => {
     console.error('加载批次信息失败:', error);
     row.availableBatches = [];
   }
+};
+
+const handleBatchDialogClosed = () => {
+  showAllocationStrategy.value = false;
+  allocationStrategy.value = 'FIFO';
 };
 
 const confirmBatchAllocation = () => {
@@ -1126,6 +2133,47 @@ const confirmBatchAllocation = () => {
 
   batchDialog.visible = false;
   ElMessage.success('批次分配完成');
+};
+
+// 导出当前数据
+const exportCurrentData = () => {
+  const exportData = {
+    orderInfo: {
+      orderNo: formData.orderNo,
+      warehouseId: formData.warehouseId,
+      customerId: formData.customerId,
+      expectedDate: formData.expectedDate
+    },
+    products: allInventoryProducts.value
+      .filter(p => p.quantity > 0)
+      .map(p => ({
+        sku: p.sku,
+        productName: p.productName,
+        spec: p.spec,
+        quantity: p.quantity,
+        price: p.price,
+        priceUnitUsd: p.priceUnitUsd,
+        remark: p.remark
+      })),
+    summary: {
+      productCount: productTypeCount.value,
+      totalQuantity: totalQuantity.value,
+      totalAmount: totalAmount.value,
+      totalAmountUsd: totalAmountUsd.value
+    }
+  };
+  
+  const dataStr = JSON.stringify(exportData, null, 2);
+  const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+  
+  const exportFileDefaultName = `出库单_${formData.orderNo}_${new Date().toISOString().split('T')[0]}.json`;
+  
+  const linkElement = document.createElement('a');
+  linkElement.setAttribute('href', dataUri);
+  linkElement.setAttribute('download', exportFileDefaultName);
+  linkElement.click();
+  
+  ElMessage.success('数据导出成功');
 };
 
 // 下载模板
@@ -1208,6 +2256,7 @@ const applyImportedData = (importedData) => {
       
       product.remark = importedItem.remark || '';
       product.batchAllocations = [];
+      product.isRecommend = false;
       
       console.log('更新后产品:', product);
       successCount++;
@@ -1218,6 +2267,7 @@ const applyImportedData = (importedData) => {
   });
   
   allInventoryProducts.value = [...allInventoryProducts.value];
+  filterProducts();
   
   return { successCount, failCount };
 };
@@ -1244,9 +2294,15 @@ const handleReset = () => {
         product.priceUnitUsd = 0;
         product.remark = '';
         product.batchAllocations = [];
+        product.isRecommend = false;
       });
       
       allInventoryProducts.value = [...allInventoryProducts.value];
+      filterProducts();
+      
+      // 清空推荐
+      showRecommendations.value = false;
+      recommendations.value = [];
       
       ElMessage.success('表单已重置');
     }
@@ -1265,7 +2321,6 @@ const handleSaveDraft = async () => {
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新草稿成功' : '保存草稿成功');
-      // router.push('/index/CkOutboundManage');
       router.replace({
         path: '/',
         query: { mode: 'outbound' } // 返回到出库管理页面
@@ -1309,7 +2364,6 @@ const handleSubmit = async () => {
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新成功' : '提交成功，等待审核');
-      // router.push('/index/salesOutboundManage');
       router.replace({
         path: '/',
         query: { mode: 'outbound' } // 返回到出库管理页面
@@ -1322,7 +2376,6 @@ const handleSubmit = async () => {
   }
 };
 
-// 准备提交数据
 // 准备提交数据
 const prepareSubmitData = () => {
   let items = [];
@@ -1383,6 +2436,14 @@ const validateForm = async () => {
     const invalidUsdProducts = productsWithQuantity.filter(p => (!p.priceUnitUsd || p.priceUnitUsd <= 0));
     if (invalidUsdProducts.length > 0) {
       ElMessage.warning('请为所有出库数量大于0的产品设置有效的USD单价');
+      return false;
+    }
+    
+    // 检查库存是否足够
+    const insufficientStockProducts = productsWithQuantity.filter(p => p.quantity > p.availableQuantity);
+    if (insufficientStockProducts.length > 0) {
+      const productNames = insufficientStockProducts.map(p => p.productName).join(', ');
+      ElMessage.warning(`以下产品库存不足: ${productNames}`);
       return false;
     }
     
@@ -1449,6 +2510,7 @@ const handleImportSubmit = async () => {
           product.price = 0;
           product.remark = '';
           product.batchAllocations = [];
+          product.isRecommend = false;
         });
         
         const { successCount, failCount } = applyImportedData(result);
@@ -1600,6 +2662,11 @@ watch(
       });
       fileList.value = [];
       productStockMap.value = {};
+      allInventoryProducts.value = [];
+      filteredProducts.value = [];
+      showRecommendations.value = false;
+      recommendations.value = [];
+      productSearch.value = '';
       generateOrderNo();
     }
   }
@@ -1613,7 +2680,16 @@ watch(
       loadInventoryData(newWarehouseId);
     } else {
       allInventoryProducts.value = [];
+      filteredProducts.value = [];
     }
+  }
+);
+
+// 监听产品搜索变化
+watch(
+  () => productSearch.value,
+  () => {
+    filterProducts();
   }
 );
 </script>
@@ -1650,6 +2726,124 @@ watch(
   margin-bottom: 30px;
 }
 
+/* 智能推荐区域 */
+.recommendation-section {
+  margin: 20px 0;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+  border: 1px solid #91d5ff;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(145, 213, 255, 0.1);
+}
+
+.recommendation-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recommendation-header-left h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #1890ff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recommendation-header-left .tip {
+  font-size: 12px;
+  color: #69c0ff;
+}
+
+.recommendation-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recommendation-table {
+  margin-top: 12px;
+  border: 1px solid #91d5ff;
+}
+
+.recommendation-table :deep(.el-table__header-wrapper) {
+  background-color: #e6f7ff;
+}
+
+.recommendation-table :deep(.el-table__body-wrapper) {
+  background-color: #fafdff;
+}
+
+.product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.product-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.sku-text {
+  font-size: 12px;
+  color: #909399;
+}
+
+.spec-text {
+  font-size: 12px;
+  color: #67c23a;
+}
+
+.recommend-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.confidence {
+  font-size: 11px;
+  color: #69c0ff;
+}
+
+.trigger-products {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trigger-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.trigger-item {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #606266;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.trigger-item:last-child {
+  border-bottom: none;
+}
+
+.no-trigger {
+  font-size: 12px;
+  color: #909399;
+}
+
+.recommend-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+/* 产品明细区域 */
 .product-section {
   margin: 30px 0;
 }
@@ -1663,16 +2857,28 @@ watch(
   border-bottom: 1px solid #ebeef5;
 }
 
-.section-header h3 {
+.section-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-header-left h3 {
   margin: 0;
   font-size: 16px;
   font-weight: bold;
   color: #303133;
 }
 
+.recommend-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .header-right-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -1681,20 +2887,260 @@ watch(
   color: #909399;
 }
 
+/* 快速统计 */
+.quick-stats {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #ebeef5;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #606266;
+  white-space: nowrap;
+}
+
+.stat-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.stat-active {
+  color: #1890ff;
+  font-weight: bold;
+}
+
+/* 产品表格 */
 .product-table {
   margin-bottom: 16px;
 }
 
+.table-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-icon {
+  color: #909399;
+  cursor: help;
+}
+
+.product-info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .product-name {
   font-weight: 500;
-  margin-bottom: 4px;
+  color: #303133;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+
+.product-name:hover {
+  color: #1890ff;
+}
+
+.recommend-tag {
+  height: 20px;
+  line-height: 18px;
+}
+
+.product-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.sku-text, .spec-text, .color-text {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
 .sku-text {
+  color: #909399;
+  background-color: #f5f5f5;
+}
+
+.spec-text {
+  color: #67c23a;
+  background-color: #f0f9eb;
+}
+
+.color-text {
+  color: #e6a23c;
+  background-color: #fdf6ec;
+}
+
+/* 库存信息 */
+.stock-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.stock-progress {
+  width: 60px;
+}
+
+.stock-none {
+  color: #909399;
+  font-weight: normal;
+}
+
+.stock-sufficient {
+  color: #67C23A;
+  font-weight: 500;
+}
+
+.stock-low {
+  color: #E6A23C;
+  font-weight: 500;
+}
+
+.stock-insufficient {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
+/* 价格历史 */
+.price-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.history-price-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 12px;
+}
+
+.price-label {
   color: #909399;
 }
 
+.price-value {
+  color: #303133;
+  font-weight: 500;
+}
+
+/* 数量单元格 */
+.quantity-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quantity-input {
+  flex: 1;
+}
+
+.max-btn {
+  flex-shrink: 0;
+  padding: 0 8px;
+  height: 28px;
+}
+
+.price-input {
+  width: 100%;
+}
+
+.amount-text {
+  font-weight: 500;
+  color: #303133;
+}
+
+/* 批次分配 */
+.batch-allocation {
+  min-height: 40px;
+}
+
+.batch-btn {
+  margin-bottom: 8px;
+}
+
+.batch-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.batch-tag {
+  cursor: help;
+}
+
+.allocation-total {
+  font-size: 12px;
+  color: #67c23a;
+  font-weight: 500;
+}
+
+.batch-detail {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.batch-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 12px;
+}
+
+.batch-detail-item:last-child {
+  border-bottom: none;
+}
+
+.batch-no {
+  color: #303133;
+  font-weight: 500;
+  flex: 2;
+}
+
+.shelf-name {
+  color: #606266;
+  flex: 2;
+}
+
+.batch-quantity {
+  color: #67c23a;
+  font-weight: 500;
+  flex: 1;
+  text-align: right;
+}
+
+.batch-empty {
+  margin-top: 8px;
+}
+
+.empty-text {
+  color: #909399;
+  font-size: 12px;
+}
+
+/* 统计信息 */
 .summary-info {
   padding: 16px;
   background-color: #f8f9fa;
@@ -1717,6 +3163,13 @@ watch(
   color: #303133;
   font-weight: bold;
   font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.summary-item .value.highlight {
+  color: #1890ff;
 }
 
 .status-success {
@@ -1727,23 +3180,11 @@ watch(
   color: #E6A23C;
 }
 
-.stock-none {
-  color: #909399;
+.status-icon {
+  font-size: 14px;
 }
 
-.stock-sufficient {
-  color: #67C23A;
-}
-
-.stock-low {
-  color: #E6A23C;
-}
-
-.stock-insufficient {
-  color: #F56C6C;
-  font-weight: bold;
-}
-
+/* 附件区域 */
 .attachment-section {
   margin-top: 30px;
 }
@@ -1778,30 +3219,7 @@ watch(
   border: 1px dashed #dcdfe6;
 }
 
-.batch-allocation {
-  min-height: 40px;
-}
-
-.batch-summary {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.batch-tag {
-  margin: 2px;
-}
-
-.batch-empty {
-  margin-top: 8px;
-}
-
-.empty-text {
-  color: #909399;
-  font-size: 12px;
-}
-
+/* 批次分配对话框 */
 .batch-dialog-content {
   padding: 0 10px;
 }
@@ -1809,16 +3227,20 @@ watch(
 .batch-info {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
   padding: 12px;
   background-color: #f8f9fa;
   border-radius: 4px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .info-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 100px;
 }
 
 .info-item .label {
@@ -1839,6 +3261,46 @@ watch(
 
 .info-item .value.warning {
   color: #E6A23C;
+}
+
+/* 分配策略 */
+.allocation-strategy {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: #f0f9ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+}
+
+.strategy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 500;
+  color: #1890ff;
+}
+
+.strategy-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.expiry-expired {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.expiry-soon {
+  color: #e6a23c;
+  font-weight: 500;
+}
+
+.expiry-near {
+  color: #67c23a;
 }
 
 .batch-table {
@@ -1930,6 +3392,7 @@ watch(
   border-top: 1px solid #ebeef5;
 }
 
+/* 导入对话框 */
 .import-dialog-content {
   padding: 20px 0;
 }
@@ -1980,6 +3443,45 @@ watch(
   border-radius: 4px;
 }
 
+/* 历史价格对话框 */
+.history-dialog-content {
+  min-height: 400px;
+}
+
+.history-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.history-summary .summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.history-summary .label {
+  font-size: 12px;
+  color: #606266;
+}
+
+.history-summary .value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.history-table {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* 通用样式 */
 .shelf-disabled {
   background-color: #f5f7fa;
   opacity: 0.6;
@@ -2024,6 +3526,7 @@ watch(
   background-color: #f5f7fa;
 }
 
+/* 响应式设计 */
 @media (max-width: 768px) {
   .outbound-create-container {
     padding: 10px;
@@ -2046,10 +3549,26 @@ watch(
     align-items: flex-start;
   }
   
+  .section-header-left {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
   .header-right-actions {
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .recommendation-header-left,
+  .recommendation-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .quick-stats .el-col {
+    margin-bottom: 8px;
   }
   
   .summary-info .el-col {
@@ -2077,12 +3596,38 @@ watch(
   
   .batch-info {
     flex-direction: column;
+    align-items: flex-start;
     gap: 8px;
   }
   
   .info-item {
     flex-direction: row;
     justify-content: space-between;
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .history-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .product-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .header-right-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .header-right-actions .el-input {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 8px;
   }
 }
 </style>

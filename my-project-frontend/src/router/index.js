@@ -351,6 +351,12 @@ const router = createRouter({
             component: () => import('@/views/ck/CkUnitManage.vue'),
             meta: { requiresAuth: false }
         },
+        {
+            path: '/index/ckRecommendRuleManage/',
+            name: 'ckRecommendRuleManage',
+            component: () => import('@/views/ck/CkRecommendRuleManage.vue'),
+            meta: { requiresAuth: false }
+        },
         
     ]
 })
