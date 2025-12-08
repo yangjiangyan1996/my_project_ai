@@ -3,6 +3,7 @@ package com.example.entity.cangku.resp;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.Date;
 
 /**
  * @Author YangJian
@@ -25,6 +26,8 @@ public class ReCommendRulePageListResp {
     private String customerName;
     //触发产品名称
     private String triggerProductName;
+    //触发产品SKU
+    private String triggerProductSku;
     //触发产品规格
     private String triggerProductSpec;
     //触发产品颜色
@@ -50,4 +53,9 @@ public class ReCommendRulePageListResp {
 
     //规则项数量
     private Long itemCount;
+
+    private Date createdAt;
+
+    private Date modifiedAt;
+
 }

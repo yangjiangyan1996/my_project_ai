@@ -1,4 +1,3 @@
-<!-- SalesOutboundCreate.vue -->
 <template>
   <div class="outbound-create-container">
     <el-card class="form-card" shadow="never">
@@ -133,182 +132,204 @@
         </el-form-item>
       </el-form>
 
-      <!-- 智能推荐区域 -->
-      <div class="recommendation-section" v-if="!isViewMode && showRecommendations && recommendations.length > 0">
+      <!-- 产品添加区域 -->
+      <div class="product-add-section" v-if="!isViewMode && formData.warehouseId && formData.customerId">
         <div class="section-header">
-          <div class="recommendation-header-left">
-            <h3>
-              <el-icon><MagicStick /></el-icon>
-              智能推荐
-            </h3>
-            <span class="tip">基于该客户的购买习惯，系统为您推荐以下产品</span>
-          </div>
-          <div class="recommendation-header-right">
-            <el-button type="text" @click="addAllRecommendations" :disabled="!hasValidRecommendations">
-              一键添加全部
-            </el-button>
-            <el-button type="text" @click="closeRecommendations">
-              <el-icon><Close /></el-icon>
-            </el-button>
-          </div>
-        </div>
-        
-        <el-table :data="recommendations" border class="recommendation-table" v-loading="loadingRecommendations">
-          <el-table-column label="推荐产品" min-width="200">
-            <template #default="{ row }">
-              <div class="product-info">
-                <div class="product-name">{{ row.productName }}</div>
-                <div class="sku-text">{{ row.sku }}</div>
-                <div class="spec-text">{{ row.spec || '-' }}</div>
-              </div>
-            </template>
-          </el-table-column>
-          
-          <el-table-column label="推荐理由" width="140">
-            <template #default="{ row }">
-              <div class="recommend-reason">
-                <el-tag size="small" :type="row.reasonType || 'info'">
-                  {{ row.reasonText }}
-                </el-tag>
-                <div class="confidence" v-if="row.confidence">
-                  置信度: {{ (row.confidence * 100).toFixed(0) }}%
-                </div>
-              </div>
-            </template>
-          </el-table-column>
-          
-          <el-table-column label="通常搭配" width="120">
-            <template #default="{ row }">
-              <div class="trigger-products">
-                <el-popover
-                  placement="top"
-                  :width="200"
-                  trigger="hover"
-                  v-if="row.triggerProducts && row.triggerProducts.length > 0"
-                >
-                  <template #reference>
-                    <el-tag size="small" type="success">
-                      搭配{{ row.triggerProducts.length }}个产品
-                    </el-tag>
-                  </template>
-                  <div class="trigger-list">
-                    <div v-for="trigger in row.triggerProducts" :key="trigger.productId" class="trigger-item">
-                      {{ trigger.productName }}
-                    </div>
-                  </div>
-                </el-popover>
-                <span v-else class="no-trigger">通用推荐</span>
-              </div>
-            </template>
-          </el-table-column>
-          
-          <el-table-column label="库存" width="80" align="center">
-            <template #default="{ row }">
-              <span :class="getStockClass(row.availableQuantity, row.recommendQuantity)">
-                {{ row.availableQuantity }}
-              </span>
-            </template>
-          </el-table-column>
-          
-          <el-table-column label="推荐数量" width="120">
-            <template #default="{ row }">
-              <el-input-number
-                v-model="row.recommendQuantity"
-                :min="0"
-                :max="row.availableQuantity"
-                controls-position="right"
-                size="small"
-                @change="() => handleRecommendQuantityChange(row)"
-                :disabled="row.availableQuantity <= 0"
-              />
-            </template>
-          </el-table-column>
-          
-          <el-table-column label="单价" width="120">
-            <template #default="{ row }">
-              <el-input-number
-                v-model="row.price"
-                :min="0"
-                :precision="2"
-                controls-position="right"
-                size="small"
-                :disabled="row.recommendQuantity <= 0 || row.availableQuantity <= 0"
-              >
-                <template #prefix>¥</template>
-              </el-input-number>
-            </template>
-          </el-table-column>
-          
-          <el-table-column label="USD单价" width="120">
-            <template #default="{ row }">
-              <el-input-number
-                v-model="row.priceUnitUsd"
-                :min="0"
-                :precision="2"
-                controls-position="right"
-                size="small"
-                :disabled="row.recommendQuantity <= 0 || row.availableQuantity <= 0"
-              >
-                <template #prefix>$</template>
-              </el-input-number>
-            </template>
-          </el-table-column>
-          
-          <el-table-column label="操作" width="120" align="center" fixed="right">
-            <template #default="{ row }">
-              <div class="recommend-actions">
-                <el-button
-                  type="primary"
-                  link
-                  @click="addRecommendToOrder(row)"
-                  :disabled="row.recommendQuantity <= 0 || row.availableQuantity <= 0 || row.added"
-                >
-                  {{ row.added ? '已添加' : '添加' }}
-                </el-button>
-                <el-button
-                  type="text"
-                  size="small"
-                  @click="ignoreRecommendation(row)"
-                >
-                  忽略
-                </el-button>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-
-      <!-- 产品明细 -->
-      <div class="product-section">
-        <div class="section-header">
-          <div class="section-header-left">
-            <h3>产品明细</h3>
-            <el-button 
-              type="success" 
-              @click="loadRecommendations"
-              :loading="loadingRecommendations"
-              v-if="!isViewMode && formData.customerId && formData.warehouseId"
-              class="recommend-btn"
-            >
-              <el-icon><MagicStick /></el-icon>
-              智能推荐
-            </el-button>
-          </div>
-          <div class="header-right-actions" v-if="!isViewMode">
-            <!-- 产品搜索 -->
+          <h3>添加产品</h3>
+          <div class="header-actions">
+            <!-- 快速搜索添加 -->
             <el-input
-              v-model="productSearch"
-              placeholder="搜索产品..."
+              v-model="quickSearch"
+              placeholder="输入产品名称/SKU搜索..."
+              style="width: 300px; margin-right: 10px;"
               clearable
-              style="width: 200px; margin-right: 10px;"
-              @input="filterProducts"
-              size="small"
+              @keyup.enter="handleQuickSearch"
             >
               <template #prefix>
                 <el-icon><Search /></el-icon>
               </template>
             </el-input>
             
+            <el-button 
+              type="primary" 
+              @click="showProductSelector = true"
+              :disabled="!availableProducts.length"
+            >
+              <el-icon><Plus /></el-icon>
+              批量选择产品
+            </el-button>
+          </div>
+        </div>
+
+        <!-- 快速搜索结果 -->
+        <div v-if="searchResults.length > 0" class="search-results">
+          <el-card class="search-results-card">
+            <template #header>
+              <div class="search-results-header">
+                <span>搜索结果</span>
+                <el-button type="text" @click="clearSearch">
+                  <el-icon><Close /></el-icon>
+                </el-button>
+              </div>
+            </template>
+            <div class="search-results-list">
+              <div 
+                v-for="product in searchResults" 
+                :key="product.productId"
+                class="search-result-item"
+              >
+                <div class="product-info">
+                  <span class="product-name">{{ product.productName }}</span>
+                  <span class="sku-text">{{ product.sku }}</span>
+                  <span class="stock-text">库存: {{ product.availableQuantity }}</span>
+                </div>
+                <el-button 
+                  type="primary" 
+                  size="small" 
+                  @click="addProductToTable(product)"
+                >
+                  添加到出库单
+                </el-button>
+              </div>
+            </div>
+          </el-card>
+        </div>
+      </div>
+
+      <!-- 推荐产品展示区域 -->
+      <div 
+        v-if="!isViewMode && groupedRecommendations.length > 0" 
+        class="recommendations-panel"
+      >
+        <div class="recommendations-header">
+          <div class="header-left">
+            <h3>
+              <el-icon><MagicStick /></el-icon>
+              智能推荐
+            </h3>
+            <span class="tip">基于您添加的产品，系统为您推荐以下搭配产品</span>
+          </div>
+          <div class="header-right">
+            <el-button type="text" @click="applyAllRecommendations" :disabled="!hasValidRecommendations">
+              应用所有推荐
+            </el-button>
+            <el-button type="text" @click="closeRecommendations">
+              <el-icon><Close /></el-icon>
+            </el-button>
+          </div>
+        </div>
+
+        <!-- 按触发产品分组的推荐 -->
+        <div 
+          v-for="group in groupedRecommendations" 
+          :key="group.triggerProductId"
+          class="recommendation-group"
+        >
+          <div class="group-header">
+            <div class="trigger-info">
+              <span class="trigger-product">
+                {{ getProductName(group.triggerProductId) }}
+                <el-tag size="small">触发产品</el-tag>
+              </span>
+              <span class="trigger-quantity">数量: {{ getProductQuantity(group.triggerProductId) }}</span>
+              <el-button 
+                type="text" 
+                size="small" 
+                @click="refreshRecommendations(group.triggerProductId)"
+                class="refresh-btn"
+              >
+                <el-icon><Refresh /></el-icon>
+                重新获取推荐
+              </el-button>
+            </div>
+            <el-button 
+              type="primary" 
+              size="small" 
+              @click="applyGroupRecommendations(group)"
+              :disabled="!group.hasValidItems"
+            >
+              应用本组推荐
+            </el-button>
+          </div>
+
+          <el-table :data="group.items" class="recommendation-items-table" border>
+            <el-table-column label="推荐产品" min-width="250">
+              <template #default="{ row }">
+                <div class="recommended-product-info">
+                  <div class="product-name">{{ row.productName }}</div>
+                  <div class="sku-text">{{ row.sku }}</div>
+                  <div class="spec-text">{{ row.spec || '-' }}</div>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="推荐类型" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.isRequired ? 'danger' : 'info'" size="small">
+                  {{ row.isRequired ? '必选' : '可选' }}
+                </el-tag>
+                <div v-if="row.confidence" class="confidence">
+                  置信度: {{ (row.confidence * 100).toFixed(0) }}%
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="推荐数量" width="180">
+              <template #default="{ row }">
+                <div class="recommended-quantity">
+                  <div v-if="row.quantityType === 1">
+                    <span class="quantity-type">固定数量</span>
+                    <span class="quantity-value">{{ row.quantityValue }}</span>
+                  </div>
+                  <div v-else>
+                    <span class="quantity-type">比例: {{ row.quantityValue }}</span>
+                    <span class="quantity-value">
+                      = {{ getTriggerProductQuantity(getTriggerIdForRow(row)) }} × {{ row.quantityValue }}
+                      = {{ calculateRecommendedQuantity(row, getTriggerIdForRow(row)) }}
+                    </span>
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="库存" width="100" align="center">
+              <template #default="{ row }">
+                <span :class="getStockClass(row.availableQuantity, row.recommendQuantity)">
+                  {{ row.availableQuantity }}
+                </span>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="是否添加" width="120" align="center">
+              <template #default="{ row }">
+                <el-checkbox 
+                  v-model="row.selected"
+                  :disabled="row.isRequired"
+                  @change="handleRecommendationToggle(row)"
+                >
+                  {{ row.selected ? '已添加' : '添加' }}
+                </el-checkbox>
+                <div v-if="row.isRequired" class="required-tip">必选</div>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- 产品明细表格 -->
+      <div class="product-section">
+        <div class="section-header">
+          <div class="section-header-left">
+            <h3>产品明细</h3>
+            <div class="product-type-filter">
+              <el-checkbox-group v-model="productTypeFilter">
+                <el-checkbox label="trigger">触发商品</el-checkbox>
+                <el-checkbox label="recommend">推荐商品</el-checkbox>
+              </el-checkbox-group>
+            </div>
+          </div>
+          <div class="header-right-actions" v-if="!isViewMode">
+            <!-- 批量操作 -->
             <el-dropdown @command="handleBatchCommand" trigger="click">
               <el-button type="primary" size="small">
                 <el-icon><Operation /></el-icon>
@@ -361,16 +382,20 @@
           <el-row :gutter="10">
             <el-col :span="3">
               <div class="stat-item">
-                <span class="stat-label">筛选:</span>
+                <span class="stat-label">出库产品:</span>
                 <span class="stat-value">{{ filteredProducts.length }} 项</span>
               </div>
             </el-col>
             <el-col :span="3">
               <div class="stat-item">
-                <span class="stat-label">已选:</span>
-                <span class="stat-value" :class="selectedProductCount > 0 ? 'stat-active' : ''">
-                  {{ selectedProductCount }} 项
-                </span>
+                <span class="stat-label">触发商品:</span>
+                <span class="stat-value">{{ filteredProducts.filter(p => p.isTriggerProduct).length }} 项</span>
+              </div>
+            </el-col>
+            <el-col :span="4">
+              <div class="stat-item">
+                <span class="stat-label">推荐商品:</span>
+                <span class="stat-value">{{ filteredProducts.filter(p => p.isRecommend).length }} 项</span>
               </div>
             </el-col>
             <el-col :span="4">
@@ -408,8 +433,11 @@
           :data="filteredProducts"
           border
           class="product-table"
-          empty-text="请先选择仓库"
+          empty-text="请先选择仓库和客户，然后添加产品"
           @selection-change="handleSelectionChange"
+          @row-click="handleRowClick"
+          row-key="productId"
+          :row-class-name="tableRowClassName"
         >
           <el-table-column type="selection" width="55" align="center" />
           <el-table-column type="index" label="序号" width="60" align="center" />
@@ -427,9 +455,32 @@
               <div class="product-info-cell">
                 <div class="product-name" @click="showProductHistory(row)">
                   {{ row.productName }}
-                  <el-tag v-if="row.isRecommend" size="small" type="success" class="recommend-tag">
-                    推荐
-                  </el-tag>
+                  <div class="product-tags">
+                    <el-tag 
+                      v-if="row.isTriggerProduct" 
+                      size="small" 
+                      type="success" 
+                      class="trigger-tag"
+                    >
+                      触发商品
+                    </el-tag>
+                    <el-tag 
+                      v-else-if="row.isRecommend" 
+                      size="small" 
+                      type="primary" 
+                      class="recommend-tag"
+                    >
+                      推荐商品
+                    </el-tag>
+                    <el-tag 
+                      v-if="row.triggerProductId" 
+                      size="small" 
+                      type="info" 
+                      class="recommend-source-tag"
+                    >
+                      来自: {{ getProductName(row.triggerProductId) }}
+                    </el-tag>
+                  </div>
                 </div>
                 <div class="product-details">
                   <div class="sku-text">{{ row.sku }}</div>
@@ -480,7 +531,24 @@
             </template>
           </el-table-column>
           
-          <el-table-column label="出库数量" width="130">
+          <!-- 新增：推荐数量列 -->
+          <el-table-column label="推荐数量" width="180" align="center" v-if="hasRecommendationDetails">
+            <template #default="{ row }">
+              <div v-if="row.isRecommend && getRecommendationDetails(row.productId).length > 0" class="recommendation-details">
+                <div v-for="detail in getRecommendationDetails(row.productId)" :key="detail.triggerProductId" class="recommendation-detail-item">
+                  <span class="trigger-product-name">{{ getProductName(detail.triggerProductId) }}:</span>
+                  <span class="recommended-quantity">{{ detail.recommendedQuantity }}个</span>
+                </div>
+                <div v-if="getTotalRecommendedQuantity(row.productId) > 0" class="recommendation-total">
+                  <span>合计: </span>
+                  <span class="total-quantity">{{ getTotalRecommendedQuantity(row.productId) }}个</span>
+                </div>
+              </div>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="出库数量" width="150">
             <template #default="{ row }">
               <div class="quantity-cell">
                 <el-input-number
@@ -489,7 +557,7 @@
                   :max="getQuantityMax(row)"
                   controls-position="right"
                   size="small"
-                  @change="() => handleQuantityChangeForAll(row)"
+                  @change="(value) => handleQuantityChange(row, value)"
                   placeholder="数量"
                   :disabled="isViewMode || row.availableQuantity <= 0"
                   class="quantity-input"
@@ -613,27 +681,63 @@
             </template>
           </el-table-column>
           
-          <el-table-column label="操作" width="80" fixed="right" align="center" v-if="!isViewMode">
-            <template #default="{ row }">
+          <el-table-column label="操作" width="120" fixed="right" align="center" v-if="!isViewMode">
+            <template #default="{ row, $index }">
               <el-button
                 type="danger"
                 link
-                @click="clearProductRow(row)"
-                :disabled="row.quantity <= 0"
+                @click="removeProductFromTable(row, $index)"
               >
-                清空
+                删除
+              </el-button>
+              <el-button
+                v-if="row.isTriggerProduct"
+                type="text"
+                link
+                @click="refreshTriggerRecommendations(row.productId)"
+                size="small"
+              >
+                刷新推荐
               </el-button>
             </template>
           </el-table-column>
         </el-table>
 
+        <!-- 没有产品时的提示 -->
+        <div v-if="!filteredProducts.length" class="empty-product-tip">
+          <div class="empty-content">
+            <el-icon class="empty-icon"><Goods /></el-icon>
+            <p>请先选择仓库和客户，然后添加产品</p>
+            <el-button 
+              type="primary" 
+              @click="showProductSelector = true"
+              :disabled="!availableProducts.length"
+            >
+              <el-icon><Plus /></el-icon>
+              添加产品
+            </el-button>
+          </div>
+        </div>
+
         <!-- 底部统计信息 -->
-        <div class="summary-info" v-if="hasProductsWithQuantity">
+        <div class="summary-info" v-if="filteredProducts.length > 0">
           <el-row :gutter="20">
             <el-col :span="3">
               <div class="summary-item">
-                <span class="label">产品种类：</span>
-                <span class="value">{{ productTypeCount }} 种</span>
+                <span class="label">出库产品：</span>
+                <span class="value">{{ filteredProducts.length }} 种</span>
+              </div>
+            </el-col>
+            <el-col :span="4">
+              <div class="summary-item">
+                <span class="label">触发产品：</span>
+                <span class="value">{{ triggerProductCount }} 个</span>
+              </div>
+            </el-col>
+            <el-col :span="4">
+              <div class="summary-item">
+                <span class="label">推荐产品：</span>
+                <span class="value">{{ recommendedProductCount }} 个</span>
               </div>
             </el-col>
             <el-col :span="4">
@@ -648,13 +752,7 @@
                 <span class="value highlight">¥ {{ totalAmount.toFixed(2) }}</span>
               </div>
             </el-col>
-            <el-col :span="4">
-              <div class="summary-item">
-                <span class="label">USD总额：</span>
-                <span class="value highlight">$ {{ totalAmountUsd.toFixed(2) }}</span>
-              </div>
-            </el-col>
-            <el-col :span="4">
+            <el-col :span="5">
               <div class="summary-item">
                 <span class="label">批次状态：</span>
                 <span class="value" :class="batchStatusClass">
@@ -663,12 +761,6 @@
                     <el-icon class="status-icon"><Warning /></el-icon>
                   </el-tooltip>
                 </span>
-              </div>
-            </el-col>
-            <el-col :span="5">
-              <div class="summary-item">
-                <span class="label">推荐产品：</span>
-                <span class="value">{{ recommendedProductCount }} 个</span>
               </div>
             </el-col>
           </el-row>
@@ -723,6 +815,112 @@
         </div>
       </div>
     </el-card>
+
+    <!-- 产品选择对话框 -->
+    <el-dialog
+      v-model="showProductSelector"
+      title="选择产品"
+      width="900px"
+      destroy-on-close
+      @closed="handleProductSelectorClosed"
+    >
+      <div class="product-selector-dialog">
+        <!-- 搜索和筛选 -->
+        <div class="selector-filter">
+          <el-input
+            v-model="selectorSearch"
+            placeholder="搜索产品名称、SKU..."
+            clearable
+            style="width: 300px; margin-right: 10px;"
+            @input="filterSelectorProducts"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          
+          <el-button type="text" @click="clearSelectorSelection">
+            清空选择
+          </el-button>
+        </div>
+
+        <!-- 产品列表 -->
+        <el-table 
+          :data="filteredSelectorProducts" 
+          @selection-change="handleProductSelection"
+          class="selector-table"
+          height="400"
+          border
+        >
+          <el-table-column type="selection" width="55" align="center" />
+          <el-table-column type="index" label="序号" width="60" align="center" />
+          
+          <el-table-column label="产品信息" min-width="250">
+            <template #default="{ row }">
+              <div class="product-info">
+                <div class="product-name">{{ row.productName }}</div>
+                <div class="sku-text">{{ row.sku }}</div>
+                <!-- <div class="spec-text">{{ row.spec || '-' }}</div> -->
+              </div>
+            </template>
+          </el-table-column>
+
+           <el-table-column label="规格" width="80" align="center">
+            <template #default="{ row }">
+              {{ row.spec || '-' }}
+            </template>
+          </el-table-column>
+
+           <el-table-column label="颜色" width="80" align="center">
+            <template #default="{ row }">
+              {{ row.color || '-' }}
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="库存" width="100" align="center">
+            <template #default="{ row }">
+              <span :class="row.availableQuantity <= 0 ? 'stock-none' : 'stock-ok'">
+                {{ row.availableQuantity }}
+              </span>
+            </template>
+          </el-table-column>
+          
+          <!-- <el-table-column label="单位" width="80" align="center">
+            <template #default="{ row }">
+              {{ row.unitName || '-' }}
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="价格" width="120">
+            <template #default="{ row }">
+              <div v-if="row.price">
+                ¥ {{ row.price.toFixed(2) }}
+                <div v-if="row.priceUnitUsd" class="usd-price">
+                  $ {{ row.priceUnitUsd.toFixed(2) }}
+                </div>
+              </div>
+              <span v-else>-</span>
+            </template>
+          </el-table-column> -->
+        </el-table>
+
+        <div class="selector-actions">
+          <div class="selected-count">
+            已选择 {{ selectedProductsForSelector.length }} 个产品
+          </div>
+          <div class="action-buttons">
+            <el-button @click="showProductSelector = false">取消</el-button>
+            <el-button 
+              type="primary" 
+              @click="addSelectedProducts"
+              :disabled="selectedProductsForSelector.length === 0"
+            >
+              添加并处理推荐
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
 
     <!-- 批次分配对话框 -->
     <el-dialog
@@ -984,7 +1182,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { 
   Plus, Delete, Upload, Download, Document, Close, Search, 
   Operation, MagicStick, Warning, InfoFilled, Refresh, 
-  CloseBold, SetUp, ArrowUp 
+  CloseBold, SetUp, ArrowUp, Goods
 } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 import axios from 'axios';
@@ -993,62 +1191,38 @@ import { accessHeader } from '@/net';
 const router = useRouter();
 const route = useRoute();
 const formRef = ref();
-const uploadRef = ref();
 const loading = ref(false);
 const downloadLoading = ref(false);
 
-// 智能推荐相关
-const showRecommendations = ref(false);
-const loadingRecommendations = ref(false);
-const recommendations = ref([]);
+// 产品选择相关
+const showProductSelector = ref(false);
+const quickSearch = ref('');
+const searchResults = ref([]);
+const selectorSearch = ref('');
+const selectedProductsForSelector = ref([]);
 
-// 产品搜索和筛选
-const productSearch = ref('');
-const filteredProducts = ref([]);
-const selectedProducts = ref([]);
+// 可用产品列表
+const availableProducts = ref([]);
+const filteredSelectorProducts = ref([]);
 
-// 批次分配策略
+// 推荐相关
+const autoApplyRequired = ref(true);
+const groupedRecommendations = ref([]);
+
+// 新增：推荐详情数据存储
+const recommendationDetails = ref({}); // 存储产品推荐详情 {productId: [{triggerProductId, recommendedQuantity}, ...]}
+
+// 批次分配相关
 const showAllocationStrategy = ref(false);
 const allocationStrategy = ref('FIFO');
 const applyingStrategy = ref(false);
 const loadingBatches = ref(false);
 
-// 历史价格对话框
-const historyDialog = reactive({
-  visible: false,
-  productName: '',
-  productId: null,
-  lastPrice: null,
-  avgPrice: null,
-  maxPrice: null,
-  minPrice: null,
-  priceList: []
-});
-const loadingHistory = ref(false);
-
-const importDialog = reactive({
-  visible: false
-});
-
-const currentFile = ref(null);
-const importResult = ref(null);
-const importLoading = ref(false);
-
-// 判断是否是编辑模式
-const isEditMode = computed(() => {
-  return !!route.params.id;
-});
-
-// 判断是否是查看模式（已审核、已完成等状态）
-const isViewMode = computed(() => {
-  return formData.status > 1; // 状态大于1表示已审核、已完成等不可编辑状态
-});
-
 // 表单数据
 const formData = reactive({
   id: null,
   orderNo: '',
-  orderType: 1, // 销售出库
+  orderType: 1,
   warehouseId: null,
   customerId: null,
   expectedDate: '',
@@ -1058,6 +1232,12 @@ const formData = reactive({
   items: [],
   attachments: []
 });
+
+// 出库产品数据
+const outboundProducts = ref([]);
+
+// 产品类型筛选
+const productTypeFilter = ref(['trigger', 'recommend']);
 
 // 批次分配对话框数据
 const batchDialog = reactive({
@@ -1074,40 +1254,101 @@ const batchDialog = reactive({
 // 选项数据
 const warehouseList = ref([]);
 const customerList = ref([]);
-const inventoryList = ref([]);
 const fileList = ref([]);
-const allInventoryProducts = ref([]);
 
-// 产品库存映射表
-const productStockMap = ref({});
+// 历史价格对话框
+const historyDialog = reactive({
+  visible: false,
+  productName: '',
+  productId: null,
+  lastPrice: null,
+  avgPrice: null,
+  maxPrice: null,
+  minPrice: null,
+  priceList: []
+});
+const loadingHistory = ref(false);
+
+// 导入对话框
+const importDialog = reactive({
+  visible: false
+});
+const currentFile = ref(null);
+const importResult = ref(null);
+const importLoading = ref(false);
 
 // 计算属性
-const productTypeCount = computed(() => {
-  return allInventoryProducts.value.filter(p => p.quantity > 0).length;
+const isEditMode = computed(() => !!route.params.id);
+
+const isViewMode = computed(() => formData.status > 1);
+
+const filteredProducts = computed(() => {
+  return outboundProducts.value.filter(p => {
+    if (p.quantity > 0) return true; // 总是显示有数量的产品
+    if (!productTypeFilter.value.length) return false;
+    
+    const isTrigger = p.isTriggerProduct && productTypeFilter.value.includes('trigger');
+    const isRecommend = p.isRecommend && productTypeFilter.value.includes('recommend');
+    return isTrigger || isRecommend;
+  });
 });
 
 const totalQuantity = computed(() => {
-  return allInventoryProducts.value.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  return filteredProducts.value
+    .filter(p => p.quantity > 0)
+    .reduce((sum, item) => sum + (item.quantity || 0), 0);
 });
 
 const totalAmount = computed(() => {
-  return allInventoryProducts.value.reduce((sum, item) => {
-    const price = item.price || 0;
-    const quantity = item.quantity || 0;
-    return sum + (price * quantity);
-  }, 0);
+  return filteredProducts.value
+    .filter(p => p.quantity > 0)
+    .reduce((sum, item) => {
+      const price = item.price || 0;
+      const quantity = item.quantity || 0;
+      return sum + (price * quantity);
+    }, 0);
 });
 
 const totalAmountUsd = computed(() => {
-  return allInventoryProducts.value.reduce((sum, item) => {
-    const priceUsd = item.priceUnitUsd || 0;
-    const quantity = item.quantity || 0;
-    return sum + (priceUsd * quantity);
-  }, 0);
+  return filteredProducts.value
+    .filter(p => p.quantity > 0)
+    .reduce((sum, item) => {
+      const priceUsd = item.priceUnitUsd || 0;
+      const quantity = item.quantity || 0;
+      return sum + (priceUsd * quantity);
+    }, 0);
+});
+
+const selectedProductCount = computed(() => {
+  return 0;
+});
+
+const hasProductsWithQuantity = computed(() => {
+  return outboundProducts.value.some(p => p.quantity > 0);
+});
+
+const hasBatchAllocations = computed(() => {
+  return outboundProducts.value.some(item => 
+    item.batchAllocations && item.batchAllocations.length > 0
+  );
+});
+
+const hasValidRecommendations = computed(() => {
+  return groupedRecommendations.value.some(group => 
+    group.items.some(item => !item.selected && item.availableQuantity > 0)
+  );
+});
+
+const recommendedProductCount = computed(() => {
+  return filteredProducts.value.filter(p => p.isRecommend && p.quantity > 0).length;
+});
+
+const triggerProductCount = computed(() => {
+  return filteredProducts.value.filter(p => p.isTriggerProduct && p.quantity > 0).length;
 });
 
 const hasInsufficientStock = computed(() => {
-  return allInventoryProducts.value.some(item => {
+  return filteredProducts.value.some(item => {
     if (item.quantity <= 0) return false;
     const allocatedQuantity = item.batchAllocations 
       ? item.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0)
@@ -1124,30 +1365,9 @@ const batchStatusClass = computed(() => {
   return hasInsufficientStock.value ? 'status-warning' : 'status-success';
 });
 
-const selectedProductCount = computed(() => {
-  return selectedProducts.value.length;
-});
-
-const hasProductsWithQuantity = computed(() => {
-  return allInventoryProducts.value.some(p => p.quantity > 0);
-});
-
-const hasBatchAllocations = computed(() => {
-  return allInventoryProducts.value.some(item => 
-    item.batchAllocations && item.batchAllocations.length > 0
-  );
-});
-
-const hasValidRecommendations = computed(() => {
-  return recommendations.value.some(r => 
-    r.recommendQuantity > 0 && 
-    r.availableQuantity > 0 && 
-    !r.added
-  );
-});
-
-const recommendedProductCount = computed(() => {
-  return allInventoryProducts.value.filter(p => p.isRecommend).length;
+// 新增：是否有推荐详情
+const hasRecommendationDetails = computed(() => {
+  return Object.keys(recommendationDetails.value).length > 0;
 });
 
 // 表单验证规则
@@ -1166,15 +1386,32 @@ const formRules = {
   ]
 };
 
+// 表格行样式
+const tableRowClassName = ({ row }) => {
+  if (row.isTriggerProduct) {
+    return 'trigger-product-row';
+  } else if (row.isRecommend) {
+    return 'recommend-product-row';
+  }
+  return '';
+};
+
 // 获取出库数量的最大值
 const getQuantityMax = (row) => {
-  // 如果是查看模式，不限制最大值，确保能显示历史数据
   if (isViewMode.value) {
     return Number.MAX_SAFE_INTEGER;
   }
-  
-  // 编辑模式下，限制不能超过当前库存
   return row.availableQuantity || 0;
+};
+
+// 生成出库单号
+const generateOrderNo = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const random = String(Math.random()).substr(2, 6);
+  formData.orderNo = `CK${year}${month}${day}${random}`;
 };
 
 // 加载出库单详情
@@ -1182,12 +1419,10 @@ const loadOutboundDetail = async (id) => {
   loading.value = true;
   try {
     const res = await get(`/api/auth/outbound/detail?orderId=${id}`);
-    console.log('出库单详情响应:', res);
     
     if (res) {
       const detailData = res.data || res;
       
-      // 设置基本数据
       Object.assign(formData, {
         id: detailData.id,
         orderNo: detailData.orderNo,
@@ -1200,43 +1435,6 @@ const loadOutboundDetail = async (id) => {
         status: detailData.status
       });
 
-      // 如果仓库有值，先加载对应的数据
-      if (detailData.warehouseId) {
-        await loadInventoryData(detailData.warehouseId);
-      }
-
-      // 设置产品明细数据
-      if (detailData.items && detailData.items.length > 0) {
-        await loadInventoryData(detailData.warehouseId);
-        
-        // 等待库存数据加载完成后，再设置产品数据
-        setTimeout(() => {
-          // 首先将所有产品的数量重置为0
-          allInventoryProducts.value.forEach(product => {
-            product.quantity = 0;
-            product.price = 0;
-            product.remark = '';
-            product.batchAllocations = [];
-          });
-          
-          // 然后设置编辑模式下的数据
-          detailData.items.forEach(detailItem => {
-            const product = allInventoryProducts.value.find(p => p.productId === detailItem.productId);
-            console.log('找到产品:', product);
-            console.log('明细数据:', detailItem);
-            if (product) {
-              product.quantity = detailItem.quantity || 0;
-              product.price = detailItem.priceUnit || 0;
-              product.remark = detailItem.remark || '';
-              product.priceUnitUsd = detailItem.priceUnitUsd || 0;
-              product.batchAllocations = detailItem.batchAllocations || [];
-            }
-          });
-        }, 500);
-      } else {
-        formData.items = [];
-      }
-
       // 设置附件数据
       if (detailData.attachments && detailData.attachments.length > 0) {
         fileList.value = detailData.attachments.map(att => ({
@@ -1245,6 +1443,22 @@ const loadOutboundDetail = async (id) => {
           status: 'success'
         }));
         formData.attachments = detailData.attachments;
+      }
+      
+      // 设置产品数据
+      if (detailData.items && detailData.items.length > 0) {
+        outboundProducts.value = detailData.items.map(item => ({
+          ...item,
+          quantity: item.quantity || 0,
+          price: item.priceUnit || 0,
+          priceUnitUsd: item.priceUnitUsd || 0,
+          remark: item.remark || '',
+          batchAllocations: item.batchAllocations || [],
+          availableQuantity: item.currentStock || 0,
+          isTriggerProduct: item.isTriggerProduct || false,
+          isRecommend: item.isRecommend || false,
+          triggerProductId: item.triggerProductId || null
+        }));
       }
       
       ElMessage.success('数据加载成功');
@@ -1258,115 +1472,155 @@ const loadOutboundDetail = async (id) => {
   }
 };
 
-// 更新库存产品数据
-const updateInventoryProducts = () => {
-  if (!formData.warehouseId || !inventoryList.value.length) {
-    allInventoryProducts.value = [];
-    filteredProducts.value = [];
+// 仓库变化处理
+const handleWarehouseChange = async (warehouseId) => {
+  if (warehouseId && formData.customerId) {
+    await loadAvailableProducts();
+  }
+  outboundProducts.value = [];
+  groupedRecommendations.value = [];
+  recommendationDetails.value = {};
+};
+
+// 客户变化处理
+const handleCustomerChange = async (customerId) => {
+  if (customerId && formData.warehouseId) {
+    await loadAvailableProducts();
+  }
+  outboundProducts.value = [];
+  groupedRecommendations.value = [];
+  recommendationDetails.value = {};
+};
+
+// 加载可用产品列表
+const loadAvailableProducts = async () => {
+  if (!formData.warehouseId) return;
+  
+  try {
+    const res = await get(`/api/auth/inventory/listOfWarehouse?warehouseId=${formData.warehouseId}`);
+    if (res && Array.isArray(res)) {
+      availableProducts.value = res.map(item => ({
+        ...item,
+        originalPrice: item.price || 0,
+        originalPriceUnitUsd: item.priceUnitUsd || 0
+      }));
+      filteredSelectorProducts.value = [...availableProducts.value];
+    }
+  } catch (error) {
+    console.error('加载可用产品失败:', error);
+  }
+};
+
+// 快速搜索处理
+const handleQuickSearch = () => {
+  if (!quickSearch.value.trim()) {
+    searchResults.value = [];
     return;
   }
   
-  allInventoryProducts.value = inventoryList.value.map(item => {
-    // 查找是否已经存在这个产品的数据（保留已输入的数量和价格）
-    const existingProduct = allInventoryProducts.value.find(p => p.productId === item.productId);
-    
-    // 默认使用接口返回的price，如果已有数据则保留用户输入的价格
-    const displayPrice = existingProduct ? existingProduct.price : (item.price || 0);
-    
-    return {
-      ...item,
-      quantity: existingProduct ? existingProduct.quantity : 0,
-      price: displayPrice,
-      priceUnitUsd: existingProduct ? existingProduct.priceUnitUsd : (item.priceUnitUsd || 0),
-      remark: existingProduct ? existingProduct.remark : '',
-      batchAllocations: existingProduct ? existingProduct.batchAllocations : [],
-      availableBatches: existingProduct ? existingProduct.availableBatches : [],
-      // 保存接口原始价格，用于导入时的逻辑判断
-      originalPrice: item.price || 0,
-      originalPriceUnitUsd: item.priceUnitUsd || 0,
-      // 是否为推荐产品
-      isRecommend: existingProduct ? existingProduct.isRecommend : false,
-      // 历史价格
-      historyPrice: existingProduct ? existingProduct.historyPrice : null
-    };
+  const searchText = quickSearch.value.toLowerCase().trim();
+  searchResults.value = availableProducts.value.filter(product => {
+    return (
+      (product.productName && product.productName.toLowerCase().includes(searchText)) ||
+      (product.sku && product.sku.toLowerCase().includes(searchText))
+    );
+  }).slice(0, 10);
+};
+
+const clearSearch = () => {
+  quickSearch.value = '';
+  searchResults.value = [];
+};
+
+// 添加产品到表格
+const addProductToTable = async (product) => {
+  // 检查是否已存在
+  const existingProduct = outboundProducts.value.find(p => p.productId === product.productId);
+  if (existingProduct) {
+    // 如果已存在且数量为0，更新数量为1
+    if (existingProduct.quantity === 0) {
+      existingProduct.quantity = 1;
+      existingProduct.price = product.originalPrice || 0;
+      existingProduct.priceUnitUsd = product.originalPriceUnitUsd || 0;
+      existingProduct.isTriggerProduct = true;
+      existingProduct.isRecommend = false;
+      existingProduct.triggerProductId = null;
+      
+      // 加载推荐
+      await loadRecommendationsForProduct(product.productId, 1);
+      ElMessage.success(`已更新 ${product.productName} 数量为1`);
+    } else {
+      ElMessage.warning(`${product.productName} 已存在于出库单中`);
+    }
+    return;
+  }
+  
+  // 新增产品
+  const newProduct = {
+    ...product,
+    quantity: 1,
+    price: product.originalPrice || 0,
+    priceUnitUsd: product.originalPriceUnitUsd || 0,
+    remark: '',
+    batchAllocations: [],
+    isTriggerProduct: true,
+    isRecommend: false,
+    historyPrice: null,
+    lastQuantity: 0,
+    triggerProductId: null
+  };
+  
+  outboundProducts.value.push(newProduct);
+  
+  clearSearch();
+  
+  ElMessage.success(`已添加 ${product.productName} 到出库单`);
+  
+  // 加载推荐
+  await loadRecommendationsForProduct(product.productId, 1);
+  
+  nextTick(() => {
+    const element = document.querySelector('.product-table');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   });
-  
-  // 初始化筛选结果
-  filterProducts();
 };
 
-// 方法
-const generateOrderNo = () => {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const random = String(Math.random()).substr(2, 6);
-  formData.orderNo = `CK${year}${month}${day}${random}`;
-};
-
-const handleWarehouseChange = async (warehouseId) => {
-  if (warehouseId) {
-    await loadInventoryData(warehouseId);
-    
-    // 确保所有产品的数量为0
-    if (allInventoryProducts.value.length > 0) {
-      allInventoryProducts.value.forEach(product => {
-        product.quantity = 0;
-        product.price = 0;
-        product.priceUnitUsd = 0;
-        product.remark = '';
-        product.batchAllocations = [];
-        product.isRecommend = false;
-      });
+// 获取行的触发产品ID
+const getTriggerIdForRow = (row) => {
+  for (const group of groupedRecommendations.value) {
+    if (group.items.includes(row)) {
+      return group.triggerProductId;
     }
-    
-    // 清空推荐
-    showRecommendations.value = false;
-    recommendations.value = [];
   }
+  return null;
 };
 
-const handleCustomerChange = (customerId) => {
-  // 客户变化时清空推荐
-  showRecommendations.value = false;
-  recommendations.value = [];
-  
-  // 如果已有仓库，可以预加载推荐
-  if (customerId && formData.warehouseId) {
-    // 延迟加载推荐，避免频繁请求
-    setTimeout(() => {
-      if (formData.customerId === customerId) {
-        loadRecommendations();
-      }
-    }, 500);
-  }
-};
-
-// 销售出库：处理所有商品表格中的数量变化
-const handleQuantityChangeForAll = (row) => {
-  if (row.quantity > 0) {
-    // 如果之前有批次分配，但数量减少了，需要清空批次分配
-    if (row.batchAllocations && row.batchAllocations.length > 0) {
-      const totalAllocated = row.batchAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
-      if (row.quantity < totalAllocated) {
-        ElMessage.warning('出库数量小于已分配批次数量，请重新分配批次');
-        row.batchAllocations = [];
-      }
+// 产品数量变化处理
+const handleQuantityChange = async (row, value) => {
+  if (value > 0) {
+    // 如果是触发产品且数量从0变成有值，查询推荐
+    if (row.isTriggerProduct && value > 0 && (!row.lastQuantity || row.lastQuantity === 0)) {
+      await loadRecommendationsForProduct(row.productId, value);
     }
     
-    // 如果接口返回了价格，使用接口价格（仅在价格为空时自动填充）
-    if (row.originalPrice && row.originalPrice > 0 && (!row.price || row.price === 0)) {
-      row.price = row.originalPrice;
+    // 更新价格
+    if (!row.price || row.price === 0) {
+      row.price = row.originalPrice || 0;
     }
-    // 如果接口返回了USD价格，使用接口USD价格（仅在USD价格为空时自动填充）
-    if (row.originalPriceUnitUsd && row.originalPriceUnitUsd > 0 && (!row.priceUnitUsd || row.priceUnitUsd === 0)) {
-      row.priceUnitUsd = row.originalPriceUnitUsd;
+    if (!row.priceUnitUsd || row.priceUnitUsd === 0) {
+      row.priceUnitUsd = row.originalPriceUnitUsd || 0;
     }
     
     // 加载历史价格
     if (!row.historyPrice && formData.customerId) {
-      loadProductHistoryPrice(row);
+      await loadProductHistoryPrice(row);
+    }
+    
+    // 如果是触发产品，更新相关推荐的数量
+    if (row.isTriggerProduct) {
+      updateRecommendationQuantities(row.productId, value);
     }
   } else {
     // 如果数量设为0，清空相关数据
@@ -1375,202 +1629,514 @@ const handleQuantityChangeForAll = (row) => {
     row.priceUnitUsd = 0;
     row.remark = '';
     row.batchAllocations = [];
+    
+    // 如果是触发产品，移除相关推荐（但不删除推荐商品）
+    if (row.isTriggerProduct) {
+      removeRecommendationsForTrigger(row.productId, false); // 不删除推荐商品
+    }
   }
   
-  // 更新筛选列表
-  filterProducts();
+  row.lastQuantity = value;
 };
 
-// 智能推荐相关方法
-const loadRecommendations = async () => {
-  if (!formData.customerId || !formData.warehouseId) {
-    ElMessage.warning('请先选择客户和仓库');
-    return;
+// 更新推荐产品的数量
+const updateRecommendationQuantities = (triggerProductId, quantity) => {
+  const group = groupedRecommendations.value.find(g => g.triggerProductId === triggerProductId);
+  if (group) {
+    group.items.forEach(item => {
+      if (item.quantityType === 2) {
+        item.calculatedQuantity = calculateRecommendedQuantity(item, triggerProductId, quantity);
+      }
+    });
   }
   
-  loadingRecommendations.value = true;
+  // 更新推荐详情
+  updateRecommendationDetails();
+};
+
+// 修改 calculateRecommendedQuantity 方法
+const calculateRecommendedQuantity = (recommendation, triggerProductId, triggerQuantity) => {
+  const quantity = triggerQuantity !== undefined 
+    ? triggerQuantity 
+    : getProductQuantity(triggerProductId);
+  
+  if (quantity <= 0) return 0;
+  
+  if (recommendation.quantityType === 1) {
+    return Number(recommendation.quantityValue) || 0;
+  } else {
+    const ratio = Number(recommendation.quantityValue) || 0;
+    const calculated = quantity * ratio;
+    return Math.round(calculated);
+  }
+};
+
+// 添加辅助方法获取触发产品数量
+const getTriggerProductQuantity = (triggerProductId) => {
+  const product = outboundProducts.value.find(p => p.productId === triggerProductId);
+  return product ? product.quantity : 0;
+};
+
+// 刷新触发产品的推荐
+const refreshTriggerRecommendations = async (productId) => {
+  const product = outboundProducts.value.find(p => p.productId === productId);
+  if (product && product.quantity > 0) {
+    await loadRecommendationsForProduct(productId, product.quantity);
+    ElMessage.success('已刷新推荐');
+  } else {
+    ElMessage.warning('请先设置触发产品的数量');
+  }
+};
+
+// 刷新推荐
+const refreshRecommendations = async (triggerProductId) => {
+  const product = outboundProducts.value.find(p => p.productId === triggerProductId);
+  if (product && product.quantity > 0) {
+    await loadRecommendationsForProduct(triggerProductId, product.quantity);
+    ElMessage.success('已重新获取推荐');
+  } else {
+    ElMessage.warning('触发产品数量为0，无法获取推荐');
+  }
+};
+
+// 加载推荐
+const loadRecommendationsForProduct = async (productId, quantity) => {
+  if (!formData.customerId || !formData.warehouseId) return;
+  
   try {
-    const res = await get(
-      `/api/auth/recommend/sales?customerId=${formData.customerId}&warehouseId=${formData.warehouseId}`
-    );
+    const requestData = {
+      customerId: formData.customerId,
+      warehouseId: formData.warehouseId,
+      productId: productId,
+      quantity: quantity,
+      applyScene: 1
+    };
     
-    if (res && res.data && res.data.length > 0) {
-      // 过滤掉已经在出库单中的产品
-      const existingProductIds = allInventoryProducts.value
+    const res = await post('/api/auth/recommend/queryRuleItems', requestData);
+    
+    console.log('推荐接口响应:', res);
+    
+    if (res && res.recommendations && res.recommendations.length > 0) {
+      // 过滤掉已经在出库单中且数量大于0的产品（改进点1）
+      const existingProductIds = outboundProducts.value
         .filter(p => p.quantity > 0)
         .map(p => p.productId);
       
-      recommendations.value = res.data
-        .filter(item => !existingProductIds.includes(item.productId))
-        .map(item => ({
-          ...item,
-          recommendQuantity: item.recommendQuantity || 1,
-          price: item.price || 0,
-          priceUnitUsd: item.priceUnitUsd || 0,
-          originalPrice: item.price || 0,
-          triggerProducts: item.triggerProducts || [],
-          reasonText: getRecommendReasonText(item),
-          reasonType: getRecommendReasonType(item),
-          added: false,
-          availableQuantity: productStockMap.value[item.productId] || 0
-        }));
-      
-      if (recommendations.value.length > 0) {
-        showRecommendations.value = true;
-        ElMessage.success(`发现 ${recommendations.value.length} 条推荐`);
+      const recommendations = res.recommendations.map(item => {
+        const productInfo = availableProducts.value.find(p => p.productId === item.productId);
+        const availableQuantity = productInfo ? productInfo.availableQuantity : 0;
         
-        // 滚动到推荐区域
-        nextTick(() => {
-          const element = document.querySelector('.recommendation-section');
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
-        });
-      } else {
-        ElMessage.info('所有推荐产品已存在于出库单中');
-        showRecommendations.value = false;
+        // 检查是否已添加（改进点1）
+        const existingProduct = outboundProducts.value.find(p => p.productId === item.productId);
+        const isSelected = existingProduct && existingProduct.quantity > 0;
+        
+        const calculatedQuantity = calculateRecommendedQuantity({
+          quantityType: item.quantityType,
+          quantityValue: item.quantityValue
+        }, productId, quantity);
+        
+        return {
+          productId: item.productId,
+          productName: item.productName,
+          sku: item.sku,
+          spec: item.spec || '-',
+          color: item.color || '-',
+          quantityType: item.quantityType || 1,
+          quantityValue: item.quantityValue ? Number(item.quantityValue) : 1,
+          isRequired: item.isRequired || false,
+          confidence: item.confidence ? Number(item.confidence) : 1,
+          remark: item.remark || '',
+          selected: isSelected,
+          availableQuantity: availableQuantity,
+          calculatedQuantity: calculatedQuantity,
+          triggerProductId: productId // 记录触发产品ID
+        };
+      }).filter(item => !existingProductIds.includes(item.productId)); // 过滤掉已存在的产品
+      
+      console.log('处理后的推荐数据:', recommendations);
+      
+      if (recommendations.length > 0) {
+        const existingGroupIndex = groupedRecommendations.value.findIndex(
+          g => g.triggerProductId === productId
+        );
+        
+        if (existingGroupIndex >= 0) {
+          groupedRecommendations.value[existingGroupIndex].items = recommendations;
+          groupedRecommendations.value[existingGroupIndex].hasValidItems = recommendations.some(item => item.availableQuantity > 0);
+        } else {
+          groupedRecommendations.value.push({
+            triggerProductId: productId,
+            items: recommendations,
+            hasValidItems: recommendations.some(item => item.availableQuantity > 0)
+          });
+        }
+        
+        // 更新推荐详情
+        updateRecommendationDetails();
+        
+        // 自动应用必选推荐
+        applyRequiredRecommendations(productId);
+        
+        ElMessage.success(`发现 ${recommendations.length} 条推荐规则`);
       }
     } else {
-      ElMessage.info('暂无推荐产品');
-      showRecommendations.value = false;
+      console.log('未找到推荐规则或推荐列表为空', res);
     }
   } catch (error) {
     console.error('加载推荐失败:', error);
-    ElMessage.error('获取推荐失败');
-    showRecommendations.value = false;
-  } finally {
-    loadingRecommendations.value = false;
+    ElMessage.error('获取推荐规则失败');
   }
 };
 
-const getRecommendReasonText = (item) => {
-  if (item.ruleType === 1) return '配置规则';
-  if (item.isRequired === 1) return '强制搭配';
-  if (item.confidence > 0.9) return '高频搭配';
-  if (item.confidence > 0.7) return '通常搭配';
-  return '建议搭配';
-};
-
-const getRecommendReasonType = (item) => {
-  if (item.isRequired === 1) return 'danger'; // 强制推荐
-  if (item.confidence > 0.9) return 'success'; // 高置信度
-  if (item.confidence > 0.7) return 'warning'; // 中置信度
-  return 'info'; // 普通建议
-};
-
-const handleRecommendQuantityChange = (row) => {
-  if (row.recommendQuantity > row.availableQuantity) {
-    row.recommendQuantity = row.availableQuantity;
-    ElMessage.warning(`推荐数量不能超过库存数量 ${row.availableQuantity}`);
-  }
-};
-
-const addRecommendToOrder = (recommend) => {
-  // 查找是否已在产品列表中
-  let product = allInventoryProducts.value.find(p => p.productId === recommend.productId);
+// 新增：更新推荐详情数据
+const updateRecommendationDetails = () => {
+  recommendationDetails.value = {};
   
-  if (product) {
-    // 如果产品已存在，更新数量
-    if (product.quantity === 0) {
-      product.quantity = recommend.recommendQuantity;
-      product.price = recommend.price;
-      product.priceUnitUsd = recommend.priceUnitUsd;
-      product.isRecommend = true;
-      ElMessage.success(`已添加 ${recommend.productName} 到出库单`);
-    } else {
-      // 如果已有数量，询问是否覆盖
-      ElMessageBox.confirm(
-        `产品 ${recommend.productName} 已有数量 ${product.quantity}，是否替换为推荐数量 ${recommend.recommendQuantity}？`,
-        '确认替换',
-        {
-          confirmButtonText: '替换',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }
-      ).then(() => {
-        product.quantity = recommend.recommendQuantity;
-        product.price = recommend.price;
-        product.priceUnitUsd = recommend.priceUnitUsd;
-        product.isRecommend = true;
-        ElMessage.success('已替换数量');
-      });
+  groupedRecommendations.value.forEach(group => {
+    group.items.forEach(item => {
+      if (!recommendationDetails.value[item.productId]) {
+        recommendationDetails.value[item.productId] = [];
+      }
+      
+      const recommendedQuantity = calculateRecommendedQuantity(item, group.triggerProductId);
+      
+      // 检查是否已存在相同的触发产品
+      const existingDetail = recommendationDetails.value[item.productId].find(
+        detail => detail.triggerProductId === group.triggerProductId
+      );
+      
+      if (existingDetail) {
+        existingDetail.recommendedQuantity = recommendedQuantity;
+      } else {
+        recommendationDetails.value[item.productId].push({
+          triggerProductId: group.triggerProductId,
+          recommendedQuantity: recommendedQuantity
+        });
+      }
+    });
+  });
+  
+  console.log('推荐详情数据:', recommendationDetails.value);
+};
+
+// 新增：获取产品推荐详情
+const getRecommendationDetails = (productId) => {
+  return recommendationDetails.value[productId] || [];
+};
+
+// 新增：获取产品总推荐数量
+const getTotalRecommendedQuantity = (productId) => {
+  const details = recommendationDetails.value[productId];
+  if (!details || details.length === 0) return 0;
+  
+  return details.reduce((sum, detail) => sum + (detail.recommendedQuantity || 0), 0);
+};
+
+// 获取产品可用数量
+const getProductAvailableQuantity = (productId) => {
+  const product = availableProducts.value.find(p => p.productId === productId);
+  return product ? product.availableQuantity : 0;
+};
+
+// 应用必选推荐
+const applyRequiredRecommendations = (triggerProductId) => {
+  const group = groupedRecommendations.value.find(g => g.triggerProductId === triggerProductId);
+  if (!group) return;
+  
+  let addedCount = 0;
+  group.items.forEach(item => {
+    if (item.isRequired && !item.selected && item.availableQuantity > 0) {
+      addRecommendationToOrder(item);
+      addedCount++;
     }
-  } else {
-    // 如果产品不存在（可能不在当前仓库），提示用户
-    ElMessage.warning(`产品 ${recommend.productName} 不在当前仓库库存中`);
+  });
+  
+  if (addedCount > 0) {
+    ElMessage.success(`已自动添加 ${addedCount} 个必选推荐商品`);
   }
-  
-  // 标记为已添加
-  recommend.added = true;
-  
-  // 更新筛选列表
-  filterProducts();
 };
 
-const addAllRecommendations = () => {
-  const validRecommendations = recommendations.value.filter(r => 
-    r.recommendQuantity > 0 && 
-    r.availableQuantity > 0 && 
-    !r.added
-  );
-  
-  if (validRecommendations.length === 0) {
-    ElMessage.warning('没有可添加的推荐产品');
+// 添加推荐产品到订单
+const addRecommendationToOrder = (recommendation) => {
+  const product = availableProducts.value.find(p => p.productId === recommendation.productId);
+  if (!product) {
+    ElMessage.warning(`产品 ${recommendation.productName} 不在当前仓库中`);
     return;
   }
   
+  const existingProduct = outboundProducts.value.find(p => p.productId === recommendation.productId);
+  if (existingProduct) {
+    if (existingProduct.quantity === 0) {
+      const quantity = recommendation.calculatedQuantity || 1;
+      existingProduct.quantity = Math.min(quantity, product.availableQuantity);
+      existingProduct.price = product.originalPrice || 0;
+      existingProduct.priceUnitUsd = product.originalPriceUnitUsd || 0;
+      existingProduct.isRecommend = true;
+      existingProduct.isTriggerProduct = false;
+      existingProduct.triggerProductId = recommendation.triggerProductId;
+      
+      recommendation.selected = true;
+      
+      ElMessage.success(`已添加 ${recommendation.productName} 到出库单`);
+    } else {
+      ElMessage.warning(`${recommendation.productName} 已存在于出库单中`);
+    }
+    return;
+  }
+  
+  const quantity = recommendation.calculatedQuantity || 1;
+  const actualQuantity = Math.min(quantity, product.availableQuantity);
+  
+  if (actualQuantity <= 0) {
+    ElMessage.warning(`${recommendation.productName} 库存不足，无法添加`);
+    return;
+  }
+  
+  const newProduct = {
+    ...product,
+    quantity: actualQuantity,
+    price: product.originalPrice || 0,
+    priceUnitUsd: product.originalPriceUnitUsd || 0,
+    remark: recommendation.remark || '',
+    batchAllocations: [],
+    isTriggerProduct: false,
+    isRecommend: true,
+    triggerProductId: recommendation.triggerProductId,
+    historyPrice: null
+  };
+  
+  outboundProducts.value.push(newProduct);
+  
+  recommendation.selected = true;
+  
+  ElMessage.success(`已添加 ${recommendation.productName} 到出库单`);
+};
+
+// 处理推荐切换
+const handleRecommendationToggle = (recommendation) => {
+  if (recommendation.selected) {
+    addRecommendationToOrder(recommendation);
+  } else {
+    removeProductFromTableByProductId(recommendation.productId);
+  }
+};
+
+// 移除触发产品的推荐（可选是否删除推荐商品）
+const removeRecommendationsForTrigger = (triggerProductId, deleteRecommendProducts = false) => {
+  const index = groupedRecommendations.value.findIndex(g => g.triggerProductId === triggerProductId);
+  if (index >= 0) {
+    if (deleteRecommendProducts) {
+      // 删除推荐商品
+      groupedRecommendations.value[index].items.forEach(item => {
+        if (item.selected) {
+          removeProductFromTableByProductId(item.productId);
+        }
+      });
+    }
+    
+    groupedRecommendations.value.splice(index, 1);
+  }
+  
+  // 更新推荐详情
+  updateRecommendationDetails();
+};
+
+// 通过产品ID移除产品
+const removeProductFromTableByProductId = (productId) => {
+  const index = outboundProducts.value.findIndex(p => p.productId === productId && p.isRecommend);
+  if (index >= 0) {
+    outboundProducts.value.splice(index, 1);
+    
+    // 从推荐详情中移除
+    delete recommendationDetails.value[productId];
+    
+    // 重新计算推荐详情
+    updateRecommendationDetails();
+  }
+};
+
+// 应用所有推荐
+const applyAllRecommendations = () => {
   let addedCount = 0;
-  validRecommendations.forEach(recommend => {
-    const product = allInventoryProducts.value.find(p => p.productId === recommend.productId);
-    if (product && product.availableQuantity >= recommend.recommendQuantity) {
-      // 如果产品已有数量，累加
-      product.quantity = (product.quantity || 0) + recommend.recommendQuantity;
-      product.price = recommend.price;
-      product.priceUnitUsd = recommend.priceUnitUsd;
-      product.isRecommend = true;
-      recommend.added = true;
+  
+  groupedRecommendations.value.forEach(group => {
+    group.items.forEach(item => {
+      if (!item.selected && item.availableQuantity > 0) {
+        addRecommendationToOrder(item);
+        addedCount++;
+      }
+    });
+  });
+  
+  if (addedCount > 0) {
+    ElMessage.success(`成功添加 ${addedCount} 个推荐产品`);
+  } else {
+    ElMessage.warning('没有可添加的推荐产品');
+  }
+};
+
+// 应用组推荐
+const applyGroupRecommendations = (group) => {
+  let addedCount = 0;
+  
+  group.items.forEach(item => {
+    if (!item.selected && item.availableQuantity > 0) {
+      addRecommendationToOrder(item);
       addedCount++;
     }
   });
   
   if (addedCount > 0) {
     ElMessage.success(`成功添加 ${addedCount} 个推荐产品`);
-    filterProducts();
   } else {
-    ElMessage.warning('未能添加任何推荐产品');
+    ElMessage.warning('本组没有可添加的推荐产品');
   }
 };
 
-const ignoreRecommendation = (recommend) => {
-  const index = recommendations.value.indexOf(recommend);
-  if (index > -1) {
-    recommendations.value.splice(index, 1);
-  }
-  
-  if (recommendations.value.length === 0) {
-    showRecommendations.value = false;
-  }
+// 获取产品名称
+const getProductName = (productId) => {
+  const product = outboundProducts.value.find(p => p.productId === productId) || 
+                  availableProducts.value.find(p => p.productId === productId);
+  return product ? product.productName : '未知产品';
 };
 
+// 获取产品数量
+const getProductQuantity = (productId) => {
+  const product = outboundProducts.value.find(p => p.productId === productId);
+  return product ? product.quantity : 0;
+};
+
+// 关闭推荐面板
 const closeRecommendations = () => {
-  showRecommendations.value = false;
+  ElMessageBox.confirm(
+    '关闭推荐面板将不再显示推荐信息，但已添加的推荐商品会保留。确定要关闭吗？',
+    '确认关闭',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    groupedRecommendations.value = [];
+    recommendationDetails.value = {};
+    ElMessage.success('已关闭推荐面板');
+  });
 };
 
-// 产品搜索和筛选
-const filterProducts = () => {
-  if (!productSearch.value.trim()) {
-    filteredProducts.value = [...allInventoryProducts.value];
+// 产品选择对话框相关
+const filterSelectorProducts = () => {
+  if (!selectorSearch.value.trim()) {
+    filteredSelectorProducts.value = [...availableProducts.value];
     return;
   }
   
-  const searchText = productSearch.value.toLowerCase().trim();
-  filteredProducts.value = allInventoryProducts.value.filter(product => {
+  const searchText = selectorSearch.value.toLowerCase().trim();
+  filteredSelectorProducts.value = availableProducts.value.filter(product => {
     return (
       (product.productName && product.productName.toLowerCase().includes(searchText)) ||
       (product.sku && product.sku.toLowerCase().includes(searchText)) ||
-      (product.spec && product.spec.toLowerCase().includes(searchText)) ||
-      (product.color && product.color.toLowerCase().includes(searchText))
+      (product.spec && product.spec.toLowerCase().includes(searchText))
     );
+  });
+};
+
+const handleProductSelection = (selection) => {
+  selectedProductsForSelector.value = selection;
+};
+
+const clearSelectorSelection = () => {
+  selectedProductsForSelector.value = [];
+  nextTick(() => {
+    filteredSelectorProducts.value = [...filteredSelectorProducts.value];
+  });
+};
+
+const handleProductSelectorClosed = () => {
+  selectorSearch.value = '';
+  selectedProductsForSelector.value = [];
+  filteredSelectorProducts.value = [...availableProducts.value];
+};
+
+const addSelectedProducts = async () => {
+  if (selectedProductsForSelector.value.length === 0) {
+    ElMessage.warning('请先选择产品');
+    return;
+  }
+  
+  let addedCount = 0;
+  for (const product of selectedProductsForSelector.value) {
+    const existingProduct = outboundProducts.value.find(p => p.productId === product.productId);
+    
+    if (!existingProduct) {
+      // 新增产品
+      const newProduct = {
+        ...product,
+        quantity: 1,
+        price: product.originalPrice || 0,
+        priceUnitUsd: product.originalPriceUnitUsd || 0,
+        remark: '',
+        batchAllocations: [],
+        isTriggerProduct: true,
+        isRecommend: false,
+        historyPrice: null,
+        lastQuantity: 0,
+        triggerProductId: null
+      };
+      
+      outboundProducts.value.push(newProduct);
+      addedCount++;
+      
+      // 加载推荐
+      await loadRecommendationsForProduct(product.productId, 1);
+    } else if (existingProduct.quantity === 0) {
+      // 已存在但数量为0，更新数量
+      existingProduct.quantity = 1;
+      existingProduct.price = product.originalPrice || 0;
+      existingProduct.priceUnitUsd = product.originalPriceUnitUsd || 0;
+      existingProduct.isTriggerProduct = true;
+      existingProduct.isRecommend = false;
+      existingProduct.triggerProductId = null;
+      addedCount++;
+      
+      // 加载推荐
+      await loadRecommendationsForProduct(product.productId, 1);
+    }
+  }
+  
+  showProductSelector.value = false;
+  
+  if (addedCount > 0) {
+    ElMessage.success(`成功添加 ${addedCount} 个产品到出库单`);
+    
+    nextTick(() => {
+      const element = document.querySelector('.product-table');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }
+};
+
+// 从表格中删除产品
+const removeProductFromTable = (row, index) => {
+  ElMessageBox.confirm(
+    `确定要删除 ${row.productName} 吗？`,
+    '确认删除',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    if (row.isTriggerProduct) {
+      removeRecommendationsForTrigger(row.productId, true);
+    } else if (row.isRecommend) {
+      // 从推荐详情中移除
+      delete recommendationDetails.value[row.productId];
+    }
+    
+    outboundProducts.value.splice(index, 1);
+    ElMessage.success('删除成功');
   });
 };
 
@@ -1579,32 +2145,37 @@ const handleBatchCommand = async (command) => {
   switch (command) {
     case 'clearAll':
       if (selectedProducts.value.length > 0) {
-        // 只清空选中的产品
         selectedProducts.value.forEach(row => {
           row.quantity = 0;
           row.price = 0;
           row.priceUnitUsd = 0;
           row.remark = '';
           row.batchAllocations = [];
-          row.isRecommend = false;
+          if (row.isRecommend) {
+            row.isRecommend = false;
+            // 从推荐详情中移除
+            delete recommendationDetails.value[row.productId];
+          }
         });
         ElMessage.success(`已清空 ${selectedProducts.value.length} 个产品的数量`);
       } else {
-        // 清空所有有数量的产品
-        const count = allInventoryProducts.value.filter(p => p.quantity > 0).length;
-        allInventoryProducts.value.forEach(product => {
+        const count = outboundProducts.value.filter(p => p.quantity > 0).length;
+        outboundProducts.value.forEach(product => {
           product.quantity = 0;
           product.price = 0;
           product.priceUnitUsd = 0;
           product.remark = '';
           product.batchAllocations = [];
-          product.isRecommend = false;
+          if (product.isRecommend) {
+            product.isRecommend = false;
+            // 从推荐详情中移除
+            delete recommendationDetails.value[product.productId];
+          }
         });
         if (count > 0) {
           ElMessage.success(`已清空 ${count} 个产品的数量`);
         }
       }
-      filterProducts();
       break;
       
     case 'resetPrices':
@@ -1617,7 +2188,7 @@ const handleBatchCommand = async (command) => {
         });
         ElMessage.success(`已重置 ${selectedProducts.value.length} 个产品的价格`);
       } else {
-        allInventoryProducts.value.forEach(product => {
+        outboundProducts.value.forEach(product => {
           if (product.quantity > 0) {
             product.price = product.originalPrice || 0;
             product.priceUnitUsd = product.originalPriceUnitUsd || 0;
@@ -1634,7 +2205,7 @@ const handleBatchCommand = async (command) => {
         });
         ElMessage.success(`已清空 ${selectedProducts.value.length} 个产品的批次分配`);
       } else {
-        allInventoryProducts.value.forEach(product => {
+        outboundProducts.value.forEach(product => {
           product.batchAllocations = [];
         });
         ElMessage.success('已清空所有产品的批次分配');
@@ -1651,15 +2222,8 @@ const handleSelectionChange = (selection) => {
   selectedProducts.value = selection;
 };
 
-const clearProductRow = (row) => {
-  row.quantity = 0;
-  row.price = 0;
-  row.priceUnitUsd = 0;
-  row.remark = '';
-  row.batchAllocations = [];
-  row.isRecommend = false;
-  ElMessage.success('已清空该产品数据');
-  filterProducts();
+const handleRowClick = (row) => {
+  // 行点击事件
 };
 
 const setMaxQuantity = (row) => {
@@ -1687,27 +2251,7 @@ const getStockColor = (currentStock, quantity) => {
   return '#67c23a';
 };
 
-// 产品历史价格
-const showProductHistory = async (row) => {
-  if (!row.productId) return;
-  
-  historyDialog.visible = true;
-  historyDialog.productName = row.productName;
-  historyDialog.productId = row.productId;
-  
-  if (!row.historyPrice) {
-    await loadProductHistoryPrice(row, true);
-  }
-  
-  if (row.historyPrice) {
-    historyDialog.lastPrice = row.historyPrice.lastPrice;
-    historyDialog.avgPrice = row.historyPrice.avgPrice;
-    historyDialog.maxPrice = row.historyPrice.maxPrice;
-    historyDialog.minPrice = row.historyPrice.minPrice;
-    historyDialog.priceList = row.historyPrice.priceList || [];
-  }
-};
-
+// 加载产品历史价格
 const loadProductHistoryPrice = async (row, force = false) => {
   if (!row.productId || (!force && row.historyPrice)) return;
   
@@ -1740,6 +2284,11 @@ const loadProductHistoryPrice = async (row, force = false) => {
 };
 
 // 批次分配相关方法
+const handleBatchDialogClosed = () => {
+  showAllocationStrategy.value = false;
+  allocationStrategy.value = 'FIFO';
+};
+
 const getShelfMaxAllocation = (batch, shelf, batchIndex, shelfIndex) => {
   if (batch.quantity < 1) {
     return 0;
@@ -1894,7 +2443,6 @@ const formatDate = (dateString) => {
 const applyAllocationStrategy = () => {
   applyingStrategy.value = true;
   
-  // 清空现有分配
   batchDialog.batches.forEach(batch => {
     if (batch.shelfList) {
       batch.shelfList.forEach(shelf => {
@@ -1905,12 +2453,10 @@ const applyAllocationStrategy = () => {
   
   let remaining = batchDialog.totalQuantity;
   
-  // 根据策略排序批次
   let sortedBatches = [...batchDialog.batches];
   
   switch (allocationStrategy.value) {
     case 'FIFO':
-      // 先进先出：按生产日期排序
       sortedBatches.sort((a, b) => {
         if (!a.productionDate && !b.productionDate) return 0;
         if (!a.productionDate) return 1;
@@ -1920,7 +2466,6 @@ const applyAllocationStrategy = () => {
       break;
       
     case 'NEAR_EXPIRE':
-      // 近效期优先：按有效期排序
       sortedBatches.sort((a, b) => {
         if (!a.expiryDate && !b.expiryDate) return 0;
         if (!a.expiryDate) return 1;
@@ -1930,7 +2475,6 @@ const applyAllocationStrategy = () => {
       break;
       
     case 'MIN_SHELF':
-      // 最少货架优先：按货架数量排序
       sortedBatches.sort((a, b) => {
         const aShelves = a.shelfList ? a.shelfList.length : 0;
         const bShelves = b.shelfList ? b.shelfList.length : 0;
@@ -1939,7 +2483,6 @@ const applyAllocationStrategy = () => {
       break;
   }
   
-  // 应用分配
   for (const batch of sortedBatches) {
     if (remaining <= 0) break;
     
@@ -1978,7 +2521,6 @@ const autoAllocateBatches = () => {
     return;
   }
   
-  // 清空现有分配
   batchDialog.batches.forEach(batch => {
     if (batch.shelfList) {
       batch.shelfList.forEach(shelf => {
@@ -1990,7 +2532,6 @@ const autoAllocateBatches = () => {
   updateBatchDialogCalculations();
   remaining = batchDialog.remainingQuantity;
   
-  // 按有效期排序分配（默认策略）
   const sortedBatches = [...batchDialog.batches].sort((a, b) => {
     if (!a.expiryDate && !b.expiryDate) return 0;
     if (!a.expiryDate) return 1;
@@ -2029,7 +2570,7 @@ const autoAllocateBatches = () => {
   }
 };
 
-// 批次分配相关方法
+// 打开批次分配对话框
 const openBatchDialogForProduct = async (row) => {
   if (!row.productId) {
     ElMessage.warning('产品信息不完整');
@@ -2069,10 +2610,10 @@ const openBatchDialogForProduct = async (row) => {
   batchDialog.visible = true;
 };
 
+// 加载批次信息
 const loadBatchInfoForProduct = async (productId, warehouseId, row) => {
   try {
     const res = await get(`/api/auth/inventory/batches?productId=${productId}&warehouseId=${warehouseId}`);
-    console.log('批次信息响应:', res);
     
     if (res && Array.isArray(res)) {
       row.availableBatches = res;
@@ -2085,11 +2626,7 @@ const loadBatchInfoForProduct = async (productId, warehouseId, row) => {
   }
 };
 
-const handleBatchDialogClosed = () => {
-  showAllocationStrategy.value = false;
-  allocationStrategy.value = 'FIFO';
-};
-
+// 确认批次分配
 const confirmBatchAllocation = () => {
   if (batchDialog.remainingQuantity !== 0) {
     ElMessage.warning(`分配数量 (${batchDialog.allocatedQuantity}) 与出库数量 (${batchDialog.totalQuantity}) 不一致，请完成分配`);
@@ -2144,7 +2681,7 @@ const exportCurrentData = () => {
       customerId: formData.customerId,
       expectedDate: formData.expectedDate
     },
-    products: allInventoryProducts.value
+    products: filteredProducts.value
       .filter(p => p.quantity > 0)
       .map(p => ({
         sku: p.sku,
@@ -2153,10 +2690,14 @@ const exportCurrentData = () => {
         quantity: p.quantity,
         price: p.price,
         priceUnitUsd: p.priceUnitUsd,
-        remark: p.remark
+        isTriggerProduct: p.isTriggerProduct,
+        isRecommend: p.isRecommend,
+        triggerProductId: p.triggerProductId,
+        remark: p.remark,
+        recommendationDetails: recommendationDetails.value[p.productId] || []
       })),
     summary: {
-      productCount: productTypeCount.value,
+      productCount: filteredProducts.value.filter(p => p.quantity > 0).length,
       totalQuantity: totalQuantity.value,
       totalAmount: totalAmount.value,
       totalAmountUsd: totalAmountUsd.value
@@ -2212,64 +2753,140 @@ const handleDownloadTemplate = async () => {
   }
 };
 
-// 应用导入数据到表格
-const applyImportedData = (importedData) => {
-  let successCount = 0;
-  let failCount = 0;
+// 文件选择处理
+const handleFileChange = (file) => {
+  const isLt10M = file.size / 1024 / 1024 < 10;
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过10MB!');
+    return;
+  }
   
-  console.log('导入数据:', importedData);
+  currentFile.value = file;
+};
+
+// 清空选择的文件
+const clearSelectedFile = () => {
+  currentFile.value = null;
+  importResult.value = null;
+};
+
+// 导入提交处理
+const handleImportSubmit = async () => {
+  console.log("开始导入销售出库数量");
+  if (!formData.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
   
-  importedData.forEach(importedItem => {
-    const existingProductIndex = allInventoryProducts.value.findIndex(p => 
-      p.productId === importedItem.productId || p.sku === importedItem.sku
-    );
-    
-    if (existingProductIndex >= 0) {
-      console.log('匹配产品:', allInventoryProducts.value[existingProductIndex]);
+  if (!currentFile.value) {
+    ElMessage.warning('请选择要上传的文件');
+    return;
+  }
+
+  try {
+    importLoading.value = true;
+    const fd = new FormData();
+
+    const realFile = currentFile.value.raw || currentFile.value;
+    fd.append('file', realFile);
+    fd.append('warehouseId', formData.warehouseId);
+
+    ElMessage.info('开始导入数据，请稍候...');
+
+    const result = await post('/api/auth/outbound/importOutboundSaleQuantity', fd);
+
+    if (result) {
+      importResult.value = result;
+      ElMessage.success(`导入成功！`);
       
-      const product = allInventoryProducts.value[existingProductIndex];
-      
-      if (importedItem.quantity && importedItem.quantity > 0 && (!importedItem.price || importedItem.price === 0)) {
-        console.log('情况1:', importedItem);
-        product.quantity = importedItem.quantity || 0;
-        product.price = product.originalPrice || 0;
-        product.priceUnitUsd = product.originalPriceUnitUsd || 0;
+      if (result && Array.isArray(result)) {
+        result.forEach(importedItem => {
+          const product = availableProducts.value.find(p => 
+            p.productId === importedItem.productId || p.sku === importedItem.sku
+          );
+          
+          if (product) {
+            const existingProduct = outboundProducts.value.find(p => p.productId === product.productId);
+            
+            if (existingProduct) {
+              existingProduct.quantity = importedItem.quantity || 0;
+              existingProduct.price = importedItem.price || product.originalPrice || 0;
+              existingProduct.priceUnitUsd = importedItem.priceUnitUsd || product.originalPriceUnitUsd || 0;
+              existingProduct.remark = importedItem.remark || '';
+            } else {
+              outboundProducts.value.push({
+                ...product,
+                quantity: importedItem.quantity || 0,
+                price: importedItem.price || product.originalPrice || 0,
+                priceUnitUsd: importedItem.priceUnitUsd || product.originalPriceUnitUsd || 0,
+                remark: importedItem.remark || '',
+                batchAllocations: [],
+                isTriggerProduct: true,
+                isRecommend: false,
+                historyPrice: null,
+                triggerProductId: null
+              });
+            }
+            
+            // 加载推荐
+            if (importedItem.quantity > 0) {
+              loadRecommendationsForProduct(product.productId, importedItem.quantity || 0);
+            }
+          }
+        });
+        
+        importDialog.visible = false;
+        currentFile.value = null;
+        importResult.value = null;
+        
+        ElMessage.success('导入完成');
       }
-      else if (importedItem.quantity && importedItem.quantity > 0 && importedItem.price && importedItem.price > 0) {
-        console.log('情况2:', importedItem);
-        product.quantity = importedItem.quantity || 0;
-        product.price = importedItem.price || 0;
-        product.priceUnitUsd = importedItem.priceUnitUsd || product.originalPriceUnitUsd || 0;
-      }
-      else if ((!importedItem.quantity || importedItem.quantity === 0) && importedItem.price && importedItem.price > 0) {
-        console.log('情况3:', importedItem);
-        product.quantity = 0;
-        product.price = importedItem.price || 0;
-        product.priceUnitUsd = importedItem.priceUnitUsd || product.originalPriceUnitUsd || 0;
-      }
-      else {
-        console.log('情况4:', importedItem);
-        product.quantity = importedItem.quantity || 0;
-        product.price = importedItem.price || product.originalPrice || 0;
-        product.priceUnitUsd = importedItem.priceUnitUsd || product.originalPriceUnitUsd || 0;
-      }
-      
-      product.remark = importedItem.remark || '';
-      product.batchAllocations = [];
-      product.isRecommend = false;
-      
-      console.log('更新后产品:', product);
-      successCount++;
     } else {
-      console.warn('未找到匹配的产品:', importedItem);
-      failCount++;
+      ElMessage.error('导入失败，请检查数据格式');
     }
-  });
+  } catch (error) {
+    console.error('导入失败详情:', error);
+    ElMessage.error("导入失败，请重试");
+    importResult.value = {
+      success: false,
+      message: error.message || '导入失败，请重试'
+    };
+  } finally {
+    importLoading.value = false;
+  }
+};
+
+// 导入Excel
+const handleImportExcel = () => {
+  if (!formData.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
   
-  allInventoryProducts.value = [...allInventoryProducts.value];
-  filterProducts();
+  importDialog.visible = true;
+  currentFile.value = null;
+  importResult.value = null;
+};
+
+// 查看历史价格
+const showProductHistory = async (row) => {
+  if (!row.productId) return;
   
-  return { successCount, failCount };
+  historyDialog.visible = true;
+  historyDialog.productName = row.productName;
+  historyDialog.productId = row.productId;
+  
+  if (!row.historyPrice) {
+    await loadProductHistoryPrice(row, true);
+  }
+  
+  if (row.historyPrice) {
+    historyDialog.lastPrice = row.historyPrice.lastPrice;
+    historyDialog.avgPrice = row.historyPrice.avgPrice;
+    historyDialog.maxPrice = row.historyPrice.maxPrice;
+    historyDialog.minPrice = row.historyPrice.minPrice;
+    historyDialog.priceList = row.historyPrice.priceList || [];
+  }
 };
 
 const handleReset = () => {
@@ -2288,21 +2905,10 @@ const handleReset = () => {
       fileList.value = [];
       generateOrderNo();
       
-      allInventoryProducts.value.forEach(product => {
-        product.quantity = 0;
-        product.price = 0;
-        product.priceUnitUsd = 0;
-        product.remark = '';
-        product.batchAllocations = [];
-        product.isRecommend = false;
-      });
-      
-      allInventoryProducts.value = [...allInventoryProducts.value];
-      filterProducts();
-      
-      // 清空推荐
-      showRecommendations.value = false;
-      recommendations.value = [];
+      outboundProducts.value = [];
+      groupedRecommendations.value = [];
+      recommendationDetails.value = {};
+      searchResults.value = [];
       
       ElMessage.success('表单已重置');
     }
@@ -2323,7 +2929,7 @@ const handleSaveDraft = async () => {
       ElMessage.success(isEditMode.value ? '更新草稿成功' : '保存草稿成功');
       router.replace({
         path: '/',
-        query: { mode: 'outbound' } // 返回到出库管理页面
+        query: { mode: 'outbound' }
       });
     }
   } catch (error) {
@@ -2336,13 +2942,13 @@ const handleSaveDraft = async () => {
 const handleSubmit = async () => {
   if (!await validateForm()) return;
   
-  const hasProducts = allInventoryProducts.value.some(p => p.quantity > 0);
+  const hasProducts = outboundProducts.value.some(p => p.quantity > 0);
   if (!hasProducts) {
     ElMessage.warning('请至少设置一个产品的出库数量');
     return;
   }
   
-  const hasUnallocatedItems = allInventoryProducts.value.some(item => {
+  const hasUnallocatedItems = outboundProducts.value.some(item => {
     if (item.quantity <= 0) return false;
     const allocatedQuantity = item.batchAllocations 
       ? item.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0)
@@ -2366,7 +2972,7 @@ const handleSubmit = async () => {
       ElMessage.success(isEditMode.value ? '更新成功' : '提交成功，等待审核');
       router.replace({
         path: '/',
-        query: { mode: 'outbound' } // 返回到出库管理页面
+        query: { mode: 'outbound' }
       });
     }
   } catch (error) {
@@ -2378,9 +2984,7 @@ const handleSubmit = async () => {
 
 // 准备提交数据
 const prepareSubmitData = () => {
-  let items = [];
-  
-  items = allInventoryProducts.value
+  const items = outboundProducts.value
     .filter(item => item.quantity > 0)
     .map(item => ({
       productId: item.productId,
@@ -2402,7 +3006,10 @@ const prepareSubmitData = () => {
         quantity: allocation.quantity,
         price: allocation.price || item.price || 0
       })),
-      remark: item.remark || ''
+      remark: item.remark || '',
+      isTriggerProduct: item.isTriggerProduct || false,
+      isRecommend: item.isRecommend || false,
+      triggerProductId: item.triggerProductId || null
     }));
   
   return {
@@ -2420,7 +3027,7 @@ const validateForm = async () => {
   try {
     await formRef.value.validate();
     
-    const productsWithQuantity = allInventoryProducts.value.filter(p => p.quantity > 0);
+    const productsWithQuantity = outboundProducts.value.filter(p => p.quantity > 0);
     
     if (productsWithQuantity.length === 0) {
       ElMessage.warning('请至少设置一个产品的出库数量');
@@ -2451,145 +3058,6 @@ const validateForm = async () => {
   } catch (error) {
     ElMessage.warning('请完善表单信息');
     return false;
-  }
-};
-
-// 文件选择处理
-const handleFileChange = (file) => {
-  const isLt10M = file.size / 1024 / 1024 < 10;
-  if (!isLt10M) {
-    ElMessage.error('文件大小不能超过10MB!');
-    return;
-  }
-  
-  currentFile.value = file;
-};
-
-// 清空选择的文件
-const clearSelectedFile = () => {
-  currentFile.value = null;
-  importResult.value = null;
-};
-
-// 导入提交处理
-const handleImportSubmit = async () => {
-  console.log("开始导入销售出库数量");
-  if (!formData.warehouseId) {
-    ElMessage.warning('请先选择仓库');
-    return;
-  }
-  console.log("开始导入销售出库数量。仓库ID:", formData.warehouseId);
-  if (!currentFile.value) {
-    ElMessage.warning('请选择要上传的文件');
-    return;
-  }
-
-  try {
-    importLoading.value = true;
-    const fd = new FormData();
-
-    const realFile = currentFile.value.raw || currentFile.value;
-    fd.append('file', realFile);
-    fd.append('warehouseId', formData.warehouseId);
-
-    console.log('FormData:');
-    for (let [k, v] of fd.entries()) console.log(k, v);
-
-    ElMessage.info('开始导入数据，请稍候...');
-
-    const result = await post('/api/auth/outbound/importOutboundSaleQuantity', fd);
-    console.log('导入响应:', result);
-
-    if (result) {
-      importResult.value = result;
-      ElMessage.success(`导入成功！`);
-      
-      if (result && Array.isArray(result)) {
-        allInventoryProducts.value.forEach(product => {
-          product.quantity = 0;
-          product.price = 0;
-          product.remark = '';
-          product.batchAllocations = [];
-          product.isRecommend = false;
-        });
-        
-        const { successCount, failCount } = applyImportedData(result);
-        
-        if (successCount > 0) {
-          ElMessage.success(`成功导入 ${successCount} 条产品记录`);
-        }
-        if (failCount > 0) {
-          ElMessage.warning(`${failCount} 条记录未找到匹配的产品`);
-        }
-        
-        importDialog.visible = false;
-        currentFile.value = null;
-        importResult.value = null;
-      }
-    } else {
-      ElMessage.error('导入失败，请检查数据格式');
-    }
-  } catch (error) {
-    console.error('导入失败详情:', error);
-    ElMessage.error("导入失败，请重试");
-    importResult.value = {
-      success: false,
-      message: error.message || '导入失败，请重试'
-    };
-  } finally {
-    importLoading.value = false;
-  }
-};
-
-// 导入Excel
-const handleImportExcel = () => {
-  if (!formData.warehouseId) {
-    ElMessage.warning('请先选择仓库');
-    return;
-  }
-  
-  importDialog.visible = true;
-  currentFile.value = null;
-  importResult.value = null;
-};
-
-const loadWarehouseList = async () => {
-  try {
-    const res = await get('/api/auth/warehouse/listEnable');
-    warehouseList.value = res || [];
-  } catch (error) {
-    ElMessage.error('加载仓库列表失败');
-  }
-};
-
-const loadCustomerList = async () => {
-  try {
-    const res = await get('/api/auth/customer/listEnable');
-    customerList.value = res || [];
-  } catch (error) {
-    ElMessage.error('加载客户列表失败');
-  }
-};
-
-const loadInventoryData = async (warehouseId) => {
-  try {
-    const res = await get(`/api/auth/inventory/listOfWarehouse?warehouseId=${warehouseId}`);
-    inventoryList.value = res || [];
-    
-    productStockMap.value = {};
-    inventoryList.value.forEach(item => {
-      productStockMap.value[item.productId] = item.availableQuantity;
-      if (item.price && item.price > 0) {
-        item.priceFromApi = item.price;
-      }
-    });
-    
-    console.log('库存映射表:', productStockMap.value);
-    
-    updateInventoryProducts();
-    
-  } catch (error) {
-    ElMessage.error('加载库存数据失败');
   }
 };
 
@@ -2630,6 +3098,24 @@ const handlePreview = (file) => {
   }
 };
 
+const loadWarehouseList = async () => {
+  try {
+    const res = await get('/api/auth/warehouse/listEnable');
+    warehouseList.value = res || [];
+  } catch (error) {
+    ElMessage.error('加载仓库列表失败');
+  }
+};
+
+const loadCustomerList = async () => {
+  try {
+    const res = await get('/api/auth/customer/listEnable');
+    customerList.value = res || [];
+  } catch (error) {
+    ElMessage.error('加载客户列表失败');
+  }
+};
+
 onMounted(() => {
   if (isEditMode.value) {
     loadOutboundDetail(route.params.id);
@@ -2640,7 +3126,7 @@ onMounted(() => {
   loadCustomerList();
 });
 
-// 监听路由变化，处理直接通过URL进入的情况
+// 监听路由变化
 watch(
   () => route.params.id,
   (newId) => {
@@ -2661,35 +3147,26 @@ watch(
         attachments: []
       });
       fileList.value = [];
-      productStockMap.value = {};
-      allInventoryProducts.value = [];
-      filteredProducts.value = [];
-      showRecommendations.value = false;
-      recommendations.value = [];
-      productSearch.value = '';
+      outboundProducts.value = [];
+      groupedRecommendations.value = [];
+      recommendationDetails.value = {};
+      searchResults.value = [];
+      quickSearch.value = '';
       generateOrderNo();
     }
   }
 );
 
-// 监听仓库变化，重新加载库存数据
+// 监听仓库和客户变化
 watch(
-  () => formData.warehouseId,
-  (newWarehouseId) => {
-    if (newWarehouseId) {
-      loadInventoryData(newWarehouseId);
+  [() => formData.warehouseId, () => formData.customerId],
+  ([warehouseId, customerId]) => {
+    if (warehouseId && customerId) {
+      loadAvailableProducts();
     } else {
-      allInventoryProducts.value = [];
-      filteredProducts.value = [];
+      availableProducts.value = [];
+      filteredSelectorProducts.value = [];
     }
-  }
-);
-
-// 监听产品搜索变化
-watch(
-  () => productSearch.value,
-  () => {
-    filterProducts();
   }
 );
 </script>
@@ -2726,8 +3203,83 @@ watch(
   margin-bottom: 30px;
 }
 
-/* 智能推荐区域 */
-.recommendation-section {
+/* 产品添加区域 */
+.product-add-section {
+  margin: 20px 0;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #ebeef5;
+}
+
+.product-add-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.product-add-section .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 搜索结果显示 */
+.search-results {
+  margin-top: 16px;
+}
+
+.search-results-card {
+  border: 1px solid #e4e7ed;
+}
+
+.search-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-results-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.search-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item .product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.search-result-item .product-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.search-result-item .sku-text {
+  font-size: 12px;
+  color: #909399;
+}
+
+.search-result-item .stock-text {
+  font-size: 12px;
+  color: #67c23a;
+}
+
+/* 推荐面板 */
+.recommendations-panel {
   margin: 20px 0;
   padding: 16px;
   background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
@@ -2736,13 +3288,22 @@ watch(
   box-shadow: 0 2px 8px rgba(145, 213, 255, 0.1);
 }
 
-.recommendation-header-left {
+.recommendations-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #91d5ff;
+}
+
+.recommendations-header .header-left {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.recommendation-header-left h3 {
+.recommendations-header .header-left h3 {
   margin: 0;
   font-size: 16px;
   font-weight: bold;
@@ -2752,95 +3313,122 @@ watch(
   gap: 6px;
 }
 
-.recommendation-header-left .tip {
+.recommendations-header .tip {
   font-size: 12px;
   color: #69c0ff;
 }
 
-.recommendation-header-right {
+.recommendations-header .header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 推荐分组 */
+.recommendation-group {
+  margin-bottom: 20px;
+  padding: 12px;
+  background-color: #fafdff;
+  border-radius: 4px;
+  border: 1px solid #91d5ff;
+}
+
+.recommendation-group:last-child {
+  margin-bottom: 0;
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #91d5ff;
+}
+
+.trigger-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trigger-product {
+  font-weight: 500;
+  color: #303133;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.recommendation-table {
-  margin-top: 12px;
-  border: 1px solid #91d5ff;
+.trigger-quantity {
+  font-size: 12px;
+  color: #606266;
 }
 
-.recommendation-table :deep(.el-table__header-wrapper) {
+.refresh-btn {
+  margin-left: 8px;
+}
+
+/* 推荐产品表格 */
+.recommendation-items-table {
+  margin-top: 12px;
+}
+
+.recommendation-items-table :deep(.el-table__header-wrapper) {
   background-color: #e6f7ff;
 }
 
-.recommendation-table :deep(.el-table__body-wrapper) {
-  background-color: #fafdff;
+.recommendation-items-table :deep(.el-table__body-wrapper) {
+  background-color: #ffffff;
 }
 
-.product-info {
+.recommended-product-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.product-name {
+.recommended-product-info .product-name {
   font-weight: 500;
   color: #303133;
 }
 
-.sku-text {
+.recommended-product-info .sku-text {
   font-size: 12px;
   color: #909399;
 }
 
-.spec-text {
+.recommended-product-info .spec-text {
   font-size: 12px;
   color: #67c23a;
-}
-
-.recommend-reason {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: flex-start;
 }
 
 .confidence {
   font-size: 11px;
   color: #69c0ff;
+  margin-top: 2px;
 }
 
-.trigger-products {
+.required-tip {
+  font-size: 11px;
+  color: #f56c6c;
+  margin-top: 2px;
+}
+
+.recommended-quantity {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.trigger-list {
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.trigger-item {
-  padding: 4px 8px;
-  font-size: 12px;
-  color: #606266;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.trigger-item:last-child {
-  border-bottom: none;
-}
-
-.no-trigger {
+.quantity-type {
   font-size: 12px;
   color: #909399;
 }
 
-.recommend-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: center;
+.quantity-value {
+  font-weight: 500;
+  color: #303133;
 }
 
 /* 产品明细区域 */
@@ -2860,7 +3448,7 @@ watch(
 .section-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
 }
 
 .section-header-left h3 {
@@ -2870,10 +3458,14 @@ watch(
   color: #303133;
 }
 
-.recommend-btn {
+.product-type-filter {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+}
+
+.product-type-filter :deep(.el-checkbox) {
+  margin-right: 15px;
 }
 
 .header-right-actions {
@@ -2882,12 +3474,254 @@ watch(
   align-items: center;
 }
 
-.tip {
+/* 产品表格样式 */
+.product-table {
+  margin-bottom: 16px;
+}
+
+:deep(.trigger-product-row) {
+  background-color: #f0f9ff !important;
+}
+
+:deep(.trigger-product-row:hover > td) {
+  background-color: #e6f7ff !important;
+}
+
+:deep(.recommend-product-row) {
+  background-color: #f9f0ff !important;
+}
+
+:deep(.recommend-product-row:hover > td) {
+  background-color: #f2e6ff !important;
+}
+
+.product-info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.product-info-cell .product-name {
+  font-weight: 500;
+  color: #303133;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  transition: color 0.2s;
+}
+
+.product-info-cell .product-name:hover {
+  color: #1890ff;
+}
+
+.product-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.trigger-tag {
+  height: 20px;
+  line-height: 18px;
+  background-color: #f0f9ff;
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+.recommend-tag {
+  height: 20px;
+  line-height: 18px;
+  background-color: #f9f0ff;
+  border-color: #d6adff;
+  color: #722ed1;
+}
+
+.recommend-source-tag {
+  height: 20px;
+  line-height: 18px;
+  background-color: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.product-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.sku-text, .spec-text, .color-text {
   font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.sku-text {
+  color: #909399;
+  background-color: #f5f5f5;
+}
+
+.spec-text {
+  color: #67c23a;
+  background-color: #f0f9eb;
+}
+
+.color-text {
+  color: #e6a23c;
+  background-color: #fdf6ec;
+}
+
+/* 库存样式 */
+.stock-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.stock-progress {
+  width: 60px;
+}
+
+.stock-none {
+  color: #909399;
+  font-weight: normal;
+}
+
+.stock-ok {
+  color: #67C23A;
+  font-weight: 500;
+}
+
+.stock-low {
+  color: #E6A23C;
+  font-weight: 500;
+}
+
+.stock-insufficient {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
+/* 新增：推荐数量样式 */
+.recommendation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.recommendation-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.trigger-product-name {
+  color: #606266;
+  min-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recommended-quantity {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.recommendation-total {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed #ebeef5;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.total-quantity {
+  color: #f56c6c;
+}
+
+/* 空产品提示 */
+.empty-product-tip {
+  padding: 60px 20px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px dashed #dcdfe6;
+}
+
+.empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  color: #c0c4cc;
+}
+
+.empty-content p {
+  margin: 0;
+  color: #909399;
+  font-size: 14px;
+}
+
+/* 产品选择对话框 */
+.product-selector-dialog {
+  padding: 10px 0;
+}
+
+.selector-filter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.selector-table {
+  margin-bottom: 20px;
+}
+
+.selector-table .product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.selector-table .usd-price {
+  font-size: 11px;
   color: #909399;
 }
 
-/* 快速统计 */
+.selector-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.selected-count {
+  font-size: 14px;
+  color: #606266;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+/* 统计信息 */
 .quick-stats {
   margin-bottom: 16px;
   padding: 12px 16px;
@@ -2919,228 +3753,7 @@ watch(
   font-weight: bold;
 }
 
-/* 产品表格 */
-.product-table {
-  margin-bottom: 16px;
-}
-
-.table-header {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.header-icon {
-  color: #909399;
-  cursor: help;
-}
-
-.product-info-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.product-name {
-  font-weight: 500;
-  color: #303133;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: color 0.2s;
-}
-
-.product-name:hover {
-  color: #1890ff;
-}
-
-.recommend-tag {
-  height: 20px;
-  line-height: 18px;
-}
-
-.product-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.sku-text, .spec-text, .color-text {
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-
-.sku-text {
-  color: #909399;
-  background-color: #f5f5f5;
-}
-
-.spec-text {
-  color: #67c23a;
-  background-color: #f0f9eb;
-}
-
-.color-text {
-  color: #e6a23c;
-  background-color: #fdf6ec;
-}
-
-/* 库存信息 */
-.stock-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: center;
-}
-
-.stock-progress {
-  width: 60px;
-}
-
-.stock-none {
-  color: #909399;
-  font-weight: normal;
-}
-
-.stock-sufficient {
-  color: #67C23A;
-  font-weight: 500;
-}
-
-.stock-low {
-  color: #E6A23C;
-  font-weight: 500;
-}
-
-.stock-insufficient {
-  color: #F56C6C;
-  font-weight: bold;
-}
-
-/* 价格历史 */
-.price-history {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.history-price-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-}
-
-.price-label {
-  color: #909399;
-}
-
-.price-value {
-  color: #303133;
-  font-weight: 500;
-}
-
-/* 数量单元格 */
-.quantity-cell {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.quantity-input {
-  flex: 1;
-}
-
-.max-btn {
-  flex-shrink: 0;
-  padding: 0 8px;
-  height: 28px;
-}
-
-.price-input {
-  width: 100%;
-}
-
-.amount-text {
-  font-weight: 500;
-  color: #303133;
-}
-
-/* 批次分配 */
-.batch-allocation {
-  min-height: 40px;
-}
-
-.batch-btn {
-  margin-bottom: 8px;
-}
-
-.batch-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.batch-tag {
-  cursor: help;
-}
-
-.allocation-total {
-  font-size: 12px;
-  color: #67c23a;
-  font-weight: 500;
-}
-
-.batch-detail {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.batch-detail-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 12px;
-}
-
-.batch-detail-item:last-child {
-  border-bottom: none;
-}
-
-.batch-no {
-  color: #303133;
-  font-weight: 500;
-  flex: 2;
-}
-
-.shelf-name {
-  color: #606266;
-  flex: 2;
-}
-
-.batch-quantity {
-  color: #67c23a;
-  font-weight: 500;
-  flex: 1;
-  text-align: right;
-}
-
-.batch-empty {
-  margin-top: 8px;
-}
-
-.empty-text {
-  color: #909399;
-  font-size: 12px;
-}
-
-/* 统计信息 */
+/* 底部统计 */
 .summary-info {
   padding: 16px;
   background-color: #f8f9fa;
@@ -3219,7 +3832,7 @@ watch(
   border: 1px dashed #dcdfe6;
 }
 
-/* 批次分配对话框 */
+/* 批次分配对话框样式 */
 .batch-dialog-content {
   padding: 0 10px;
 }
@@ -3263,7 +3876,6 @@ watch(
   color: #E6A23C;
 }
 
-/* 分配策略 */
 .allocation-strategy {
   margin-bottom: 16px;
   padding: 12px;
@@ -3543,6 +4155,28 @@ watch(
     justify-content: flex-end;
   }
   
+  .product-add-section .section-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .product-add-section .header-actions {
+    width: 100%;
+  }
+  
+  .recommendations-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .group-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
   .section-header {
     flex-direction: column;
     gap: 12px;
@@ -3550,8 +4184,9 @@ watch(
   }
   
   .section-header-left {
-    width: 100%;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
   
   .header-right-actions {
@@ -3559,12 +4194,6 @@ watch(
     justify-content: flex-start;
     flex-wrap: wrap;
     gap: 8px;
-  }
-  
-  .recommendation-header-left,
-  .recommendation-header-right {
-    width: 100%;
-    justify-content: space-between;
   }
   
   .quick-stats .el-col {
@@ -3575,23 +4204,16 @@ watch(
     margin-bottom: 8px;
   }
   
-  .shelf-item {
+  .selector-filter {
     flex-direction: column;
+    gap: 12px;
     align-items: flex-start;
-    gap: 8px;
   }
   
-  .shelf-info {
-    width: 100%;
-    flex-direction: row;
-    justify-content: space-between;
-    flex: none;
-  }
-  
-  .shelf-input {
-    width: 100%;
-    max-width: none;
-    flex: none;
+  .selector-actions {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
   }
   
   .batch-info {
@@ -3613,21 +4235,31 @@ watch(
 }
 
 @media (max-width: 576px) {
+  .product-add-section .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .product-add-section .header-actions .el-input {
+    width: 100%;
+    margin-right: 0;
+  }
+  
   .product-details {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
   
-  .header-right-actions {
+  .product-tags {
     flex-direction: column;
     align-items: flex-start;
   }
   
-  .header-right-actions .el-input {
-    width: 100%;
-    margin-right: 0;
-    margin-bottom: 8px;
+  .recommendation-detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
 }
 </style>

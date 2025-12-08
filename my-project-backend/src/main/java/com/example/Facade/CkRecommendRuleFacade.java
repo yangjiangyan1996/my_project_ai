@@ -9,6 +9,7 @@ import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.ReCommendRuleDetailResp;
 import com.example.entity.cangku.resp.ReCommendRulePageListResp;
 import com.example.entity.cangku.resp.RecommendRuleItemDetailResp;
+import com.example.entity.cangku.resp.RecommendRuleQueryResp;
 import com.example.service.*;
 import com.google.common.collect.Lists;
 import jakarta.annotation.Resource;
@@ -59,7 +60,7 @@ public class CkRecommendRuleFacade {
 
         List<Long> ruleIds = list.getRecords().stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
         List<RecommendRuleItem> ruleItems = recommendRuleItemService.selectByRuleIds(req.getTenantId(), ruleIds);
-        Map<Long,Long> ruleId2CountMap =ruleItems.stream().collect(Collectors.groupingBy(RecommendRuleItem::getRuleId, Collectors.counting()));
+        Map<Long, Long> ruleId2CountMap = ruleItems.stream().collect(Collectors.groupingBy(RecommendRuleItem::getRuleId, Collectors.counting()));
 
 
         List<Long> customerIds = list.getRecords().stream().map(v -> v.getCustomerId()).distinct().collect(Collectors.toList());
@@ -75,6 +76,7 @@ public class CkRecommendRuleFacade {
                 Product product = finalProductId2ProductMap.get(v.getTriggerProductId());
                 p.setTriggerProductName(product.getName());
                 p.setTriggerProductColor(product.getColor());
+                p.setTriggerProductSku(product.getSku());
                 p.setTriggerProductSpec(product.getSpec());
             }
 
@@ -83,8 +85,9 @@ public class CkRecommendRuleFacade {
                 p.setCustomerName(customer.getCustomerName());
             }
 
-            p.setItemCount(ruleId2CountMap.getOrDefault(v.getId(),0L));
-
+            p.setItemCount(ruleId2CountMap.getOrDefault(v.getId(), 0L));
+            p.setCreatedAt(v.getCreatedAt());
+            p.setModifiedAt(v.getModifiedAt());
             return p;
         }).collect(Collectors.toList());
 
@@ -145,6 +148,7 @@ public class CkRecommendRuleFacade {
             item.setIsRequired(v.getIsRequired());
             item.setConfidence(v.getConfidence());
             item.setSequence(v.getSequence());
+            item.setRemark(v.getRemark());
             item.setCreatedAt(new Date());
             item.setModifiedAt(new Date());
             item.setCreatedBy(req.getUserId());
@@ -168,7 +172,7 @@ public class CkRecommendRuleFacade {
         if (!b) {
             throw new ValidationException("更新失败");
         }
-        Boolean removeResult = recommendRuleItemService.delectedByRuleId(req.getId(), req.getUserId(),req.getTenantId());
+        Boolean removeResult = recommendRuleItemService.delectedByRuleId(req.getId(), req.getUserId(), req.getTenantId());
         if (!removeResult) {
             throw new ValidationException("删除失败");
         }
@@ -183,6 +187,7 @@ public class CkRecommendRuleFacade {
             item.setIsRequired(v.getIsRequired());
             item.setConfidence(v.getConfidence());
             item.setSequence(v.getSequence());
+            item.setRemark(v.getRemark());
             item.setCreatedAt(new Date());
             item.setModifiedAt(new Date());
             item.setCreatedBy(req.getUserId());
@@ -271,5 +276,45 @@ public class CkRecommendRuleFacade {
             return item;
         }).collect(Collectors.toList());
         return collect;
+    }
+
+    public RecommendRuleQueryResp queryRuleItems(RecommendRuleQueryReq req, Long tenantId) {
+        if (req == null || req.getProductId() == null) {
+            throw new ValidationException("参数错误");
+        }
+        List<RecommendRule> rules = recommendRuleService.selectList(tenantId, req);
+        if (CollectionUtils.isEmpty(rules)) {
+            return new RecommendRuleQueryResp();
+        }
+        List<Long> ruleIds = rules.stream().map(v -> v.getId()).collect(Collectors.toList());
+        List<RecommendRuleItem> recommendRuleItems = recommendRuleItemService.selectByRuleIds(tenantId, ruleIds);
+        List<Long> productIds = recommendRuleItems.stream().map(v -> v.getProductId()).distinct().collect(Collectors.toList());
+        Map<Long, Product> productId2ProductMap = new HashMap<>();
+        List<Product> products = productService.selectByIds(tenantId, productIds);
+        if (!CollectionUtils.isEmpty(products)) {
+            productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+        }
+        Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
+        List<RecommendRuleQueryResp.RecommendRuleInner> recommendations = recommendRuleItems.stream().map(v -> {
+            RecommendRuleQueryResp.RecommendRuleInner item = new RecommendRuleQueryResp.RecommendRuleInner();
+            if (finalProductId2ProductMap.containsKey(v.getProductId())) {
+                Product product = finalProductId2ProductMap.get(v.getProductId());
+                item.setProductName(product.getName());
+                item.setSpec(product.getSpec());
+                item.setColor(product.getColor());
+                item.setProductId(product.getId());
+                item.setSku(product.getSku());
+            }
+            item.setQuantityType(v.getQuantityType());
+            item.setConfidence(v.getConfidence());
+            item.setIsRequired(v.getIsRequired().compareTo(1) == 0);
+            item.setQuantityValue(v.getQuantityValue());
+            item.setRemark(v.getRemark());
+            return item;
+        }).collect(Collectors.toList());
+        RecommendRuleQueryResp result = new RecommendRuleQueryResp();
+        result.setRecommendations(recommendations);
+        result.setProductId(req.getProductId());
+        return result;
     }
 }

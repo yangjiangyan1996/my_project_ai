@@ -9,6 +9,7 @@ import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.ReCommendRuleDetailResp;
 import com.example.entity.cangku.resp.ReCommendRulePageListResp;
 import com.example.entity.cangku.resp.RecommendRuleItemDetailResp;
+import com.example.entity.cangku.resp.RecommendRuleQueryResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -30,6 +31,21 @@ public class RecommendRuleController {
     @Resource
     private CkRecommendRuleFacade recommendRuleFacade;
 
+    //查询单个产品的推荐
+    @PostMapping("/queryRuleItems")
+    public RespBean<RecommendRuleQueryResp> queryRuleItems(@RequestBody RecommendRuleQueryReq req) {
+        try {
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            RecommendRuleQueryResp result = recommendRuleFacade.queryRuleItems(req, tenantId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("RecommendRuleController#queryRuleItems,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("RecommendRuleController#queryRuleItems,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
     @PostMapping("/pageList")
     public RespBean<Page<ReCommendRulePageListResp>> pageList(@RequestBody RecommendRuleListPageReq req) {

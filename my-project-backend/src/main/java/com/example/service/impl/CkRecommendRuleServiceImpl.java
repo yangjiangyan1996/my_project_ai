@@ -5,10 +5,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.RecommendRule;
 import com.example.entity.cangku.req.RecommendRuleListPageReq;
+import com.example.entity.cangku.req.RecommendRuleQueryReq;
 import com.example.mapper.CkRecommendRuleMapper;
 import com.example.service.CkRecommendRuleService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -18,6 +21,20 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class CkRecommendRuleServiceImpl extends ServiceImpl<CkRecommendRuleMapper, RecommendRule> implements CkRecommendRuleService {
+    @Override
+    public List<RecommendRule> selectList(Long tenantId, RecommendRuleQueryReq req) {
+        return baseMapper.selectList(
+                new QueryWrapper<RecommendRule>()
+                        .eq(req.getCustomerId()!= null ,"customer_id", req.getCustomerId())
+                        .eq(req.getApplyScene()!= null ,"apply_scene", req.getApplyScene())
+                        .eq(req.getProductId()!= null ,"trigger_product_id", req.getProductId())
+                        .eq(req.getQuantity() != null ,"trigger_min_quantity", req.getQuantity())
+                        .eq("tenant_id", tenantId)
+                        .eq("status", 1)
+                        .eq("is_deleted",0)
+        );
+    }
+
     @Override
     public RecommendRule selectById(Long id, Long tenantId) {
         return this.query()

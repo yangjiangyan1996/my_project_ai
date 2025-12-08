@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.RecommendRule;
 import com.example.entity.cangku.req.RecommendRuleListPageReq;
+import com.example.entity.cangku.req.RecommendRuleQueryReq;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -15,4 +18,7 @@ public interface CkRecommendRuleService extends IService<RecommendRule> {
     Page<RecommendRule> getPage(Page<RecommendRule> page, RecommendRuleListPageReq req);
 
     RecommendRule selectById(Long id, Long tenantId);
+
+    List<RecommendRule> selectList(Long tenantId, RecommendRuleQueryReq req);
+
 }

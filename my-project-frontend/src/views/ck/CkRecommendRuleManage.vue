@@ -215,7 +215,7 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="900px"
+      width="1000px"
       :before-close="handleDialogClose"
     >
       <el-form
@@ -396,7 +396,7 @@
               </div>
               
               <el-row :gutter="20">
-                <el-col :span="10">
+                <el-col :span="20">
                   <el-form-item 
                     :label="`产品 ${index + 1}`" 
                     :prop="`ruleItems.${index}.productId`"
@@ -421,15 +421,35 @@
                         :label="`${product.name} (${product.sku})`"
                         :value="product.id"
                       >
-                        <span style="float: left">{{ product.name }}</span>
-                        <span style="float: right; color: #8492a6; font-size: 13px">
-                          {{ product.sku }} | {{ product.spec }}
-                        </span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                          <div style="text-align: left; flex: 1;">
+                           <div style="font-weight: 500;">{{ product.name }}{{ product.spec ? ' - ' + product.spec : '-无规格' }}{{ product.color ? ' - ' + product.color : '-无颜色' }}</div>
+                          </div>
+                        </div>
                       </el-option>
                     </el-select>
+                    <!-- 已选择的产品信息 -->
+                    <div v-if="item.productName" class="selected-product-info">
+                      <div class="product-info-row">
+                        <span class="label">产品名称:</span>
+                        <span class="value">{{ item.productName }}</span>
+                      </div>
+                      <div class="product-info-row">
+                        <span class="label">SKU:</span>
+                        <span class="value">{{ item.productSku }}</span>
+                      </div>
+                      <div v-if="item.productSpec" class="product-info-row">
+                        <span class="label">规格:</span>
+                        <span class="value">{{ item.productSpec }}</span>
+                      </div>
+                      <div v-if="item.productColor" class="product-info-row">
+                        <span class="label">颜色:</span>
+                        <span class="value">{{ item.productColor }}</span>
+                      </div>
+                    </div>
                   </el-form-item>
                 </el-col>
-                <el-col :span="6">
+                <el-col :span="8">
                   <el-form-item 
                     :label="`数量类型`" 
                     :prop="`ruleItems.${index}.quantityType`"
@@ -439,13 +459,18 @@
                       trigger: 'change'
                     }"
                   >
-                    <el-select v-model="item.quantityType" placeholder="请选择" style="width: 100%" @change="handleQuantityTypeChange(item)">
+                    <el-select 
+                      v-model="item.quantityType" 
+                      placeholder="请选择" 
+                      style="width: 100%" 
+                      @change="handleQuantityTypeChange(item)"
+                    >
                       <el-option label="固定数量" :value="1" />
                       <el-option label="按比例" :value="2" />
                     </el-select>
                   </el-form-item>
                 </el-col>
-                <el-col :span="6">
+                <el-col :span="8">
                   <el-form-item 
                     :label="item.quantityType === 1 ? '固定数量' : '比例系数'" 
                     :prop="`ruleItems.${index}.quantityValue`"
@@ -458,30 +483,38 @@
                     <el-input-number
                       v-model="item.quantityValue"
                       :min="0.0001"
-                      :precision="4"
+                      :precision="item.quantityType === 1 ? 2 : 4"
                       :step="item.quantityType === 1 ? 1 : 0.1"
                       controls-position="right"
                       style="width: 100%"
-                      :placeholder="item.quantityType === 1 ? '如：10' : '如：1.5'"
-                    />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="2">
-                  <el-form-item label="强制">
-                    <el-switch
-                      v-model="item.isRequired"
-                      :active-value="1"
-                      :inactive-value="0"
+                      :placeholder="item.quantityType === 1 ? '如：10.00' : '如：1.5000'"
                     />
                   </el-form-item>
                 </el-col>
               </el-row>
               
-              <el-row :gutter="20" v-if="item.quantityType === 2">
-                <el-col :span="24">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item 
+                    label="是否强制" 
+                    :prop="`ruleItems.${index}.isRequired`"
+                    :rules="{
+                      required: true,
+                      message: '请选择是否强制',
+                      trigger: 'change'
+                    }"
+                  >
+                    <el-radio-group v-model="item.isRequired" style="margin-top: 8px;">
+                      <el-radio :label="1" border size="small">必选</el-radio>
+                      <el-radio :label="0" border size="small">非必选</el-radio>
+                    </el-radio-group>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12" v-if="item.quantityType === 2">
                   <div class="quantity-tip">
-                    当触发产品数量为 {{ form.triggerMinQuantity || 1 }} 时，推荐产品数量为：
-                    {{ calculateRecommendQuantity(item) }}
+                    <div style="font-weight: 500; margin-bottom: 4px;">计算示例:</div>
+                    当触发产品数量为 {{ form.triggerMinQuantity || 1 }} 时，
+                    推荐产品数量为：{{ calculateRecommendQuantity(item) }}
                   </div>
                 </el-col>
               </el-row>
@@ -538,7 +571,7 @@
     <el-dialog
       v-model="detailDialogVisible"
       title="规则详情"
-      width="800px"
+      width="900px"
     >
       <div v-if="currentRule">
         <el-descriptions :column="2" border>
@@ -547,6 +580,8 @@
           <el-descriptions-item label="触发产品">
             {{ currentRule.triggerProductName }} ({{ currentRule.triggerProductSku }})
           </el-descriptions-item>
+          <el-descriptions-item label="触发产品规格">{{ currentRule.triggerProductSpec || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="触发产品颜色">{{ currentRule.triggerProductColor || '-' }}</el-descriptions-item>
           <el-descriptions-item label="触发数量">
             {{ currentRule.triggerMinQuantity }}
             <span v-if="currentRule.triggerMaxQuantity"> - {{ currentRule.triggerMaxQuantity }}</span>
@@ -583,10 +618,12 @@
           <h4>推荐产品列表</h4>
           <el-table :data="ruleItemsDetail" style="width: 100%" border>
             <el-table-column type="index" label="序号" width="60" align="center" />
-            <el-table-column label="推荐产品" min-width="180">
+            <el-table-column label="推荐产品" min-width="200">
               <template #default="scope">
-                <div>{{ scope.row.productName }}</div>
-                <div class="text-muted">{{ scope.row.productSku }}</div>
+                <div style="font-weight: 500;">{{ scope.row.productName }}</div>
+                <div class="text-muted">SKU: {{ scope.row.productSku }}</div>
+                <div v-if="scope.row.productSpec" class="text-muted">规格: {{ scope.row.productSpec }}</div>
+                <div v-if="scope.row.productColor" class="text-muted">颜色: {{ scope.row.productColor }}</div>
               </template>
             </el-table-column>
             <el-table-column label="数量类型" width="100" align="center">
@@ -599,7 +636,7 @@
                 {{ scope.row.quantityValue }}
               </template>
             </el-table-column>
-            <el-table-column label="计算示例" width="150" align="center" v-if="currentRule.triggerMinQuantity">
+            <el-table-column label="计算示例" width="150" align="center" v-if="currentRule.triggerMinQuantity && ruleItemsDetail.some(item => item.quantityType === 2)">
               <template #default="scope">
                 <span v-if="scope.row.quantityType === 2">
                   {{ calculateDetailQuantity(scope.row) }}
@@ -607,10 +644,10 @@
                 <span v-else>-</span>
               </template>
             </el-table-column>
-            <el-table-column label="是否强制" width="80" align="center">
+            <el-table-column label="是否强制" width="100" align="center">
               <template #default="scope">
-                <el-tag :type="scope.row.isRequired === 1 ? 'danger' : ''" size="small">
-                  {{ scope.row.isRequired === 1 ? '强制' : '建议' }}
+                <el-tag :type="scope.row.isRequired === 1 ? 'danger' : 'success'" size="small">
+                  {{ scope.row.isRequired === 1 ? '必选' : '非必选' }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -664,8 +701,6 @@ const pagination = reactive({
 const customerList = ref([]);
 // 触发产品选项
 const triggerProductOptions = ref([]);
-// 推荐产品搜索缓存
-const recommendProductCache = ref({});
 // 规则列表
 const ruleList = ref([]);
 
@@ -799,14 +834,18 @@ const handleEdit = async (row) => {
           productId: item.productId,
           productName: item.productName,
           productSku: item.productSku,
+          productSpec: item.productSpec,
+          productColor: item.productColor,
           productOptions: [{
             id: item.productId,
             name: item.productName,
-            sku: item.productSku
+            sku: item.productSku,
+            spec: item.productSpec,
+            color: item.productColor
           }],
           quantityType: item.quantityType,
           quantityValue: item.quantityValue,
-          isRequired: item.isRequired,
+          isRequired: item.isRequired || 0, // 确保有默认值
           confidence: item.confidence || 1,
           remark: item.remark,
           sequence: item.sequence
@@ -830,7 +869,15 @@ const viewRuleDetail = async (row) => {
     
     // 加载规则项详情
     const res = await get(`/api/auth/recommend/items?ruleId=${row.id}`);
-    ruleItemsDetail.value = res || [];
+    if (res && res.length > 0) {
+      ruleItemsDetail.value = res.map(item => ({
+        ...item,
+        productSpec: item.productSpec,
+        productColor: item.productColor
+      }));
+    } else {
+      ruleItemsDetail.value = [];
+    }
     
     detailDialogVisible.value = true;
   } catch (error) {
@@ -933,6 +980,8 @@ const handleRecommendProductChange = (productId, index) => {
   if (product) {
     form.ruleItems[index].productName = product.name;
     form.ruleItems[index].productSku = product.sku;
+    form.ruleItems[index].productSpec = product.spec;
+    form.ruleItems[index].productColor = product.color;
   }
 };
 
@@ -940,6 +989,12 @@ const handleQuantityTypeChange = (item) => {
   // 如果切换到按比例，设置默认比例系数为1
   if (item.quantityType === 2 && (!item.quantityValue || item.quantityValue === 0)) {
     item.quantityValue = 1;
+  }
+  // 更新精度设置
+  if (item.quantityType === 1) {
+    item.quantityValue = item.quantityValue ? parseFloat(item.quantityValue.toFixed(2)) : 1;
+  } else {
+    item.quantityValue = item.quantityValue ? parseFloat(item.quantityValue.toFixed(4)) : 1;
   }
 };
 
@@ -949,9 +1004,14 @@ const searchTriggerProducts = async (query) => {
     productLoading.value = true;
     try {
       const res = await get(`/api/auth/product/search?keyword=${query}`);
-      triggerProductOptions.value = res || [];
+      triggerProductOptions.value = (res || []).map(product => ({
+        ...product,
+        spec: product.spec || '',
+        color: product.color || ''
+      }));
     } catch (error) {
       console.error('搜索触发产品失败:', error);
+      triggerProductOptions.value = [];
     } finally {
       productLoading.value = false;
     }
@@ -965,7 +1025,11 @@ const searchRecommendProducts = async (query, index) => {
   if (query) {
     try {
       const res = await get(`/api/auth/product/search?keyword=${query}`);
-      form.ruleItems[index].productOptions = res || [];
+      form.ruleItems[index].productOptions = (res || []).map(product => ({
+        ...product,
+        spec: product.spec || '',
+        color: product.color || ''
+      }));
     } catch (error) {
       console.error('搜索推荐产品失败:', error);
       form.ruleItems[index].productOptions = [];
@@ -1007,6 +1071,10 @@ const handleSubmit = async () => {
       ruleItems: form.ruleItems.map((item, index) => ({
         id: item.id,
         productId: item.productId,
+        productName: item.productName,
+        productSku: item.productSku,
+        productSpec: item.productSpec,
+        productColor: item.productColor,
         quantityType: item.quantityType,
         quantityValue: item.quantityValue,
         isRequired: item.isRequired,
@@ -1039,10 +1107,12 @@ const addRecommendItem = () => {
     productId: null,
     productName: '',
     productSku: '',
+    productSpec: '',
+    productColor: '',
     productOptions: [],
     quantityType: 1,
     quantityValue: 1,
-    isRequired: 0,
+    isRequired: 0, // 默认非必选
     confidence: 1,
     remark: '',
     sequence: form.ruleItems.length + 1
@@ -1264,12 +1334,13 @@ onMounted(() => {
 }
 
 .quantity-tip {
-  padding: 8px 12px;
+  padding: 12px;
   background-color: #f0f9ff;
   border-radius: 4px;
   color: #409eff;
   font-size: 13px;
-  margin: 8px 0;
+  margin-top: 8px;
+  border-left: 4px solid #409eff;
 }
 
 .form-tip {
@@ -1298,6 +1369,38 @@ onMounted(() => {
   margin: 20px 0 10px 0;
   color: #303133;
   font-size: 16px;
+  font-weight: bold;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.selected-product-info {
+  margin-top: 8px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.product-info-row {
+  display: flex;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.product-info-row:last-child {
+  margin-bottom: 0;
+}
+
+.product-info-row .label {
+  color: #606266;
+  min-width: 50px;
+  margin-right: 8px;
+}
+
+.product-info-row .value {
+  color: #303133;
+  font-weight: 500;
 }
 
 :deep(.el-table) {
@@ -1325,10 +1428,19 @@ onMounted(() => {
 :deep(.el-select-dropdown__item) {
   display: flex;
   justify-content: space-between;
+  padding: 8px 20px;
 }
 
 :deep(.el-divider__text) {
   color: #409eff;
   font-weight: bold;
+}
+
+:deep(.el-radio-group .el-radio) {
+  margin-right: 8px;
+}
+
+:deep(.el-radio.is-bordered) {
+  padding: 8px 15px;
 }
 </style>
