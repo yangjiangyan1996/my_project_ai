@@ -472,20 +472,25 @@
                     >
                       推荐商品
                     </el-tag>
-                    <el-tag 
-                      v-if="row.triggerProductId" 
-                      size="small" 
-                      type="info" 
-                      class="recommend-source-tag"
-                    >
-                      来自: {{ getProductName(row.triggerProductId)  }}
-                    </el-tag>
                   </div>
                 </div>
                 <div class="product-details">
                   <div class="sku-text">{{ row.sku }}</div>
                   <div class="spec-text">{{ row.spec || '-' }}</div>
                   <div class="color-text">{{ row.color || '-' }}</div>
+
+                   <!-- 新增：触发产品来源信息（单独一行） -->
+                  <div v-if="row.triggerProductId" class="trigger-source-row">
+                    <el-tooltip
+                      :content="getProductFullName(row.triggerProductId)"
+                      placement="top"
+                    >
+                      <span class="trigger-source-text">
+                        <el-icon><Connection /></el-icon>
+                        来自: {{ getTruncatedProductName(row.triggerProductId) }}
+                      </span>
+                    </el-tooltip>
+                  </div>
                 </div>
               </div>
             </template>
@@ -1182,7 +1187,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { 
   Plus, Delete, Upload, Download, Document, Close, Search, 
   Operation, MagicStick, Warning, InfoFilled, Refresh, 
-  CloseBold, SetUp, ArrowUp, Goods
+  CloseBold, SetUp, ArrowUp, Goods, Connection
 } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 import axios from 'axios';
@@ -1470,6 +1475,12 @@ const loadOutboundDetail = async (id) => {
           historyPrice: null // 稍后单独加载
         }));
       }
+
+      // 再次检查数据是否正确加载
+        console.log('最终加载的产品数据:');
+        outboundProducts.value.forEach((p, i) => {
+          console.log(`${i+1}. ${p.productName}: quantity=${p.quantity}, price=${p.price}`);
+        });
       
       // 编辑模式下，加载仓库对应的可用产品
       if (formData.warehouseId) {
@@ -2061,10 +2072,42 @@ const applyGroupRecommendations = (group) => {
   }
 };
 
+
+// 在组件中使用
+const getProductFullName = (productId) => {
+  const product = outboundProducts.value.find(p => p.productId === productId) || 
+                  availableProducts.value.find(p => p.productId === productId);
+  if (!product) return '未知产品';
+  
+  let name = product.productName || '';
+  if (product.spec && product.spec !== '-') {
+    name += ` (${product.spec})`;
+  } else {
+    name += ' - 无规格';
+  }
+  if (product.color && product.color !== '-') {
+    name += ` [${product.color}]`;
+  } else {
+    name += ' - 无颜色';
+  }
+  return name;
+};
+
+// 获取截断后的名称（最多25个字符）
+const getTruncatedProductName = (productId) => {
+  const fullName = getProductFullName(productId);
+  if (fullName.length > 25) {
+    return fullName.substring(0, 25) + '...';
+  }
+  return fullName;
+};
+
+
 // 获取产品名称
 const getProductName = (productId) => {
   const product = outboundProducts.value.find(p => p.productId === productId) || 
                   availableProducts.value.find(p => p.productId === productId);
+                  console.log("dsjnfdskanksf",product);
   return product ? `${product.productName} - ${product.spec ? product.spec : '无规格'} - ${product.color ? product.color : '无颜色'}` : '未知产品';
 };
 
@@ -4342,5 +4385,30 @@ watch(
     align-items: flex-start;
     gap: 2px;
   }
+}
+
+/* 触发产品来源行样式 */
+.trigger-source-row {
+  margin-top: 4px;
+  padding: 3px 6px;
+  background-color: #f6ffed;
+  border-radius: 3px;
+  border: 1px solid #b7eb8f;
+  max-width: 100%;
+}
+
+.trigger-source-text {
+  font-size: 11px;
+  color: #52c41a;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trigger-source-text .el-icon {
+  font-size: 10px;
 }
 </style>
