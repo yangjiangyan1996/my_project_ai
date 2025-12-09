@@ -197,124 +197,155 @@
       </div>
 
       <!-- 推荐产品展示区域 -->
-      <div 
-        v-if="!isViewMode && groupedRecommendations.length > 0" 
-        class="recommendations-panel"
-      >
-        <div class="recommendations-header">
-          <div class="header-left">
-            <h3>
-              <el-icon><MagicStick /></el-icon>
-              智能推荐
-            </h3>
-            <span class="tip">基于您添加的产品，系统为您推荐以下搭配产品</span>
-          </div>
-          <div class="header-right">
-            <el-button type="text" @click="applyAllRecommendations" :disabled="!hasValidRecommendations">
-              应用所有推荐
-            </el-button>
-            <el-button type="text" @click="closeRecommendations">
-              <el-icon><Close /></el-icon>
-            </el-button>
-          </div>
-        </div>
+       <!-- 推荐产品展示区域 -->
+<div 
+  v-if="(!isViewMode && groupedRecommendations.length > 0) || (isViewMode && hasRecommendationDetails)" 
+  class="recommendations-panel"
+>
+  <div class="recommendations-header">
+    <div class="header-left">
+      <h3>
+        <el-icon><MagicStick /></el-icon>
+        智能推荐
+      </h3>
+      <span class="tip" v-if="!isViewMode">基于您添加的产品，系统为您推荐以下搭配产品</span>
+      <span class="tip" v-else>创建时的智能推荐记录</span>
+    </div>
+    <div class="header-right" v-if="!isViewMode">
+      <el-button type="text" @click="applyAllRecommendations" :disabled="!hasValidRecommendations">
+        应用所有推荐
+      </el-button>
+      <el-button type="text" @click="closeRecommendations">
+        <el-icon><Close /></el-icon>
+      </el-button>
+    </div>
+  </div>
 
-        <!-- 按触发产品分组的推荐 -->
-        <div 
-          v-for="group in groupedRecommendations" 
-          :key="group.triggerProductId"
-          class="recommendation-group"
+  <!-- 按触发产品分组的推荐 -->
+  <div 
+    v-for="group in groupedRecommendations" 
+    :key="group.triggerProductId"
+    class="recommendation-group"
+  >
+    <div class="group-header">
+      <div class="trigger-info">
+        <span class="trigger-product">
+          {{ getProductName(group.triggerProductId) }}
+          <el-tag size="small">触发产品</el-tag>
+        </span>
+        <span class="trigger-quantity">数量: {{ getProductQuantity(group.triggerProductId) }}</span>
+        <el-button 
+          v-if="!isViewMode"
+          type="text" 
+          size="small" 
+          @click="refreshRecommendations(group.triggerProductId)"
+          class="refresh-btn"
         >
-          <div class="group-header">
-            <div class="trigger-info">
-              <span class="trigger-product">
-                {{ getProductName(group.triggerProductId) }}
-                <el-tag size="small">触发产品</el-tag>
-              </span>
-              <span class="trigger-quantity">数量: {{ getProductQuantity(group.triggerProductId) }}</span>
-              <el-button 
-                type="text" 
-                size="small" 
-                @click="refreshRecommendations(group.triggerProductId)"
-                class="refresh-btn"
-              >
-                <el-icon><Refresh /></el-icon>
-                重新获取推荐
-              </el-button>
-            </div>
-            <el-button 
-              type="primary" 
-              size="small" 
-              @click="applyGroupRecommendations(group)"
-              :disabled="!group.hasValidItems"
-            >
-              应用本组推荐
-            </el-button>
+          <el-icon><Refresh /></el-icon>
+          重新获取推荐
+        </el-button>
+      </div>
+      <el-button 
+        v-if="!isViewMode"
+        type="primary" 
+        size="small" 
+        @click="applyGroupRecommendations(group)"
+        :disabled="!group.hasValidItems"
+      >
+        应用本组推荐
+      </el-button>
+    </div>
+
+    <el-table :data="group.items" class="recommendation-items-table" border>
+      <el-table-column label="推荐产品" min-width="250">
+        <template #default="{ row }">
+          <div class="recommended-product-info">
+            <div class="product-name">{{ row.productName }}</div>
+            <div class="sku-text">{{ row.sku }}</div>
+            <div class="spec-text">{{ row.spec || '-' }}</div>
           </div>
+        </template>
+      </el-table-column>
 
-          <el-table :data="group.items" class="recommendation-items-table" border>
-            <el-table-column label="推荐产品" min-width="250">
-              <template #default="{ row }">
-                <div class="recommended-product-info">
-                  <div class="product-name">{{ row.productName }}</div>
-                  <div class="sku-text">{{ row.sku }}</div>
-                  <div class="spec-text">{{ row.spec || '-' }}</div>
-                </div>
-              </template>
-            </el-table-column>
+      <el-table-column label="推荐类型" width="100">
+        <template #default="{ row }">
+          <el-tag :type="row.isRequired ? 'danger' : 'info'" size="small">
+            {{ row.isRequired ? '必选' : '可选' }}
+          </el-tag>
+          <div v-if="row.confidence" class="confidence">
+            置信度: {{ (row.confidence * 100).toFixed(0) }}%
+          </div>
+        </template>
+      </el-table-column>
 
-            <el-table-column label="推荐类型" width="100">
-              <template #default="{ row }">
-                <el-tag :type="row.isRequired ? 'danger' : 'info'" size="small">
-                  {{ row.isRequired ? '必选' : '可选' }}
-                </el-tag>
-                <div v-if="row.confidence" class="confidence">
-                  置信度: {{ (row.confidence * 100).toFixed(0) }}%
-                </div>
-              </template>
-            </el-table-column>
+      <el-table-column label="推荐数量" width="180">
+        <template #default="{ row }">
+          <div class="recommended-quantity">
+            <div v-if="row.quantityType === 1">
+              <span class="quantity-type">固定数量</span>
+              <span class="quantity-value">{{ row.calculatedQuantity || row.quantityValue }}</span>
+            </div>
+            <div v-else>
+              <span class="quantity-type">比例: {{ row.quantityValue }}</span>
+              <span class="quantity-value">
+                = {{ getTriggerProductQuantity(getTriggerIdForRow(row)) }} × {{ row.quantityValue }}
+                = {{ row.calculatedQuantity || calculateRecommendedQuantity(row, getTriggerIdForRow(row)) }}
+              </span>
+            </div>
+          </div>
+        </template>
+      </el-table-column>
 
-            <el-table-column label="推荐数量" width="180">
-              <template #default="{ row }">
-                <div class="recommended-quantity">
-                  <div v-if="row.quantityType === 1">
-                    <span class="quantity-type">固定数量</span>
-                    <span class="quantity-value">{{ row.quantityValue }}</span>
-                  </div>
-                  <div v-else>
-                    <span class="quantity-type">比例: {{ row.quantityValue }}</span>
-                    <span class="quantity-value">
-                      = {{ getTriggerProductQuantity(getTriggerIdForRow(row)) }} × {{ row.quantityValue }}
-                      = {{ calculateRecommendedQuantity(row, getTriggerIdForRow(row)) }}
-                    </span>
-                  </div>
-                </div>
-              </template>
-            </el-table-column>
+      <el-table-column label="库存" width="100" align="center">
+        <template #default="{ row }">
+          <span :class="getStockClass(row.availableQuantity, row.calculatedQuantity || row.quantityValue)">
+            {{ row.availableQuantity }}
+          </span>
+        </template>
+      </el-table-column>
 
-            <el-table-column label="库存" width="100" align="center">
-              <template #default="{ row }">
-                <span :class="getStockClass(row.availableQuantity, row.recommendQuantity)">
-                  {{ row.availableQuantity }}
-                </span>
-              </template>
-            </el-table-column>
-
-            <el-table-column label="是否添加" width="120" align="center">
-              <template #default="{ row }">
-                <el-checkbox 
-                  v-model="row.selected"
-                  :disabled="row.isRequired"
-                  @change="handleRecommendationToggle(row)"
-                >
-                  {{ row.selected ? '已添加' : '添加' }}
-                </el-checkbox>
-                <div v-if="row.isRequired" class="required-tip">必选</div>
-              </template>
-            </el-table-column>
-          </el-table>
+      <el-table-column label="是否添加" width="120" align="center" v-if="!isViewMode">
+        <template #default="{ row }">
+          <el-checkbox 
+            v-model="row.selected"
+            :disabled="row.isRequired || isViewMode"
+            @change="handleRecommendationToggle(row)"
+          >
+            {{ row.selected ? '已添加' : '添加' }}
+          </el-checkbox>
+          <div v-if="row.isRequired" class="required-tip">必选</div>
+        </template>
+      </el-table-column>
+      
+      <!-- 查看模式下显示实际添加数量 -->
+      <el-table-column label="实际数量" width="100" align="center" v-if="isViewMode">
+        <template #default="{ row }">
+          <span v-if="row.selected" class="actual-quantity">
+            {{ row.actualQuantity || row.calculatedQuantity || 0 }}
+          </span>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
+  
+  <!-- 查看模式下显示推荐详情 -->
+  <div v-if="isViewMode && !groupedRecommendations.length && hasRecommendationDetails" class="view-mode-recommendations">
+    <div class="recommendation-summary">
+      <h4>推荐产品汇总</h4>
+      <div class="recommendation-list">
+        <div 
+          v-for="(details, productId) in recommendationDetails" 
+          :key="productId"
+          class="recommendation-item"
+        >
+          <span class="product-name">{{ getProductName(productId) }}</span>
+          <span class="total-recommended">推荐总量: {{ getTotalRecommendedQuantity(productId) }}</span>
         </div>
       </div>
+    </div>
+  </div>
+</div>
 
       <!-- 产品明细表格 -->
       <div class="product-section">
@@ -557,6 +588,7 @@
             <template #default="{ row }">
               <div class="quantity-cell">
                 <el-input-number
+                  v-if="!isViewMode"
                   v-model="row.quantity"
                   :min="0"
                   :max="getQuantityMax(row)"
@@ -564,9 +596,13 @@
                   size="small"
                   @change="(value) => handleQuantityChange(row, value)"
                   placeholder="数量"
-                  :disabled="isViewMode || row.availableQuantity <= 0"
+                  :disabled="row.availableQuantity <= 0"
                   class="quantity-input"
                 />
+                <!-- 查看模式下只显示数值 -->
+                <span v-else class="quantity-view">
+                  {{ row.quantity || 0 }}
+                </span>
                 <el-button
                   v-if="!isViewMode && row.availableQuantity > 0"
                   type="text"
@@ -1426,7 +1462,7 @@ const generateOrderNo = () => {
   formData.orderNo = `CK${year}${month}${day}${random}`;
 };
 
-// 加载出库单详情// 加载出库单详情
+// 加载出库单详情// 加载出库单详情// 加载出库单详情
 const loadOutboundDetail = async (id) => {
   loading.value = true;
   try {
@@ -1466,30 +1502,49 @@ const loadOutboundDetail = async (id) => {
           const isRecommend = extension.isRecommendProduct === 0; // 0=是推荐产品
           const triggerProductId = extension.triggerProductId || null;
           
-          return {
-            ...item,
-            quantity: item.quantity || 0,
-            price: item.priceUnit || 0,
-            priceUnitUsd: item.priceUnitUsd || 0,
+          // 构建产品对象
+          const productData = {
+            productId: item.productId,
+            productName: item.productName,
+            sku: item.sku,
+            spec: item.spec || '',
+            color: item.color || '',
+            unitName: item.unit || '',
+            // 关键：确保 quantity 字段正确设置
+            quantity: item.quantity ? Number(item.quantity) : 0,
+            price: item.priceUnit ? Number(item.priceUnit) : 0,
+            priceUnitUsd: item.priceUnitUsd ? Number(item.priceUnitUsd) : 0,
             remark: item.remark || '',
             batchAllocations: item.batchAllocations || [],
-            availableQuantity: item.currentStock || 0,
-            // 从 extension 中获取扩展字段
+            // 从 availableBatches 中获取可用库存，如果没有则设为0
+            availableQuantity: item.availableBatches ? 
+              item.availableBatches.reduce((sum, batch) => sum + Number(batch.quantity), 0) : 0,
+            // 扩展信息
             isTriggerProduct: isTriggerProduct,
             isRecommend: isRecommend,
             triggerProductId: triggerProductId,
-            extension: extension, // 保存完整的扩展信息
-            originalPrice: item.priceUnit || 0,
-            originalPriceUnitUsd: item.priceUnitUsd || 0,
-            historyPrice: null // 稍后单独加载
+            extension: extension,
+            // 保存原始价格用于重置
+            originalPrice: item.priceUnit ? Number(item.priceUnit) : 0,
+            originalPriceUnitUsd: item.priceUnitUsd ? Number(item.priceUnitUsd) : 0,
+            historyPrice: null,
+            // 记录上次数量用于比较
+            lastQuantity: item.quantity ? Number(item.quantity) : 0
           };
+          
+          console.log(`加载产品 ${item.productName}:`, {
+            quantity: productData.quantity,
+            price: productData.price,
+            isTrigger: productData.isTriggerProduct,
+            isRecommend: productData.isRecommend,
+            triggerId: productData.triggerProductId
+          });
+          
+          return productData;
         });
       }
 
-      console.log('最终加载的产品数据:');
-      outboundProducts.value.forEach((p, i) => {
-        console.log(`${i+1}. ${p.productName}: quantity=${p.quantity}, price=${p.price}`);
-      });
+      console.log('最终加载的产品数据:', outboundProducts.value);
       
       // 编辑模式下，加载仓库对应的可用产品
       if (formData.warehouseId) {
@@ -1510,7 +1565,7 @@ const loadOutboundDetail = async (id) => {
   }
 };
 
-// 为编辑模式下的现有产品加载推荐
+// 为编辑模式下的现有产品加载推荐// 为编辑模式下的现有产品加载推荐
 const loadRecommendationsForExistingProducts = async () => {
   if (!formData.customerId || !formData.warehouseId) return;
   
@@ -1519,20 +1574,57 @@ const loadRecommendationsForExistingProducts = async () => {
   recommendationDetails.value = {};
   
   // 为每个触发产品加载推荐
-  const triggerProducts = outboundProducts.value.filter(p => p.isTriggerProduct && p.quantity > 0);
+  const triggerProducts = outboundProducts.value.filter(p => p.isTriggerProduct );
+  //计算p.quantity.batchAllocations中对象的quantity总和
+  //const quantityOfTriggerProducts = triggerProducts.reduce((sum, p) => sum + p.quantity, 0);
+  // console.log('触发产品:', triggerProducts);
+  console.log('为以下触发产品加载推荐:', triggerProducts.map(p => ({
+    name: p.productName,
+    quantity: p.quantity,
+    id: p.productId
+  })));
   
   for (const product of triggerProducts) {
-    await loadRecommendationsForProduct(product.productId, product.quantity);
-  }
+    console.log('触发产品:', product);
+    
+    // 如果产品有批次分配，从批次分配中计算总数
+    let quantityOfTriggerProducts;
+    
+    if (product.batchAllocations && product.batchAllocations.length > 0) {
+        // 从批次分配中计算总数量
+        quantityOfTriggerProducts = product.batchAllocations.reduce((sum, allocation) => {
+            return sum + (Number(allocation.quantity) || 0);
+        }, 0);
+        console.log(`触发产品 ${product.productName} 从批次分配计算数量: ${quantityOfTriggerProducts}`);
+    } else {
+        // 如果没有批次分配，直接使用 quantity 属性
+        quantityOfTriggerProducts = Number(product.quantity) || 0;
+        console.log(`触发产品 ${product.productName} 从quantity属性获取数量: ${quantityOfTriggerProducts}`);
+    }
+    console.log(`触发产品 ${product.productName} 最终计算数量: ${quantityOfTriggerProducts}`);
+    
+    await loadRecommendationsForProduct(product.productId, quantityOfTriggerProducts);
+}
   
   // 标记已添加的推荐产品为选中状态
   const recommendProducts = outboundProducts.value.filter(p => p.isRecommend && p.quantity > 0);
+  console.log('已添加的推荐产品:', recommendProducts.map(p => ({
+    name: p.productName,
+    quantity: p.quantity,
+    id: p.productId
+  })));
+  
+  // 更新推荐详情数据
+  updateRecommendationDetails();
+  
+  // 在推荐面板中标记已添加的推荐产品
   recommendProducts.forEach(recommendProduct => {
-    // 在推荐分组中找到对应的推荐项并标记为选中
     groupedRecommendations.value.forEach(group => {
       const item = group.items.find(i => i.productId === recommendProduct.productId);
       if (item) {
         item.selected = true;
+        // 更新已添加的数量
+        item.calculatedQuantity = recommendProduct.quantity;
       }
     });
   });
@@ -1810,8 +1902,9 @@ const refreshRecommendations = async (triggerProductId) => {
   }
 };
 
-// 加载推荐
+// 加载推荐// 加载推荐
 const loadRecommendationsForProduct = async (productId, quantity) => {
+  console.log('加载推荐,loadRecommendationsForProduct触发产品ID:', productId, '数量:', quantity, 'formData:', formData);
   if (!formData.customerId || !formData.warehouseId) return;
   
   try {
@@ -1823,21 +1916,22 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
       applyScene: 1
     };
     
+    console.log('推荐接口响应,请求参数:', requestData);
     const res = await post('/api/auth/recommend/queryRuleItems', requestData);
     
     console.log('推荐接口响应:', res);
     
     if (res && res.recommendations && res.recommendations.length > 0) {
-      // 过滤掉已经在出库单中且数量大于0的产品（改进点1）
+      // 过滤掉已经在出库单中且数量大于0的产品
       const existingProductIds = outboundProducts.value
-        .filter(p => p.quantity > 0)
+        .filter(p => p.quantity > 0 && p.productId !== productId) // 排除当前触发产品本身
         .map(p => p.productId);
       
       const recommendations = res.recommendations.map(item => {
         const productInfo = availableProducts.value.find(p => p.productId === item.productId);
         const availableQuantity = productInfo ? productInfo.availableQuantity : 0;
         
-        // 检查是否已添加（改进点1）
+        // 检查是否已添加（编辑模式下，已存在的推荐产品应该被标记为已选中）
         const existingProduct = outboundProducts.value.find(p => p.productId === item.productId);
         const isSelected = existingProduct && existingProduct.quantity > 0;
         
@@ -1860,7 +1954,9 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
           selected: isSelected,
           availableQuantity: availableQuantity,
           calculatedQuantity: calculatedQuantity,
-          triggerProductId: productId // 记录触发产品ID
+          triggerProductId: productId, // 记录触发产品ID
+          // 如果是编辑模式且已存在，使用实际数量
+          actualQuantity: isSelected ? existingProduct.quantity : calculatedQuantity
         };
       }).filter(item => !existingProductIds.includes(item.productId)); // 过滤掉已存在的产品
       
@@ -1885,8 +1981,10 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
         // 更新推荐详情
         updateRecommendationDetails();
         
-        // 自动应用必选推荐
-        applyRequiredRecommendations(productId);
+        // 编辑模式下不自动应用推荐，只展示
+        if (!isEditMode.value) {
+          applyRequiredRecommendations(productId);
+        }
         
         ElMessage.success(`发现 ${recommendations.length} 条推荐规则`);
       }
@@ -4464,5 +4562,59 @@ watch(
 
 .trigger-source-text .el-icon {
   font-size: 10px;
+}
+
+/* 查看模式下的推荐样式 */
+.view-mode-recommendations {
+  padding: 16px;
+  background-color: #fafdff;
+  border-radius: 4px;
+  border: 1px solid #91d5ff;
+}
+
+.recommendation-summary h4 {
+  margin: 0 0 12px 0;
+  color: #1890ff;
+}
+
+.recommendation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recommendation-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+}
+
+.recommendation-item .product-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.recommendation-item .total-recommended {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.actual-quantity {
+  color: #67c23a;
+  font-weight: bold;
+}
+
+.quantity-view {
+  display: inline-block;
+  width: 100%;
+  height: 32px;
+  line-height: 32px;
+  text-align: center;
+  font-weight: 500;
+  color: #303133;
 }
 </style>
