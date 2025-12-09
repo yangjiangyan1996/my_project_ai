@@ -1426,7 +1426,7 @@ const generateOrderNo = () => {
   formData.orderNo = `CK${year}${month}${day}${random}`;
 };
 
-// 加载出库单详情
+// 加载出库单详情// 加载出库单详情
 const loadOutboundDetail = async (id) => {
   loading.value = true;
   try {
@@ -1457,30 +1457,39 @@ const loadOutboundDetail = async (id) => {
         formData.attachments = detailData.attachments;
       }
       
-      // 设置产品数据
+      // 设置产品数据（关键修改点）
       if (detailData.items && detailData.items.length > 0) {
-        outboundProducts.value = detailData.items.map(item => ({
-          ...item,
-          quantity: item.quantity || 0,
-          price: item.priceUnit || 0,
-          priceUnitUsd: item.priceUnitUsd || 0,
-          remark: item.remark || '',
-          batchAllocations: item.batchAllocations || [],
-          availableQuantity: item.currentStock || 0,
-          isTriggerProduct: item.isTriggerProduct || false,
-          isRecommend: item.isRecommend || false,
-          triggerProductId: item.triggerProductId || null,
-          originalPrice: item.priceUnit || 0,
-          originalPriceUnitUsd: item.priceUnitUsd || 0,
-          historyPrice: null // 稍后单独加载
-        }));
+        outboundProducts.value = detailData.items.map(item => {
+          // 从 extension 中获取扩展信息
+          const extension = item.extension || {};
+          const isTriggerProduct = extension.isTriggerProduct === 0; // 0=是触发产品
+          const isRecommend = extension.isRecommendProduct === 0; // 0=是推荐产品
+          const triggerProductId = extension.triggerProductId || null;
+          
+          return {
+            ...item,
+            quantity: item.quantity || 0,
+            price: item.priceUnit || 0,
+            priceUnitUsd: item.priceUnitUsd || 0,
+            remark: item.remark || '',
+            batchAllocations: item.batchAllocations || [],
+            availableQuantity: item.currentStock || 0,
+            // 从 extension 中获取扩展字段
+            isTriggerProduct: isTriggerProduct,
+            isRecommend: isRecommend,
+            triggerProductId: triggerProductId,
+            extension: extension, // 保存完整的扩展信息
+            originalPrice: item.priceUnit || 0,
+            originalPriceUnitUsd: item.priceUnitUsd || 0,
+            historyPrice: null // 稍后单独加载
+          };
+        });
       }
 
-      // 再次检查数据是否正确加载
-        console.log('最终加载的产品数据:');
-        outboundProducts.value.forEach((p, i) => {
-          console.log(`${i+1}. ${p.productName}: quantity=${p.quantity}, price=${p.price}`);
-        });
+      console.log('最终加载的产品数据:');
+      outboundProducts.value.forEach((p, i) => {
+        console.log(`${i+1}. ${p.productName}: quantity=${p.quantity}, price=${p.price}`);
+      });
       
       // 编辑模式下，加载仓库对应的可用产品
       if (formData.warehouseId) {
@@ -1611,7 +1620,7 @@ const clearSearch = () => {
   searchResults.value = [];
 };
 
-// 添加产品到表格
+// 添加产品到表格// 添加产品到表格
 const addProductToTable = async (product) => {
   // 检查是否已存在
   const existingProduct = outboundProducts.value.find(p => p.productId === product.productId);
@@ -1624,6 +1633,12 @@ const addProductToTable = async (product) => {
       existingProduct.isTriggerProduct = true;
       existingProduct.isRecommend = false;
       existingProduct.triggerProductId = null;
+      
+      // 确保有 extension 信息
+      existingProduct.extension = existingProduct.extension || {};
+      existingProduct.extension.isTriggerProduct = 0; // 0=是触发产品
+      existingProduct.extension.isRecommendProduct = 1; // 1=不是推荐产品
+      existingProduct.extension.triggerProductId = null;
       
       // 加载推荐
       await loadRecommendationsForProduct(product.productId, 1);
@@ -1644,9 +1659,16 @@ const addProductToTable = async (product) => {
     batchAllocations: [],
     isTriggerProduct: true,
     isRecommend: false,
+    triggerProductId: null,
+    // 添加扩展信息
+    extension: {
+      productId: product.productId,
+      isTriggerProduct: 0, // 0=是触发产品
+      isRecommendProduct: 1, // 1=不是推荐产品
+      triggerProductId: null
+    },
     historyPrice: null,
-    lastQuantity: 0,
-    triggerProductId: null
+    lastQuantity: 0
   };
   
   outboundProducts.value.push(newProduct);
@@ -1676,7 +1698,7 @@ const getTriggerIdForRow = (row) => {
   return null;
 };
 
-// 产品数量变化处理
+// 产品数量变化处理// 产品数量变化处理
 const handleQuantityChange = async (row, value) => {
   if (value > 0) {
     // 如果是触发产品且数量从0变成有值，查询推荐
@@ -1690,6 +1712,16 @@ const handleQuantityChange = async (row, value) => {
     }
     if (!row.priceUnitUsd || row.priceUnitUsd === 0) {
       row.priceUnitUsd = row.originalPriceUnitUsd || 0;
+    }
+    
+    // 确保有 extension 信息
+    if (!row.extension) {
+      row.extension = {
+        productId: row.productId,
+        isTriggerProduct: row.isTriggerProduct ? 0 : 1,
+        isRecommendProduct: row.isRecommend ? 0 : 1,
+        triggerProductId: row.triggerProductId || null
+      };
     }
     
     // 加载历史价格
@@ -1935,7 +1967,7 @@ const applyRequiredRecommendations = (triggerProductId) => {
   }
 };
 
-// 添加推荐产品到订单
+// 添加推荐产品到订单// 添加推荐产品到订单
 const addRecommendationToOrder = (recommendation) => {
   const product = availableProducts.value.find(p => p.productId === recommendation.productId);
   if (!product) {
@@ -1953,6 +1985,12 @@ const addRecommendationToOrder = (recommendation) => {
       existingProduct.isRecommend = true;
       existingProduct.isTriggerProduct = false;
       existingProduct.triggerProductId = recommendation.triggerProductId;
+      
+      // 确保有 extension 信息
+      existingProduct.extension = existingProduct.extension || {};
+      existingProduct.extension.isTriggerProduct = 1; // 1=不是触发产品
+      existingProduct.extension.isRecommendProduct = 0; // 0=是推荐产品
+      existingProduct.extension.triggerProductId = recommendation.triggerProductId || 0;
       
       recommendation.selected = true;
       
@@ -1981,6 +2019,13 @@ const addRecommendationToOrder = (recommendation) => {
     isTriggerProduct: false,
     isRecommend: true,
     triggerProductId: recommendation.triggerProductId,
+    // 添加扩展信息
+    extension: {
+      productId: recommendation.productId,
+      isTriggerProduct: 1, // 1=不是触发产品
+      isRecommendProduct: 0, // 0=是推荐产品
+      triggerProductId: recommendation.triggerProductId || 0
+    },
     historyPrice: null
   };
   
@@ -3093,19 +3138,27 @@ const handleSubmit = async () => {
   }
 };
 
-// 准备提交数据// 准备提交数据
+// 准备提交数据// 准备提交数据// 准备提交数据
 const prepareSubmitData = () => {
   const items = outboundProducts.value
     .filter(item => item.quantity > 0)
     .map(item => {
       // 构建扩展信息
-      const extension = {
+      // 优先使用已存在的 extension，否则新建
+      const extension = item.extension || {
         productId: item.productId,
         isTriggerProduct: item.isTriggerProduct ? 0 : 1, // 0=是触发产品, 1=不是触发产品
         isRecommendProduct: item.isRecommend ? 0 : 1, // 0=是推荐产品, 1=不是推荐产品
         triggerProductId: item.triggerProductId || 0, // 关联的触发产品ID，没有则为0
         remark: item.remark || ''
       };
+      
+      // 如果 extension 存在但需要更新字段
+      if (item.extension) {
+        extension.isTriggerProduct = item.isTriggerProduct ? 0 : 1;
+        extension.isRecommendProduct = item.isRecommend ? 0 : 1;
+        extension.triggerProductId = item.triggerProductId || 0;
+      }
       
       return {
         productId: item.productId,
@@ -3128,6 +3181,7 @@ const prepareSubmitData = () => {
           price: allocation.price || item.price || 0
         })),
         remark: item.remark || '',
+        // 保留原来的字段，用于前端显示
         isTriggerProduct: item.isTriggerProduct || false,
         isRecommend: item.isRecommend || false,
         triggerProductId: item.triggerProductId || null,
