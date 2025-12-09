@@ -257,17 +257,24 @@
     </div>
 
     <el-table :data="group.items" class="recommendation-items-table" border>
-      <el-table-column label="推荐产品" min-width="250">
+      <el-table-column label="推荐产品" min-width="150">
         <template #default="{ row }">
           <div class="recommended-product-info">
             <div class="product-name">{{ row.productName }}</div>
-            <div class="sku-text">{{ row.sku }}</div>
-            <div class="spec-text">{{ row.spec || '-' }}</div>
+            <div class="sku-text">sku:{{ row.sku }}</div>
+            <div class="spec-text">规格:{{ row.spec || '-' }}</div>
+            <div class="spec-text">颜色: {{ row.color || '-' }}</div>
+            
+            <!-- 新增：来源提示 -->
+            <div v-if="row.selected" class="source-tip">
+              <el-tag size="mini" type="success">已添加</el-tag>
+              <span class="source-text">来自: {{ getProductName(row.triggerProductId) }}</span>
+            </div>
           </div>
         </template>
       </el-table-column>
 
-      <el-table-column label="推荐类型" width="100">
+      <el-table-column label="推荐类型" width="150">
         <template #default="{ row }">
           <el-tag :type="row.isRequired ? 'danger' : 'info'" size="small">
             {{ row.isRequired ? '必选' : '可选' }}
@@ -296,10 +303,18 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="库存" width="100" align="center">
+      <el-table-column label="库存" width="150" align="center">
         <template #default="{ row }">
           <span :class="getStockClass(row.availableQuantity, row.calculatedQuantity || row.quantityValue)">
             {{ row.availableQuantity }}
+          </span>
+        </template>
+      </el-table-column>
+
+       <el-table-column label="备注" width="200" align="center">
+        <template #default="{ row }">
+          <span :class="stock-none">
+            {{ row.remark }}
           </span>
         </template>
       </el-table-column>
@@ -1775,6 +1790,13 @@ const addProductToTable = async (product) => {
   // 加载推荐
   await loadRecommendationsForProduct(product.productId, 1);
   
+
+  // 如果有推荐产品被添加，更新推荐面板中的选择状态
+    if (outboundProducts.value.some(p => p.isRecommend && p.quantity > 0)) {
+      updateRecommendationDetails();
+    }
+
+
   nextTick(() => {
     const element = document.querySelector('.product-table');
     if (element) {
@@ -1827,6 +1849,11 @@ const handleQuantityChange = async (row, value) => {
     // 如果是触发产品，更新相关推荐的数量
     if (row.isTriggerProduct) {
       updateRecommendationQuantities(row.productId, value);
+    }
+
+    // 更新推荐面板中相关产品的选择状态
+    if (row.isRecommend) {
+      updateRecommendationSelection(row.productId, value > 0);
     }
   } else {
     // 如果数量设为0，清空相关数据
@@ -1935,8 +1962,11 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
         const availableQuantity = productInfo ? productInfo.availableQuantity : 0;
         
         // 检查是否已添加（编辑模式下，已存在的推荐产品应该被标记为已选中）
-        const existingProduct = outboundProducts.value.find(p => p.productId === item.productId);
-        const isSelected = existingProduct && existingProduct.quantity > 0;
+        const existingProduct = outboundProducts.value.find(p => 
+          p.productId === item.productId && p.quantity > 0 && p.isRecommend
+        );
+        const isSelected = !!existingProduct;
+        const actualQuantity = isSelected ? existingProduct.quantity : 0;
         
         const calculatedQuantity = calculateRecommendedQuantity({
           quantityType: item.quantityType,
@@ -1959,9 +1989,14 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
           calculatedQuantity: calculatedQuantity,
           triggerProductId: productId, // 记录触发产品ID
           // 如果是编辑模式且已存在，使用实际数量
-          actualQuantity: isSelected ? existingProduct.quantity : calculatedQuantity
+          actualQuantity: actualQuantity,
+          // 记录这个推荐是否为当前触发产品的推荐
+          isCurrentTriggerRecommendation: true
         };
-      }).filter(item => !existingProductIds.includes(item.productId)); // 过滤掉已存在的产品
+      });
+
+      // 重要：不移除过滤逻辑，保留所有推荐产品
+      // .filter(item => !existingProductIds.includes(item.productId));
       
       console.log('处理后的推荐数据:', recommendations);
       
@@ -2057,9 +2092,22 @@ const applyRequiredRecommendations = (triggerProductId) => {
   
   let addedCount = 0;
   group.items.forEach(item => {
+    // 只添加必选且未选中（不在出库单中）的产品
     if (item.isRequired && !item.selected && item.availableQuantity > 0) {
-      addRecommendationToOrder(item);
-      addedCount++;
+      // 先检查产品是否已经在出库单中（可能来自其他触发产品的推荐）
+      const existingProduct = outboundProducts.value.find(p => 
+        p.productId === item.productId && p.quantity > 0 && p.isRecommend
+      );
+      
+      if (!existingProduct) {
+        addRecommendationToOrder(item);
+        addedCount++;
+      } else {
+        // 如果已经存在，只需标记为已选中
+        item.selected = true;
+        // 更新实际数量
+        item.actualQuantity = existingProduct.quantity;
+      }
     }
   });
   
@@ -2069,6 +2117,7 @@ const applyRequiredRecommendations = (triggerProductId) => {
 };
 
 // 添加推荐产品到订单// 添加推荐产品到订单
+// 添加推荐产品到订单
 const addRecommendationToOrder = (recommendation) => {
   const product = availableProducts.value.find(p => p.productId === recommendation.productId);
   if (!product) {
@@ -2135,14 +2184,45 @@ const addRecommendationToOrder = (recommendation) => {
   recommendation.selected = true;
   
   ElMessage.success(`已添加 ${recommendation.productName} 到出库单`);
+  
+  // 更新所有相关的推荐项状态
+  updateRecommendationSelection(recommendation.productId, true);
 };
 
+// 处理推荐切换
 // 处理推荐切换
 const handleRecommendationToggle = (recommendation) => {
   if (recommendation.selected) {
     addRecommendationToOrder(recommendation);
   } else {
-    removeProductFromTableByProductId(recommendation.productId);
+    // 只从出库单中移除，但不从推荐面板中移除
+    const existingProduct = outboundProducts.value.find(p => 
+      p.productId === recommendation.productId && p.quantity > 0 && p.isRecommend
+    );
+    
+    if (existingProduct) {
+      // 如果是来自多个触发产品的推荐，只设置数量为0，不删除
+      const triggerCount = Object.values(recommendationDetails.value)
+        .filter(details => details.some(d => d.triggerProductId === recommendation.triggerProductId))
+        .length;
+      
+      if (triggerCount > 1) {
+        // 来自多个触发产品，只清空数量
+        existingProduct.quantity = 0;
+        existingProduct.price = 0;
+        existingProduct.priceUnitUsd = 0;
+        existingProduct.remark = '';
+        existingProduct.batchAllocations = [];
+        
+        ElMessage.success(`已清空 ${recommendation.productName} 的数量`);
+        
+        // 更新推荐面板中的选择状态
+        updateRecommendationSelection(recommendation.productId, false);
+      } else {
+        // 只来自当前触发产品，可以删除
+        removeProductFromTableByProductId(recommendation.productId);
+      }
+    }
   }
 };
 
@@ -2166,6 +2246,29 @@ const removeRecommendationsForTrigger = (triggerProductId, deleteRecommendProduc
   updateRecommendationDetails();
 };
 
+
+// 更新指定产品的所有推荐项的选择状态
+const updateRecommendationSelection = (productId, isSelected) => {
+  groupedRecommendations.value.forEach(group => {
+    const item = group.items.find(i => i.productId === productId);
+    if (item) {
+      item.selected = isSelected;
+      
+      // 如果是查看模式或者编辑模式，更新实际数量
+      if (isViewMode.value || isEditMode.value) {
+        const existingProduct = outboundProducts.value.find(p => 
+          p.productId === productId && p.quantity > 0 && p.isRecommend
+        );
+        if (existingProduct) {
+          item.actualQuantity = existingProduct.quantity;
+        } else if (!isSelected) {
+          item.actualQuantity = 0;
+        }
+      }
+    }
+  });
+};
+
 // 通过产品ID移除产品
 const removeProductFromTableByProductId = (productId) => {
   const index = outboundProducts.value.findIndex(p => p.productId === productId && p.isRecommend);
@@ -2178,6 +2281,9 @@ const removeProductFromTableByProductId = (productId) => {
     // 重新计算推荐详情
     updateRecommendationDetails();
   }
+  
+  // 更新所有相关的推荐项状态
+  updateRecommendationSelection(productId, false);
 };
 
 // 应用所有推荐
@@ -4620,5 +4726,27 @@ watch(
   text-align: center;
   font-weight: 500;
   color: #303133;
+}
+
+/* 推荐产品来源提示 */
+.source-tip {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.source-text {
+  color: #67c23a;
+}
+
+/* 已添加的推荐行样式 */
+:deep(.recommendation-items-table .row-added) {
+  background-color: #f0f9eb !important;
+}
+
+:deep(.recommendation-items-table .row-added:hover > td) {
+  background-color: #e6f7e6 !important;
 }
 </style>
