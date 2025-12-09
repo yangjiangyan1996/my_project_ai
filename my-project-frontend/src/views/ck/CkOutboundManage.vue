@@ -676,121 +676,121 @@ const loadStats = async () => {
   }
 };
 
-// 加载出库单详情
-const loadOutboundDetail = async (id) => {
-  try {
-    const res = await get(`/api/auth/outbound/detail?orderId=${id}`);
-    console.log('出库单详情响应:', res);
+// // 加载出库单详情
+// const loadOutboundDetail = async (id) => {
+//   try {
+//     const res = await get(`/api/auth/outbound/detail?orderId=${id}`);
+//     console.log('出库单详情响应:', res);
     
-    if (res && res.code === 200) {
-      // 如果接口返回了标准响应格式
-      const detailData = res.data || res;
-      return {
-        // 基本信息
-        id: detailData.id,
-        orderNo: detailData.orderNo,
-        orderType: detailData.orderType,
-        warehouseId: detailData.warehouseId,
-        warehouseName: detailData.warehouseName,
-        customerId: detailData.customerId,
-        customerName: detailData.customerName,
-        relatedOrderNo: detailData.relatedOrderNo,
-        expectedDate: detailData.expectedDate,
-        remark: detailData.remark,
-        status: detailData.status,
-        itemCount: detailData.itemCount,
-        totalQuantity: detailData.totalQuantity,
-        totalAmount: detailData.totalAmount,
-        totalAmountUsd: detailData.totalAmountUsd || 0, // 新增：USD总额
-        applicantId: detailData.applicantId,
-        applicantName: detailData.applicantName,
-        applicantAvatar: detailData.applicantAvatar,
-        isUrgent: detailData.isUrgent || false,
-        createdAt: detailData.createdAt,
-        updatedAt: detailData.updatedAt,
+//     if (res && res.code === 200) {
+//       // 如果接口返回了标准响应格式
+//       const detailData = res.data || res;
+//       return {
+//         // 基本信息
+//         id: detailData.id,
+//         orderNo: detailData.orderNo,
+//         orderType: detailData.orderType,
+//         warehouseId: detailData.warehouseId,
+//         warehouseName: detailData.warehouseName,
+//         customerId: detailData.customerId,
+//         customerName: detailData.customerName,
+//         relatedOrderNo: detailData.relatedOrderNo,
+//         expectedDate: detailData.expectedDate,
+//         remark: detailData.remark,
+//         status: detailData.status,
+//         itemCount: detailData.itemCount,
+//         totalQuantity: detailData.totalQuantity,
+//         totalAmount: detailData.totalAmount,
+//         totalAmountUsd: detailData.totalAmountUsd || 0, // 新增：USD总额
+//         applicantId: detailData.applicantId,
+//         applicantName: detailData.applicantName,
+//         applicantAvatar: detailData.applicantAvatar,
+//         isUrgent: detailData.isUrgent || false,
+//         createdAt: detailData.createdAt,
+//         updatedAt: detailData.updatedAt,
         
-        // 扩展字段，保留所有原始数据
-        ...detailData,
+//         // 扩展字段，保留所有原始数据
+//         ...detailData,
         
-        // 产品明细
-        items: detailData.items ? detailData.items.map(item => ({
-          id: item.id,
-          productId: item.productId,
-          productName: item.productName,
-          sku: item.sku,
-          spec: item.spec,
-          unit: item.unit,
-          quantity: item.quantity,
-          price: item.price,
-          priceUnitUsd: item.priceUnitUsd || 0, // 新增：USD单价
-          priceTotalUsd: item.priceTotalUsd || 0, // 新增：USD总额
-          batchAllocations: item.batchAllocations || [],
-          remark: item.remark,
-          // 保留所有原始字段
-          ...item
-        })) : [],
+//         // 产品明细
+//         items: detailData.items ? detailData.items.map(item => ({
+//           id: item.id,
+//           productId: item.productId,
+//           productName: item.productName,
+//           sku: item.sku,
+//           spec: item.spec,
+//           unit: item.unit,
+//           quantity: item.quantity,
+//           price: item.price,
+//           priceUnitUsd: item.priceUnitUsd || 0, // 新增：USD单价
+//           priceTotalUsd: item.priceTotalUsd || 0, // 新增：USD总额
+//           batchAllocations: item.batchAllocations || [],
+//           remark: item.remark,
+//           // 保留所有原始字段
+//           ...item
+//         })) : [],
         
-        // 附件信息
-        attachments: detailData.attachments || []
-      };
-    } else if (res) {
-      // 如果接口直接返回数据对象
-      return {
-        // 基本信息
-        id: res.id,
-        orderNo: res.orderNo,
-        orderType: res.orderType,
-        warehouseId: res.warehouseId,
-        warehouseName: res.warehouseName,
-        customerId: res.customerId,
-        customerName: res.customerName,
-        relatedOrderNo: res.relatedOrderNo,
-        expectedDate: res.expectedDate,
-        remark: res.remark,
-        status: res.status,
-        itemCount: res.itemCount,
-        totalQuantity: res.totalQuantity,
-        totalAmount: res.totalAmount,
-        totalAmountUsd: res.totalAmountUsd || 0, // 新增：USD总额
-        applicantId: res.applicantId,
-        applicantName: res.applicantName,
-        applicantAvatar: res.applicantAvatar,
-        isUrgent: res.isUrgent || false,
-        createdAt: res.createdAt,
-        updatedAt: res.updatedAt,
+//         // 附件信息
+//         attachments: detailData.attachments || []
+//       };
+//     } else if (res) {
+//       // 如果接口直接返回数据对象
+//       return {
+//         // 基本信息
+//         id: res.id,
+//         orderNo: res.orderNo,
+//         orderType: res.orderType,
+//         warehouseId: res.warehouseId,
+//         warehouseName: res.warehouseName,
+//         customerId: res.customerId,
+//         customerName: res.customerName,
+//         relatedOrderNo: res.relatedOrderNo,
+//         expectedDate: res.expectedDate,
+//         remark: res.remark,
+//         status: res.status,
+//         itemCount: res.itemCount,
+//         totalQuantity: res.totalQuantity,
+//         totalAmount: res.totalAmount,
+//         totalAmountUsd: res.totalAmountUsd || 0, // 新增：USD总额
+//         applicantId: res.applicantId,
+//         applicantName: res.applicantName,
+//         applicantAvatar: res.applicantAvatar,
+//         isUrgent: res.isUrgent || false,
+//         createdAt: res.createdAt,
+//         updatedAt: res.updatedAt,
         
-        // 扩展字段，保留所有原始数据
-        ...res,
+//         // 扩展字段，保留所有原始数据
+//         ...res,
         
-        // 产品明细
-        items: res.items ? res.items.map(item => ({
-          id: item.id,
-          productId: item.productId,
-          productName: item.productName,
-          sku: item.sku,
-          spec: item.spec,
-          unit: item.unit,
-          quantity: item.quantity,
-          price: item.price,
-          priceUnitUsd: item.priceUnitUsd || 0, // 新增：USD单价
-          priceTotalUsd: item.priceTotalUsd || 0, // 新增：USD总额
-          batchAllocations: item.batchAllocations || [],
-          remark: item.remark,
-          // 保留所有原始字段
-          ...item
-        })) : [],
+//         // 产品明细
+//         items: res.items ? res.items.map(item => ({
+//           id: item.id,
+//           productId: item.productId,
+//           productName: item.productName,
+//           sku: item.sku,
+//           spec: item.spec,
+//           unit: item.unit,
+//           quantity: item.quantity,
+//           price: item.price,
+//           priceUnitUsd: item.priceUnitUsd || 0, // 新增：USD单价
+//           priceTotalUsd: item.priceTotalUsd || 0, // 新增：USD总额
+//           batchAllocations: item.batchAllocations || [],
+//           remark: item.remark,
+//           // 保留所有原始字段
+//           ...item
+//         })) : [],
         
-        // 附件信息
-        attachments: res.attachments || []
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error('加载出库单详情失败:', error);
-    ElMessage.error('加载详情失败: ' + (error.message || '未知错误'));
-    return null;
-  }
-};
+//         // 附件信息
+//         attachments: res.attachments || []
+//       };
+//     }
+//     return null;
+//   } catch (error) {
+//     console.error('加载出库单详情失败:', error);
+//     ElMessage.error('加载详情失败: ' + (error.message || '未知错误'));
+//     return null;
+//   }
+// };
 
 // 计算属性
 const pendingOutbounds = computed(() => {
