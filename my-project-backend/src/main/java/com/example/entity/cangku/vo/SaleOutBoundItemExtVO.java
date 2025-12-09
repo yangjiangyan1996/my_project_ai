@@ -11,10 +11,10 @@ import lombok.Data;
 @Data
 public class SaleOutBoundItemExtVO {
     private Long productId;
-    //标识是否为触发产品
-    private Boolean isTriggerProduct;
-    //标识是否为推荐产品
-    private Boolean isRecommendProduct;
+    //标识是否为触发产品 0=是， 1=不是
+    private Integer isTriggerProduct;
+    //标识是否为推荐产品  0=是， 1=不是
+    private Integer isRecommendProduct;
     //关联的触发产品ID
     private Long triggerProductId;
 }

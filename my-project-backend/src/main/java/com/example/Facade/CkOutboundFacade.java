@@ -10,6 +10,7 @@ import com.example.entity.cangku.req.excel.OutBoundSaleQuantityImportDto;
 import com.example.entity.cangku.resp.*;
 import com.example.entity.cangku.resp.excel.OutboundOderExcelModel;
 import com.example.entity.cangku.resp.excel.OutboundSaleExcelModel;
+import com.example.entity.cangku.vo.SaleOutBoundItemExtVO;
 import com.example.entity.dto.Account;
 import com.example.enums.CkInOutboundEnums;
 import com.example.enums.CkProductEnums;
@@ -976,9 +977,12 @@ public class CkOutboundFacade {
                 //扩展信息
                 if(productId2OutboundOrderItemSaleExtMap.containsKey(productId)) {
                     OutboundOrderItemSaleExt saleExt = productId2OutboundOrderItemSaleExtMap.getOrDefault(productId, new OutboundOrderItemSaleExt());
-                    req.setIsTriggerProduct(saleExt.getIsTriggerProduct() == 0 ? true : false);
-                    req.setIsRecommend(saleExt.getIsRecommendProduct() == 0 ? true : false);
-                    req.setTriggerProductId(saleExt.getTriggerProductId());
+                    SaleOutBoundItemExtVO saleExtVO = new SaleOutBoundItemExtVO();
+                    saleExtVO.setProductId(saleExt.getProductId());
+                    saleExtVO.setIsTriggerProduct(saleExt.getIsTriggerProduct());
+                    saleExtVO.setIsRecommendProduct(saleExt.getIsRecommendProduct());
+                    saleExtVO.setTriggerProductId(saleExt.getTriggerProductId());
+                    req.setExtension(saleExtVO);
                 }
 
                 List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v -> {
@@ -1689,20 +1693,11 @@ public class CkOutboundFacade {
             ext.setProductId(itemReq.getProductId());
 
             // 设置是否为触发产品
-            // 注意：根据你的表结构注释，0=是，1=不是，所以这里取反
-            if (Boolean.TRUE.equals(itemReq.getExtension().getIsTriggerProduct())) {
-                ext.setIsTriggerProduct(0); // 0=是触发产品
-            } else {
-                ext.setIsTriggerProduct(1); // 1=不是触发产品
-            }
-
+            // 注意：根据你的表结构注释，0=是，1=不是
+            ext.setIsTriggerProduct(itemReq.getExtension().getIsTriggerProduct());
             // 设置是否为推荐产品
-            // 注意：根据你的表结构注释，0=是，1=不是，所以这里取反
-            if (Boolean.TRUE.equals(itemReq.getExtension().getIsRecommendProduct())) {
-                ext.setIsRecommendProduct(0); // 0=是推荐产品
-            } else {
-                ext.setIsRecommendProduct(1); // 1=不是推荐产品
-            }
+            // 注意：根据你的表结构注释，0=是，1=不是
+            ext.setIsRecommendProduct(itemReq.getExtension().getIsRecommendProduct());
 
             // 设置触发产品ID
             if (itemReq.getExtension().getTriggerProductId() != null && itemReq.getExtension().getTriggerProductId() > 0) {
