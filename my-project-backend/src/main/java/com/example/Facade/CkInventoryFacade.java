@@ -315,8 +315,8 @@ public class CkInventoryFacade {
     }
 
 
-    public List<InventoryListResp> List(Long warehouseId, Long tenantId) {
-        List<InventoryWarehouse> inventoryTransactionList = inventoryWarehouseService.selectByWarehourseId(warehouseId, tenantId);
+    public List<InventoryListResp> List(Long warehouseId, Long tenantId,List<Long> productIdsOfChoose) {
+        List<InventoryWarehouse> inventoryTransactionList = inventoryWarehouseService.selectByWarehourseId(warehouseId,productIdsOfChoose, tenantId);
         if (inventoryTransactionList.isEmpty()) {
             return new ArrayList<>();
         }

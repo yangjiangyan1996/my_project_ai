@@ -17,6 +17,7 @@ import com.example.enums.CkProductEnums;
 import com.example.holder.InventoryHolder;
 import com.example.service.*;
 import com.example.utils.ExcelUtils;
+import com.example.validhandle.OutboundCreateSaleProductReqValidator;
 import com.google.common.collect.Lists;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -770,9 +771,12 @@ public class CkOutboundFacade {
         return productionTaskService.delectByOutBoundId(p.getId(), req.getTenantId(), req.getUserId());
     }
 
-    public List<OutboundSaleExcelModel> getOutboundSaleExportData(Long tenantId, Long warehouseId) {
-        List<InventoryListResp> result = inventoryFacade.List(warehouseId, tenantId);
+    public List<OutboundSaleExcelModel> getOutboundSaleExportData(Long tenantId, Long warehouseId, List<Long>  productIds) {
+        List<InventoryListResp> result = inventoryFacade.List(warehouseId, tenantId, productIds);
         return result.stream().map(v -> {
+            if (!productIds.contains(v.getProductId())) {
+                return null;
+            }
             OutboundSaleExcelModel model = new OutboundSaleExcelModel();
             model.setProductId(v.getProductId().toString());
             model.setSku(v.getSku());
@@ -781,7 +785,7 @@ public class CkOutboundFacade {
             model.setColor(v.getColor());
             model.setInventory(v.getAvailableQuantity().toString());
             return model;
-        }).collect(Collectors.toList());
+        }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     public List<OutBoundSaleQuantityImportResp> importOutboundSaleQuantity(MultipartFile file, Long tenantId, Long userId, Long warehouseId) {
@@ -1627,7 +1631,7 @@ public class CkOutboundFacade {
     @Transactional(rollbackFor = Exception.class)
     public Boolean createProductionSaleOutBound(OutboundCreateSaleProductReq req) {
         // 1. 校验请求参数的合法性
-        validateOutboundRequest(req);
+        OutboundCreateSaleProductReqValidator.validateAll(req);
 
         // 2. 构建出库单主表实体对象
         OutboundOrder outboundOrder = buildOutboundOrder(req);
@@ -1718,35 +1722,6 @@ public class CkOutboundFacade {
         }
 
         return extList;
-    }
-
-    /**
-     * 校验出库单请求参数
-     */
-    private void validateOutboundRequest(OutboundCreateSaleProductReq req) {
-        // 基本的校验逻辑
-        if (req == null) {
-            throw new ValidationException("出库单请求参数不能为空");
-        }
-
-        if (req.getWarehouseId() == null) {
-            throw new ValidationException("仓库不能为空");
-        }
-
-        if (req.getCustomerId() == null) {
-            throw new ValidationException("客户不能为空");
-        }
-
-        if (CollectionUtils.isEmpty(req.getItems())) {
-            throw new ValidationException("出库产品明细不能为空");
-        }
-
-        // 检查产品数量是否有效
-        for (OutboundCreateSaleProductReq.OrderItemInner item : req.getItems()) {
-            if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new ValidationException("产品出库数量必须大于0");
-            }
-        }
     }
 
 

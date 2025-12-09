@@ -7,6 +7,7 @@ import com.example.enums.CkCommonEnums;
 import com.example.mapper.CkInventoryWarehouseMapper;
 import com.example.service.CkInventoryWarehouseService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 
@@ -24,6 +25,15 @@ public class CkInventoryWarehouseServiceImpl  extends ServiceImpl<CkInventoryWar
                 .eq("product_id", productId)
                 .eq("tenant_id", tenantId)
                 .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode()));
+    }
+
+    @Override
+    public List<InventoryWarehouse> selectByWarehourseId(Long warehouseId, List<Long> productIds, Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<InventoryWarehouse>()
+                .eq("warehouse_id", warehouseId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+                .in(!CollectionUtils.isEmpty(productIds),"product_id", productIds));
     }
 
     @Override

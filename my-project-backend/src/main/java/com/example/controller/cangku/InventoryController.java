@@ -128,7 +128,7 @@ public class InventoryController {
         try {
             Long tenantId = UserUtil.getCurrentUser().getTenantId();
 
-            List<InventoryListResp> result = inventoryFacade.List(warehouseId,tenantId);
+            List<InventoryListResp> result = inventoryFacade.List(warehouseId,tenantId, null);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("InventoryController#listOfWarehouse,req:{}",warehouseId, e);

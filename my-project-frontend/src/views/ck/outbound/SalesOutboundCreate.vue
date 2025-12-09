@@ -367,41 +367,16 @@
         <div class="section-header">
           <div class="section-header-left">
             <h3>产品明细</h3>
-            <div class="product-type-filter">
+            <!-- <div class="product-type-filter">
               <el-checkbox-group v-model="productTypeFilter">
                 <el-checkbox label="trigger">触发商品</el-checkbox>
                 <el-checkbox label="recommend">推荐商品</el-checkbox>
               </el-checkbox-group>
-            </div>
+            </div> -->
           </div>
           <div class="header-right-actions" v-if="!isViewMode">
             <!-- 批量操作 -->
-            <el-dropdown @command="handleBatchCommand" trigger="click">
-              <el-button type="primary" size="small">
-                <el-icon><Operation /></el-icon>
-                批量操作
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="clearAll" :disabled="!hasProductsWithQuantity">
-                    <el-icon><Delete /></el-icon>
-                    清空所有数量
-                  </el-dropdown-item>
-                  <el-dropdown-item command="resetPrices" :disabled="!hasProductsWithQuantity">
-                    <el-icon><Refresh /></el-icon>
-                    重置价格
-                  </el-dropdown-item>
-                  <el-dropdown-item command="clearBatches" :disabled="!hasBatchAllocations">
-                    <el-icon><CloseBold /></el-icon>
-                    清空批次分配
-                  </el-dropdown-item>
-                  <el-dropdown-item command="exportData">
-                    <el-icon><Download /></el-icon>
-                    导出当前数据
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+            
             
             <el-button 
               type="success" 
@@ -583,18 +558,74 @@
           </el-table-column>
           
           <!-- 新增：推荐数量列 -->
+          <!-- 产品明细表格中修改推荐数量列 -->
           <el-table-column label="推荐数量" width="180" align="center" v-if="hasRecommendationDetails">
             <template #default="{ row }">
-              <div v-if="row.isRecommend && getRecommendationDetails(row.productId).length > 0" class="recommendation-details">
-                <div v-for="detail in getRecommendationDetails(row.productId)" :key="detail.triggerProductId" class="recommendation-detail-item">
-                  <span class="trigger-product-name">{{ getProductName(detail.triggerProductId) }}:</span>
-                  <span class="recommended-quantity">{{ detail.recommendedQuantity }}个</span>
+              <!-- 使用Popover显示完整信息 -->
+              <el-popover
+                v-if="row.isRecommend && getRecommendationDetails(row.productId).length > 0"
+                placement="top-start"
+                :width="280"
+                trigger="click"
+                :show-arrow="false"
+              >
+                <template #reference>
+                  <div class="recommend-quantity-summary" @click.stop>
+                    <div class="summary-badge">
+                      <el-tag size="small" type="info" class="count-tag">
+                        {{ getRecommendationDetails(row.productId).length }}
+                      </el-tag>
+                    </div>
+                    <div class="total-quantity-display">
+                      {{ getTotalRecommendedQuantity(row.productId) }} 个
+                    </div>
+                    <el-icon class="expand-icon"><ArrowRight /></el-icon>
+                  </div>
+                </template>
+                
+                <!-- Popover内容 -->
+                <div class="recommend-detail-popover">
+                  <div class="popover-header">
+                    <div class="product-header">
+                      <el-icon><Connection /></el-icon>
+                      <span class="product-name">{{ row.productName }}</span>
+                    </div>
+                    <div class="recommend-title">推荐来源详情</div>
+                  </div>
+                  
+                  <div class="detail-scroll">
+                    <div 
+                      v-for="(detail, index) in getRecommendationDetails(row.productId)" 
+                      :key="detail.triggerProductId" 
+                      class="detail-item"
+                      :class="{'last-item': index === getRecommendationDetails(row.productId).length - 1}"
+                    >
+                      <div class="trigger-source">
+                        <el-icon><Promotion /></el-icon>
+                        <div class="trigger-info">
+                          <div class="trigger-name">{{ getTriggerProductName(detail.triggerProductId) }}</div>
+                          <div class="trigger-spec">
+                            {{ getProductSpec(detail.triggerProductId) }}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="recommend-quantity">
+                        <span class="quantity-label">推荐数量</span>
+                        <span class="quantity-value">{{ detail.recommendedQuantity }} 个</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="popover-footer">
+                    <div class="footer-summary">
+                      <span class="total-label">推荐总数:</span>
+                      <span class="total-number">{{ getTotalRecommendedQuantity(row.productId) }}</span>
+                      <span class="total-unit">个</span>
+                    </div>
+                  </div>
                 </div>
-                <div v-if="getTotalRecommendedQuantity(row.productId) > 0" class="recommendation-total">
-                  <span>合计: </span>
-                  <span class="total-quantity">{{ getTotalRecommendedQuantity(row.productId) }}个</span>
-                </div>
-              </div>
+              </el-popover>
+              
               <span v-else>-</span>
             </template>
           </el-table-column>
@@ -1049,16 +1080,16 @@
           v-loading="loadingBatches"
         >
           <el-table-column label="批次号" prop="batchNo" width="120" fixed="left" />
-          <el-table-column label="生产日期" width="100">
+          <!-- <el-table-column label="生产日期" width="100">
             <template #default="{ row }">
               <span>{{ row.productionDate || '-' }}</span>
             </template>
-          </el-table-column>
-          <el-table-column label="有效期" width="100">
+          </el-table-column> -->
+          <!-- <el-table-column label="有效期" width="100">
             <template #default="{ row }">
               <span :class="getExpiryClass(row.expiryDate)">{{ formatDate(row.expiryDate) || '-' }}</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
           <el-table-column label="总可用数量" width="100" align="center">
             <template #default="{ row }">
               <span :class="row.quantity < 1 ? 'text-disabled' : ''">{{ row.quantity }}</span>
@@ -1506,6 +1537,27 @@ const loadAvailableProducts = async () => {
   } catch (error) {
     console.error('加载可用产品失败:', error);
   }
+};
+
+
+// 新增方法：获取触发产品名称（简化版）
+const getTriggerProductName = (productId) => {
+  const product = outboundProducts.value.find(p => p.productId === productId) || 
+                  availableProducts.value.find(p => p.productId === productId);
+  return product ? product.productName : '未知产品';
+};
+
+// 新增方法：获取产品规格信息
+const getProductSpec = (productId) => {
+  const product = outboundProducts.value.find(p => p.productId === productId) || 
+                  availableProducts.value.find(p => p.productId === productId);
+  if (!product) return '';
+  
+  const parts = [];
+  if (product.spec && product.spec !== '-') parts.push(product.spec);
+  if (product.color && product.color !== '-') parts.push(product.color);
+  
+  return parts.join(' | ') || '无规格';
 };
 
 // 加载出库单详情// 加载出库单详情// 加载出库单详情
@@ -2164,7 +2216,7 @@ const addRecommendationToOrder = (recommendation) => {
     quantity: actualQuantity,
     price: product.originalPrice || 0,
     priceUnitUsd: product.originalPriceUnitUsd || 0,
-    remark: recommendation.remark || '',
+    // remark: recommendation.remark || '',
     batchAllocations: [],
     isTriggerProduct: false,
     isRecommend: true,
@@ -3090,9 +3142,21 @@ const handleDownloadTemplate = async () => {
   downloadLoading.value = true;
 
   try {
-    const response = await axios.get('/api/auth/outbound/exportExcel?warehouseId=' + formData.warehouseId, {
-      headers: accessHeader(),
-      responseType: 'blob',
+    // 获取产品ID列表
+    const productIds = filteredProducts.value
+      .filter(p => p.quantity > 0)
+      .map(p => p.productId)
+      .filter(id => id);
+
+    const response = await axios.post('/api/auth/outbound/exportExcel', {
+      warehouseId: formData.warehouseId,
+      productIds: productIds
+    }, {
+      headers: {
+        ...accessHeader(),
+        'Content-Type': 'application/json'
+      },
+      responseType: 'blob'
     });
 
     const blob = new Blob([response.data], {

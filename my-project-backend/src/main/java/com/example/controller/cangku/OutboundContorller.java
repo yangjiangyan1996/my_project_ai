@@ -275,8 +275,8 @@ public class OutboundContorller {
     }
 
 
-    @GetMapping("/exportExcel")
-    public void exportSkuExcel(HttpServletResponse response, @RequestParam("warehouseId") Long warehouseId) throws IOException {
+    @PostMapping("/exportExcel")
+    public void exportSkuExcel(HttpServletResponse response, @RequestBody OutboundExportSaleProductReq req) throws IOException {
         try{
             Long tenantId = UserUtil.getCurrentUser().getTenantId();
             // 设置响应头
@@ -289,7 +289,7 @@ public class OutboundContorller {
 
             // 准备数据，这里示例用空数据，如果有实际数据可以填充
             // 如果不想预填充测试数据，可传空列表 data = new ArrayList<>();
-            List<OutboundSaleExcelModel> dataList = outboundFacade.getOutboundSaleExportData(tenantId, warehouseId);
+            List<OutboundSaleExcelModel> dataList = outboundFacade.getOutboundSaleExportData(tenantId, req.getWarehouseId(), req.getProductIds());
 
             // EasyExcel 写入
             EasyExcel.write(response.getOutputStream(), OutboundSaleExcelModel.class)
