@@ -1462,12 +1462,43 @@ const generateOrderNo = () => {
   formData.orderNo = `CK${year}${month}${day}${random}`;
 };
 
+
+// 加载可用产品列表
+const loadAvailableProducts = async () => {
+  if (!formData.warehouseId) return;
+  
+  try {
+    const res = await get(`/api/auth/inventory/listOfWarehouse?warehouseId=${formData.warehouseId}`);
+    if (res && Array.isArray(res)) {
+      availableProducts.value = res.map(item => ({
+        ...item,
+        originalPrice: item.price || 0,
+        originalPriceUnitUsd: item.priceUnitUsd || 0
+      }));
+      filteredSelectorProducts.value = [...availableProducts.value];
+      
+      // 编辑模式下，更新已有产品的可用库存信息
+      if (isEditMode.value && outboundProducts.value.length > 0) {
+        outboundProducts.value.forEach(product => {
+          const availableProduct = availableProducts.value.find(p => p.productId === product.productId);
+          if (availableProduct) {
+            console.log('availableProduct', availableProduct);
+            product.availableQuantity = availableProduct.availableQuantity;
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('加载可用产品失败:', error);
+  }
+};
+
 // 加载出库单详情// 加载出库单详情// 加载出库单详情
 const loadOutboundDetail = async (id) => {
   loading.value = true;
   try {
     const res = await get(`/api/auth/outbound/detail?orderId=${id}`);
-    
+
     if (res) {
       const detailData = res.data || res;
       
@@ -1501,7 +1532,7 @@ const loadOutboundDetail = async (id) => {
           const isTriggerProduct = extension.isTriggerProduct === 0; // 0=是触发产品
           const isRecommend = extension.isRecommendProduct === 0; // 0=是推荐产品
           const triggerProductId = extension.triggerProductId || null;
-          
+
           // 构建产品对象
           const productData = {
             productId: item.productId,
@@ -1511,14 +1542,15 @@ const loadOutboundDetail = async (id) => {
             color: item.color || '',
             unitName: item.unit || '',
             // 关键：确保 quantity 字段正确设置
-            quantity: item.quantity ? Number(item.quantity) : 0,
+            quantity: item.quantity,
             price: item.priceUnit ? Number(item.priceUnit) : 0,
             priceUnitUsd: item.priceUnitUsd ? Number(item.priceUnitUsd) : 0,
             remark: item.remark || '',
             batchAllocations: item.batchAllocations || [],
             // 从 availableBatches 中获取可用库存，如果没有则设为0
-            availableQuantity: item.availableBatches ? 
-              item.availableBatches.reduce((sum, batch) => sum + Number(batch.quantity), 0) : 0,
+            // availableQuantity: item.availableBatches ? 
+            //   item.availableBatches.reduce((sum, batch) => sum + Number(batch.quantity), 0) : 0,
+            availableQuantity: item.quantity * 2,// TODO yang 这里最好是实时库存 如果这里的数量小于 item.quantity，就会导致页面回显出库数量为0
             // 扩展信息
             isTriggerProduct: isTriggerProduct,
             isRecommend: isRecommend,
@@ -1660,35 +1692,6 @@ const handleCustomerChange = async (customerId) => {
   }
 };
 
-
-// 加载可用产品列表
-const loadAvailableProducts = async () => {
-  if (!formData.warehouseId) return;
-  
-  try {
-    const res = await get(`/api/auth/inventory/listOfWarehouse?warehouseId=${formData.warehouseId}`);
-    if (res && Array.isArray(res)) {
-      availableProducts.value = res.map(item => ({
-        ...item,
-        originalPrice: item.price || 0,
-        originalPriceUnitUsd: item.priceUnitUsd || 0
-      }));
-      filteredSelectorProducts.value = [...availableProducts.value];
-      
-      // 编辑模式下，更新已有产品的可用库存信息
-      if (isEditMode.value && outboundProducts.value.length > 0) {
-        outboundProducts.value.forEach(product => {
-          const availableProduct = availableProducts.value.find(p => p.productId === product.productId);
-          if (availableProduct) {
-            product.availableQuantity = availableProduct.availableQuantity;
-          }
-        });
-      }
-    }
-  } catch (error) {
-    console.error('加载可用产品失败:', error);
-  }
-};
 
 
 // 快速搜索处理
@@ -3391,6 +3394,7 @@ const loadCustomerList = async () => {
     ElMessage.error('加载客户列表失败');
   }
 };
+
 
 onMounted(() => {
   if (isEditMode.value) {
