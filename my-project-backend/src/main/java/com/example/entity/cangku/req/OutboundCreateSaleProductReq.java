@@ -1,5 +1,6 @@
 package com.example.entity.cangku.req;
 
+import com.example.entity.cangku.vo.SaleOutBoundItemExtVO;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -48,6 +49,9 @@ public class OutboundCreateSaleProductReq {
         private BigDecimal priceTotalUsd;
         private List<BatchAllocationInner> batchAllocations;
         private String remark;
+
+        //销售出库扩展信息
+        SaleOutBoundItemExtVO extension;
     }
 
     @Data

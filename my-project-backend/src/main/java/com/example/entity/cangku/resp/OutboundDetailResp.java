@@ -77,6 +77,12 @@ public class OutboundDetailResp {
         // 备注
         private String remark;
 
+        //标识是否为触发产品
+        private Boolean isTriggerProduct;
+        //标识是否为推荐产品
+        private Boolean isRecommend;
+        //关联的触发产品ID
+        private Long triggerProductId;
 
         // 批次数量
         List<ProductInventoryBatchInner> availableBatches;

@@ -46,6 +46,8 @@ public class CkOutboundFacade {
     @Resource
     CkProductionTaskService productionTaskService;
     @Resource
+    CkOutboundOrderItemSaleExtService outboundOrderItemSaleExtService;
+    @Resource
     CkOutboundOrderItemService outboundOrderItemService;
 
     @Resource
@@ -918,6 +920,12 @@ public class CkOutboundFacade {
             shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
         }
 
+        List<OutboundOrderItemSaleExt> outboundOrderItemSaleExts = outboundOrderItemSaleExtService.selectByOrderId(orderId, tenantId);
+        Map<Long, OutboundOrderItemSaleExt> productId2OutboundOrderItemSaleExtMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty(outboundOrderItemSaleExts)) {
+            productId2OutboundOrderItemSaleExtMap = outboundOrderItemSaleExts.stream().collect(Collectors.toMap(OutboundOrderItemSaleExt::getProductId, v -> v));
+        }
+
         OutboundDetailResp resp = new OutboundDetailResp();
         resp.setId(outboundOrder.getId());
         resp.setOrderNo(outboundOrder.getOrderNo());
@@ -964,6 +972,14 @@ public class CkOutboundFacade {
                 req.setPriceTotalUsd(outItemList.get(0).getPriceTotalUsd());
                 req.setPriceUnitUsd(outItemList.get(0).getPriceUnitUsd());
                 req.setRemark(outItemList.get(0).getRemark());
+
+                //扩展信息
+                if(productId2OutboundOrderItemSaleExtMap.containsKey(productId)) {
+                    OutboundOrderItemSaleExt saleExt = productId2OutboundOrderItemSaleExtMap.getOrDefault(productId, new OutboundOrderItemSaleExt());
+                    req.setIsTriggerProduct(saleExt.getIsTriggerProduct() == 0 ? true : false);
+                    req.setIsRecommend(saleExt.getIsRecommendProduct() == 0 ? true : false);
+                    req.setTriggerProductId(saleExt.getTriggerProductId());
+                }
 
                 List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v -> {
                     OutboundDetailResp.ProductInventoryBatchInner i = new OutboundDetailResp.ProductInventoryBatchInner();
@@ -1606,7 +1622,8 @@ public class CkOutboundFacade {
      */
     @Transactional(rollbackFor = Exception.class)
     public Boolean createProductionSaleOutBound(OutboundCreateSaleProductReq req) {
-        //校验请求参数的合法性
+        // 1. 校验请求参数的合法性
+        validateOutboundRequest(req);
 
         // 2. 构建出库单主表实体对象
         OutboundOrder outboundOrder = buildOutboundOrder(req);
@@ -1617,18 +1634,124 @@ public class CkOutboundFacade {
             throw new ValidationException("出库单主表保存失败");
         }
 
-
         // 4. 处理出库单明细
-        List<OutboundOrderItem> orderItems1 = buildOutboundOrderItems(req, outboundOrder.getId());
-        boolean itemsSaved1 = outboundOrderItemService.saveBatch(orderItems1);
-        if (!itemsSaved1) {
+        List<OutboundOrderItem> orderItems = buildOutboundOrderItems(req, outboundOrder.getId());
+        boolean itemsSaved = outboundOrderItemService.saveBatch(orderItems);
+        if (!itemsSaved) {
             throw new ValidationException("出库单明细保存失败");
         }
-        // 5. 如果是已完成状态，更新库存和流水
+
+        // 5. 处理销售出库扩展表
+        List<OutboundOrderItemSaleExt> outboundOrderItemSaleExts = handleOutboundOrderItemExtensions(req, outboundOrder, orderItems);
+        // 批量插入扩展表数据
+        if (!CollectionUtils.isEmpty(outboundOrderItemSaleExts)) {
+            boolean extSaved = outboundOrderItemSaleExtService.saveBatch(outboundOrderItemSaleExts);
+            if (!extSaved) {
+                throw new ValidationException("销售出库扩展表保存失败");
+            }
+        }
+
+        // 6. 如果是已完成状态，更新库存和流水
         if (req.getStatus() == 3) { // 已完成状态
-            inventoryHolder.updateSubInventoryForApprove(outboundOrder, orderItems1, req.getUserId());
+            inventoryHolder.updateSubInventoryForApprove(outboundOrder, orderItems, req.getUserId());
         }
         return true;
+    }
+
+    /**
+     * 处理销售出库单明细扩展表
+     */
+    private List<OutboundOrderItemSaleExt> handleOutboundOrderItemExtensions(OutboundCreateSaleProductReq req,
+                                                   OutboundOrder outboundOrder,
+                                                   List<OutboundOrderItem> orderItems) {
+        if (CollectionUtils.isEmpty(req.getItems())) {
+            return new ArrayList<>();
+        }
+
+        List<OutboundOrderItemSaleExt> extList = new ArrayList<>();
+
+        for (int i = 0; i < req.getItems().size(); i++) {
+            OutboundCreateSaleProductReq.OrderItemInner itemReq = req.getItems().get(i);
+            OutboundOrderItem orderItem = orderItems.get(i);
+
+            OutboundOrderItemSaleExt ext = new OutboundOrderItemSaleExt();
+
+            // 设置租户ID（假设从请求中获取或从上下文中获取）
+            ext.setTenantId(req.getTenantId());
+
+            // 设置出库单ID
+            ext.setOrderId(outboundOrder.getId());
+
+            // 设置出库单详情ID
+            ext.setOrderItemId(orderItem.getId());
+
+            // 设置产品ID
+            ext.setProductId(itemReq.getProductId());
+
+            // 设置是否为触发产品
+            // 注意：根据你的表结构注释，0=是，1=不是，所以这里取反
+            if (Boolean.TRUE.equals(itemReq.getExtension().getIsTriggerProduct())) {
+                ext.setIsTriggerProduct(0); // 0=是触发产品
+            } else {
+                ext.setIsTriggerProduct(1); // 1=不是触发产品
+            }
+
+            // 设置是否为推荐产品
+            // 注意：根据你的表结构注释，0=是，1=不是，所以这里取反
+            if (Boolean.TRUE.equals(itemReq.getExtension().getIsRecommendProduct())) {
+                ext.setIsRecommendProduct(0); // 0=是推荐产品
+            } else {
+                ext.setIsRecommendProduct(1); // 1=不是推荐产品
+            }
+
+            // 设置触发产品ID
+            if (itemReq.getExtension().getTriggerProductId() != null && itemReq.getExtension().getTriggerProductId() > 0) {
+                ext.setTriggerProductId(itemReq.getExtension().getTriggerProductId());
+            } else {
+                ext.setTriggerProductId(0L); // 如果没有触发产品，设为0或null，但表结构NOT NULL，所以设为0
+            }
+
+            // 设置创建人
+            ext.setCreatedBy(req.getUserId());
+
+            // 设置修改人
+            ext.setModifiedBy(req.getUserId());
+
+            // 创建时间和修改时间使用数据库默认值
+
+            extList.add(ext);
+        }
+
+        return extList;
+    }
+
+    /**
+     * 校验出库单请求参数
+     */
+    private void validateOutboundRequest(OutboundCreateSaleProductReq req) {
+        // 基本的校验逻辑
+        if (req == null) {
+            throw new ValidationException("出库单请求参数不能为空");
+        }
+
+        if (req.getWarehouseId() == null) {
+            throw new ValidationException("仓库不能为空");
+        }
+
+        if (req.getCustomerId() == null) {
+            throw new ValidationException("客户不能为空");
+        }
+
+        if (CollectionUtils.isEmpty(req.getItems())) {
+            throw new ValidationException("出库产品明细不能为空");
+        }
+
+        // 检查产品数量是否有效
+        for (OutboundCreateSaleProductReq.OrderItemInner item : req.getItems()) {
+            if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("产品出库数量必须大于0");
+            }
+        }
     }
 
 

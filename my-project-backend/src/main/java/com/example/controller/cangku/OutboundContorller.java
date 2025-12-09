@@ -64,7 +64,7 @@ public class OutboundContorller {
 
 
     /**
-     * 获取出库详情
+     * 获取销售出库详情
      * @param orderId 出库订单ID
      * @return 返回出库详情
      */
@@ -83,7 +83,7 @@ public class OutboundContorller {
     }
 
     /**
-     * 获取出库详情 (新的)
+     * 获取生产领料出库详情
      * @param orderId 出库订单ID
      * @return 返回出库详情
      */

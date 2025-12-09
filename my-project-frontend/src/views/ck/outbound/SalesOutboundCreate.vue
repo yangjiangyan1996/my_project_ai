@@ -10,7 +10,7 @@
               type="primary" 
               @click="handleSaveDraft" 
               :loading="loading"
-              v-if="!isEditMode || (isEditMode && formData.status === 0)"
+              v-if="!isViewMode && (!isEditMode || (isEditMode && formData.status === 0))"
             >
               保存草稿
             </el-button>
@@ -18,7 +18,7 @@
               type="primary" 
               @click="handleSubmit" 
               :loading="loading"
-              v-if="!isEditMode || (isEditMode && (formData.status === 0 || formData.status === 4))"
+              v-if="!isViewMode && (!isEditMode || (isEditMode && (formData.status === 0 || formData.status === 4)))"
             >
               {{ isEditMode ? '更新提交' : '提交审核' }}
             </el-button>
@@ -478,7 +478,7 @@
                       type="info" 
                       class="recommend-source-tag"
                     >
-                      来自: {{ getProductName(row.triggerProductId) }}
+                      来自: {{ getProductName(row.triggerProductId)  }}
                     </el-tag>
                   </div>
                 </div>
@@ -1280,7 +1280,14 @@ const importLoading = ref(false);
 // 计算属性
 const isEditMode = computed(() => !!route.params.id);
 
-const isViewMode = computed(() => formData.status > 1);
+const isViewMode = computed(() => {
+  // 如果是编辑模式但状态不可编辑，则进入查看模式
+  if (isEditMode.value) {
+    // 假设状态 0=草稿, 1=待审核, 2=已审核, 3=已出库, 4=已取消
+    return formData.status > 1; // 只有草稿和待审核状态可编辑
+  }
+  return false; // 新建模式肯定不是查看模式
+});
 
 const filteredProducts = computed(() => {
   return outboundProducts.value.filter(p => {
@@ -1432,7 +1439,7 @@ const loadOutboundDetail = async (id) => {
         expectedDate: detailData.expectedDate,
         relatedOrderNo: detailData.relatedOrderNo || '',
         remark: detailData.remark || '',
-        status: detailData.status
+        status: detailData.status || 0
       });
 
       // 设置附件数据
@@ -1457,9 +1464,20 @@ const loadOutboundDetail = async (id) => {
           availableQuantity: item.currentStock || 0,
           isTriggerProduct: item.isTriggerProduct || false,
           isRecommend: item.isRecommend || false,
-          triggerProductId: item.triggerProductId || null
+          triggerProductId: item.triggerProductId || null,
+          originalPrice: item.priceUnit || 0,
+          originalPriceUnitUsd: item.priceUnitUsd || 0,
+          historyPrice: null // 稍后单独加载
         }));
       }
+      
+      // 编辑模式下，加载仓库对应的可用产品
+      if (formData.warehouseId) {
+        await loadAvailableProducts();
+      }
+      
+      // 编辑模式下，为已有的触发产品加载推荐
+      await loadRecommendationsForExistingProducts();
       
       ElMessage.success('数据加载成功');
     }
@@ -1472,14 +1490,48 @@ const loadOutboundDetail = async (id) => {
   }
 };
 
+// 为编辑模式下的现有产品加载推荐
+const loadRecommendationsForExistingProducts = async () => {
+  if (!formData.customerId || !formData.warehouseId) return;
+  
+  // 重置推荐数据
+  groupedRecommendations.value = [];
+  recommendationDetails.value = {};
+  
+  // 为每个触发产品加载推荐
+  const triggerProducts = outboundProducts.value.filter(p => p.isTriggerProduct && p.quantity > 0);
+  
+  for (const product of triggerProducts) {
+    await loadRecommendationsForProduct(product.productId, product.quantity);
+  }
+  
+  // 标记已添加的推荐产品为选中状态
+  const recommendProducts = outboundProducts.value.filter(p => p.isRecommend && p.quantity > 0);
+  recommendProducts.forEach(recommendProduct => {
+    // 在推荐分组中找到对应的推荐项并标记为选中
+    groupedRecommendations.value.forEach(group => {
+      const item = group.items.find(i => i.productId === recommendProduct.productId);
+      if (item) {
+        item.selected = true;
+      }
+    });
+  });
+};
+
+
+// 仓库变化处理
 // 仓库变化处理
 const handleWarehouseChange = async (warehouseId) => {
   if (warehouseId && formData.customerId) {
     await loadAvailableProducts();
   }
-  outboundProducts.value = [];
-  groupedRecommendations.value = [];
-  recommendationDetails.value = {};
+  
+  // 编辑模式下不清空已有产品，除非是新建模式
+  if (!isEditMode.value) {
+    outboundProducts.value = [];
+    groupedRecommendations.value = [];
+    recommendationDetails.value = {};
+  }
 };
 
 // 客户变化处理
@@ -1487,10 +1539,15 @@ const handleCustomerChange = async (customerId) => {
   if (customerId && formData.warehouseId) {
     await loadAvailableProducts();
   }
-  outboundProducts.value = [];
-  groupedRecommendations.value = [];
-  recommendationDetails.value = {};
+  
+  // 编辑模式下不清空已有产品，除非是新建模式
+  if (!isEditMode.value) {
+    outboundProducts.value = [];
+    groupedRecommendations.value = [];
+    recommendationDetails.value = {};
+  }
 };
+
 
 // 加载可用产品列表
 const loadAvailableProducts = async () => {
@@ -1505,11 +1562,22 @@ const loadAvailableProducts = async () => {
         originalPriceUnitUsd: item.priceUnitUsd || 0
       }));
       filteredSelectorProducts.value = [...availableProducts.value];
+      
+      // 编辑模式下，更新已有产品的可用库存信息
+      if (isEditMode.value && outboundProducts.value.length > 0) {
+        outboundProducts.value.forEach(product => {
+          const availableProduct = availableProducts.value.find(p => p.productId === product.productId);
+          if (availableProduct) {
+            product.availableQuantity = availableProduct.availableQuantity;
+          }
+        });
+      }
     }
   } catch (error) {
     console.error('加载可用产品失败:', error);
   }
 };
+
 
 // 快速搜索处理
 const handleQuickSearch = () => {
@@ -1997,7 +2065,7 @@ const applyGroupRecommendations = (group) => {
 const getProductName = (productId) => {
   const product = outboundProducts.value.find(p => p.productId === productId) || 
                   availableProducts.value.find(p => p.productId === productId);
-  return product ? product.productName : '未知产品';
+  return product ? `${product.productName} - ${product.spec ? product.spec : '无规格'} - ${product.color ? product.color : '无颜色'}` : '未知产品';
 };
 
 // 获取产品数量
@@ -2982,35 +3050,48 @@ const handleSubmit = async () => {
   }
 };
 
-// 准备提交数据
+// 准备提交数据// 准备提交数据
 const prepareSubmitData = () => {
   const items = outboundProducts.value
     .filter(item => item.quantity > 0)
-    .map(item => ({
-      productId: item.productId,
-      productName: item.productName,
-      sku: item.sku,
-      spec: item.spec,
-      unit: item.unitName,
-      color: item.color,
-      currentStock: item.availableQuantity,
-      quantity: item.quantity,
-      price: item.price,
-      priceTotal: item.price * (item.quantity || 0),
-      priceUnitUsd: item.priceUnitUsd || 0,
-      priceTotalUsd: (item.priceUnitUsd || 0) * (item.quantity || 0),
-      batchAllocations: (item.batchAllocations || []).map(allocation => ({
-        batchNo: allocation.batchNo,
-        shelfId: allocation.shelfId,
-        shelfName: allocation.shelfName,
-        quantity: allocation.quantity,
-        price: allocation.price || item.price || 0
-      })),
-      remark: item.remark || '',
-      isTriggerProduct: item.isTriggerProduct || false,
-      isRecommend: item.isRecommend || false,
-      triggerProductId: item.triggerProductId || null
-    }));
+    .map(item => {
+      // 构建扩展信息
+      const extension = {
+        productId: item.productId,
+        isTriggerProduct: item.isTriggerProduct ? 0 : 1, // 0=是触发产品, 1=不是触发产品
+        isRecommendProduct: item.isRecommend ? 0 : 1, // 0=是推荐产品, 1=不是推荐产品
+        triggerProductId: item.triggerProductId || 0, // 关联的触发产品ID，没有则为0
+        remark: item.remark || ''
+      };
+      
+      return {
+        productId: item.productId,
+        productName: item.productName,
+        sku: item.sku,
+        spec: item.spec,
+        unit: item.unitName,
+        color: item.color,
+        currentStock: item.availableQuantity,
+        quantity: item.quantity,
+        price: item.price,
+        priceTotal: item.price * (item.quantity || 0),
+        priceUnitUsd: item.priceUnitUsd || 0,
+        priceTotalUsd: (item.priceUnitUsd || 0) * (item.quantity || 0),
+        batchAllocations: (item.batchAllocations || []).map(allocation => ({
+          batchNo: allocation.batchNo,
+          shelfId: allocation.shelfId,
+          shelfName: allocation.shelfName,
+          quantity: allocation.quantity,
+          price: allocation.price || item.price || 0
+        })),
+        remark: item.remark || '',
+        isTriggerProduct: item.isTriggerProduct || false,
+        isRecommend: item.isRecommend || false,
+        triggerProductId: item.triggerProductId || null,
+        // 扩展信息
+        extension: extension
+      };
+    });
   
   return {
     ...formData,
