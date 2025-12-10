@@ -199,7 +199,7 @@
         </div>
 
       <!-- 快捷操作 -->
-      <el-card class="quick-actions-card" shadow="never">
+      <!-- <el-card class="quick-actions-card" shadow="never">
         <template #header>
           <div class="card-header">
             <span class="card-title">快捷操作</span>
@@ -252,7 +252,7 @@
             审批待办
           </el-button>
         </div>
-      </el-card>
+      </el-card> -->
 
       <!-- 库存预警监控 - 整行显示 -->
       <el-card class="low-stock-alert-card" shadow="never">
