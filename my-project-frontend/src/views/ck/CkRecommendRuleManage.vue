@@ -126,10 +126,12 @@
         <el-table-column label="触发产品" min-width="200">
           <template #default="scope">
             <div>{{ scope.row.triggerProductName }}</div>
-            <div class="text-muted">{{ scope.row.triggerProductSku }}</div>
+            <div class="text-muted">sku: {{ scope.row.triggerProductSku }}</div>
+            <div class="text-muted">spec: {{ scope.row.triggerProductSpec }}</div>
+            <div class="text-muted">color: {{ scope.row.triggerProductColor }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="触发数量" width="130" align="center">
+        <el-table-column label="触发数量" width="100" align="center">
           <template #default="scope">
             {{ scope.row.triggerMinQuantity }}
             <span v-if="scope.row.triggerMaxQuantity"> - {{ scope.row.triggerMaxQuantity }}</span>
