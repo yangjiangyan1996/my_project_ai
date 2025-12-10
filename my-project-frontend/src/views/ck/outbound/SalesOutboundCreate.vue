@@ -5,7 +5,7 @@
         <div class="card-header">
           <span class="card-title">{{ isEditMode ? '编辑销售出库单' : '新建销售出库单' }}</span>
           <div class="header-actions">
-            <el-button @click="handleReset">重置</el-button>
+            <el-button @click="handleReset" >重置</el-button>
             <el-button 
               type="primary" 
               @click="handleSaveDraft" 
