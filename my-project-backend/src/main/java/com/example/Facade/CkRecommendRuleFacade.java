@@ -1,5 +1,6 @@
 package com.example.Facade;
 
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.Customer;
 import com.example.entity.cangku.dto.Product;
@@ -14,6 +15,7 @@ import com.example.service.*;
 import com.google.common.collect.Lists;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
  * @Date 2025/12/6 15:37
  */
 @Service
+@Slf4j
 public class CkRecommendRuleFacade {
     @Resource
     private CkRecommendRuleService recommendRuleService;
@@ -284,6 +287,7 @@ public class CkRecommendRuleFacade {
         }
         List<RecommendRule> rules = recommendRuleService.selectList(tenantId, req);
         if (CollectionUtils.isEmpty(rules)) {
+            log.warn("CkRecommendRuleFacade#queryRuleItems, 规则不存在, req:{}, tenantId:{}", JSON.toJSONString( req), tenantId);
             return new RecommendRuleQueryResp();
         }
         List<Long> ruleIds = rules.stream().map(v -> v.getId()).collect(Collectors.toList());

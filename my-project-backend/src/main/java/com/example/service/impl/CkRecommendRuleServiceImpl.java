@@ -28,7 +28,7 @@ public class CkRecommendRuleServiceImpl extends ServiceImpl<CkRecommendRuleMappe
                         .eq(req.getCustomerId()!= null ,"customer_id", req.getCustomerId())
                         .eq(req.getApplyScene()!= null ,"apply_scene", req.getApplyScene())
                         .eq(req.getProductId()!= null ,"trigger_product_id", req.getProductId())
-                        .eq(req.getQuantity() != null ,"trigger_min_quantity", req.getQuantity())
+                        .le(req.getQuantity() != null ,"trigger_min_quantity", req.getQuantity())
                         .eq("tenant_id", tenantId)
                         .eq("status", 1)
                         .eq("is_deleted",0)
