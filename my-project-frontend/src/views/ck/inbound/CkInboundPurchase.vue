@@ -1,6 +1,19 @@
 <!-- 采购入库， ORDER_TYPE =1 -->
 <template>
   <div class="inbound-create-container">
+
+    <!-- 返回按钮行 -->
+    <div class="back-header">
+      <el-button 
+        type="text" 
+        @click="handleGoBack"
+        :icon="ArrowLeft"
+        class="back-btn"
+      >
+        返回
+      </el-button>
+    </div>
+
     <el-card class="form-card" shadow="never">
       <template #header>
         <div class="card-header">
@@ -35,7 +48,16 @@
         label-width="120px"
         class="inbound-form"
       >
+       
         <el-row :gutter="24">
+          <el-col :xs="24" :sm="12" :lg="8">
+            <el-form-item label="采购单号" prop="relatedOrderNo">
+              <el-input
+                v-model="formData.relatedOrderNo"
+                placeholder="请输入采购单号"
+              />
+            </el-form-item>
+          </el-col>
           <el-col :xs="24" :sm="12" :lg="8">
             <el-form-item label="入库单号" prop="orderNo">
               <el-input v-model="formData.orderNo" placeholder="系统自动生成" disabled />
@@ -85,14 +107,6 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :sm="12" :lg="8">
-            <el-form-item label="采购单号" prop="relatedOrderNo">
-              <el-input
-                v-model="formData.relatedOrderNo"
-                placeholder="请输入采购单号"
-              />
-            </el-form-item>
-          </el-col>
         </el-row>
 
         <el-form-item label="备注" prop="remark">
@@ -119,6 +133,7 @@
               :disabled="!canAutoAllocate"
               class="auto-allocate-btn"
               icon="CircleCheck"
+              v-if="!isEditMode || (isEditMode && formData.status === 0)"
             >
               自动全部分配
             </el-button>
@@ -229,14 +244,28 @@
             </el-table-column>
 
             <!-- 批次号 -->
-            <el-table-column label="批次号" min-width="150">
+            <el-table-column label="批次号" min-width="180">
               <template #default="{ row, $index }">
-                <el-input
-                  v-model="row.batchNo"
-                  placeholder="批次号"
-                  size="small"
-                  @blur="() => validateBatchNo(row.batchNo, $index)"
-                />
+                <div class="batch-no-cell">
+                  <el-input
+                    v-model="row.batchNo"
+                    placeholder="批次号"
+                    size="small"
+                    @blur="() => validateBatchNo(row.batchNo, $index)"
+                    class="batch-input"
+                  />
+                  <el-button
+                    v-if="row.batchNo"
+                    type="primary"
+                    link
+                    size="small"
+                    @click="copyBatchNoToAll(row.batchNo)"
+                    class="copy-batch-btn"
+                    title="复制此批次号到所有产品"
+                  >
+                    复制到所有
+                  </el-button>
+                </div>
               </template>
             </el-table-column>
 
@@ -452,7 +481,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Delete, CircleCheck } from '@element-plus/icons-vue';
+import { Plus, Delete,  CircleCheck, ArrowLeft } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
 const router = useRouter();
@@ -681,6 +710,85 @@ const handleActualQuantityChange = (value, index) => {
   
   calculateItemTotal(index);
 };
+
+
+// 返回上一页方法
+const handleGoBack = () => {
+  // 检查是否有未保存的更改
+  const hasUnsavedChanges = formData.items.length > 0 || 
+                           formData.warehouseId || 
+                           formData.supplierId || 
+                           formData.relatedOrderNo || 
+                           formData.remark;
+  
+  if (hasUnsavedChanges && !isEditMode.value) {
+    ElMessageBox.confirm(
+      '当前表单有未保存的更改，确定要返回吗？',
+      '确认返回',
+      {
+        type: 'warning',
+        confirmButtonText: '确定返回',
+        cancelButtonText: '取消',
+        distinguishCancelAndClose: true
+      }
+    ).then(() => {
+      // 用户确认返回
+      router.back();
+    }).catch(() => {
+      // 用户取消返回
+    });
+  } else {
+    // 没有未保存的更改或处于编辑模式，直接返回
+    router.back();
+  }
+};
+
+// 复制批次号方法
+const copyBatchNoToAll = (batchNo) => {
+  if (!batchNo || batchNo.trim() === '') {
+    ElMessage.warning('请先输入有效的批次号');
+    return;
+  }
+  
+  ElMessageBox.confirm(
+    `确定要将批次号 "${batchNo}" 复制到所有产品的批次号吗？`,
+    '批量复制批次号',
+    {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    }
+  ).then(() => {
+    // 复制到所有有产品的行
+    formData.items.forEach((item, index) => {
+      if (item.productId) { // 只复制给已选择产品的行
+        item.batchNo = batchNo;
+        validateBatchNo(batchNo, index);
+      }
+    });
+    ElMessage.success(`已成功将批次号 "${batchNo}" 复制到所有产品`);
+  }).catch(() => {
+    // 用户取消操作
+  });
+};
+
+// 复制当前行的批次号到所有产品
+const copyCurrentBatchToAll = (index) => {
+  const currentItem = formData.items[index];
+  if (!currentItem.productId) {
+    ElMessage.warning('请先选择当前行的产品');
+    return;
+  }
+  
+  if (!currentItem.batchNo || currentItem.batchNo.trim() === '') {
+    ElMessage.warning('请先输入当前行的批次号');
+    return;
+  }
+  
+  copyBatchNoToAll(currentItem.batchNo);
+};
+
+
 
 const calculateItemTotal = (index) => {
   const item = formData.items[index];
@@ -2063,4 +2171,91 @@ watch(
   left: 8px;
   pointer-events: none;
 }
+
+
+/* 批次号单元格样式 */
+.batch-no-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.batch-input {
+  margin-bottom: 4px;
+}
+
+.copy-batch-btn {
+  align-self: flex-start;
+  font-size: 12px;
+  padding: 0;
+  height: 20px;
+}
+
+/* 批量操作样式 */
+.batch-operations {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .batch-operations {
+    flex-direction: row;
+    justify-content: center;
+  }
+  
+  .copy-batch-btn {
+    font-size: 11px;
+  }
+}
+
+/* 返回按钮区域样式 */
+.back-header {
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.back-btn {
+  padding: 10px 16px;  /* 增加内边距 */
+  font-size: 16px;     /* 增大字体 */
+  font-weight: 500;    /* 增加字重 */
+  color: #409EFF;
+}
+
+.back-btn:hover {
+  background-color: #ecf5ff;
+  border-radius: 4px;
+}
+
+.back-btn i {
+  margin-right: 6px;  /* 增加图标和文字间距 */
+  font-size: 18px;    /* 增大图标 */
+}
+
+/* 调整整体容器，为返回按钮腾出空间 */
+.inbound-create-container {
+  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: calc(100vh - 60px);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .back-header {
+    margin-bottom: 12px;
+  }
+  
+  .back-btn {
+    padding: 8px 14px;
+    font-size: 15px;
+  }
+  
+  .back-btn i {
+    font-size: 16px;
+    margin-right: 4px;
+  }
+}
+
 </style>
