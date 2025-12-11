@@ -243,6 +243,20 @@ public class InventoryController {
         }
     }
 
-
+    //获取商品常用的货架
+    @GetMapping("/getCommonlyUsedShelvesForGoods")
+    public RespBean<List<ProductUsedShelfResp>> getCommonlyUsedShelvesForGoods(@RequestParam("productIds") List<Long> productIds) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<ProductUsedShelfResp> result = inventoryFacade.getCommonlyUsedShelvesForGoods(productIds, user.getTenantId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("InventoryController#getCommonlyUsedShelvesForGoods,req:{}",JSON.toJSONString(productIds), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#getCommonlyUsedShelvesForGoods,req:{}", JSON.toJSONString(productIds), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 
 }

@@ -2,6 +2,8 @@ package com.example.entity.cangku.resp;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 /**
  * @Author YangJian
  * @Description
@@ -29,6 +31,8 @@ public class ShelfPageListResp {
     private String layer;
     //容量
     private double capacity;
+    //可用容量
+    private BigDecimal availableCapacity;
     //容量单位
     private String capacityUnit;
     //状态：0-禁用，1-启用

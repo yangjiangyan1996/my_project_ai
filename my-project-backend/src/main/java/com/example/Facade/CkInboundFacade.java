@@ -4,10 +4,7 @@ import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.*;
-import com.example.entity.cangku.resp.InboundCountOfManagePageResp;
-import com.example.entity.cangku.resp.InboundDetailResp;
-import com.example.entity.cangku.resp.InboundListPageResp;
-import com.example.entity.cangku.resp.InboundProductInDetailResp;
+import com.example.entity.cangku.resp.*;
 import com.example.enums.CkInOutboundEnums;
 import com.example.holder.InventoryHolder;
 import com.example.holder.ProductTaskHolder;
@@ -35,6 +32,8 @@ import java.util.stream.Collectors;
 @Service
 public class CkInboundFacade {
     @Resource
+    CkInventoryFacade inventoryFacade;
+    @Resource
     ProductTaskHolder productTaskHolder;
     @Resource
     CkOutboundOrderService outboundOrderService;
@@ -44,6 +43,8 @@ public class CkInboundFacade {
     CkUnitService unitService;
     @Resource
     CkProductService productService;
+    @Resource
+    CkShelfFacade shelfFacade;
     @Resource
     CkShelfService shelfService;
     @Resource
@@ -90,7 +91,7 @@ public class CkInboundFacade {
 
         //判断数量生产入库数量是否足够
         //后续要加入审核的时候，要加一个锁定库存
-        productTaskHolder.checkProductTaskAndSave(req,orderItems);
+        productTaskHolder.checkProductTaskAndSave(req, orderItems);
 
         // 5. 如果是已完成状态，更新库存和流水
         if (req.getStatus() == 3) { // 已完成状态
@@ -595,7 +596,7 @@ public class CkInboundFacade {
             req.setBatchNo(inboundOrderItems.get(0).getBatchNo());
             req.setRemark(inboundOrderItems.get(0).getRemark());
             req.setPriceUnit(inboundOrderItems.get(0).getPriceUnit());
-            req.setShelfLocationIds(inboundOrderItems.stream().map(v->v.getShelfLocationId()).distinct().collect(Collectors.toList()));
+            req.setShelfLocationIds(inboundOrderItems.stream().map(v -> v.getShelfLocationId()).distinct().collect(Collectors.toList()));
             req.setPriceTotal(priceTotal);
             req.setActualQuantity(actualQuantity);
             Product product = finalProductId2ProductMap.getOrDefault(inboundOrderItems.get(0).getProductId(), null);
@@ -638,7 +639,7 @@ public class CkInboundFacade {
 
         //查询 入库明细， 记录ID-数量 ,用于回滚productionTas数据
         List<InboundOrderItem> items = inboundOrderItemService.selectByInboundOrderId(req.getTenantId(), req.getId());
-        Map<Long, BigDecimal> productionTaskId2QuantityMap = items.stream().filter(v->v.getProductionTaskId()!=null).collect(Collectors.toMap(v -> v.getProductionTaskId(), v -> v.getActualQuantity()));
+        Map<Long, BigDecimal> productionTaskId2QuantityMap = items.stream().filter(v -> v.getProductionTaskId() != null).collect(Collectors.toMap(v -> v.getProductionTaskId(), v -> v.getActualQuantity()));
         // 6. 处理入库单明细 - 先删除旧的，再插入新的
         boolean itemsDeleted = inboundOrderItemService.deleteByOrderId(req.getTenantId(), req.getId(), req.getUserId());
         if (!itemsDeleted) {
@@ -652,9 +653,9 @@ public class CkInboundFacade {
         }
 
         //回滚productionTask数量
-        if(!productionTaskId2QuantityMap.isEmpty()) {
+        if (!productionTaskId2QuantityMap.isEmpty()) {
             List<ProductionTask> productionTasks = productionTaskService.selectByIds(productionTaskId2QuantityMap.keySet(), req.getTenantId());
-            productionTasks.forEach(v->{
+            productionTasks.forEach(v -> {
                 v.setRemainingQuantity(v.getRemainingQuantity().add(productionTaskId2QuantityMap.get(v.getId())));
                 v.setLockQuantity(v.getLockQuantity().subtract(productionTaskId2QuantityMap.get(v.getId())));
             });
@@ -666,7 +667,7 @@ public class CkInboundFacade {
 
         //判断数量生产入库数量是否足够
         //后续要加入审核的时候，要加一个锁定库存
-        productTaskHolder.checkProductTaskAndSave(req,  orderItems);
+        productTaskHolder.checkProductTaskAndSave(req, orderItems);
 
         // 7. 如果状态从未完成变为已完成，更新库存和流水
         if (existingOrder.getStatus() != 3 && req.getStatus() == 3) {
@@ -903,7 +904,7 @@ public class CkInboundFacade {
         }
 
         // 按生产任务ID分组，汇总入库数量
-        Map<Long, InboundOrderItem> taskId2InboundItemMap = itemsWithProductionTask.stream().collect(Collectors.toMap(v->v.getProductionTaskId(), v->v));
+        Map<Long, InboundOrderItem> taskId2InboundItemMap = itemsWithProductionTask.stream().collect(Collectors.toMap(v -> v.getProductionTaskId(), v -> v));
 
         // 批量查询生产任务'
         List<Long> productionTaskIds = itemsWithProductionTask.stream().map(v -> v.getProductionTaskId()).distinct().collect(Collectors.toList());
@@ -932,7 +933,7 @@ public class CkInboundFacade {
 
         for (ProductionTask task : productionTasks) {
             InboundOrderItem inboundOrderItem = taskId2InboundItemMap.get(task.getId());
-            BigDecimal inboundQuantity =inboundOrderItem.getActualQuantity();
+            BigDecimal inboundQuantity = inboundOrderItem.getActualQuantity();
             if (inboundQuantity == null || inboundQuantity.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
@@ -1062,7 +1063,7 @@ public class CkInboundFacade {
         Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
         Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
 
-        List<InboundProductInDetailResp.InboundItemDetail> items =new ArrayList<>();
+        List<InboundProductInDetailResp.InboundItemDetail> items = new ArrayList<>();
         //根据货物ID_关联领料单ID来分组
         Map<String, List<InboundOrderItem>> productId_relationPickingOrderId2InboundItemListMap = inboundItemList.stream().collect(Collectors.groupingBy(v -> v.getProductId() + "_" + v.getRelatedOutboundOrderNo()));
         for (String productId_relationPickingOrderId : productId_relationPickingOrderId2InboundItemListMap.keySet()) {
@@ -1071,7 +1072,7 @@ public class CkInboundFacade {
 
             InboundProductInDetailResp.InboundItemDetail rd = new InboundProductInDetailResp.InboundItemDetail();
             rd.setProductId(v.getProductId());
-            Product product = finalProductId2ProductMap.getOrDefault(v.getProductId(),null);
+            Product product = finalProductId2ProductMap.getOrDefault(v.getProductId(), null);
             if (product != null) {
                 rd.setProductName(product.getName());
                 rd.setSku(product.getSku());
@@ -1123,6 +1124,7 @@ public class CkInboundFacade {
 
     /**
      * 获取数量
+     *
      * @param tenantId
      * @return
      */
@@ -1134,14 +1136,94 @@ public class CkInboundFacade {
         InboundCountOfManagePageResp r = new InboundCountOfManagePageResp();
         r.setTotalCount(inboundOrders.size());
 
-        List<InboundOrder> inboundOrdersOfWaiting = inboundOrders.stream().filter(v ->  CkInOutboundEnums.InOutBoundStatus.WaitSubmit.getCode().equals(v.getStatus())).collect(Collectors.toList());
+        List<InboundOrder> inboundOrdersOfWaiting = inboundOrders.stream().filter(v -> CkInOutboundEnums.InOutBoundStatus.WaitSubmit.getCode().equals(v.getStatus())).collect(Collectors.toList());
         r.setWaitApproveCount(inboundOrdersOfWaiting.size());
 
-        List<InboundOrder> appPassList = inboundOrders.stream().filter(v ->  CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode().equals(v.getStatus())).collect(Collectors.toList());
+        List<InboundOrder> appPassList = inboundOrders.stream().filter(v -> CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode().equals(v.getStatus())).collect(Collectors.toList());
         r.setApprovePassCount(appPassList.size());
 
-        List<InboundOrder> appRejectList = inboundOrders.stream().filter(v ->  CkInOutboundEnums.InOutBoundStatus.Reject.getCode().equals(v.getStatus())).collect(Collectors.toList());
+        List<InboundOrder> appRejectList = inboundOrders.stream().filter(v -> CkInOutboundEnums.InOutBoundStatus.Reject.getCode().equals(v.getStatus())).collect(Collectors.toList());
         r.setApproveRejectCount(appRejectList.size());
         return r;
+    }
+
+    public List<InboundProductUsedShelfResp> allocateIShelfnventoryQuantity(InboundProductUsedShelfReq req) {
+        List<Long> productIds = req.getList().stream().map(v -> v.getProductId()).collect(Collectors.toList());
+        List<ProductUsedShelfResp> commonlyUsedShelvesForGoods = inventoryFacade.getCommonlyUsedShelvesForGoods(productIds, req.getTenantId());
+        List<ShelfPageListResp> shelfList = shelfFacade.listEnable(req.getTenantId(), req.getWarehouseId());
+
+        //商品ID对应的需要分配的数量
+        Map<Long, BigDecimal> productId2QuantityMap = req.getList().stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getQuantity()));
+
+        Map<Long, String> productId2SkuMap = req.getList().stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getSku()));
+
+        //货架ID对应货架剩余可用数量
+        Map<Long, BigDecimal> shelfId2AvailableCapacityMap = shelfList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v.getAvailableCapacity()));
+
+        //商品ID对应商品常用的货架ID
+        Map<Long, List<Long>> productId2UsedShelfIdsMap = commonlyUsedShelvesForGoods.stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getShelfIds()));
+
+        List<InboundProductUsedShelfResp> result = new ArrayList<>();
+
+        //开始分配
+        for (Map.Entry<Long, BigDecimal> entry : productId2QuantityMap.entrySet()) {
+
+            Long productId = entry.getKey();
+            BigDecimal remainQty = entry.getValue(); // 还需要分配的数量
+
+            InboundProductUsedShelfResp resp = new InboundProductUsedShelfResp();
+            resp.setProductId(productId);
+            List<InboundProductUsedShelfResp.ProductUsedShelfRespInner> allocList = new ArrayList<>();
+
+            // 1. 优先分配常用货架
+            List<Long> preferredShelves = productId2UsedShelfIdsMap.getOrDefault(productId, Collections.emptyList());
+
+            for (Long shelfId : preferredShelves) {
+                if (remainQty.compareTo(BigDecimal.ZERO) <= 0) break;
+                BigDecimal available = shelfId2AvailableCapacityMap.getOrDefault(shelfId, BigDecimal.ZERO);
+
+                if (available.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+                BigDecimal assignQty = available.min(remainQty);
+                remainQty = remainQty.subtract(assignQty);
+                shelfId2AvailableCapacityMap.put(shelfId, available.subtract(assignQty));
+
+                allocList.add(new InboundProductUsedShelfResp.ProductUsedShelfRespInner(shelfId, assignQty));
+            }
+
+
+            // 2. 分配其他货架（排除常用货架）
+            if (remainQty.compareTo(BigDecimal.ZERO) > 0) {
+
+                for (ShelfPageListResp shelf : shelfList) {
+                    if (remainQty.compareTo(BigDecimal.ZERO) <= 0) break;
+
+                    Long shelfId = shelf.getId();
+                    if (preferredShelves.contains(shelfId)) continue;
+
+                    BigDecimal available = shelfId2AvailableCapacityMap.getOrDefault(shelfId, BigDecimal.ZERO);
+                    if (available.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+                    BigDecimal assignQty = available.min(remainQty);
+                    remainQty = remainQty.subtract(assignQty);
+                    shelfId2AvailableCapacityMap.put(shelfId, available.subtract(assignQty));
+
+                    allocList.add(new InboundProductUsedShelfResp.ProductUsedShelfRespInner(shelfId, assignQty));
+                }
+            }
+
+
+            // 3. 若还有剩余，说明货架容量不足 —— 给你暴露接口，可用于前端提示
+            if (remainQty.compareTo(BigDecimal.ZERO) > 0) {
+                // 你可以用抛异常，也可以在 resp 里加字段记录
+                String sku = productId2SkuMap.get(productId);
+                throw new ValidationException("商品sku " + sku + " 货架容量不足，剩余未分配数量：" + remainQty);
+            }
+
+            resp.setShelfQuantityList(allocList);
+            result.add(resp);
+        }
+
+        return result;
     }
 }

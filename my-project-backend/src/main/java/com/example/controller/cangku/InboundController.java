@@ -6,15 +6,14 @@ import com.example.Facade.CkInboundFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
-import com.example.entity.cangku.resp.InboundCountOfManagePageResp;
-import com.example.entity.cangku.resp.InboundDetailResp;
-import com.example.entity.cangku.resp.InboundListPageResp;
-import com.example.entity.cangku.resp.InboundProductInDetailResp;
+import com.example.entity.cangku.resp.*;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -194,6 +193,28 @@ public class InboundController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("InboundController#updateStatus,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+    //采购入库自动分配货架
+    @PostMapping("/allocateIShelfnventoryQuantity")
+    public RespBean<List<InboundProductUsedShelfResp>> allocateIShelfnventoryQuantity(@RequestBody InboundProductUsedShelfReq req) {
+        try {
+            Long userId = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+
+            List<InboundProductUsedShelfResp> result = ckInboundFacade.allocateIShelfnventoryQuantity(req);
+            return RespBean.success(result);
+        }  catch (ValidationException e) {
+            log.error("InboundController#allocateIShelfnventoryQuantity,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InboundController#allocateIShelfnventoryQuantity,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

@@ -21,6 +21,15 @@ import java.util.Set;
 @Service
 public class CkInventoryShelfServiceImpl extends ServiceImpl<CkInventoryShelfMapper, InventoryShelf> implements CkInventoryShelfService {
     @Override
+    public List<InventoryShelf> selectByShelfIds(Long tenantId, List<Long> shelfIds) {
+        return baseMapper.selectList(new QueryWrapper<InventoryShelf>()
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", 0)
+                .in("shelf_id", shelfIds)
+        );
+    }
+
+    @Override
     public List<InventoryShelf> getBatchShelfStock(Long tenantId, Long warehouseId, Long productId) {
         return baseMapper.selectList(new QueryWrapper<InventoryShelf>()
                 .eq("tenant_id", tenantId)
@@ -44,7 +53,16 @@ public class CkInventoryShelfServiceImpl extends ServiceImpl<CkInventoryShelfMap
     }
 
     @Override
-    public List<InventoryShelf> selectByProductIds(Long productId, Long tenantId) {
+    public List<InventoryShelf> selectByProductIds(List<Long> productId, Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<InventoryShelf>()
+                .eq("is_deleted", 0)
+                .eq("tenant_id", tenantId)
+                .in("product_id", productId)
+        );
+    }
+
+    @Override
+    public List<InventoryShelf> selectByProductId(Long productId, Long tenantId) {
         return  baseMapper.selectList(new QueryWrapper<InventoryShelf>()
                 .eq("is_deleted", 0)
                 .eq("tenant_id", tenantId)

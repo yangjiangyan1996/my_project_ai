@@ -111,9 +111,21 @@
       <div class="product-section">
         <div class="section-header">
           <h3>产品明细</h3>
-          <el-button type="primary" @click="handleAddProduct" :icon="Plus">
-            添加产品
-          </el-button>
+          <div class="product-actions">
+            <el-button 
+              type="success" 
+              @click="handleAutoAllocateAll" 
+              :loading="autoAllocating"
+              :disabled="!canAutoAllocate"
+              class="auto-allocate-btn"
+              icon="CircleCheck"
+            >
+              自动全部分配
+            </el-button>
+            <el-button type="primary" @click="handleAddProduct" :icon="Plus">
+              添加产品
+            </el-button>
+          </div>
         </div>
 
         <!-- 外层容器添加水平滚动 -->
@@ -344,6 +356,14 @@
                 <span class="value">¥ {{ totalAmount.toFixed(2) }}</span>
               </div>
             </el-col>
+            <el-col :span="6">
+              <div class="summary-item">
+                <span class="label">自动分配状态：</span>
+                <span class="value" :class="autoAllocationStatus.class">
+                  {{ autoAllocationStatus.text }}
+                </span>
+              </div>
+            </el-col>
           </el-row>
         </div>
       </div>
@@ -432,13 +452,14 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Delete } from '@element-plus/icons-vue';
+import { Plus, Delete, CircleCheck } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
 const router = useRouter();
 const route = useRoute();
 const formRef = ref();
 const loading = ref(false);
+const autoAllocating = ref(false);
 
 // 采购入库类型固定为1
 const ORDER_TYPE = 1;
@@ -491,6 +512,295 @@ const totalAmount = computed(() => {
   return formData.items.reduce((sum, item) => {
     return sum + (parseFloat(item.priceTotal) || 0);
   }, 0);
+});
+
+// 自动全部分配方法
+const handleAutoAllocateAll = async () => {
+  if (!formData.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
+  
+  const validItems = formData.items.filter(item => 
+    item.productId && item.actualQuantity > 0
+  );
+  
+  if (validItems.length === 0) {
+    ElMessage.warning('请先选择产品并输入数量');
+    return;
+  }
+  
+  autoAllocating.value = true;
+  
+  try {
+    // 构建符合接口要求的参数
+    const reqData = {
+      warehouseId: formData.warehouseId,
+      list: validItems.map(item => {
+        // 找到产品信息以获取sku
+        const product = productList.value.find(p => p.id === item.productId);
+        return {
+          productId: item.productId,
+          sku: product ? product.sku : item.sku || '',
+          quantity: parseFloat(item.actualQuantity) || 1
+        };
+      })
+    };
+    
+    // 注意：接口是 @GetMapping 但有 @RequestBody，可能需要特殊处理
+    // 尝试使用 post 方法传递参数
+    const res = await post('/api/auth/inbound/allocateIShelfnventoryQuantity', reqData);
+    
+    if (res && Array.isArray(res)) {
+      // 处理分配结果
+      processAutoAllocationResult(res, validItems);
+      ElMessage.success('自动分配完成');
+    } else {
+      ElMessage.warning('获取分配结果失败');
+    }
+  } catch (error) {
+    console.error('自动分配失败:', error);
+    ElMessage.error('自动分配失败');
+  } finally {
+    autoAllocating.value = false;
+  }
+};
+
+// 处理自动分配结果
+const processAutoAllocationResult = (allocationResults, validItems) => {
+  // 创建产品ID到分配结果的映射
+  const allocationMap = new Map();
+  allocationResults.forEach(result => {
+    if (result.productId && result.shelfQuantityList) {
+      allocationMap.set(result.productId, result.shelfQuantityList);
+    }
+  });
+  
+  // 更新每个产品的货架分配
+  formData.items.forEach((item, index) => {
+    if (!item.productId || item.actualQuantity <= 0) {
+      // 清空无效产品的货架分配
+      if (item.shelfLocationIds && item.shelfLocationIds.length > 0) {
+        item.shelfLocationIds = [];
+      }
+      if (item.shelfAllocations && item.shelfAllocations.length > 0) {
+        item.shelfAllocations = [];
+      }
+      return;
+    }
+    
+    const shelfAllocation = allocationMap.get(item.productId);
+    if (!shelfAllocation || !Array.isArray(shelfAllocation)) {
+      // 如果没有分配结果，清空已有分配
+      item.shelfLocationIds = [];
+      item.shelfAllocations = [];
+      return;
+    }
+    
+    // 过滤出当前仓库中存在的货架
+    const availableShelves = shelfAllocation.filter(shelf => 
+      shelfLocationList.value.some(loc => loc.id === shelf.shelfId)
+    );
+    
+    if (availableShelves.length === 0) {
+      item.shelfLocationIds = [];
+      item.shelfAllocations = [];
+      return;
+    }
+    
+    // 计算总分配数量
+    const totalAllocated = availableShelves.reduce((sum, shelf) => 
+      sum + (parseFloat(shelf.quantity) || 0), 0
+    );
+    
+    // 如果总分配数量与实际数量不匹配，按比例调整
+    const actualQuantity = parseFloat(item.actualQuantity) || 1;
+    let adjustedShelves = [...availableShelves];
+    
+    if (totalAllocated !== actualQuantity && totalAllocated > 0) {
+      // 按比例调整每个货架的分配数量
+      const ratio = actualQuantity / totalAllocated;
+      adjustedShelves = availableShelves.map(shelf => ({
+        ...shelf,
+        quantity: Math.round(parseFloat(shelf.quantity) * ratio)
+      }));
+      
+      // 处理四舍五入可能导致的误差
+      const adjustedTotal = adjustedShelves.reduce((sum, shelf) => sum + (shelf.quantity || 0), 0);
+      if (adjustedTotal !== actualQuantity) {
+        const diff = actualQuantity - adjustedTotal;
+        if (diff !== 0 && adjustedShelves.length > 0) {
+          // 将差异加到第一个货架上
+          adjustedShelves[0].quantity = Math.max(0, (adjustedShelves[0].quantity || 0) + diff);
+        }
+      }
+    }
+    
+    // 过滤掉数量为0的货架
+    const validShelves = adjustedShelves.filter(shelf => shelf.quantity > 0);
+    
+    // 更新货架位置ID
+    item.shelfLocationIds = validShelves.map(shelf => shelf.shelfId);
+    
+    // 更新货架分配
+    item.shelfAllocations = validShelves.map(shelf => ({
+      shelfLocationId: shelf.shelfId,
+      quantity: shelf.quantity
+    }));
+  });
+};
+
+// 修改相关的数量处理方法，确保正确处理浮点数
+const handleActualQuantityBlur = (index) => {
+  const item = formData.items[index];
+  const quantity = parseFloat(item.actualQuantity) || 1;  // 改为 parseFloat
+  item.actualQuantity = Math.max(1, quantity);
+  handleActualQuantityChange(quantity, index);
+};
+
+const handlePriceUnitBlur = (index) => {
+  const item = formData.items[index];
+  const price = parseFloat(item.priceUnit) || 0;
+  item.priceUnit = Math.max(0, price);
+  calculateItemTotal(index);
+};
+
+const handleActualQuantityChange = (value, index) => {
+  const item = formData.items[index];
+  const newQuantity = parseFloat(value) || 1;  // 改为 parseFloat
+  item.actualQuantity = newQuantity;
+  
+  // 如果实际数量减少，需要重新验证货架分配
+  if (item.shelfAllocations && item.shelfAllocations.length > 0) {
+    const totalAllocated = item.shelfAllocations.reduce((sum, alloc) => sum + (parseFloat(alloc.quantity) || 0), 0);
+    if (newQuantity < totalAllocated) {
+      ElMessage.warning('实际数量小于已分配货架数量，请重新分配货架');
+      item.shelfAllocations = [];
+    }
+  }
+  
+  calculateItemTotal(index);
+};
+
+const calculateItemTotal = (index) => {
+  const item = formData.items[index];
+  const quantity = parseFloat(item.actualQuantity) || 0;  // 改为 parseFloat
+  const priceUnit = parseFloat(item.priceUnit) || 0;
+  item.priceTotal = parseFloat((quantity * priceUnit).toFixed(2));
+};
+
+// 修改加载详情的方法中的数据处理
+const loadInboundDetail = async (id) => {
+  loading.value = true;
+  try {
+    const res = await get(`/api/auth/inbound/detail?orderId=${id}`);
+    if (res) {
+      Object.assign(formData, {
+        id: res.id,
+        orderNo: res.orderNo,
+        orderType: res.orderType,
+        warehouseId: res.warehouseId,
+        supplierId: res.supplierId,
+        relatedOrderNo: res.relatedOrderNo || '',
+        remark: res.remark || '',
+        status: res.status
+      });
+
+      if (res.warehouseId) {
+        await loadShelfLocationList(res.warehouseId);
+      }
+
+      if (res.items && res.items.length > 0) {
+        formData.items = res.items.map(item => {
+          const shelfLocationIds = item.shelfLocationIds || 
+                                (item.shelfLocationId ? [item.shelfLocationId] : []);
+          
+          let shelfAllocations = item.shelfAllocations || [];
+          if (!shelfAllocations.length && item.shelfLocationId && item.actualQuantity) {
+            shelfAllocations = [{
+              shelfLocationId: item.shelfLocationId,
+              quantity: parseFloat(item.actualQuantity) || 0
+            }];
+          }
+
+          // 处理 quantity 字段（BigDecimal 转换为数字）
+          shelfAllocations = shelfAllocations.map(allocation => ({
+            ...allocation,
+            quantity: parseFloat(allocation.quantity) || 0
+          }));
+
+          return {
+            productId: item.productId,
+            productName: item.productName || '',
+            sku: item.sku || '',
+            spec: item.spec || '',
+            color: item.color || '',
+            unit: item.unit || '',
+            quantity: item.quantity || 1,
+            actualQuantity: parseFloat(item.actualQuantity) || 1,
+            priceUnit: parseFloat(item.priceUnit) || 0,
+            priceTotal: parseFloat(item.priceTotal) || 0,
+            shelfLocationIds: shelfLocationIds,
+            shelfAllocations: shelfAllocations,
+            batchNo: item.batchNo || '',
+            remark: item.remark || ''
+          };
+        });
+      } else {
+        formData.items = [];
+      }
+      
+      // 初始化缓存
+      updateSelectedProductIdsCache();
+      
+      ElMessage.success('数据加载成功');
+    }
+  } catch (error) {
+    ElMessage.error('加载数据失败');
+    router.back();
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 计算是否可以自动分配
+const canAutoAllocate = computed(() => {
+  if (!formData.warehouseId) return false;
+  
+  // 检查是否有已选择的产品并且有数量
+  const validItems = formData.items.filter(item => 
+    item.productId && item.actualQuantity > 0
+  );
+  
+  return validItems.length > 0;
+});
+
+// 自动分配状态信息
+const autoAllocationStatus = computed(() => {
+  if (!formData.warehouseId) {
+    return { text: '请先选择仓库', class: 'warning' };
+  }
+  
+  const validItems = formData.items.filter(item => 
+    item.productId && item.actualQuantity > 0
+  );
+  
+  if (validItems.length === 0) {
+    return { text: '请添加产品并输入数量', class: 'warning' };
+  }
+  
+  const allocatedItems = formData.items.filter(item => 
+    item.shelfAllocations && item.shelfAllocations.length > 0
+  );
+  
+  if (allocatedItems.length === validItems.length) {
+    return { text: '已全部分配', class: 'success' };
+  }
+  
+  return { 
+    text: `${allocatedItems.length}/${validItems.length} 已分配`, 
+    class: 'info' 
+  };
 });
 
 // 缓存管理方法
@@ -578,6 +888,7 @@ const handleAddProduct = () => {
     productName: '',
     sku: '',
     spec: '',
+    color: '',
     unit: '',
     quantity: 1,
     actualQuantity: 1,
@@ -615,6 +926,8 @@ const handleProductChange = (productId, index) => {
     item.sku = '';
     item.spec = '';
     item.unit = '';
+    item.shelfLocationIds = [];
+    item.shelfAllocations = [];
   }
   
   // 更新缓存
@@ -626,43 +939,6 @@ const handleProductChange = (productId, index) => {
   calculateItemTotal(index);
 };
 
-const handleActualQuantityBlur = (index) => {
-  const item = formData.items[index];
-  const quantity = parseInt(item.actualQuantity) || 1;
-  item.actualQuantity = Math.max(1, quantity);
-  handleActualQuantityChange(quantity, index);
-};
-
-const handlePriceUnitBlur = (index) => {
-  const item = formData.items[index];
-  const price = parseFloat(item.priceUnit) || 0;
-  item.priceUnit = Math.max(0, price);
-  calculateItemTotal(index);
-};
-
-const handleActualQuantityChange = (value, index) => {
-  const item = formData.items[index];
-  const newQuantity = parseInt(value) || 1;
-  item.actualQuantity = newQuantity;
-  
-  // 如果实际数量减少，需要重新验证货架分配
-  if (item.shelfAllocations && item.shelfAllocations.length > 0) {
-    const totalAllocated = item.shelfAllocations.reduce((sum, alloc) => sum + (parseInt(alloc.quantity) || 0), 0);
-    if (newQuantity < totalAllocated) {
-      ElMessage.warning('实际数量小于已分配货架数量，请重新分配货架');
-      item.shelfAllocations = [];
-    }
-  }
-  
-  calculateItemTotal(index);
-};
-
-const calculateItemTotal = (index) => {
-  const item = formData.items[index];
-  const quantity = parseInt(item.actualQuantity) || 0;
-  const priceUnit = parseFloat(item.priceUnit) || 0;
-  item.priceTotal = quantity * priceUnit;
-};
 
 const validateBatchNo = (batchNo, index) => {
   if (batchNo && !/^[A-Za-z0-9_-]+$/.test(batchNo)) {
@@ -702,7 +978,7 @@ const getShelfName = (shelfLocationId) => {
   return location ? location.shelfName : '未知货架';
 };
 
-// 货架分配相关方法
+// 货架分配对话框相关方法
 const openShelfAllocationDialog = (index) => {
   const item = formData.items[index];
   if (!item.productId) {
@@ -880,77 +1156,6 @@ const loadShelfLocationList = async (warehouseId) => {
     shelfLocationList.value = res || [];
   } catch (error) {
     shelfLocationList.value = [];
-  }
-};
-
-const loadInboundDetail = async (id) => {
-  loading.value = true;
-  try {
-    const res = await get(`/api/auth/inbound/detail?orderId=${id}`);
-    if (res) {
-      Object.assign(formData, {
-        id: res.id,
-        orderNo: res.orderNo,
-        orderType: res.orderType,
-        warehouseId: res.warehouseId,
-        supplierId: res.supplierId,
-        relatedOrderNo: res.relatedOrderNo || '',
-        remark: res.remark || '',
-        status: res.status
-      });
-
-      if (res.warehouseId) {
-        await loadShelfLocationList(res.warehouseId);
-      }
-
-      if (res.items && res.items.length > 0) {
-        formData.items = res.items.map(item => {
-          const shelfLocationIds = item.shelfLocationIds || 
-                                (item.shelfLocationId ? [item.shelfLocationId] : []);
-          
-          let shelfAllocations = item.shelfAllocations || [];
-          if (!shelfAllocations.length && item.shelfLocationId && item.actualQuantity) {
-            shelfAllocations = [{
-              shelfLocationId: item.shelfLocationId,
-              quantity: parseInt(item.actualQuantity) || 0
-            }];
-          }
-
-          shelfAllocations = shelfAllocations.map(allocation => ({
-            ...allocation,
-            quantity: parseInt(allocation.quantity) || 0
-          }));
-
-          return {
-            productId: item.productId,
-            productName: item.productName || '',
-            sku: item.sku || '',
-            spec: item.spec || '',
-            unit: item.unit || '',
-            quantity: item.quantity || 1,
-            actualQuantity: parseInt(item.actualQuantity) || 1,
-            priceUnit: parseFloat(item.priceUnit) || 0,
-            priceTotal: parseFloat(item.priceTotal) || 0,
-            shelfLocationIds: shelfLocationIds,
-            shelfAllocations: shelfAllocations,
-            batchNo: item.batchNo || '',
-            remark: item.remark || ''
-          };
-        });
-      } else {
-        formData.items = [];
-      }
-      
-      // 初始化缓存
-      updateSelectedProductIdsCache();
-      
-      ElMessage.success('数据加载成功');
-    }
-  } catch (error) {
-    ElMessage.error('加载数据失败');
-    router.back();
-  } finally {
-    loading.value = false;
   }
 };
 
@@ -1185,6 +1390,16 @@ watch(
   color: #303133;
 }
 
+.product-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.auto-allocate-btn {
+  margin-right: 8px;
+}
+
 .product-table {
   margin-bottom: 16px;
 }
@@ -1231,6 +1446,18 @@ watch(
   color: #303133;
   font-weight: bold;
   font-size: 16px;
+}
+
+.summary-item .value.success {
+  color: #67C23A;
+}
+
+.summary-item .value.warning {
+  color: #E6A23C;
+}
+
+.summary-item .value.info {
+  color: #409EFF;
 }
 
 .price-total {
@@ -1415,6 +1642,17 @@ watch(
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
+  }
+  
+  .product-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+  
+  .auto-allocate-btn,
+  .product-actions .el-button {
+    width: 100%;
   }
 }
 

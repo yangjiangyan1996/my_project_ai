@@ -55,7 +55,7 @@ public class ShelfController {
     public RespBean<List<ShelfPageListResp>> listEnable(@RequestParam("warehouseId") Long warehouseId) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            List<ShelfPageListResp> result = shelfFacade.listEnable(user, warehouseId);
+            List<ShelfPageListResp> result = shelfFacade.listEnable(user.getTenantId(), warehouseId);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("WarehouseController#listEnable,req:{}",warehouseId, e);

@@ -315,8 +315,8 @@ public class CkInventoryFacade {
     }
 
 
-    public List<InventoryListResp> List(Long warehouseId, Long tenantId,List<Long> productIdsOfChoose) {
-        List<InventoryWarehouse> inventoryTransactionList = inventoryWarehouseService.selectByWarehourseId(warehouseId,productIdsOfChoose, tenantId);
+    public List<InventoryListResp> List(Long warehouseId, Long tenantId, List<Long> productIdsOfChoose) {
+        List<InventoryWarehouse> inventoryTransactionList = inventoryWarehouseService.selectByWarehourseId(warehouseId, productIdsOfChoose, tenantId);
         if (inventoryTransactionList.isEmpty()) {
             return new ArrayList<>();
         }
@@ -374,7 +374,7 @@ public class CkInventoryFacade {
         if (CollectionUtils.isEmpty(inventoryBatches)) {
             return Collections.emptyList();
         }
-        List<InventoryShelf> inventoryShelfList = inventoryShelfService.selectByProductIds(productId, tenantId);
+        List<InventoryShelf> inventoryShelfList = inventoryShelfService.selectByProductId(productId, tenantId);
 
         Map<String, List<InventoryShelf>> batchNo2InventoryShelfMap = inventoryShelfList.stream().collect(Collectors.groupingBy(InventoryShelf::getBatchNo));
 
@@ -1433,5 +1433,26 @@ public class CkInventoryFacade {
         r.setLowStock(lowStock);
 
         return r;
+    }
+
+    public List<ProductUsedShelfResp> getCommonlyUsedShelvesForGoods(List<Long> productIds, Long tenantId) {
+        List<ProductUsedShelfResp> productUsedShelfResps = new ArrayList<>();
+        if (CollectionUtils.isEmpty(productIds)) {
+            return productUsedShelfResps;
+        }
+        List<InventoryShelf> inventoryShelves = inventoryShelfService.selectByProductIds(productIds, tenantId);
+        if (CollectionUtils.isEmpty(inventoryShelves)) {
+            return productUsedShelfResps;
+        }
+        Map<Long, List<InventoryShelf>> productId2ShelfInventoryMap = inventoryShelves.stream().collect(Collectors.groupingBy(InventoryShelf::getProductId));
+
+        for (Long productId : productId2ShelfInventoryMap.keySet()) {
+            List<InventoryShelf> inventoryShelfList = productId2ShelfInventoryMap.get(productId);
+            ProductUsedShelfResp r = new ProductUsedShelfResp();
+            r.setProductId(productId);
+            r.setShelfIds(inventoryShelfList.stream().map(InventoryShelf::getShelfId).collect(Collectors.toList()));
+            productUsedShelfResps.add(r);
+        }
+        return productUsedShelfResps;
     }
 }

@@ -17,9 +17,13 @@ public interface CkInventoryShelfService extends IService<InventoryShelf> {
 
     InventoryShelf getByWarehouseAndProductAndShelf(Long warehouseId, Long productId, Long shelfLocationId,String batchNo, Long tenantId);
 
-    List<InventoryShelf> selectByProductIds(Long productId, Long tenantId);
+    List<InventoryShelf> selectByProductId(Long productId, Long tenantId);
+
+    List<InventoryShelf> selectByProductIds(List<Long> productIds, Long tenantId);
 
     List<InventoryShelf> getBatchShelfStock(Long tenantId,Long warehouseId, Set<Long> componentProductIds);
 
     List<InventoryShelf> getBatchShelfStock(Long tenantId,Long warehouseId, Long componentProductId);
+
+    List<InventoryShelf> selectByShelfIds(Long tenantId, List<Long> shelfIds);
 }
