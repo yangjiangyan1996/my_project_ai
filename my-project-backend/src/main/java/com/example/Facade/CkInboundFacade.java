@@ -4,7 +4,10 @@ import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.*;
 import com.example.entity.cangku.req.*;
-import com.example.entity.cangku.resp.*;
+import com.example.entity.cangku.resp.InboundCountOfManagePageResp;
+import com.example.entity.cangku.resp.InboundDetailResp;
+import com.example.entity.cangku.resp.InboundListPageResp;
+import com.example.entity.cangku.resp.InboundProductInDetailResp;
 import com.example.enums.CkInOutboundEnums;
 import com.example.holder.InventoryHolder;
 import com.example.holder.ProductTaskHolder;
@@ -32,8 +35,6 @@ import java.util.stream.Collectors;
 @Service
 public class CkInboundFacade {
     @Resource
-    CkInventoryFacade inventoryFacade;
-    @Resource
     ProductTaskHolder productTaskHolder;
     @Resource
     CkOutboundOrderService outboundOrderService;
@@ -43,8 +44,6 @@ public class CkInboundFacade {
     CkUnitService unitService;
     @Resource
     CkProductService productService;
-    @Resource
-    CkShelfFacade shelfFacade;
     @Resource
     CkShelfService shelfService;
     @Resource
@@ -1145,85 +1144,5 @@ public class CkInboundFacade {
         List<InboundOrder> appRejectList = inboundOrders.stream().filter(v -> CkInOutboundEnums.InOutBoundStatus.Reject.getCode().equals(v.getStatus())).collect(Collectors.toList());
         r.setApproveRejectCount(appRejectList.size());
         return r;
-    }
-
-    public List<InboundProductUsedShelfResp> allocateIShelfnventoryQuantity(InboundProductUsedShelfReq req) {
-        List<Long> productIds = req.getList().stream().map(v -> v.getProductId()).collect(Collectors.toList());
-        List<ProductUsedShelfResp> commonlyUsedShelvesForGoods = inventoryFacade.getCommonlyUsedShelvesForGoods(productIds, req.getTenantId());
-        List<ShelfPageListResp> shelfList = shelfFacade.listEnable(req.getTenantId(), req.getWarehouseId());
-
-        //商品ID对应的需要分配的数量
-        Map<Long, BigDecimal> productId2QuantityMap = req.getList().stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getQuantity()));
-
-        Map<Long, String> productId2SkuMap = req.getList().stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getSku()));
-
-        //货架ID对应货架剩余可用数量
-        Map<Long, BigDecimal> shelfId2AvailableCapacityMap = shelfList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v.getAvailableCapacity()));
-
-        //商品ID对应商品常用的货架ID
-        Map<Long, List<Long>> productId2UsedShelfIdsMap = commonlyUsedShelvesForGoods.stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getShelfIds()));
-
-        List<InboundProductUsedShelfResp> result = new ArrayList<>();
-
-        //开始分配
-        for (Map.Entry<Long, BigDecimal> entry : productId2QuantityMap.entrySet()) {
-
-            Long productId = entry.getKey();
-            BigDecimal remainQty = entry.getValue(); // 还需要分配的数量
-
-            InboundProductUsedShelfResp resp = new InboundProductUsedShelfResp();
-            resp.setProductId(productId);
-            List<InboundProductUsedShelfResp.ProductUsedShelfRespInner> allocList = new ArrayList<>();
-
-            // 1. 优先分配常用货架
-            List<Long> preferredShelves = productId2UsedShelfIdsMap.getOrDefault(productId, Collections.emptyList());
-
-            for (Long shelfId : preferredShelves) {
-                if (remainQty.compareTo(BigDecimal.ZERO) <= 0) break;
-                BigDecimal available = shelfId2AvailableCapacityMap.getOrDefault(shelfId, BigDecimal.ZERO);
-
-                if (available.compareTo(BigDecimal.ZERO) <= 0) continue;
-
-                BigDecimal assignQty = available.min(remainQty);
-                remainQty = remainQty.subtract(assignQty);
-                shelfId2AvailableCapacityMap.put(shelfId, available.subtract(assignQty));
-
-                allocList.add(new InboundProductUsedShelfResp.ProductUsedShelfRespInner(shelfId, assignQty));
-            }
-
-
-            // 2. 分配其他货架（排除常用货架）
-            if (remainQty.compareTo(BigDecimal.ZERO) > 0) {
-
-                for (ShelfPageListResp shelf : shelfList) {
-                    if (remainQty.compareTo(BigDecimal.ZERO) <= 0) break;
-
-                    Long shelfId = shelf.getId();
-                    if (preferredShelves.contains(shelfId)) continue;
-
-                    BigDecimal available = shelfId2AvailableCapacityMap.getOrDefault(shelfId, BigDecimal.ZERO);
-                    if (available.compareTo(BigDecimal.ZERO) <= 0) continue;
-
-                    BigDecimal assignQty = available.min(remainQty);
-                    remainQty = remainQty.subtract(assignQty);
-                    shelfId2AvailableCapacityMap.put(shelfId, available.subtract(assignQty));
-
-                    allocList.add(new InboundProductUsedShelfResp.ProductUsedShelfRespInner(shelfId, assignQty));
-                }
-            }
-
-
-            // 3. 若还有剩余，说明货架容量不足 —— 给你暴露接口，可用于前端提示
-            if (remainQty.compareTo(BigDecimal.ZERO) > 0) {
-                // 你可以用抛异常，也可以在 resp 里加字段记录
-                String sku = productId2SkuMap.get(productId);
-                throw new ValidationException("商品sku " + sku + " 货架容量不足，剩余未分配数量：" + remainQty);
-            }
-
-            resp.setShelfQuantityList(allocList);
-            result.add(resp);
-        }
-
-        return result;
     }
 }

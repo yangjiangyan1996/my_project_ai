@@ -2,13 +2,16 @@ package com.example.controller.cangku;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.Facade.CkCommentFacade;
 import com.example.Facade.CkShelfFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.ShelfCreateReq;
 import com.example.entity.cangku.req.ShelfListPageReq;
+import com.example.entity.cangku.req.ShelfProductUsedAllReq;
 import com.example.entity.cangku.req.ShelfUpdateStatusReq;
 import com.example.entity.cangku.resp.ShelfPageListResp;
+import com.example.entity.cangku.resp.ShelfProductUsedAllResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -30,6 +33,7 @@ public class ShelfController {
 
     @Resource
     CkShelfFacade shelfFacade;
+    CkCommentFacade commentFacade;
 
 
     @PostMapping("/pageList")
@@ -126,4 +130,25 @@ public class ShelfController {
         }
     }
 
+
+    //采购入库自动分配货架
+    @PostMapping("/allocateIShelfnventoryQuantity")
+    public RespBean<List<ShelfProductUsedAllResp>> allocateIShelfnventoryQuantity(@RequestBody ShelfProductUsedAllReq req) {
+        try {
+            Long userId = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+
+            List<ShelfProductUsedAllResp> result = commentFacade.allocateIShelfnventoryQuantity(req);
+            return RespBean.success(result);
+        }  catch (ValidationException e) {
+            log.error("InboundController#allocateIShelfnventoryQuantity,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InboundController#allocateIShelfnventoryQuantity,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 }

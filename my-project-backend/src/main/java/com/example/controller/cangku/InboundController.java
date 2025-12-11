@@ -2,6 +2,7 @@ package com.example.controller.cangku;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.Facade.CkCommentFacade;
 import com.example.Facade.CkInboundFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
@@ -25,6 +26,8 @@ import java.util.List;
 @Slf4j
 @RequestMapping("/api/auth/inbound/")
 public class InboundController {
+    @Resource
+    CkCommentFacade commentFacade;
     @Resource
     CkInboundFacade ckInboundFacade;
 
@@ -208,7 +211,7 @@ public class InboundController {
             req.setUserId(userId);
             req.setTenantId(tenantId);
 
-            List<InboundProductUsedShelfResp> result = ckInboundFacade.allocateIShelfnventoryQuantity(req);
+            List<InboundProductUsedShelfResp> result = commentFacade.allocateIShelfnventoryQuantity(req);
             return RespBean.success(result);
         }  catch (ValidationException e) {
             log.error("InboundController#allocateIShelfnventoryQuantity,req:{}", JSON.toJSONString(req), e);
