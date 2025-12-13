@@ -15,6 +15,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class OutboundOderExcelModel {
+    @ExcelProperty("单号")
+    private String orderNumber;
+
     @ExcelProperty("货架号")
     private String shelfName;
 

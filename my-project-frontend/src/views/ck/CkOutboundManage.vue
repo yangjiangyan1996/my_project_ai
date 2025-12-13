@@ -1100,44 +1100,54 @@ const getStatusTagType = (status) => {
 
 const handleDownloadTemplate = async (outbound) => {
   try {
-    // 设置导出加载状态
     outbound.exportLoading = true;
-    
-    const response = await axios.get(`/api/auth/outbound/exportOutboundOrderExcel?orderId=${outbound.id}`, {
-      headers: accessHeader(), // 如果需要认证
-      responseType: 'blob', // ⚠️ 必须加
-    });
 
+    const response = await axios.get(
+      `/api/auth/outbound/exportOutboundOrderExcel?orderId=${outbound.id}`,
+      {
+        headers: accessHeader(),
+        responseType: 'blob',
+      }
+    );
 
-    // 创建 blob 对象
+    // ===== 1️⃣ 从响应头读取文件名（注意小写） =====
+    let fileName = '出库单.xlsx';
+    const disposition = response.headers['content-disposition'];
+
+    if (disposition) {
+      // attachment;filename=xxxx.xlsx
+      const fileNameMatch = disposition.match(/filename=([^;]+)/);
+      if (fileNameMatch && fileNameMatch[1]) {
+        fileName = decodeURIComponent(fileNameMatch[1]);
+      }
+    }
+
+    // ===== 2️⃣ 创建 Blob =====
     const blob = new Blob([response.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
 
-    // 创建 URL 对象
+    // ===== 3️⃣ 触发浏览器下载 =====
     const url = window.URL.createObjectURL(blob);
-
-    // 创建 a 标签下载
     const a = document.createElement('a');
     a.href = url;
-    a.download = `出库单_${outbound.orderNo}.xlsx`; // 使用出库单号作为文件名
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
-    a.remove();
 
-    // 释放 URL
+    // ===== 4️⃣ 清理 =====
     window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
 
     ElMessage.success('导出成功');
-
   } catch (error) {
     console.error('导出出库单失败', error);
     ElMessage.error('导出失败，请稍后重试');
   } finally {
-    // 清除导出加载状态
     outbound.exportLoading = false;
   }
 };
+
 
 const formatTime = (timeString) => {
   if (!timeString) return '--';

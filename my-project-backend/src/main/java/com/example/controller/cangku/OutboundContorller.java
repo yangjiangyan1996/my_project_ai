@@ -310,10 +310,14 @@ public class OutboundContorller {
             // 设置响应头
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setCharacterEncoding("utf-8");
+            response.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+
 
             // 文件名
-            String fileName = URLEncoder.encode("出库单", "UTF-8").replaceAll("\\+", "%20");
-            response.setHeader("Content-Disposition", "attachment;filename=" + fileName + ".xlsx");
+            String fileName = outboundFacade.exportOutboundOrderExcelName(tenantId, orderId);
+            // URL编码文件名，防止中文乱码
+            String encodedFileName = URLEncoder.encode(fileName, "UTF-8").replaceAll("\\+", "%20");
+            response.setHeader("Content-Disposition", "attachment;filename=" + encodedFileName + ".xlsx");
 
             // 准备数据，这里示例用空数据，如果有实际数据可以填充
             // 如果不想预填充测试数据，可传空列表 data = new ArrayList<>();

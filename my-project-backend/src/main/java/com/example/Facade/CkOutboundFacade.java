@@ -809,6 +809,13 @@ public class CkOutboundFacade {
 
     }
 
+    public String exportOutboundOrderExcelName (Long tenantId, Long orderId) {
+        OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);
+        if (Objects.isNull(outboundOrder)) {
+            throw new ValidationException("出库单不存在");
+        }
+        return "出库单" + outboundOrder.getRelatedOrderNo();
+    }
     public List<OutboundOderExcelModel> exportOutboundOrderExcel(Long tenantId, Long orderId) {
         OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);
         if (Objects.isNull(outboundOrder)) {
@@ -835,6 +842,7 @@ public class CkOutboundFacade {
         Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
         return outboundOrderItems.stream().map(v -> {
             OutboundOderExcelModel model = new OutboundOderExcelModel();
+            model.setOrderNumber(outboundOrder.getRelatedOrderNo());
             model.setShelfName(finalShelfId2ShelfMap.getOrDefault(v.getShelfLocationId(), new WarehouseShelf()).getShelfName());
             model.setQuantity(String.valueOf(v.getQuantity()));
             model.setRemark(v.getRemark());
