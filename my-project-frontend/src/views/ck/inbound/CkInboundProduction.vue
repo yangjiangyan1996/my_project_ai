@@ -1,6 +1,18 @@
 <!-- CkInboundProduction.vue -->
 <template>
   <div class="inbound-create-container">
+    <!-- 返回按钮行 -->
+    <div class="back-header">
+      <el-button 
+        type="text" 
+        @click="handleGoBack"
+        :icon="ArrowLeft"
+        class="back-btn"
+      >
+        返回
+      </el-button>
+    </div>
+
     <el-card class="form-card" shadow="never">
       <template #header>
         <div class="card-header">
@@ -178,6 +190,18 @@
         <div class="section-header">
           <h3>产品明细</h3>
           <div class="product-actions">
+            <!-- 自动全部分配按钮 -->
+            <el-button 
+              type="success" 
+              @click="handleAutoAllocateAll" 
+              :loading="autoAllocating"
+              :disabled="!canAutoAllocate"
+              class="auto-allocate-btn"
+              icon="CircleCheck"
+              v-if="!isEditMode || (isEditMode && formData.status === 0)"
+            >
+              自动全部分配
+            </el-button>
             <el-button type="primary" @click="handleAddProduct" :icon="Plus" :disabled="!formData.warehouseId">
               添加产品
             </el-button>
@@ -193,9 +217,10 @@
             border
             class="product-table"
             empty-text="请添加产品明细"
+            style="min-width: 1500px"
           >
-            <el-table-column type="index" label="序号" width="60" align="center" />
-            <el-table-column label="产品信息" min-width="100">
+            <el-table-column type="index" label="序号" width="60" align="center" fixed="left" />
+            <el-table-column label="产品信息" min-width="220" fixed="left">
               <template #default="{ row, $index }">
                 <el-select
                   v-model="row.productId"
@@ -278,16 +303,27 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="货架分配" width="120" align="center">
+            <el-table-column label="货架分配" width="180" align="center">
               <template #default="{ row, $index }">
-                <el-button 
-                  type="primary" 
-                  link 
-                  @click="openShelfAllocationDialog($index)"
-                  :disabled="!row.shelfLocationIds || row.shelfLocationIds.length === 0"
-                >
-                  {{ getShelfAllocationStatus(row) }}
-                </el-button>
+                <div v-if="row.shelfAllocations && row.shelfAllocations.length > 0" class="shelf-allocation-summary">
+                  <div 
+                    v-for="allocation in row.shelfAllocations" 
+                    :key="allocation.shelfLocationId"
+                    class="allocation-item"
+                  >
+                    <el-tooltip
+                      :content="`${getShelfName(allocation.shelfLocationId)}: ${allocation.quantity}`"
+                      placement="top"
+                    >
+                      <span class="allocation-text">
+                        {{ getShelfName(allocation.shelfLocationId) }}: {{ allocation.quantity }}
+                      </span>
+                    </el-tooltip>
+                  </div>
+                </div>
+                <div v-else class="allocation-empty">
+                  <span class="empty-text">未分配</span>
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="操作" width="80" fixed="right" align="center">
@@ -326,9 +362,9 @@
             </el-col>
             <el-col :span="6">
               <div class="summary-item">
-                <span class="label">分配状态：</span>
-                <span class="value" :class="allocationStatusClass">
-                  {{ allocationStatusText }}
+                <span class="label">自动分配状态：</span>
+                <span class="value" :class="autoAllocationStatus.class">
+                  {{ autoAllocationStatus.text }}
                 </span>
               </div>
             </el-col>
@@ -336,73 +372,6 @@
         </div>
       </div>
     </el-card>
-
-    <!-- 货架分配对话框 -->
-    <el-dialog
-      v-model="shelfAllocationDialog.visible"
-      :title="`货架数量分配 - ${shelfAllocationDialog.productName}`"
-      width="500px"
-      destroy-on-close
-    >
-      <div class="shelf-allocation-dialog-content">
-        <div class="allocation-info">
-          <div class="info-item">
-            <span class="label">产品：</span>
-            <span class="value">{{ shelfAllocationDialog.productName }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">入库数量：</span>
-            <span class="value">{{ shelfAllocationDialog.totalQuantity }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">已分配：</span>
-            <span class="value" :class="shelfAllocationDialog.allocatedQuantity >= shelfAllocationDialog.totalQuantity ? 'success' : 'warning'">
-              {{ shelfAllocationDialog.allocatedQuantity }}
-            </span>
-          </div>
-          <div class="info-item">
-            <span class="label">剩余：</span>
-            <span class="value">{{ shelfAllocationDialog.remainingQuantity }}</span>
-          </div>
-        </div>
-
-        <el-divider />
-
-        <div class="shelf-allocation-list">
-          <div 
-            v-for="(shelf, index) in shelfAllocationDialog.shelves" 
-            :key="shelf.id"
-            class="shelf-allocation-item"
-          >
-            <div class="shelf-info">
-              <span class="shelf-name">{{ getShelfLocationLabel(shelf) }}</span>
-            </div>
-            <div class="allocation-control">
-              <el-input-number
-                v-model="shelf.allocatedQuantity"
-                :min="0"
-                :max="getMaxShelfAllocation(index)"
-                :precision="0"
-                controls-position="right"
-                size="small"
-                placeholder="分配数量"
-                style="width: 120px"
-                @change="(value) => handleShelfAllocationChange(value, index)"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div class="allocation-actions">
-          <el-button @click="autoAllocateShelves" :disabled="shelfAllocationDialog.remainingQuantity <= 0">
-            自动分配
-          </el-button>
-          <el-button type="primary" @click="confirmShelfAllocation">
-            确认分配
-          </el-button>
-        </div>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
@@ -410,7 +379,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Delete } from '@element-plus/icons-vue';
+import { Plus, Delete, CircleCheck, ArrowLeft } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
 const router = useRouter();
@@ -418,6 +387,7 @@ const route = useRoute();
 const formRef = ref();
 const loading = ref(false);
 const importing = ref(false);
+const autoAllocating = ref(false); // 自动分配加载状态
 
 // 数据来源选择
 const dataSource = ref('manual');
@@ -443,17 +413,6 @@ const formData = reactive({
   items: [],
 });
 
-// 货架分配对话框数据
-const shelfAllocationDialog = reactive({
-  visible: false,
-  productIndex: -1,
-  productName: '',
-  totalQuantity: 0,
-  shelves: [],
-  allocatedQuantity: 0,
-  remainingQuantity: 0
-});
-
 // 选项数据
 const warehouseList = ref([]);
 const productList = ref([]);
@@ -464,22 +423,44 @@ const totalActualQuantity = computed(() => {
   return formData.items.reduce((sum, item) => sum + (parseInt(item.actualQuantity) || 0), 0);
 });
 
-const allocationStatusText = computed(() => {
-  const unallocatedItems = formData.items.filter(item => {
-    if (!item.shelfLocationIds || item.shelfLocationIds.length === 0) return true;
-    const allocated = item.shelfAllocations?.reduce((sum, alloc) => sum + (parseInt(alloc.quantity) || 0), 0) || 0;
-    return allocated !== (parseInt(item.actualQuantity) || 0);
-  });
-  return unallocatedItems.length === 0 ? '已完成' : `${unallocatedItems.length}项待分配`;
+// 计算是否可以自动分配
+const canAutoAllocate = computed(() => {
+  if (!formData.warehouseId) return false;
+  
+  // 检查是否有已选择的产品并且有数量
+  const validItems = formData.items.filter(item => 
+    item.productId && item.actualQuantity > 0
+  );
+  
+  return validItems.length > 0;
 });
 
-const allocationStatusClass = computed(() => {
-  const unallocatedItems = formData.items.filter(item => {
-    if (!item.shelfLocationIds || item.shelfLocationIds.length === 0) return true;
-    const allocated = item.shelfAllocations?.reduce((sum, alloc) => sum + (parseInt(alloc.quantity) || 0), 0) || 0;
-    return allocated !== (parseInt(item.actualQuantity) || 0);
-  });
-  return unallocatedItems.length === 0 ? 'status-success' : 'status-warning';
+// 自动分配状态信息
+const autoAllocationStatus = computed(() => {
+  if (!formData.warehouseId) {
+    return { text: '请先选择仓库', class: 'warning' };
+  }
+  
+  const validItems = formData.items.filter(item => 
+    item.productId && item.actualQuantity > 0
+  );
+  
+  if (validItems.length === 0) {
+    return { text: '请添加产品并输入数量', class: 'warning' };
+  }
+  
+  const allocatedItems = formData.items.filter(item => 
+    item.shelfAllocations && item.shelfAllocations.length > 0
+  );
+  
+  if (allocatedItems.length === validItems.length) {
+    return { text: '已全部分配', class: 'success' };
+  }
+  
+  return { 
+    text: `${allocatedItems.length}/${validItems.length} 已分配`, 
+    class: 'info' 
+  };
 });
 
 // 表单验证规则
@@ -491,6 +472,175 @@ const formRules = {
     { required: true, message: '请选择预计入库日期', trigger: 'change' }
   ]
 };
+
+// ==================== 自动分配相关方法 ====================
+
+// 返回上一页方法
+const handleGoBack = () => {
+  // 检查是否有未保存的更改
+  const hasUnsavedChanges = formData.items.length > 0 || 
+                           formData.warehouseId || 
+                           formData.expectedDate || 
+                           formData.remark;
+  
+  if (hasUnsavedChanges && !isEditMode.value) {
+    ElMessageBox.confirm(
+      '当前表单有未保存的更改，确定要返回吗？',
+      '确认返回',
+      {
+        type: 'warning',
+        confirmButtonText: '确定返回',
+        cancelButtonText: '取消',
+        distinguishCancelAndClose: true
+      }
+    ).then(() => {
+      // 用户确认返回
+      router.back();
+    }).catch(() => {
+      // 用户取消返回
+    });
+  } else {
+    // 没有未保存的更改或处于编辑模式，直接返回
+    router.back();
+  }
+};
+
+// 自动全部分配方法
+const handleAutoAllocateAll = async () => {
+  if (!formData.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
+  
+  const validItems = formData.items.filter(item => 
+    item.productId && item.actualQuantity > 0
+  );
+  
+  if (validItems.length === 0) {
+    ElMessage.warning('请先选择产品并输入数量');
+    return;
+  }
+  
+  autoAllocating.value = true;
+  
+  try {
+    // 构建符合接口要求的参数
+    const reqData = {
+      warehouseId: formData.warehouseId,
+      list: validItems.map(item => {
+        // 找到产品信息以获取sku
+        const product = productList.value.find(p => p.id === item.productId);
+        return {
+          productId: item.productId,
+          sku: product ? product.sku : item.sku || '',
+          quantity: parseFloat(item.actualQuantity) || 1
+        };
+      })
+    };
+    
+    // 调用自动分配接口
+    const res = await post('/api/auth/inbound/allocateIShelfnventoryQuantity', reqData);
+    
+    if (res && Array.isArray(res)) {
+      // 处理分配结果
+      processAutoAllocationResult(res, validItems);
+      ElMessage.success('自动分配完成');
+    } else {
+      ElMessage.warning('获取分配结果失败');
+    }
+  } catch (error) {
+    console.error('自动分配失败:', error);
+    ElMessage.error('自动分配失败');
+  } finally {
+    autoAllocating.value = false;
+  }
+};
+
+// 处理自动分配结果
+const processAutoAllocationResult = (allocationResults, validItems) => {
+  // 创建产品ID到分配结果的映射
+  const allocationMap = new Map();
+  allocationResults.forEach(result => {
+    if (result.productId && result.shelfQuantityList) {
+      allocationMap.set(result.productId, result.shelfQuantityList);
+    }
+  });
+  
+  // 更新每个产品的货架分配
+  formData.items.forEach((item, index) => {
+    if (!item.productId || item.actualQuantity <= 0) {
+      // 清空无效产品的货架分配
+      if (item.shelfLocationIds && item.shelfLocationIds.length > 0) {
+        item.shelfLocationIds = [];
+      }
+      if (item.shelfAllocations && item.shelfAllocations.length > 0) {
+        item.shelfAllocations = [];
+      }
+      return;
+    }
+    
+    const shelfAllocation = allocationMap.get(item.productId);
+    if (!shelfAllocation || !Array.isArray(shelfAllocation)) {
+      // 如果没有分配结果，清空已有分配
+      item.shelfLocationIds = [];
+      item.shelfAllocations = [];
+      return;
+    }
+    
+    // 过滤出当前仓库中存在的货架
+    const availableShelves = shelfAllocation.filter(shelf => 
+      shelfLocationList.value.some(loc => loc.id === shelf.shelfId)
+    );
+    
+    if (availableShelves.length === 0) {
+      item.shelfLocationIds = [];
+      item.shelfAllocations = [];
+      return;
+    }
+    
+    // 计算总分配数量
+    const totalAllocated = availableShelves.reduce((sum, shelf) => 
+      sum + (parseFloat(shelf.quantity) || 0), 0
+    );
+    
+    // 如果总分配数量与实际数量不匹配，按比例调整
+    const actualQuantity = parseFloat(item.actualQuantity) || 1;
+    let adjustedShelves = [...availableShelves];
+    
+    if (totalAllocated !== actualQuantity && totalAllocated > 0) {
+      // 按比例调整每个货架的分配数量
+      const ratio = actualQuantity / totalAllocated;
+      adjustedShelves = availableShelves.map(shelf => ({
+        ...shelf,
+        quantity: Math.round(parseFloat(shelf.quantity) * ratio)
+      }));
+      
+      // 处理四舍五入可能导致的误差
+      const adjustedTotal = adjustedShelves.reduce((sum, shelf) => sum + (shelf.quantity || 0), 0);
+      if (adjustedTotal !== actualQuantity) {
+        const diff = actualQuantity - adjustedTotal;
+        if (diff !== 0 && adjustedShelves.length > 0) {
+          // 将差异加到第一个货架上
+          adjustedShelves[0].quantity = Math.max(0, (adjustedShelves[0].quantity || 0) + diff);
+        }
+      }
+    }
+    
+    // 过滤掉数量为0的货架
+    const validShelves = adjustedShelves.filter(shelf => shelf.quantity > 0);
+    
+    // 更新货架位置ID
+    item.shelfLocationIds = validShelves.map(shelf => shelf.shelfId);
+    
+    // 更新货架分配
+    item.shelfAllocations = validShelves.map(shelf => ({
+      shelfLocationId: shelf.shelfId,
+      quantity: shelf.quantity
+    }));
+  });
+};
+
+// ==================== 自动分配相关方法结束 ====================
 
 // 数据来源变更处理
 const handleDataSourceChange = (value) => {
@@ -637,143 +787,13 @@ const generateBatchNo = () => {
   return `B${year}${month}${day}${random}`;
 };
 
-// 获取货架分配状态文本
-const getShelfAllocationStatus = (row) => {
-  if (!row.shelfLocationIds || row.shelfLocationIds.length === 0) {
-    return '未选择货架';
-  }
-  
-  const allocated = row.shelfAllocations?.reduce((sum, alloc) => sum + (parseInt(alloc.quantity) || 0), 0) || 0;
-  const total = parseInt(row.actualQuantity) || 0;
-  
-  if (allocated === 0) return '未分配';
-  if (allocated < total) return `部分分配 (${allocated}/${total})`;
-  if (allocated === total) return '已分配';
-  return '超额分配';
+// 获取货架名称
+const getShelfName = (shelfLocationId) => {
+  const location = shelfLocationList.value.find(loc => loc.id === shelfLocationId);
+  return location ? location.shelfName : '未知货架';
 };
 
-// 货架分配相关方法（保持原有逻辑）
-const openShelfAllocationDialog = (index) => {
-  const item = formData.items[index];
-  shelfAllocationDialog.productIndex = index;
-  shelfAllocationDialog.productName = item.productName;
-  shelfAllocationDialog.totalQuantity = parseInt(item.actualQuantity) || 1;
-  
-  shelfAllocationDialog.shelves = item.shelfLocationIds.map(shelfId => {
-    const location = shelfLocationList.value.find(loc => loc.id === shelfId);
-    const existingAllocation = item.shelfAllocations?.find(
-      allocation => allocation.shelfLocationId === shelfId
-    );
-    
-    return {
-      id: shelfId,
-      shelfName: location ? location.shelfName : '未知货架',
-      shelfCode: location ? location.shelfCode : '',
-      allocatedQuantity: existingAllocation ? parseInt(existingAllocation.quantity) : 0
-    };
-  });
-
-  updateShelfAllocationCalculations();
-  shelfAllocationDialog.visible = true;
-};
-
-const handleShelfAllocationChange = (value, changedIndex) => {
-  const changedShelf = shelfAllocationDialog.shelves[changedIndex];
-  const newValue = parseInt(value) || 0;
-  
-  const otherShelvesTotal = shelfAllocationDialog.shelves.reduce((sum, shelf, index) => {
-    if (index !== changedIndex) return sum + (parseInt(shelf.allocatedQuantity) || 0);
-    return sum;
-  }, 0);
-  
-  const newTotal = otherShelvesTotal + newValue;
-  
-  if (newTotal > shelfAllocationDialog.totalQuantity) {
-    const excess = newTotal - shelfAllocationDialog.totalQuantity;
-    let remainingExcess = excess;
-    
-    for (let i = 0; i < shelfAllocationDialog.shelves.length; i++) {
-      if (i !== changedIndex && remainingExcess > 0) {
-        const shelf = shelfAllocationDialog.shelves[i];
-        const currentValue = parseInt(shelf.allocatedQuantity) || 0;
-        const deduction = Math.min(currentValue, remainingExcess);
-        shelf.allocatedQuantity = currentValue - deduction;
-        remainingExcess -= deduction;
-      }
-    }
-    
-    if (remainingExcess > 0) {
-      changedShelf.allocatedQuantity = Math.max(0, shelfAllocationDialog.totalQuantity - otherShelvesTotal);
-      ElMessage.warning(`分配数量不能超过总入库数量 ${shelfAllocationDialog.totalQuantity}`);
-    }
-  }
-  
-  changedShelf.allocatedQuantity = newValue;
-  updateShelfAllocationCalculations();
-};
-
-const updateShelfAllocationCalculations = () => {
-  shelfAllocationDialog.allocatedQuantity = shelfAllocationDialog.shelves.reduce(
-    (sum, shelf) => sum + (parseInt(shelf.allocatedQuantity) || 0), 0
-  );
-  shelfAllocationDialog.remainingQuantity = Math.max(0, shelfAllocationDialog.totalQuantity - shelfAllocationDialog.allocatedQuantity);
-};
-
-const getMaxShelfAllocation = (index) => {
-  const otherShelvesTotal = shelfAllocationDialog.shelves.reduce((sum, shelf, i) => {
-    if (i !== index) return sum + (parseInt(shelf.allocatedQuantity) || 0);
-    return sum;
-  }, 0);
-  return Math.max(0, shelfAllocationDialog.totalQuantity - otherShelvesTotal);
-};
-
-const autoAllocateShelves = () => {
-  const totalQuantity = shelfAllocationDialog.totalQuantity;
-  const shelfCount = shelfAllocationDialog.shelves.length;
-  if (shelfCount === 0) return;
-  
-  shelfAllocationDialog.shelves.forEach(shelf => {
-    shelf.allocatedQuantity = 0;
-  });
-  
-  const baseAllocation = Math.floor(totalQuantity / shelfCount);
-  let remaining = totalQuantity - (baseAllocation * shelfCount);
-  
-  shelfAllocationDialog.shelves.forEach(shelf => {
-    shelf.allocatedQuantity = baseAllocation;
-  });
-  
-  for (let i = 0; i < remaining; i++) {
-    if (i < shelfAllocationDialog.shelves.length) {
-      shelfAllocationDialog.shelves[i].allocatedQuantity += 1;
-    }
-  }
-  
-  updateShelfAllocationCalculations();
-};
-
-const confirmShelfAllocation = () => {
-  const allocatedQuantity = shelfAllocationDialog.allocatedQuantity;
-  const totalQuantity = shelfAllocationDialog.totalQuantity;
-  
-  if (allocatedQuantity !== totalQuantity) {
-    ElMessage.warning(`分配数量 (${allocatedQuantity}) 与入库数量 (${totalQuantity}) 不一致`);
-    return;
-  }
-
-  const item = formData.items[shelfAllocationDialog.productIndex];
-  item.shelfAllocations = shelfAllocationDialog.shelves
-    .filter(shelf => shelf.allocatedQuantity > 0)
-    .map(shelf => ({
-      shelfLocationId: shelf.id,
-      quantity: parseInt(shelf.allocatedQuantity)
-    }));
-
-  shelfAllocationDialog.visible = false;
-  ElMessage.success('货架分配完成');
-};
-
-// 其他方法（保持原有逻辑）
+// 其他方法
 const generateOrderNo = () => {
   const date = new Date();
   const year = date.getFullYear();
@@ -895,7 +915,7 @@ const loadShelfLocationList = async (warehouseId) => {
   }
 };
 
-// 提交相关方法（保持原有逻辑）
+// 提交相关方法
 const handleReset = () => {
   ElMessageBox.confirm(
     `确定要${isEditMode.value ? '重置' : '清空'}表单吗？所有输入的数据将会丢失。`, 
@@ -927,8 +947,6 @@ const handleSaveDraft = async () => {
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新草稿成功' : '保存草稿成功');
-      // router.push('/index/ckInboundManage');
-      // 修改这里：使用路由参数方式返回，而不是完全跳转
       router.replace({
         path: '/',
         query: { mode: 'inbound' } // 返回到入库管理页面
@@ -967,7 +985,6 @@ const handleSubmit = async () => {
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新成功' : '提交成功，等待审核');
-      //router.push('/index/ckInboundManage');
       router.replace({
         path: '/',
         query: { mode: 'inbound' } // 返回到入库管理页面
@@ -1146,24 +1163,109 @@ watch(
 </script>
 
 <style scoped>
-/* 原有样式保持不变，只添加新样式 */
-.imported-picking-orders {
-  margin-top: 16px;
-  padding: 12px;
-  background-color: #f0f9ff;
+/* 返回按钮区域样式 */
+.back-header {
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.back-btn {
+  padding: 10px 16px;  /* 增加内边距 */
+  font-size: 16px;     /* 增大字体 */
+  font-weight: 500;    /* 增加字重 */
+  color: #409EFF;
+}
+
+.back-btn:hover {
+  background-color: #ecf5ff;
   border-radius: 4px;
-  border: 1px solid #e1f5fe;
 }
 
-.imported-picking-orders h4 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #0288d1;
+.back-btn i {
+  margin-right: 6px;  /* 增加图标和文字间距 */
+  font-size: 18px;    /* 增大图标 */
 }
 
-.imported-list {
+/* 调整整体容器，为返回按钮腾出空间 */
+.inbound-create-container {
+  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: calc(100vh - 60px);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .back-header {
+    margin-bottom: 12px;
+  }
+  
+  .back-btn {
+    padding: 8px 14px;
+    font-size: 15px;
+  }
+  
+  .back-btn i {
+    font-size: 16px;
+    margin-right: 4px;
+  }
+}
+
+/* 自动分配按钮样式 */
+.product-actions {
   display: flex;
-  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.auto-allocate-btn {
+  margin-right: 8px;
+}
+
+/* 货架分配状态样式 */
+.shelf-allocation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.allocation-item {
+  margin-bottom: 4px;
+  padding: 2px 4px;
+  background-color: #f0f7ff;
+  border-radius: 2px;
+  border-left: 2px solid #409eff;
+}
+
+.allocation-text {
+  font-size: 12px;
+  color: #409eff;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.allocation-empty {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.empty-text {
+  color: #c0c4cc;
+  font-size: 12px;
+}
+
+/* 统计信息样式调整 */
+.summary-item .value.success {
+  color: #67C23A;
+}
+
+.summary-item .value.warning {
+  color: #E6A23C;
+}
+
+.summary-item .value.info {
+  color: #409EFF;
 }
 
 /* 其他样式保持不变 */
@@ -1248,6 +1350,25 @@ watch(
   text-align: center;
 }
 
+.imported-picking-orders {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f0f9ff;
+  border-radius: 4px;
+  border: 1px solid #e1f5fe;
+}
+
+.imported-picking-orders h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #0288d1;
+}
+
+.imported-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
 /* 基本信息区域 */
 .basic-info-section {
   margin-bottom: 24px;
@@ -1262,14 +1383,10 @@ watch(
   margin: 24px 0;
 }
 
-.product-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
 .product-table-container {
   margin-bottom: 16px;
+  width: 100%;
+  overflow-x: auto;
 }
 
 .product-table {
@@ -1301,91 +1418,12 @@ watch(
   font-size: 16px;
 }
 
-.status-success {
-  color: #67C23A;
-}
-
-.status-warning {
-  color: #E6A23C;
-}
-
-/* 货架分配对话框 */
-.shelf-allocation-dialog-content {
-  padding: 0 10px;
-}
-
-.allocation-info {
-  margin-bottom: 16px;
-  padding: 12px;
+.product-details {
+  margin-top: 8px;
+  padding: 4px;
   background-color: #f8f9fa;
   border-radius: 4px;
-}
-
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.info-item:last-child {
-  margin-bottom: 0;
-}
-
-.info-item .label {
-  color: #606266;
-  font-size: 14px;
-}
-
-.info-item .value {
-  color: #303133;
-  font-weight: bold;
-}
-
-.info-item .value.success {
-  color: #67C23A;
-}
-
-.info-item .value.warning {
-  color: #E6A23C;
-}
-
-.shelf-allocation-list {
-  max-height: 300px;
-  overflow-y: auto;
-  margin: 16px 0;
-}
-
-.shelf-allocation-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-  background-color: #f8f9fa;
-}
-
-.shelf-info {
-  flex: 1;
-}
-
-.shelf-name {
-  font-weight: 500;
-  color: #303133;
-}
-
-.allocation-control {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.allocation-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 16px;
+  font-size: 12px;
 }
 
 /* 响应式设计 */
@@ -1412,32 +1450,18 @@ watch(
   }
   
   .product-actions {
+    flex-direction: column;
     width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .auto-allocate-btn,
+  .product-actions .el-button {
+    width: 100%;
   }
   
   .summary-info .el-col {
     margin-bottom: 8px;
   }
-  
-  .shelf-allocation-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .allocation-control {
-    width: 100%;
-    justify-content: space-between;
-  }
-}
-
-.product-details {
-  margin-top: 8px;
-  padding: 4px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  font-size: 12px;
 }
 </style>
