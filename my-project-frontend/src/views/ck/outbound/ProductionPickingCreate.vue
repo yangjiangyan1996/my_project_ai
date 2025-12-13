@@ -1,5 +1,18 @@
 <template>
   <div class="outbound-create-container">
+
+    <!-- 返回按钮行 -->
+    <div class="back-header">
+      <el-button 
+        type="text" 
+        @click="handleGoBack"
+        :icon="ArrowLeft"
+        class="back-btn"
+      >
+        返回
+      </el-button>
+    </div>
+
     <el-card class="form-card" shadow="never">
       <template #header>
         <div class="card-header">
@@ -223,8 +236,8 @@
                 <div class="progress-bar" :style="{ width: allocationProgress + '%' }"></div>
               </div>
               <span class="progress-text">
-                正在检查 {{ currentCheckIndex + 1 }}/{{ totalChecksCount }} 个分配记录
-                ({{ Math.round(allocationProgress) }}%)
+                正在检查 {{ Math.min(currentCheckIndex, totalChecksCount) }}/{{ totalChecksCount }} 个分配记录
+                ({{ Math.round(Math.min(allocationProgress, 100)) }}%)
               </span>
             </div>
           </div>
@@ -454,7 +467,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Delete, Upload,  ArrowUp, ArrowDown, MagicStick, Loading } from '@element-plus/icons-vue';
+import { Plus, Delete, Upload,  ArrowUp, ArrowDown, MagicStick, Loading, ArrowLeft } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
 const router = useRouter();
@@ -749,6 +762,7 @@ const handleAutoAllocateAll = async () => {
 };
 
 // 处理自动分配结果
+// 处理自动分配结果 - 修复版
 const processAutoAllocationResult = async (result) => {
   // 备份原有的分配数据
   const backupAllocations = formData.items.map(item => 
@@ -809,6 +823,9 @@ const processAutoAllocationResult = async (result) => {
       });
     });
     
+    // 重要：补充0分配的货架数据
+    await supplementZeroAllocationShelves();
+    
     // 等待DOM更新
     await nextTick();
     
@@ -848,8 +865,57 @@ const processAutoAllocationResult = async (result) => {
   }
 };
 
+// 补充0分配的货架数据
+const supplementZeroAllocationShelves = async () => {
+  console.log('开始补充0分配的货架数据...');
+  
+  formData.items.forEach((item, itemIndex) => {
+    if (!item.bomAllocations) {
+      item.bomAllocations = [];
+    }
+    
+    if (item.bomData && item.bomData.length > 0) {
+      item.bomData.forEach(bomItem => {
+        if (bomItem.batches && bomItem.batches.length > 0) {
+          bomItem.batches.forEach(batch => {
+            if (batch.shelfList && batch.shelfList.length > 0) {
+              batch.shelfList.forEach(shelf => {
+                // 检查这个货架是否已经有分配数据
+                const existingAllocation = item.bomAllocations.find(a => 
+                  a.componentProductId === bomItem.componentProductId &&
+                  a.batchNo === batch.batchNo &&
+                  a.shelfId === shelf.shelfId
+                );
+                
+                // 如果没有分配数据，添加一个0分配的记录
+                if (!existingAllocation) {
+                  const zeroAllocation = {
+                    componentProductId: bomItem.componentProductId,
+                    componentProductName: bomItem.componentProductName,
+                    componentProductSku: bomItem.componentProductSku,
+                    batchNo: batch.batchNo,
+                    shelfId: shelf.shelfId,
+                    shelfName: shelf.shelfName || `货架${shelf.shelfId}`,
+                    quantity: 0
+                  };
+                  
+                  item.bomAllocations.push(zeroAllocation);
+                  console.log(`补充0分配数据: 产品${item.productId} 原料${bomItem.componentProductId} 批次${batch.batchNo} 货架${shelf.shelfId} 数量0`);
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+  });
+  
+  console.log('0分配货架数据补充完成');
+};
+
 // 批量检查所有分配记录的实时数量
 // 批量检查所有分配记录的实时数量 - 修改为检查所有货架
+// 批量检查所有分配记录的实时数量 - 优化版
 const batchCheckAllocations = async (checkRequests) => {
   if (!checkRequests || checkRequests.length === 0) {
     allocationProgress.value = 100;
@@ -858,56 +924,55 @@ const batchCheckAllocations = async (checkRequests) => {
   
   console.log(`开始批量检查 ${checkRequests.length} 个分配记录`);
   
-  // 收集所有需要检查的货架（包括未分配数量的货架）
-  const allShelvesToCheck = await collectAllShelvesToCheck();
-  
   // 设置总检查数量
-  totalChecksCount.value = allShelvesToCheck.length;
+  totalChecksCount.value = checkRequests.length;
   currentCheckIndex.value = 0;
   
-  console.log(`总共需要检查 ${totalChecksCount.value} 个货架（包括已分配和未分配的）`);
+  console.log(`总共需要检查 ${totalChecksCount.value} 个货架`);
   
-  // 按成品分组检查
-  const shelvesByProduct = {};
-  allShelvesToCheck.forEach(shelf => {
-    const key = shelf.productId;
-    if (!shelvesByProduct[key]) {
-      shelvesByProduct[key] = [];
+  // 按原料-批次-货架分组，减少重复检查
+  const groupedChecks = {};
+  
+  checkRequests.forEach(shelf => {
+    const groupKey = `${shelf.productId}_${shelf.componentProductId}_${shelf.batchNo}_${shelf.shelfId}`;
+    if (!groupedChecks[groupKey]) {
+      groupedChecks[groupKey] = shelf;
     }
-    shelvesByProduct[key].push(shelf);
   });
   
-  // 遍历每个成品的所有货架
-  const productKeys = Object.keys(shelvesByProduct);
+  const uniqueChecks = Object.values(groupedChecks);
+  console.log(`去重后需要检查 ${uniqueChecks.length} 个唯一货架`);
+  
+  // 按成品分组
+  const checksByProduct = {};
+  uniqueChecks.forEach(shelf => {
+    const key = shelf.productId;
+    if (!checksByProduct[key]) {
+      checksByProduct[key] = [];
+    }
+    checksByProduct[key].push(shelf);
+  });
+  
+  const productKeys = Object.keys(checksByProduct);
+  
   for (let i = 0; i < productKeys.length; i++) {
     const productId = productKeys[i];
-    const shelves = shelvesByProduct[productId];
+    const shelves = checksByProduct[productId];
     
     console.log(`检查成品 ${productId} 的 ${shelves.length} 个货架`);
     
-    // 按原料-批次-货架去重
-    const uniqueShelves = {};
-    shelves.forEach(shelf => {
-      const key = `${shelf.componentProductId}_${shelf.batchNo}_${shelf.shelfId}`;
-      if (!uniqueShelves[key]) {
-        uniqueShelves[key] = shelf;
-      }
-    });
-    
-    const uniqueShelfList = Object.values(uniqueShelves);
-    
     // 逐个检查每个货架
-    for (let j = 0; j < uniqueShelfList.length; j++) {
-      const shelf = uniqueShelfList[j];
+    for (let j = 0; j < shelves.length; j++) {
+      const shelf = shelves[j];
       
       try {
-        console.log(`检查货架: 成品${shelf.productId} 原料${shelf.componentProductId} 批次${shelf.batchNo} 货架${shelf.shelfId}`);
+        console.log(`检查货架 ${j+1}/${shelves.length}: 成品${shelf.productId} 原料${shelf.componentProductId} 批次${shelf.batchNo} 货架${shelf.shelfId}`);
         
         // 更新进度
         currentCheckIndex.value++;
         allocationProgress.value = Math.round((currentCheckIndex.value / totalChecksCount.value) * 100);
         
-        // 调用检查接口，传入具体的参数
+        // 调用检查接口
         const checkResult = await checkBatchAllocation(
           shelf.productId,
           shelf.batchNo,
@@ -915,30 +980,30 @@ const batchCheckAllocations = async (checkRequests) => {
         );
         
         if (checkResult && checkResult.success) {
-          console.log(`货架检查成功: ${shelf.productId}-${shelf.componentProductId}-${shelf.batchNo}-${shelf.shelfId}`);
+          console.log(`√ 货架检查成功: ${shelf.productId}-${shelf.componentProductId}-${shelf.batchNo}-${shelf.shelfId}`);
         } else {
-          console.warn(`货架检查失败或库存不足: ${shelf.productId}-${shelf.componentProductId}-${shelf.batchNo}-${shelf.shelfId}`);
+          console.warn(`× 货架检查失败: ${shelf.productId}-${shelf.componentProductId}-${shelf.batchNo}-${shelf.shelfId}`);
         }
         
-        // 检查间隔1.5秒，给数据渲染和组装留时间
-        if (j < uniqueShelfList.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1500));
+        // 检查间隔缩短到500毫秒，提高效率
+        if (j < shelves.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
         
       } catch (error) {
-        console.error(`货架检查失败:`, error);
+        console.error(`货架检查异常:`, error);
       }
     }
     
-    // 成品间检查间隔1秒
+    // 成品间检查间隔500毫秒
     if (i < productKeys.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
   
   // 检查完成
   allocationProgress.value = 100;
-  console.log('批量检查完成，所有货架都已检查');
+  console.log('批量检查完成');
 };
 
 // 收集所有需要检查的货架（包括已分配和未分配的）
@@ -984,34 +1049,59 @@ const collectAllShelvesToCheck = async () => {
 
 // ==================== 自动分配相关方法结束 ====================
 
-// 构建检查请求数据
+// 构建检查请求数据// 构建检查请求数据 - 强制包含所有货架
 const buildAllocationCheckRequest = (currentProductId = null, currentBatchNo = null, currentShelfId = null) => {
   const productAllocations = formData.items.map((item, index) => {
     const productInfo = productionProductList.value.find(p => p.id === item.productId);
     
-    // 确保bomAllocations有数据（即使为空数组）
-    const bomAllocations = item.bomAllocations || [];
+    // 收集所有可能的分配记录（包括数量为0的）
+    const allPossibleAllocations = [];
     
-    const bomAllocationsWithTotal = bomAllocations.map(allocation => {
-      const bomItem = item.bomData?.find(b => b.componentProductId === allocation.componentProductId);
-      const totalBomQuantity = bomItem ? calculateRequiredQuantity(bomItem.quantity, item.quantity) : 0;
-      
-      return {
-        componentProductId: allocation.componentProductId,
-        componentProductName: allocation.componentProductName,
-        batchNo: allocation.batchNo,
-        shelfId: allocation.shelfId,
-        shelfName: allocation.shelfName,
-        quantity: parseFloat(allocation.quantity) || 0,
-        totalBomQuantity: parseFloat(totalBomQuantity) || 0
-      };
-    });
-
+    if (item.bomData && item.bomData.length > 0) {
+      item.bomData.forEach(bomItem => {
+        if (bomItem.batches && bomItem.batches.length > 0) {
+          bomItem.batches.forEach(batch => {
+            if (batch.shelfList && batch.shelfList.length > 0) {
+              batch.shelfList.forEach(shelf => {
+                // 查找现有的分配数量
+                const existingAllocation = item.bomAllocations?.find(a => 
+                  a.componentProductId === bomItem.componentProductId &&
+                  a.batchNo === batch.batchNo &&
+                  a.shelfId === shelf.shelfId
+                );
+                
+                // 确保每个货架都有一条记录（即使没有分配数据）
+                const allocationData = {
+                  componentProductId: bomItem.componentProductId,
+                  componentProductName: bomItem.componentProductName,
+                  batchNo: batch.batchNo,
+                  shelfId: shelf.shelfId,
+                  shelfName: shelf.shelfName || `货架${shelf.shelfId}`,
+                  quantity: existingAllocation ? parseFloat(existingAllocation.quantity) || 0 : 0,
+                  totalBomQuantity: calculateRequiredQuantity(bomItem.quantity, item.quantity)
+                };
+                
+                allPossibleAllocations.push(allocationData);
+                
+                console.log(`构建检查请求 - 货架${shelf.shelfId}:`, {
+                  成品: item.productId,
+                  原料: bomItem.componentProductId,
+                  批次: batch.batchNo,
+                  货架: shelf.shelfId,
+                  数量: allocationData.quantity
+                });
+              });
+            }
+          });
+        }
+      });
+    }
+    
     return {
       productId: item.productId,
       productName: productInfo?.name || item.productName,
       productQuantity: parseFloat(item.quantity) || 0,
-      bomAllocations: bomAllocationsWithTotal
+      bomAllocations: allPossibleAllocations
     };
   });
 
@@ -1034,6 +1124,9 @@ const buildAllocationCheckRequest = (currentProductId = null, currentBatchNo = n
   if (currentShelfId !== null) {
     requestData.currentShelfId = currentShelfId;
   }
+  
+  console.log('构建的检查请求数据 - 货架总数:', 
+    productAllocations.reduce((sum, p) => sum + (p.bomAllocations?.length || 0), 0));
   
   return requestData;
 };
@@ -1525,6 +1618,37 @@ const handleAddProduct = () => {
 const handleRemoveProduct = async (index) => {
   formData.items.splice(index, 1);
   await checkBatchAllocation(null, null, null);
+};
+
+// 返回上一页方法
+const handleGoBack = () => {
+  // 检查是否有未保存的更改
+  const hasUnsavedChanges = formData.items.length > 0 || 
+                           formData.warehouseId || 
+                           formData.supplierId || 
+                           formData.relatedOrderNo || 
+                           formData.remark;
+  
+  if (hasUnsavedChanges && !isEditMode.value) {
+    ElMessageBox.confirm(
+      '当前表单有未保存的更改，确定要返回吗？',
+      '确认返回',
+      {
+        type: 'warning',
+        confirmButtonText: '确定返回',
+        cancelButtonText: '取消',
+        distinguishCancelAndClose: true
+      }
+    ).then(() => {
+      // 用户确认返回
+      router.back();
+    }).catch(() => {
+      // 用户取消返回
+    });
+  } else {
+    // 没有未保存的更改或处于编辑模式，直接返回
+    router.back();
+  }
 };
 
 const handleProductChange = async (productId, index) => {
@@ -2690,6 +2814,54 @@ watch(
   .bom-section .header-right-actions {
     width: 100%;
     justify-content: space-between;
+  }
+}
+
+
+/* 返回按钮区域样式 */
+.back-header {
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.back-btn {
+  padding: 10px 16px;  /* 增加内边距 */
+  font-size: 16px;     /* 增大字体 */
+  font-weight: 500;    /* 增加字重 */
+  color: #409EFF;
+}
+
+.back-btn:hover {
+  background-color: #ecf5ff;
+  border-radius: 4px;
+}
+
+.back-btn i {
+  margin-right: 6px;  /* 增加图标和文字间距 */
+  font-size: 18px;    /* 增大图标 */
+}
+
+/* 调整整体容器，为返回按钮腾出空间 */
+.inbound-create-container {
+  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: calc(100vh - 60px);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .back-header {
+    margin-bottom: 12px;
+  }
+  
+  .back-btn {
+    padding: 8px 14px;
+    font-size: 15px;
+  }
+  
+  .back-btn i {
+    font-size: 16px;
+    margin-right: 4px;
   }
 }
 </style>
