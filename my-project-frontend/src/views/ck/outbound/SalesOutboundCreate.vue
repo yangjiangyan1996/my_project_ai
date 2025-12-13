@@ -1,5 +1,21 @@
 <template>
   <div class="outbound-create-container">
+
+
+    <!-- 返回按钮行 -->
+    <div class="back-header">
+      <el-button 
+        type="text" 
+        @click="handleGoBack"
+        :icon="ArrowLeft"
+        class="back-btn"
+      >
+        返回
+      </el-button>
+    </div>
+
+
+
     <el-card class="form-card" shadow="never">
       <template #header>
         <div class="card-header">
@@ -49,6 +65,16 @@
         class="outbound-form"
       >
         <el-row :gutter="24">
+           <el-col :xs="24" :sm="12" :lg="8">
+            <el-form-item label="关联单号" prop="relatedOrderNo">
+              <el-input
+                v-model="formData.relatedOrderNo"
+                placeholder="请输入关联单号"
+                :disabled="isViewMode"
+              />
+            </el-form-item>
+          </el-col>
+          
           <el-col :xs="24" :sm="12" :lg="8">
             <el-form-item label="出库单号" prop="orderNo">
               <el-input v-model="formData.orderNo" placeholder="系统自动生成" disabled />
@@ -122,15 +148,7 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :xs="24" :sm="12" :lg="8">
-            <el-form-item label="关联单号" prop="relatedOrderNo">
-              <el-input
-                v-model="formData.relatedOrderNo"
-                placeholder="请输入关联单号"
-                :disabled="isViewMode"
-              />
-            </el-form-item>
-          </el-col>
+         
         </el-row>
 
         <el-form-item label="备注" prop="remark">
@@ -409,7 +427,7 @@
               <el-icon><MagicStick /></el-icon>
               自动全部分配
             </el-button>
-            
+
             <!-- 批量操作 -->
             <el-button 
               type="success" 
@@ -1284,7 +1302,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { 
   Plus, Delete, Upload, Download, Document, Close, Search, 
   Operation, MagicStick, Warning, InfoFilled, Refresh, 
-  CloseBold, SetUp, ArrowUp, Goods, Connection, Loading
+  CloseBold, SetUp, ArrowUp, Goods, Connection, Loading, ArrowLeft
 } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 import axios from 'axios';
@@ -1540,6 +1558,38 @@ const generateOrderNo = () => {
   formData.orderNo = `CK${year}${month}${day}${random}`;
 };
 
+
+
+// 返回上一页方法
+const handleGoBack = () => {
+  // 检查是否有未保存的更改
+  const hasUnsavedChanges = formData.items.length > 0 || 
+                           formData.warehouseId || 
+                           formData.customerId || 
+                           formData.relatedOrderNo || 
+                           formData.remark;
+  
+  if (hasUnsavedChanges && !isEditMode.value) {
+    ElMessageBox.confirm(
+      '当前表单有未保存的更改，确定要返回吗？',
+      '确认返回',
+      {
+        type: 'warning',
+        confirmButtonText: '确定返回',
+        cancelButtonText: '取消',
+        distinguishCancelAndClose: true
+      }
+    ).then(() => {
+      // 用户确认返回
+      router.back();
+    }).catch(() => {
+      // 用户取消返回
+    });
+  } else {
+    // 没有未保存的更改或处于编辑模式，直接返回
+    router.back();
+  }
+};
 
 // 加载可用产品列表
 const loadAvailableProducts = async () => {
@@ -5231,6 +5281,54 @@ watch(
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
+  }
+}
+
+
+/* 返回按钮区域样式 */
+.back-header {
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.back-btn {
+  padding: 10px 16px;  /* 增加内边距 */
+  font-size: 16px;     /* 增大字体 */
+  font-weight: 500;    /* 增加字重 */
+  color: #409EFF;
+}
+
+.back-btn:hover {
+  background-color: #ecf5ff;
+  border-radius: 4px;
+}
+
+.back-btn i {
+  margin-right: 6px;  /* 增加图标和文字间距 */
+  font-size: 18px;    /* 增大图标 */
+}
+
+/* 调整整体容器，为返回按钮腾出空间 */
+.inbound-create-container {
+  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: calc(100vh - 60px);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .back-header {
+    margin-bottom: 12px;
+  }
+  
+  .back-btn {
+    padding: 8px 14px;
+    font-size: 15px;
+  }
+  
+  .back-btn i {
+    font-size: 16px;
+    margin-right: 4px;
   }
 }
 </style>
