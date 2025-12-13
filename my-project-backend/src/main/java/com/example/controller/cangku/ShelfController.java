@@ -33,6 +33,7 @@ public class ShelfController {
 
     @Resource
     CkShelfFacade shelfFacade;
+    @Resource
     CkCommentFacade commentFacade;
 
 
@@ -133,15 +134,10 @@ public class ShelfController {
 
     //采购入库自动分配货架
     @PostMapping("/allocateIShelfnventoryQuantity")
-    public RespBean<List<ShelfProductUsedAllResp>> allocateIShelfnventoryQuantity(@RequestBody ShelfProductUsedAllReq req) {
+    public RespBean<List<ShelfProductUsedAllResp>> allocateIShelfnventoryQuantity(@RequestBody List<ShelfProductUsedAllReq> req) {
         try {
-            Long userId = UserUtil.getCurrentUser().getId();
-            Long tenantId = UserUtil.getCurrentUser().getTenantId();
 
-            req.setUserId(userId);
-            req.setTenantId(tenantId);
-
-            List<ShelfProductUsedAllResp> result = commentFacade.allocateIShelfnventoryQuantity(req);
+            List<ShelfProductUsedAllResp> result = commentFacade.allocateShelfInventoryQuantity(req);
             return RespBean.success(result);
         }  catch (ValidationException e) {
             log.error("InboundController#allocateIShelfnventoryQuantity,req:{}", JSON.toJSONString(req), e);

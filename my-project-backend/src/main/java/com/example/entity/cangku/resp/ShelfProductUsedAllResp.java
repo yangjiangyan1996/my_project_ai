@@ -16,16 +16,22 @@ import java.util.List;
  */
 @Data
 public class ShelfProductUsedAllResp {
+    //表格序号
+    private Integer index;
+    //商品ID
     private Long productId;
+    //商品sku
     private String sku;
-    private BigDecimal totalAllocated;
+    //批次分配
     private List<BatchAllocation> batchAllocations;
 
     @Data
     public static class BatchAllocation {
-        private Long batchNo;
+        //批次号
+        private String batchNo;
+        //批次创建时间
         private Date createdAtOfBatch;
-        private BigDecimal totalAllocated;
+        //货架分配
         private List<ShelfAllocation> allocations;
     }
 
@@ -33,8 +39,11 @@ public class ShelfProductUsedAllResp {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class ShelfAllocation {
+        //货架ID
         private Long shelfId;
+        //货架名称
         private String shelfName;
+        //分配数量
         private BigDecimal quantity;
     }
 }
