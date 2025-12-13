@@ -6,6 +6,20 @@
           <span class="card-title">{{ isEditMode ? '编辑销售出库单' : '新建销售出库单' }}</span>
           <div class="header-actions">
             <el-button @click="handleReset" >重置</el-button>
+            
+            <!-- 新增：自动全部分配按钮 -->
+            <!-- <el-button 
+              type="success" 
+              @click="handleAutoAllocateAll"
+              :loading="autoAllocating"
+              :disabled="!canAutoAllocate || isViewMode"
+              v-if="!isViewMode"
+              class="auto-allocate-btn"
+            >
+              <el-icon><MagicStick /></el-icon>
+              自动全部分配
+            </el-button> -->
+            
             <el-button 
               type="primary" 
               @click="handleSaveDraft" 
@@ -197,187 +211,206 @@
       </div>
 
       <!-- 推荐产品展示区域 -->
-       <!-- 推荐产品展示区域 -->
-<div 
-  v-if="(!isViewMode && groupedRecommendations.length > 0) || (isViewMode && hasRecommendationDetails)" 
-  class="recommendations-panel"
->
-  <div class="recommendations-header">
-    <div class="header-left">
-      <h3>
-        <el-icon><MagicStick /></el-icon>
-        智能推荐
-      </h3>
-      <span class="tip" v-if="!isViewMode">基于您添加的产品，系统为您推荐以下搭配产品</span>
-      <span class="tip" v-else>创建时的智能推荐记录</span>
-    </div>
-    <div class="header-right" v-if="!isViewMode">
-      <el-button type="text" @click="applyAllRecommendations" :disabled="!hasValidRecommendations">
-        应用所有推荐
-      </el-button>
-      <el-button type="text" @click="closeRecommendations">
-        <el-icon><Close /></el-icon>
-      </el-button>
-    </div>
-  </div>
-
-  <!-- 按触发产品分组的推荐 -->
-  <div 
-    v-for="group in groupedRecommendations" 
-    :key="group.triggerProductId"
-    class="recommendation-group"
-  >
-    <div class="group-header">
-      <div class="trigger-info">
-        <span class="trigger-product">
-          {{ getProductName(group.triggerProductId) }}
-          <el-tag size="small">触发产品</el-tag>
-        </span>
-        <span class="trigger-quantity">数量: {{ getProductQuantity(group.triggerProductId) }}</span>
-        <el-button 
-          v-if="!isViewMode"
-          type="text" 
-          size="small" 
-          @click="refreshRecommendations(group.triggerProductId)"
-          class="refresh-btn"
-        >
-          <el-icon><Refresh /></el-icon>
-          重新获取推荐
-        </el-button>
-      </div>
-      <el-button 
-        v-if="!isViewMode"
-        type="primary" 
-        size="small" 
-        @click="applyGroupRecommendations(group)"
-        :disabled="!group.hasValidItems"
+      <div 
+        v-if="(!isViewMode && groupedRecommendations.length > 0) || (isViewMode && hasRecommendationDetails)" 
+        class="recommendations-panel"
       >
-        应用本组推荐
-      </el-button>
-    </div>
-
-    <el-table :data="group.items" class="recommendation-items-table" border>
-      <el-table-column label="推荐产品" min-width="150">
-        <template #default="{ row }">
-          <div class="recommended-product-info">
-            <div class="product-name">{{ row.productName }}</div>
-            <div class="sku-text">sku:{{ row.sku }}</div>
-            <div class="spec-text">规格:{{ row.spec || '-' }}</div>
-            <div class="spec-text">颜色: {{ row.color || '-' }}</div>
-            
-            <!-- 新增：来源提示 -->
-            <div v-if="row.selected" class="source-tip">
-              <el-tag size="mini" type="success">已添加</el-tag>
-              <span class="source-text">来自: {{ getProductName(row.triggerProductId) }}</span>
-            </div>
+        <div class="recommendations-header">
+          <div class="header-left">
+            <h3>
+              <el-icon><MagicStick /></el-icon>
+              智能推荐
+            </h3>
+            <span class="tip" v-if="!isViewMode">基于您添加的产品，系统为您推荐以下搭配产品</span>
+            <span class="tip" v-else>创建时的智能推荐记录</span>
           </div>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="推荐类型" width="150">
-        <template #default="{ row }">
-          <el-tag :type="row.isRequired ? 'danger' : 'info'" size="small">
-            {{ row.isRequired ? '必选' : '可选' }}
-          </el-tag>
-          <div v-if="row.confidence" class="confidence">
-            置信度: {{ (row.confidence * 100).toFixed(0) }}%
+          <div class="header-right" v-if="!isViewMode">
+            <el-button type="text" @click="applyAllRecommendations" :disabled="!hasValidRecommendations">
+              应用所有推荐
+            </el-button>
+            <el-button type="text" @click="closeRecommendations">
+              <el-icon><Close /></el-icon>
+            </el-button>
           </div>
-        </template>
-      </el-table-column>
+        </div>
 
-      <el-table-column label="推荐数量" width="180">
-        <template #default="{ row }">
-          <div class="recommended-quantity">
-            <div v-if="row.quantityType === 1">
-              <span class="quantity-type">固定数量</span>
-              <span class="quantity-value">{{ row.calculatedQuantity || row.quantityValue }}</span>
-            </div>
-            <div v-else>
-              <span class="quantity-type">比例: {{ row.quantityValue }}</span>
-              <span class="quantity-value">
-                = {{ getTriggerProductQuantity(getTriggerIdForRow(row)) }} × {{ row.quantityValue }}
-                = {{ row.calculatedQuantity || calculateRecommendedQuantity(row, getTriggerIdForRow(row)) }}
-              </span>
-            </div>
-          </div>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="库存" width="150" align="center">
-        <template #default="{ row }">
-          <span :class="getStockClass(row.availableQuantity, row.calculatedQuantity || row.quantityValue)">
-            {{ row.availableQuantity }}
-          </span>
-        </template>
-      </el-table-column>
-
-       <el-table-column label="备注" width="200" align="center">
-        <template #default="{ row }">
-          <span :class="stock-none">
-            {{ row.remark }}
-          </span>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="是否添加" width="120" align="center" v-if="!isViewMode">
-        <template #default="{ row }">
-          <el-checkbox 
-            v-model="row.selected"
-            :disabled="row.isRequired || isViewMode"
-            @change="handleRecommendationToggle(row)"
-          >
-            {{ row.selected ? '已添加' : '添加' }}
-          </el-checkbox>
-          <div v-if="row.isRequired" class="required-tip">必选</div>
-        </template>
-      </el-table-column>
-      
-      <!-- 查看模式下显示实际添加数量 -->
-      <el-table-column label="实际数量" width="100" align="center" v-if="isViewMode">
-        <template #default="{ row }">
-          <span v-if="row.selected" class="actual-quantity">
-            {{ row.actualQuantity || row.calculatedQuantity || 0 }}
-          </span>
-          <span v-else>-</span>
-        </template>
-      </el-table-column>
-    </el-table>
-  </div>
-  
-  <!-- 查看模式下显示推荐详情 -->
-  <div v-if="isViewMode && !groupedRecommendations.length && hasRecommendationDetails" class="view-mode-recommendations">
-    <div class="recommendation-summary">
-      <h4>推荐产品汇总</h4>
-      <div class="recommendation-list">
+        <!-- 按触发产品分组的推荐 -->
         <div 
-          v-for="(details, productId) in recommendationDetails" 
-          :key="productId"
-          class="recommendation-item"
+          v-for="group in groupedRecommendations" 
+          :key="group.triggerProductId"
+          class="recommendation-group"
         >
-          <span class="product-name">{{ getProductName(productId) }}</span>
-          <span class="total-recommended">推荐总量: {{ getTotalRecommendedQuantity(productId) }}</span>
+          <div class="group-header">
+            <div class="trigger-info">
+              <span class="trigger-product">
+                {{ getProductName(group.triggerProductId) }}
+                <el-tag size="small">触发产品</el-tag>
+              </span>
+              <span class="trigger-quantity">数量: {{ getProductQuantity(group.triggerProductId) }}</span>
+              <el-button 
+                v-if="!isViewMode"
+                type="text" 
+                size="small" 
+                @click="refreshRecommendations(group.triggerProductId)"
+                class="refresh-btn"
+              >
+                <el-icon><Refresh /></el-icon>
+                重新获取推荐
+              </el-button>
+            </div>
+            <el-button 
+              v-if="!isViewMode"
+              type="primary" 
+              size="small" 
+              @click="applyGroupRecommendations(group)"
+              :disabled="!group.hasValidItems"
+            >
+              应用本组推荐
+            </el-button>
+          </div>
+
+          <el-table :data="group.items" class="recommendation-items-table" border>
+            <el-table-column label="推荐产品" min-width="150">
+              <template #default="{ row }">
+                <div class="recommended-product-info">
+                  <div class="product-name">{{ row.productName }}</div>
+                  <div class="sku-text">sku:{{ row.sku }}</div>
+                  <div class="spec-text">规格:{{ row.spec || '-' }}</div>
+                  <div class="spec-text">颜色: {{ row.color || '-' }}</div>
+                  
+                  <!-- 新增：来源提示 -->
+                  <div v-if="row.selected" class="source-tip">
+                    <el-tag size="mini" type="success">已添加</el-tag>
+                    <span class="source-text">来自: {{ getProductName(row.triggerProductId) }}</span>
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="推荐类型" width="150">
+              <template #default="{ row }">
+                <el-tag :type="row.isRequired ? 'danger' : 'info'" size="small">
+                  {{ row.isRequired ? '必选' : '可选' }}
+                </el-tag>
+                <div v-if="row.confidence" class="confidence">
+                  置信度: {{ (row.confidence * 100).toFixed(0) }}%
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="推荐数量" width="180">
+              <template #default="{ row }">
+                <div class="recommended-quantity">
+                  <div v-if="row.quantityType === 1">
+                    <span class="quantity-type">固定数量</span>
+                    <span class="quantity-value">{{ row.calculatedQuantity || row.quantityValue }}</span>
+                  </div>
+                  <div v-else>
+                    <span class="quantity-type">比例: {{ row.quantityValue }}</span>
+                    <span class="quantity-value">
+                      = {{ getTriggerProductQuantity(getTriggerIdForRow(row)) }} × {{ row.quantityValue }}
+                      = {{ row.calculatedQuantity || calculateRecommendedQuantity(row, getTriggerIdForRow(row)) }}
+                    </span>
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="库存" width="150" align="center">
+              <template #default="{ row }">
+                <span :class="getStockClass(row.availableQuantity, row.calculatedQuantity || row.quantityValue)">
+                  {{ row.availableQuantity }}
+                </span>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="备注" width="200" align="center">
+              <template #default="{ row }">
+                <span :class="stock-none">
+                  {{ row.remark }}
+                </span>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="是否添加" width="120" align="center" v-if="!isViewMode">
+              <template #default="{ row }">
+                <el-checkbox 
+                  v-model="row.selected"
+                  :disabled="row.isRequired || isViewMode"
+                  @change="handleRecommendationToggle(row)"
+                >
+                  {{ row.selected ? '已添加' : '添加' }}
+                </el-checkbox>
+                <div v-if="row.isRequired" class="required-tip">必选</div>
+              </template>
+            </el-table-column>
+            
+            <!-- 查看模式下显示实际添加数量 -->
+            <el-table-column label="实际数量" width="100" align="center" v-if="isViewMode">
+              <template #default="{ row }">
+                <span v-if="row.selected" class="actual-quantity">
+                  {{ row.actualQuantity || row.calculatedQuantity || 0 }}
+                </span>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        
+        <!-- 查看模式下显示推荐详情 -->
+        <div v-if="isViewMode && !groupedRecommendations.length && hasRecommendationDetails" class="view-mode-recommendations">
+          <div class="recommendation-summary">
+            <h4>推荐产品汇总</h4>
+            <div class="recommendation-list">
+              <div 
+                v-for="(details, productId) in recommendationDetails" 
+                :key="productId"
+                class="recommendation-item"
+              >
+                <span class="product-name">{{ getProductName(productId) }}</span>
+                <span class="total-recommended">推荐总量: {{ getTotalRecommendedQuantity(productId) }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
 
       <!-- 产品明细表格 -->
       <div class="product-section">
         <div class="section-header">
           <div class="section-header-left">
             <h3>产品明细</h3>
-            <!-- <div class="product-type-filter">
-              <el-checkbox-group v-model="productTypeFilter">
-                <el-checkbox label="trigger">触发商品</el-checkbox>
-                <el-checkbox label="recommend">推荐商品</el-checkbox>
-              </el-checkbox-group>
-            </div> -->
           </div>
           <div class="header-right-actions" v-if="!isViewMode">
+            <!-- 自动分配加载状态 -->
+            <div v-if="isAllocating" class="auto-allocation-status">
+              <el-progress 
+                :percentage="allocationProgress" 
+                :stroke-width="6"
+                :show-text="false"
+                color="#67C23A"
+                class="allocation-progress"
+              />
+              <span class="progress-text">
+                自动分配中: {{ Math.round(allocationProgress) }}%
+                ({{ currentAllocationIndex }}/{{ totalAllocationCount }})
+              </span>
+            </div>
+            
+             <!-- 新增：自动全部分配按钮 -->
+            <el-button 
+              type="success" 
+              @click="handleAutoAllocateAll"
+              :loading="autoAllocating"
+              :disabled="!canAutoAllocate || isViewMode"
+              v-if="!isViewMode"
+              class="auto-allocate-btn"
+            >
+              <el-icon><MagicStick /></el-icon>
+              自动全部分配
+            </el-button>
+            
             <!-- 批量操作 -->
-            
-            
             <el-button 
               type="success" 
               @click="handleDownloadTemplate"
@@ -446,6 +479,17 @@
               </div>
             </el-col>
           </el-row>
+        </div>
+
+        <!-- 自动分配结果提示 -->
+        <div v-if="autoAllocationResult" class="auto-allocation-result">
+          <el-alert 
+            :title="autoAllocationResult.success ? '自动分配成功' : '自动分配失败'" 
+            :type="autoAllocationResult.success ? 'success' : 'error'"
+            :description="autoAllocationResult.message"
+            :closable="true"
+            @close="autoAllocationResult = null"
+          />
         </div>
 
         <!-- 销售出库的产品表格 -->
@@ -947,7 +991,6 @@
               <div class="product-info">
                 <div class="product-name">{{ row.productName }}</div>
                 <div class="sku-text">{{ row.sku }}</div>
-                <!-- <div class="spec-text">{{ row.spec || '-' }}</div> -->
               </div>
             </template>
           </el-table-column>
@@ -971,24 +1014,6 @@
               </span>
             </template>
           </el-table-column>
-          
-          <!-- <el-table-column label="单位" width="80" align="center">
-            <template #default="{ row }">
-              {{ row.unitName || '-' }}
-            </template>
-          </el-table-column>
-          
-          <el-table-column label="价格" width="120">
-            <template #default="{ row }">
-              <div v-if="row.price">
-                ¥ {{ row.price.toFixed(2) }}
-                <div v-if="row.priceUnitUsd" class="usd-price">
-                  $ {{ row.priceUnitUsd.toFixed(2) }}
-                </div>
-              </div>
-              <span v-else>-</span>
-            </template>
-          </el-table-column> -->
         </el-table>
 
         <div class="selector-actions">
@@ -1080,16 +1105,6 @@
           v-loading="loadingBatches"
         >
           <el-table-column label="批次号" prop="batchNo" width="120" fixed="left" />
-          <!-- <el-table-column label="生产日期" width="100">
-            <template #default="{ row }">
-              <span>{{ row.productionDate || '-' }}</span>
-            </template>
-          </el-table-column> -->
-          <!-- <el-table-column label="有效期" width="100">
-            <template #default="{ row }">
-              <span :class="getExpiryClass(row.expiryDate)">{{ formatDate(row.expiryDate) || '-' }}</span>
-            </template>
-          </el-table-column> -->
           <el-table-column label="总可用数量" width="100" align="center">
             <template #default="{ row }">
               <span :class="row.quantity < 1 ? 'text-disabled' : ''">{{ row.quantity }}</span>
@@ -1269,7 +1284,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { 
   Plus, Delete, Upload, Download, Document, Close, Search, 
   Operation, MagicStick, Warning, InfoFilled, Refresh, 
-  CloseBold, SetUp, ArrowUp, Goods, Connection
+  CloseBold, SetUp, ArrowUp, Goods, Connection, Loading
 } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 import axios from 'axios';
@@ -1287,6 +1302,14 @@ const quickSearch = ref('');
 const searchResults = ref([]);
 const selectorSearch = ref('');
 const selectedProductsForSelector = ref([]);
+
+// 新增：自动分配相关状态
+const autoAllocating = ref(false);
+const isAllocating = ref(false);
+const allocationProgress = ref(0);
+const currentAllocationIndex = ref(0);
+const totalAllocationCount = ref(0);
+const autoAllocationResult = ref(null);
 
 // 可用产品列表
 const availableProducts = ref([]);
@@ -1464,6 +1487,15 @@ const hasRecommendationDetails = computed(() => {
   return Object.keys(recommendationDetails.value).length > 0;
 });
 
+// 新增：计算是否可以自动分配
+const canAutoAllocate = computed(() => {
+  return formData.warehouseId && 
+         outboundProducts.value.length > 0 && 
+         outboundProducts.value.some(item => item.quantity > 0) &&
+         !isAllocating.value &&
+         !isViewMode.value;
+});
+
 // 表单验证规则
 const formRules = {
   orderType: [
@@ -1560,7 +1592,7 @@ const getProductSpec = (productId) => {
   return parts.join(' | ') || '无规格';
 };
 
-// 加载出库单详情// 加载出库单详情// 加载出库单详情
+// 加载出库单详情
 const loadOutboundDetail = async (id) => {
   loading.value = true;
   try {
@@ -1664,7 +1696,7 @@ const loadOutboundDetail = async (id) => {
   }
 };
 
-// 为编辑模式下的现有产品加载推荐// 为编辑模式下的现有产品加载推荐
+// 为编辑模式下的现有产品加载推荐
 const loadRecommendationsForExistingProducts = async () => {
   if (!formData.customerId || !formData.warehouseId) return;
   
@@ -1731,7 +1763,6 @@ const loadRecommendationsForExistingProducts = async () => {
 
 
 // 仓库变化处理
-// 仓库变化处理
 const handleWarehouseChange = async (warehouseId) => {
   if (warehouseId && formData.customerId) {
     await loadAvailableProducts();
@@ -1782,7 +1813,7 @@ const clearSearch = () => {
   searchResults.value = [];
 };
 
-// 添加产品到表格// 添加产品到表格
+// 添加产品到表格
 const addProductToTable = async (product) => {
   // 检查是否已存在
   const existingProduct = outboundProducts.value.find(p => p.productId === product.productId);
@@ -1867,7 +1898,7 @@ const getTriggerIdForRow = (row) => {
   return null;
 };
 
-// 产品数量变化处理// 产品数量变化处理
+// 产品数量变化处理
 const handleQuantityChange = async (row, value) => {
   if (value > 0) {
     // 如果是触发产品且数量从0变成有值，查询推荐
@@ -1984,7 +2015,7 @@ const refreshRecommendations = async (triggerProductId) => {
   }
 };
 
-// 加载推荐// 加载推荐
+// 加载推荐
 const loadRecommendationsForProduct = async (productId, quantity) => {
   console.log('加载推荐,loadRecommendationsForProduct触发产品ID:', productId, '数量:', quantity, 'formData:', formData);
   if (!formData.customerId || !formData.warehouseId) return;
@@ -2168,7 +2199,6 @@ const applyRequiredRecommendations = (triggerProductId) => {
   }
 };
 
-// 添加推荐产品到订单// 添加推荐产品到订单
 // 添加推荐产品到订单
 const addRecommendationToOrder = (recommendation) => {
   const product = availableProducts.value.find(p => p.productId === recommendation.productId);
@@ -2241,7 +2271,6 @@ const addRecommendationToOrder = (recommendation) => {
   updateRecommendationSelection(recommendation.productId, true);
 };
 
-// 处理推荐切换
 // 处理推荐切换
 const handleRecommendationToggle = (recommendation) => {
   if (recommendation.selected) {
@@ -2698,6 +2727,266 @@ const loadProductHistoryPrice = async (row, force = false) => {
   }
 };
 
+// ==================== 自动分配相关方法 ====================
+
+// 检查是否可以自动分配
+const checkAutoAllocationEligibility = () => {
+  const productsWithQuantity = outboundProducts.value.filter(item => item.quantity > 0);
+  
+  if (productsWithQuantity.length === 0) {
+    ElMessage.warning('请先设置产品的出库数量');
+    return false;
+  }
+  
+  const productsWithInsufficientStock = productsWithQuantity.filter(
+    item => item.quantity > (item.availableQuantity || 0)
+  );
+  
+  if (productsWithInsufficientStock.length > 0) {
+    const productNames = productsWithInsufficientStock.map(item => item.productName).join(', ');
+    ElMessage.warning(`以下产品库存不足: ${productNames}`);
+    return false;
+  }
+  
+  return true;
+};
+
+// 自动全部分配
+const handleAutoAllocateAll = async () => {
+  try {
+    // 检查分配资格
+    if (!checkAutoAllocationEligibility()) {
+      return;
+    }
+    
+    // 编辑模式下确认
+    if (isEditMode.value) {
+      const confirmed = await ElMessageBox.confirm(
+        '自动分配会覆盖当前的批次分配数据，确定要继续吗？',
+        '提示',
+        {
+          type: 'warning',
+          confirmButtonText: '确定',
+          cancelButtonText: '取消'
+        }
+      );
+      
+      if (!confirmed) {
+        return;
+      }
+    }
+    
+    // 设置分配状态
+    autoAllocating.value = true;
+    isAllocating.value = true;
+    allocationProgress.value = 0;
+    currentAllocationIndex.value = 0;
+    autoAllocationResult.value = null;
+    
+    // 获取需要分配的产品
+    const productsToAllocate = outboundProducts.value.filter(item => 
+      item.quantity > 0 && 
+      (!item.batchAllocations || item.batchAllocations.length === 0)
+    );
+    
+    totalAllocationCount.value = productsToAllocate.length;
+    
+    if (totalAllocationCount.value === 0) {
+      ElMessage.info('所有产品已经分配完成');
+      autoAllocating.value = false;
+      isAllocating.value = false;
+      return;
+    }
+    
+    console.log(`开始为 ${totalAllocationCount.value} 个产品进行自动分配`);
+    
+    // 依次为每个产品分配批次
+    for (let i = 0; i < productsToAllocate.length; i++) {
+      const product = productsToAllocate[i];
+      currentAllocationIndex.value = i + 1;
+      allocationProgress.value = Math.round((currentAllocationIndex.value / totalAllocationCount.value) * 100);
+      
+      console.log(`分配产品 ${i+1}/${totalAllocationCount.value}: ${product.productName} (数量: ${product.quantity})`);
+      
+      try {
+        await autoAllocateProduct(product);
+        console.log(`产品 ${product.productName} 分配成功`);
+      } catch (error) {
+        console.error(`产品 ${product.productName} 分配失败:`, error);
+        ElMessage.error(`产品 ${product.productName} 分配失败: ${error.message || '未知错误'}`);
+      }
+      
+      // 每个产品分配后稍作延迟，避免请求过快
+      if (i < productsToAllocate.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+    
+    // 分配完成
+    autoAllocating.value = false;
+    isAllocating.value = false;
+    allocationProgress.value = 100;
+    
+    // 显示分配结果
+    const allocatedProducts = outboundProducts.value.filter(item => 
+      item.quantity > 0 && item.batchAllocations && item.batchAllocations.length > 0
+    );
+    
+    const allocatedCount = allocatedProducts.reduce((sum, item) => 
+      sum + (item.batchAllocations?.length || 0), 0
+    );
+    
+    autoAllocationResult.value = {
+      success: true,
+      message: `自动分配完成，成功为 ${allocatedProducts.length} 个产品分配了 ${allocatedCount} 个批次`
+    };
+    
+    ElMessage.success('自动分配完成');
+    
+  } catch (error) {
+    console.error('自动分配失败:', error);
+    autoAllocating.value = false;
+    isAllocating.value = false;
+    
+    autoAllocationResult.value = {
+      success: false,
+      message: `自动分配失败: ${error.message || '未知错误'}`
+    };
+    
+    ElMessage.error('自动分配失败');
+  }
+};
+
+// 为单个产品自动分配批次
+const autoAllocateProduct = async (product) => {
+  if (!product.productId || !formData.warehouseId) {
+    throw new Error('产品信息或仓库信息不完整');
+  }
+  
+  // 加载批次信息
+  await loadBatchInfoForProduct(product.productId, formData.warehouseId, product);
+  
+  if (!product.availableBatches || product.availableBatches.length === 0) {
+    throw new Error('没有找到可用批次');
+  }
+  
+  const targetQuantity = product.quantity;
+  let remainingQuantity = targetQuantity;
+  const allocations = [];
+  
+  // 按先进先出（FIFO）排序批次
+  const sortedBatches = [...product.availableBatches].sort((a, b) => {
+    if (a.productionDate && b.productionDate) {
+      return new Date(a.productionDate) - new Date(b.productionDate);
+    }
+    if (a.createdAt && b.createdAt) {
+      return new Date(a.createdAt) - new Date(b.createdAt);
+    }
+    return 0;
+  });
+  
+  // 遍历批次进行分配
+  for (const batch of sortedBatches) {
+    if (remainingQuantity <= 0) break;
+    
+    const batchTotalAvailable = batch.quantity || 0;
+    if (batchTotalAvailable <= 0) continue;
+    
+    // 如果有货架信息，按货架分配
+    if (batch.shelfList && batch.shelfList.length > 0) {
+      // 按货架可用数量排序
+      const sortedShelves = [...batch.shelfList].sort((a, b) => b.quantity - a.quantity);
+      
+      for (const shelf of sortedShelves) {
+        if (remainingQuantity <= 0) break;
+        
+        const shelfAvailable = shelf.quantity || 0;
+        if (shelfAvailable <= 0) continue;
+        
+        const allocateQuantity = Math.min(shelfAvailable, remainingQuantity);
+        
+        allocations.push({
+          batchNo: batch.batchNo,
+          shelfId: shelf.shelfId,
+          shelfName: shelf.shelfName || `货架${shelf.shelfId}`,
+          quantity: allocateQuantity,
+          price: product.price || 0
+        });
+        
+        remainingQuantity -= allocateQuantity;
+      }
+    } else {
+      // 没有货架信息，直接按批次分配
+      const allocateQuantity = Math.min(batchTotalAvailable, remainingQuantity);
+      
+      allocations.push({
+        batchNo: batch.batchNo,
+        shelfId: null,
+        shelfName: '默认货架',
+        quantity: allocateQuantity,
+        price: product.price || 0
+      });
+      
+      remainingQuantity -= allocateQuantity;
+    }
+  }
+  
+  // 检查是否分配完成
+  if (remainingQuantity > 0) {
+    throw new Error(`库存不足，仍有 ${remainingQuantity} 个无法分配`);
+  }
+  
+  // 更新产品的批次分配
+  product.batchAllocations = allocations;
+  
+  // 记录分配详情
+  console.log(`产品 ${product.productName} 分配结果:`, {
+    需要数量: targetQuantity,
+    分配批次数: allocations.length,
+    分配明细: allocations.map(a => ({
+      批次: a.batchNo,
+      货架: a.shelfName,
+      数量: a.quantity
+    }))
+  });
+  
+  return allocations;
+};
+
+// 批量自动分配
+const batchAutoAllocate = async (products) => {
+  const results = {
+    success: 0,
+    failed: 0,
+    details: []
+  };
+  
+  for (const product of products) {
+    try {
+      await autoAllocateProduct(product);
+      results.success++;
+      results.details.push({
+        productId: product.productId,
+        productName: product.productName,
+        success: true,
+        message: '分配成功'
+      });
+    } catch (error) {
+      results.failed++;
+      results.details.push({
+        productId: product.productId,
+        productName: product.productName,
+        success: false,
+        message: error.message || '分配失败'
+      });
+    }
+  }
+  
+  return results;
+};
+
+// ==================== 自动分配相关方法结束 ====================
+
 // 批次分配相关方法
 const handleBatchDialogClosed = () => {
   showAllocationStrategy.value = false;
@@ -2985,7 +3274,7 @@ const autoAllocateBatches = () => {
   }
 };
 
-// 打开批次分配对话框
+// 打开批次分配对话框 - 修改以支持自动分配
 const openBatchDialogForProduct = async (row) => {
   if (!row.productId) {
     ElMessage.warning('产品信息不完整');
@@ -3009,6 +3298,7 @@ const openBatchDialogForProduct = async (row) => {
     })) : []
   }));
 
+  // 如果已经有分配数据，使用现有数据
   if (row.batchAllocations && row.batchAllocations.length > 0) {
     row.batchAllocations.forEach(allocation => {
       const batch = batchDialog.batches.find(b => b.batchNo === allocation.batchNo);
@@ -3016,6 +3306,18 @@ const openBatchDialogForProduct = async (row) => {
         const shelf = batch.shelfList.find(s => s.shelfId === allocation.shelfId);
         if (shelf) {
           shelf.allocated = allocation.quantity;
+        }
+      }
+    });
+  } else {
+    // 尝试自动分配（仅填充对话框，不保存）
+    const mockAllocations = await calculateAutoAllocation(row.quantity, batchDialog.batches);
+    mockAllocations.forEach(mockAlloc => {
+      const batch = batchDialog.batches.find(b => b.batchNo === mockAlloc.batchNo);
+      if (batch && batch.shelfList) {
+        const shelf = batch.shelfList.find(s => s.shelfId === mockAlloc.shelfId);
+        if (shelf) {
+          shelf.allocated = mockAlloc.quantity;
         }
       }
     });
@@ -3039,6 +3341,60 @@ const loadBatchInfoForProduct = async (productId, warehouseId, row) => {
     console.error('加载批次信息失败:', error);
     row.availableBatches = [];
   }
+};
+
+// 计算自动分配方案（用于对话框预览）
+const calculateAutoAllocation = async (targetQuantity, batches) => {
+  let remainingQuantity = targetQuantity;
+  const allocations = [];
+  
+  // 按先进先出排序
+  const sortedBatches = [...batches].sort((a, b) => {
+    if (a.productionDate && b.productionDate) {
+      return new Date(a.productionDate) - new Date(b.productionDate);
+    }
+    return 0;
+  });
+  
+  for (const batch of sortedBatches) {
+    if (remainingQuantity <= 0) break;
+    
+    const batchTotalAvailable = batch.quantity || 0;
+    if (batchTotalAvailable <= 0) continue;
+    
+    if (batch.shelfList && batch.shelfList.length > 0) {
+      const sortedShelves = [...batch.shelfList].sort((a, b) => b.quantity - a.quantity);
+      
+      for (const shelf of sortedShelves) {
+        if (remainingQuantity <= 0) break;
+        
+        const shelfAvailable = shelf.quantity || 0;
+        if (shelfAvailable <= 0) continue;
+        
+        const allocateQuantity = Math.min(shelfAvailable, remainingQuantity);
+        
+        allocations.push({
+          batchNo: batch.batchNo,
+          shelfId: shelf.shelfId,
+          quantity: allocateQuantity
+        });
+        
+        remainingQuantity -= allocateQuantity;
+      }
+    } else {
+      const allocateQuantity = Math.min(batchTotalAvailable, remainingQuantity);
+      
+      allocations.push({
+        batchNo: batch.batchNo,
+        shelfId: null,
+        quantity: allocateQuantity
+      });
+      
+      remainingQuantity -= allocateQuantity;
+    }
+  }
+  
+  return allocations;
 };
 
 // 确认批次分配
@@ -3085,6 +3441,25 @@ const confirmBatchAllocation = () => {
 
   batchDialog.visible = false;
   ElMessage.success('批次分配完成');
+};
+
+// 提交前检查分配状态
+const checkAllocationStatus = () => {
+  const unallocatedProducts = outboundProducts.value.filter(item => {
+    if (item.quantity <= 0) return false;
+    const allocatedQuantity = item.batchAllocations 
+      ? item.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0)
+      : 0;
+    return (item.quantity || 0) !== allocatedQuantity;
+  });
+  
+  if (unallocatedProducts.length > 0) {
+    const productNames = unallocatedProducts.map(p => p.productName).join(', ');
+    ElMessage.warning(`以下产品未完成批次分配: ${productNames}`);
+    return false;
+  }
+  
+  return true;
 };
 
 // 导出当前数据
@@ -3375,16 +3750,8 @@ const handleSubmit = async () => {
     return;
   }
   
-  const hasUnallocatedItems = outboundProducts.value.some(item => {
-    if (item.quantity <= 0) return false;
-    const allocatedQuantity = item.batchAllocations 
-      ? item.batchAllocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0)
-      : 0;
-    return (item.quantity || 0) !== allocatedQuantity;
-  });
-  
-  if (hasUnallocatedItems) {
-    ElMessage.warning('存在未完成批次分配的产品，请完成批次分配后再提交');
+  // 检查批次分配
+  if (!checkAllocationStatus()) {
     return;
   }
   
@@ -3409,7 +3776,7 @@ const handleSubmit = async () => {
   }
 };
 
-// 准备提交数据// 准备提交数据// 准备提交数据
+// 准备提交数据
 const prepareSubmitData = () => {
   const items = outboundProducts.value
     .filter(item => item.quantity > 0)
@@ -3647,6 +4014,16 @@ watch(
 .header-actions {
   display: flex;
   gap: 12px;
+}
+
+.auto-allocate-btn {
+  background-color: #67C23A;
+  border-color: #67C23A;
+}
+
+.auto-allocate-btn:hover {
+  background-color: #5da737;
+  border-color: #5da737;
 }
 
 .outbound-form {
@@ -3922,6 +4299,32 @@ watch(
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+/* 自动分配状态样式 */
+.auto-allocation-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  background-color: #f0f9ff;
+  border-radius: 4px;
+  border: 1px solid #91d5ff;
+}
+
+.allocation-progress {
+  width: 100px;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #1890ff;
+  white-space: nowrap;
+}
+
+/* 自动分配结果提示 */
+.auto-allocation-result {
+  margin: 16px 0;
 }
 
 /* 产品表格样式 */
@@ -4588,131 +4991,6 @@ watch(
   background-color: #f5f7fa;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .outbound-create-container {
-    padding: 10px;
-  }
-  
-  .card-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .header-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-  
-  .product-add-section .section-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .product-add-section .header-actions {
-    width: 100%;
-  }
-  
-  .recommendations-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .group-header {
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
-  }
-  
-  .section-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .section-header-left {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .header-right-actions {
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  
-  .quick-stats .el-col {
-    margin-bottom: 8px;
-  }
-  
-  .summary-info .el-col {
-    margin-bottom: 8px;
-  }
-  
-  .selector-filter {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .selector-actions {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-  }
-  
-  .batch-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .info-item {
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
-    min-width: auto;
-  }
-  
-  .history-summary {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 576px) {
-  .product-add-section .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .product-add-section .header-actions .el-input {
-    width: 100%;
-    margin-right: 0;
-  }
-  
-  .product-details {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  
-  .product-tags {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .recommendation-detail-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-  }
-}
-
 /* 触发产品来源行样式 */
 .trigger-source-row {
   margin-top: 4px;
@@ -4812,5 +5090,147 @@ watch(
 
 :deep(.recommendation-items-table .row-added:hover > td) {
   background-color: #e6f7e6 !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .outbound-create-container {
+    padding: 10px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .product-add-section .section-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .product-add-section .header-actions {
+    width: 100%;
+  }
+  
+  .recommendations-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .group-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .section-header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .header-right-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .auto-allocation-status {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .allocation-progress {
+    width: 100%;
+  }
+  
+  .progress-text {
+    font-size: 11px;
+    text-align: center;
+  }
+  
+  .quick-stats .el-col {
+    margin-bottom: 8px;
+  }
+  
+  .summary-info .el-col {
+    margin-bottom: 8px;
+  }
+  
+  .selector-filter {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .selector-actions {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .batch-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .info-item {
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .history-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .product-add-section .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .product-add-section .header-actions .el-input {
+    width: 100%;
+    margin-right: 0;
+  }
+  
+  .product-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .product-tags {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .recommendation-detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
 }
 </style>
