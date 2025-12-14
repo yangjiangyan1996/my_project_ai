@@ -32,7 +32,7 @@ public class ProductBomDetail extends BaseModel {
     //生产一个成品所需的原料净用量数量（目前只存储，无逻辑）
     private BigDecimal quantityBeforeLoss;
 
-    //其他数量（比如有的东西是几米的，一次用几个，目前没有逻辑相关）
+    //基础单位数量（多少成品用一个包装）
     private BigDecimal otherQuantity;
 
     //备注，比如原料替代说明
