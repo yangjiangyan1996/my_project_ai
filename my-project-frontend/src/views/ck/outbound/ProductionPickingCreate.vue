@@ -49,6 +49,14 @@
       >
         <el-row :gutter="24">
           <el-col :xs="24" :sm="12" :lg="8">
+            <el-form-item label="关联单号" prop="relatedOrderNo">
+              <el-input
+                v-model="formData.relatedOrderNo"
+                placeholder="请输入关联单号"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12" :lg="8">
             <el-form-item label="出库单号" prop="orderNo">
               <el-input v-model="formData.orderNo" placeholder="系统自动生成" disabled />
             </el-form-item>
@@ -97,14 +105,6 @@
                 placeholder="选择预计出库日期"
                 style="width: 100%"
                 value-format="YYYY-MM-DD"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :xs="24" :sm="12" :lg="8">
-            <el-form-item label="关联单号" prop="relatedOrderNo">
-              <el-input
-                v-model="formData.relatedOrderNo"
-                placeholder="请输入关联单号"
               />
             </el-form-item>
           </el-col>
