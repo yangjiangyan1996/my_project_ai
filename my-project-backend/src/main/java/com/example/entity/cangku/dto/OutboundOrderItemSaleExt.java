@@ -27,7 +27,7 @@ public class OutboundOrderItemSaleExt extends BaseModel {
     private Long productId;
     //是否为触发产品, 0=是。1=不是
     private Integer isTriggerProduct;
-    //是否为推荐产品, 0=是。1=不是
+    //是否为推荐产品, 0=不是 1=推荐产品 2=包装件
     private Integer isRecommendProduct;
     //关联的触发产品ID
     private Long triggerProductId;

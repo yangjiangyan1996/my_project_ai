@@ -934,9 +934,9 @@ public class CkOutboundFacade {
         }
 
         List<OutboundOrderItemSaleExt> outboundOrderItemSaleExts = outboundOrderItemSaleExtService.selectByOrderId(orderId, tenantId);
-        Map<Long, OutboundOrderItemSaleExt> productId2OutboundOrderItemSaleExtMap = new HashMap<>();
+        Map<Long, OutboundOrderItemSaleExt> orderItemId2OutboundOrderItemSaleExtMap = new HashMap<>();
         if (!CollectionUtils.isEmpty(outboundOrderItemSaleExts)) {
-            productId2OutboundOrderItemSaleExtMap = outboundOrderItemSaleExts.stream().collect(Collectors.toMap(OutboundOrderItemSaleExt::getProductId, v -> v));
+            orderItemId2OutboundOrderItemSaleExtMap = outboundOrderItemSaleExts.stream().collect(Collectors.toMap(OutboundOrderItemSaleExt::getOrderItemId, v -> v));
         }
 
         OutboundDetailResp resp = new OutboundDetailResp();
@@ -963,52 +963,98 @@ public class CkOutboundFacade {
 
         List<OutboundDetailResp.ProductInfoInner> innerList = new ArrayList<>();
 
-        for (Long productId : productId2OutItemListMap.keySet()) {
-            List<OutboundOrderItem> outItemList = productId2OutItemListMap.get(productId);
-            if (!CollectionUtils.isEmpty(outItemList)) {
-                OutboundDetailResp.ProductInfoInner req = new OutboundDetailResp.ProductInfoInner();
-                req.setProductId(productId);
-                Product product = finalProductId2ProductMap.getOrDefault(productId, null);
-                if (product.getId() != null) {
-                    req.setProductName(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getName());
-                    req.setSku(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSku());
-                    req.setSpec(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSpec());
-                    req.setUnit(finalUnitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
-                }
-
-                //将outItemList 中的getQuantity求和
-                BigDecimal quantity = outItemList.stream().map(OutboundOrderItem::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
-                req.setQuantity(quantity);
-                BigDecimal totalAmount = outItemList.stream().map(OutboundOrderItem::getPriceTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-                req.setPriceTotal(totalAmount);
-                req.setPriceUnit(outItemList.get(0).getPriceUnit());
-                req.setPriceTotalUsd(outItemList.get(0).getPriceTotalUsd());
-                req.setPriceUnitUsd(outItemList.get(0).getPriceUnitUsd());
-                req.setRemark(outItemList.get(0).getRemark());
-
-                //扩展信息
-                if(productId2OutboundOrderItemSaleExtMap.containsKey(productId)) {
-                    OutboundOrderItemSaleExt saleExt = productId2OutboundOrderItemSaleExtMap.getOrDefault(productId, new OutboundOrderItemSaleExt());
-                    SaleOutBoundItemExtVO saleExtVO = new SaleOutBoundItemExtVO();
-                    saleExtVO.setProductId(saleExt.getProductId());
-                    saleExtVO.setIsTriggerProduct(saleExt.getIsTriggerProduct());
-                    saleExtVO.setIsRecommendProduct(saleExt.getIsRecommendProduct());
-                    saleExtVO.setTriggerProductId(saleExt.getTriggerProductId());
-                    req.setExtension(saleExtVO);
-                }
-
-                List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v -> {
-                    OutboundDetailResp.ProductInventoryBatchInner i = new OutboundDetailResp.ProductInventoryBatchInner();
-                    i.setItemId(v.getId());
-                    i.setBatchNo(v.getBatchNo());
-                    i.setQuantity(v.getQuantity());
-                    i.setShelfId(v.getShelfLocationId());
-                    i.setShelfName(finalShelfId2ShelfMap.getOrDefault(v.getShelfLocationId(), new WarehouseShelf()).getShelfName());
-                    return i;
-                }).collect(Collectors.toList());
-                req.setBatchAllocations(batchAllocations);
-                innerList.add(req);
+//        for (Long productId : productId2OutItemListMap.keySet()) {
+//            List<OutboundOrderItem> outItemList = productId2OutItemListMap.get(productId);
+//            if (!CollectionUtils.isEmpty(outItemList)) {
+//                OutboundDetailResp.ProductInfoInner req = new OutboundDetailResp.ProductInfoInner();
+//                req.setProductId(productId);
+//                Product product = finalProductId2ProductMap.getOrDefault(productId, null);
+//                if (product.getId() != null) {
+//                    req.setProductName(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getName());
+//                    req.setSku(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSku());
+//                    req.setSpec(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSpec());
+//                    req.setUnit(finalUnitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
+//                }
+//
+//                //将outItemList 中的getQuantity求和
+//                BigDecimal quantity = outItemList.stream().map(OutboundOrderItem::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+//                req.setQuantity(quantity);
+//                BigDecimal totalAmount = outItemList.stream().map(OutboundOrderItem::getPriceTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+//                req.setPriceTotal(totalAmount);
+//                req.setPriceUnit(outItemList.get(0).getPriceUnit());
+//                req.setPriceTotalUsd(outItemList.get(0).getPriceTotalUsd());
+//                req.setPriceUnitUsd(outItemList.get(0).getPriceUnitUsd());
+//                req.setRemark(outItemList.get(0).getRemark());
+//
+//                //扩展信息
+////                if(orderItemId2OutboundOrderItemSaleExtMap.containsKey(productId)) {
+////                    OutboundOrderItemSaleExt saleExt = productId2OutboundOrderItemSaleExtMap.getOrDefault(productId, new OutboundOrderItemSaleExt());
+////                    SaleOutBoundItemExtVO saleExtVO = new SaleOutBoundItemExtVO();
+////                    saleExtVO.setProductId(saleExt.getProductId());
+////                    saleExtVO.setIsTriggerProduct(saleExt.getIsTriggerProduct());
+////                    saleExtVO.setIsRecommendProduct(saleExt.getIsRecommendProduct());
+////                    saleExtVO.setTriggerProductId(saleExt.getTriggerProductId());
+////                    req.setExtension(saleExtVO);
+////                }
+//
+//                List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v -> {
+//                    OutboundDetailResp.ProductInventoryBatchInner i = new OutboundDetailResp.ProductInventoryBatchInner();
+//                    i.setItemId(v.getId());
+//                    i.setBatchNo(v.getBatchNo());
+//                    i.setQuantity(v.getQuantity());
+//                    i.setShelfId(v.getShelfLocationId());
+//                    i.setShelfName(finalShelfId2ShelfMap.getOrDefault(v.getShelfLocationId(), new WarehouseShelf()).getShelfName());
+//                    return i;
+//                }).collect(Collectors.toList());
+//                req.setBatchAllocations(batchAllocations);
+//                innerList.add(req);
+//            }
+//        }
+//        resp.setItems(innerList);
+//        resp.setItemCount(CollectionUtils.isEmpty(innerList) ? 0 : innerList.size());
+//        return resp;
+        for (OutboundOrderItem ooi : items) {
+            OutboundDetailResp.ProductInfoInner req = new OutboundDetailResp.ProductInfoInner();
+            req.setProductId(ooi.getProductId());
+            Product product = finalProductId2ProductMap.getOrDefault(ooi.getProductId(), null);
+            if (product.getId() != null) {
+                req.setProductName(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getName());
+                req.setSku(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSku());
+                req.setSpec(finalProductId2ProductMap.getOrDefault(product.getId(), new Product()).getSpec());
+                req.setUnit(finalUnitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
             }
+
+            //将outItemList 中的getQxuantity求和
+            req.setQuantity(ooi.getQuantity());
+            req.setPriceTotal(ooi.getPriceTotal());
+            req.setPriceUnit(ooi.getPriceUnit());
+            req.setPriceTotalUsd(ooi.getPriceTotalUsd());
+            req.setPriceUnitUsd(ooi.getPriceUnitUsd());
+            req.setRemark(ooi.getRemark());
+
+            //扩展信息
+            if(orderItemId2OutboundOrderItemSaleExtMap.containsKey(ooi.getId())) {
+                OutboundOrderItemSaleExt saleExt = orderItemId2OutboundOrderItemSaleExtMap.getOrDefault(ooi.getId(), new OutboundOrderItemSaleExt());
+                SaleOutBoundItemExtVO saleExtVO = new SaleOutBoundItemExtVO();
+                saleExtVO.setProductId(saleExt.getProductId());
+                saleExtVO.setIsTriggerProduct(saleExt.getIsTriggerProduct());
+                saleExtVO.setIsRecommendProduct(saleExt.getIsRecommendProduct());
+                saleExtVO.setTriggerProductId(saleExt.getTriggerProductId());
+                req.setExtension(saleExtVO);
+            }
+
+            List<OutboundOrderItem> outItemList = productId2OutItemListMap.get(ooi.getProductId());
+            List<OutboundDetailResp.ProductInventoryBatchInner> batchAllocations = outItemList.stream().map(v -> {
+                OutboundDetailResp.ProductInventoryBatchInner i = new OutboundDetailResp.ProductInventoryBatchInner();
+                i.setItemId(v.getId());
+                i.setBatchNo(v.getBatchNo());
+                i.setQuantity(v.getQuantity());
+                i.setShelfId(v.getShelfLocationId());
+                i.setShelfName(finalShelfId2ShelfMap.getOrDefault(v.getShelfLocationId(), new WarehouseShelf()).getShelfName());
+                return i;
+            }).collect(Collectors.toList());
+            req.setBatchAllocations(batchAllocations);
+            innerList.add(req);
         }
         resp.setItems(innerList);
         resp.setItemCount(CollectionUtils.isEmpty(innerList) ? 0 : innerList.size());
@@ -1708,7 +1754,7 @@ public class CkOutboundFacade {
             // 注意：根据你的表结构注释，0=是，1=不是
             ext.setIsTriggerProduct(itemReq.getExtension().getIsTriggerProduct());
             // 设置是否为推荐产品
-            // 注意：根据你的表结构注释，0=是，1=不是
+            // 注意：根据你的表结构注释，0=不是 1=推荐产品 2=包装件
             ext.setIsRecommendProduct(itemReq.getExtension().getIsRecommendProduct());
 
             // 设置触发产品ID

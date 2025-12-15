@@ -32,7 +32,7 @@ public class ProductBomExcelModel {
     @ExcelProperty("颜色")
     private String color;
 
-    //其他数量（比如有的东西是几米的，一次用几个，目前没有逻辑相关）
+    //基础单位数量（多少成品用一个包装）
     @ExcelProperty("数量")
     private String otherQuantity;
 

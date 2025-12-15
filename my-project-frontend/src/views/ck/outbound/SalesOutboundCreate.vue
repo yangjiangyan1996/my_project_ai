@@ -538,6 +538,9 @@
               <div class="product-info-cell">
                 <div class="product-name" @click="showProductHistory(row)">
                   {{ row.productName }}
+                  
+                  
+                  <!-- 在模板中调整产品标签显示 -->
                   <div class="product-tags">
                     <el-tag 
                       v-if="row.isTriggerProduct" 
@@ -555,8 +558,41 @@
                     >
                       推荐商品
                     </el-tag>
+                    <el-tag 
+                      v-else-if="row.isPackage" 
+                      size="small" 
+                      type="warning" 
+                      class="package-tag"
+                    >
+                      包装件
+                    </el-tag>
+                    <!-- 普通商品可以不加标签，或者添加一个默认标签 -->
+                    <el-tag 
+                      v-else 
+                      size="small" 
+                      type="info" 
+                      class="normal-tag"
+                    >
+                      普通商品
+                    </el-tag>
                   </div>
                 </div>
+                <!-- 包装件来源信息 -->
+                <div v-if="row.isPackage && row.parentProductId" class="package-source-row">
+                  <el-tooltip
+                    :content="getProductFullName(row.parentProductId)"
+                    placement="top"
+                  >
+                    <span class="package-source-text">
+                      <el-icon><Connection /></el-icon>
+                      包装来源: {{ getTruncatedProductName(row.parentProductId) }}
+                    </span>
+                  </el-tooltip>
+                  <span v-if="row.packageRatio" class="package-ratio">
+                    比例: 1:{{ row.packageRatio }}
+                  </span>
+                </div>
+                
                 <div class="product-details">
                   <div class="sku-text">{{ row.sku }}</div>
                   <div class="spec-text">{{ row.spec || '-' }}</div>
@@ -1273,6 +1309,7 @@
             <span class="label">最低价格：</span>
             <span class="value">¥ {{ historyDialog.minPrice?.toFixed(2) || '-' }}</span>
           </div>
+          
         </div>
         
         <el-table :data="historyDialog.priceList" border class="history-table">
@@ -1346,6 +1383,12 @@ const allocationStrategy = ref('FIFO');
 const applyingStrategy = ref(false);
 const loadingBatches = ref(false);
 
+// 出库产品数据
+const outboundProducts = ref([]);
+
+// 产品类型筛选 - 添加包装件类型
+const productTypeFilter = ref(['trigger', 'recommend', 'package']);
+
 // 表单数据
 const formData = reactive({
   id: null,
@@ -1361,11 +1404,6 @@ const formData = reactive({
   attachments: []
 });
 
-// 出库产品数据
-const outboundProducts = ref([]);
-
-// 产品类型筛选
-const productTypeFilter = ref(['trigger', 'recommend']);
 
 // 批次分配对话框数据
 const batchDialog = reactive({
@@ -1411,22 +1449,63 @@ const isEditMode = computed(() => !!route.params.id);
 const isViewMode = computed(() => {
   // 如果是编辑模式但状态不可编辑，则进入查看模式
   if (isEditMode.value) {
-    // 假设状态 0=草稿, 1=待审核, 2=已审核, 3=已出库, 4=已取消
-    return formData.status > 1; // 只有草稿和待审核状态可编辑
+    // 状态 0=草稿, 1=待审核, 2=已审核, 3=已出库, 4=已取消
+    // 只有草稿状态（0）可编辑，其他状态都进入查看模式
+    return formData.status !== 0;
   }
   return false; // 新建模式肯定不是查看模式
 });
 
+// 修改 filteredProducts 计算属性：
+// 修改 filteredProducts 计算属性：
 const filteredProducts = computed(() => {
-  return outboundProducts.value.filter(p => {
+  // 查看模式下显示所有产品
+  if (isViewMode.value) {
+    console.log('查看模式，显示所有产品:', outboundProducts.value.length);
+    return outboundProducts.value;
+  }
+  
+  // 编辑模式下按筛选条件显示
+  const filtered = outboundProducts.value.filter(p => {
     if (p.quantity > 0) return true; // 总是显示有数量的产品
     if (!productTypeFilter.value.length) return false;
     
     const isTrigger = p.isTriggerProduct && productTypeFilter.value.includes('trigger');
     const isRecommend = p.isRecommend && productTypeFilter.value.includes('recommend');
-    return isTrigger || isRecommend;
+    const isPackage = p.isPackage && productTypeFilter.value.includes('package');
+    
+    return isTrigger || isRecommend || isPackage;
   });
+  
+  return filtered;
 });
+
+// 新增排序方法，确保包装件跟在父产品后面
+const sortProductsWithPackages = (products) => {
+  // 创建一个副本，避免修改原数组
+  const sorted = [...products];
+  
+  // 找出所有的主产品（非包装件）
+  const mainProducts = sorted.filter(p => !p.isPackage);
+  
+  // 对每个主产品，找到其包装件并重新排序
+  let finalArray = [];
+  
+  mainProducts.forEach(mainProduct => {
+    // 添加主产品
+    finalArray.push(mainProduct);
+    
+    // 找到该主产品的包装件
+    const packages = sorted.filter(p => 
+      p.isPackage && p.parentProductId === mainProduct.productId
+    );
+    
+    // 添加包装件到主产品后面
+    finalArray.push(...packages);
+  });
+  
+  return finalArray;
+};
 
 const totalQuantity = computed(() => {
   return filteredProducts.value
@@ -1531,11 +1610,14 @@ const formRules = {
 };
 
 // 表格行样式
+// 表格行样式 - 添加包装件样式
 const tableRowClassName = ({ row }) => {
   if (row.isTriggerProduct) {
     return 'trigger-product-row';
   } else if (row.isRecommend) {
     return 'recommend-product-row';
+  } else if (row.isPackage) {
+    return 'package-product-row';
   }
   return '';
 };
@@ -1673,59 +1755,80 @@ const loadOutboundDetail = async (id) => {
         formData.attachments = detailData.attachments;
       }
       
-      // 设置产品数据（关键修改点）
+      // 清空现有数据
+      outboundProducts.value = [];
+      groupedRecommendations.value = [];
+      recommendationDetails.value = {};
+      
+      // 设置产品数据
       if (detailData.items && detailData.items.length > 0) {
-        outboundProducts.value = detailData.items.map(item => {
-          // 从 extension 中获取扩展信息
+        // 首先按原始顺序添加所有产品
+        const itemsWithOrder = detailData.items.map((item, index) => {
           const extension = item.extension || {};
-          const isTriggerProduct = extension.isTriggerProduct === 0; // 0=是触发产品
-          const isRecommend = extension.isRecommendProduct === 0; // 0=是推荐产品
-          const triggerProductId = extension.triggerProductId || null;
+          const isRecommendProduct = extension.isRecommendProduct;
+          
+          let isTriggerProduct, isRecommend, isPackage;
+          
+          if (isRecommendProduct === 1) {
+            // 推荐产品
+            isTriggerProduct = extension.isTriggerProduct === 0;
+            isRecommend = true;
+            isPackage = false;
+          } else if (isRecommendProduct === 2) {
+            // 包装件
+            isTriggerProduct = false;
+            isRecommend = false;
+            isPackage = true;
+          } else {
+            // 普通产品（包括触发产品）
+            isTriggerProduct = extension.isTriggerProduct === 0;
+            isRecommend = false;
+            isPackage = false;
+          }
 
-          // 构建产品对象
-          const productData = {
+          return {
             productId: item.productId,
             productName: item.productName,
             sku: item.sku,
             spec: item.spec || '',
             color: item.color || '',
             unitName: item.unit || '',
-            // 关键：确保 quantity 字段正确设置
-            quantity: item.quantity,
+            quantity: item.quantity || 0,
             price: item.priceUnit ? Number(item.priceUnit) : 0,
             priceUnitUsd: item.priceUnitUsd ? Number(item.priceUnitUsd) : 0,
             remark: item.remark || '',
             batchAllocations: item.batchAllocations || [],
-            // 从 availableBatches 中获取可用库存，如果没有则设为0
-            // availableQuantity: item.availableBatches ? 
-            //   item.availableBatches.reduce((sum, batch) => sum + Number(batch.quantity), 0) : 0,
-            availableQuantity: item.quantity * 2,// TODO yang 这里最好是实时库存 如果这里的数量小于 item.quantity，就会导致页面回显出库数量为0
-            // 扩展信息
+            availableQuantity: item.quantity * 2, // 这里使用实际数量
             isTriggerProduct: isTriggerProduct,
             isRecommend: isRecommend,
-            triggerProductId: triggerProductId,
+            isPackage: isPackage,
+            triggerProductId: extension.triggerProductId || null,
+            parentProductId: extension.parentProductId || null,
+            packageRatio: extension.packageRatio || null,
             extension: extension,
-            // 保存原始价格用于重置
             originalPrice: item.priceUnit ? Number(item.priceUnit) : 0,
             originalPriceUnitUsd: item.priceUnitUsd ? Number(item.priceUnitUsd) : 0,
             historyPrice: null,
-            // 记录上次数量用于比较
-            lastQuantity: item.quantity ? Number(item.quantity) : 0
+            lastQuantity: item.quantity ? Number(item.quantity) : 0,
+            originalIndex: index // 保存原始索引用于调试
           };
-          
-          console.log(`加载产品 ${item.productName}:`, {
-            quantity: productData.quantity,
-            price: productData.price,
-            isTrigger: productData.isTriggerProduct,
-            isRecommend: productData.isRecommend,
-            triggerId: productData.triggerProductId
-          });
-          
-          return productData;
         });
+        
+        // 直接使用原始顺序，因为后端已经按正确顺序返回
+        outboundProducts.value = itemsWithOrder;
+        
+        console.log('加载的产品数据:', outboundProducts.value.map(p => ({
+          name: p.productName,
+          id: p.productId,
+          quantity: p.quantity,
+          isTrigger: p.isTriggerProduct,
+          isRecommend: p.isRecommend,
+          isPackage: p.isPackage,
+          parentId: p.parentProductId,
+          triggerId: p.triggerProductId,
+          originalIndex: p.originalIndex
+        })));
       }
-
-      console.log('最终加载的产品数据:', outboundProducts.value);
       
       // 编辑模式下，加载仓库对应的可用产品
       if (formData.warehouseId) {
@@ -1733,7 +1836,9 @@ const loadOutboundDetail = async (id) => {
       }
       
       // 编辑模式下，为已有的触发产品加载推荐
-      await loadRecommendationsForExistingProducts();
+      if (formData.customerId && formData.warehouseId) {
+        await loadRecommendationsForExistingProducts();
+      }
       
       ElMessage.success('数据加载成功');
     }
@@ -1746,57 +1851,88 @@ const loadOutboundDetail = async (id) => {
   }
 };
 
+// 新增：编辑模式下批量加载包装件的方法
+const loadPackageComponentsBatchForEdit = async (parentProductId, parentQuantity) => {
+  try {
+    const res = await get(`/api/auth/product/bomDetailOnlyPackageInfo?productId=${parentProductId}`);
+    
+    if (res && res.list && res.list.length > 0) {
+      const parentIndex = outboundProducts.value.findIndex(p => 
+        p.productId === parentProductId && !p.isPackage
+      );
+      
+      if (parentIndex === -1) return;
+      
+      // 为每个包装件创建对象
+      for (const component of res.list) {
+        const packageItem = await createPackageComponent(component, parentProductId, parentQuantity);
+        if (packageItem) {
+          // 查找编辑模式下是否已有该包装件的数据
+          const existingPackageIndex = outboundProducts.value.findIndex(p => 
+            p.isPackage && p.productId === packageItem.productId && p.parentProductId === parentProductId
+          );
+          
+          if (existingPackageIndex === -1) {
+            // 插入到父产品后面
+            outboundProducts.value.splice(parentIndex + 1, 0, packageItem);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('编辑模式加载包装件失败:', error);
+  }
+};
+
+// 为编辑模式下的现有产品加载推荐
 // 为编辑模式下的现有产品加载推荐
 const loadRecommendationsForExistingProducts = async () => {
   if (!formData.customerId || !formData.warehouseId) return;
+  
+  console.log('开始加载编辑模式推荐...');
   
   // 重置推荐数据
   groupedRecommendations.value = [];
   recommendationDetails.value = {};
   
-  // 为每个触发产品加载推荐
-  const triggerProducts = outboundProducts.value.filter(p => p.isTriggerProduct );
-  //计算p.quantity.batchAllocations中对象的quantity总和
-  //const quantityOfTriggerProducts = triggerProducts.reduce((sum, p) => sum + p.quantity, 0);
-  // console.log('触发产品:', triggerProducts);
-  console.log('为以下触发产品加载推荐:', triggerProducts.map(p => ({
+  // 为每个触发产品加载推荐（包括主产品和推荐产品）
+  const triggerProducts = outboundProducts.value.filter(p => 
+    (p.isTriggerProduct || p.isRecommend) && p.quantity > 0
+  );
+  
+  console.log('需要加载推荐的触发产品:', triggerProducts.map(p => ({
     name: p.productName,
+    id: p.productId,
     quantity: p.quantity,
-    id: p.productId
+    isTrigger: p.isTriggerProduct,
+    isRecommend: p.isRecommend
   })));
   
   for (const product of triggerProducts) {
-    console.log('触发产品:', product);
+    // 计算数量
+    let quantityOfTriggerProducts = Number(product.quantity) || 0;
     
-    // 如果产品有批次分配，从批次分配中计算总数
-    let quantityOfTriggerProducts;
+    console.log(`为产品 ${product.productName} 加载推荐，数量: ${quantityOfTriggerProducts}`);
     
-    if (product.batchAllocations && product.batchAllocations.length > 0) {
-        // 从批次分配中计算总数量
-        quantityOfTriggerProducts = product.batchAllocations.reduce((sum, allocation) => {
-            return sum + (Number(allocation.quantity) || 0);
-        }, 0);
-        console.log(`触发产品 ${product.productName} 从批次分配计算数量: ${quantityOfTriggerProducts}`);
-    } else {
-        // 如果没有批次分配，直接使用 quantity 属性
-        quantityOfTriggerProducts = Number(product.quantity) || 0;
-        console.log(`触发产品 ${product.productName} 从quantity属性获取数量: ${quantityOfTriggerProducts}`);
+    if (quantityOfTriggerProducts > 0) {
+      try {
+        await loadRecommendationsForProduct(product.productId, quantityOfTriggerProducts);
+      } catch (error) {
+        console.error(`加载产品 ${product.productName} 的推荐失败:`, error);
+      }
     }
-    console.log(`触发产品 ${product.productName} 最终计算数量: ${quantityOfTriggerProducts}`);
-    
-    await loadRecommendationsForProduct(product.productId, quantityOfTriggerProducts);
-}
+  }
+  
+  // 更新推荐详情数据
+  updateRecommendationDetails();
   
   // 标记已添加的推荐产品为选中状态
   const recommendProducts = outboundProducts.value.filter(p => p.isRecommend && p.quantity > 0);
-  console.log('已添加的推荐产品:', recommendProducts.map(p => ({
+  console.log('已存在的推荐产品:', recommendProducts.map(p => ({
     name: p.productName,
     quantity: p.quantity,
     id: p.productId
   })));
-  
-  // 更新推荐详情数据
-  updateRecommendationDetails();
   
   // 在推荐面板中标记已添加的推荐产品
   recommendProducts.forEach(recommendProduct => {
@@ -1804,11 +1940,14 @@ const loadRecommendationsForExistingProducts = async () => {
       const item = group.items.find(i => i.productId === recommendProduct.productId);
       if (item) {
         item.selected = true;
-        // 更新已添加的数量
         item.calculatedQuantity = recommendProduct.quantity;
+        item.actualQuantity = recommendProduct.quantity;
       }
     });
   });
+  
+  console.log('编辑模式推荐详情:', recommendationDetails.value);
+  console.log('推荐分组:', groupedRecommendations.value);
 };
 
 
@@ -1864,9 +2003,10 @@ const clearSearch = () => {
 };
 
 // 添加产品到表格
+// 在现有代码中找到 addProductToTable 方法，修改如下：
 const addProductToTable = async (product) => {
   // 检查是否已存在
-  const existingProduct = outboundProducts.value.find(p => p.productId === product.productId);
+  const existingProduct = outboundProducts.value.find(p => p.productId === product.productId && !p.isPackage);
   if (existingProduct) {
     // 如果已存在且数量为0，更新数量为1
     if (existingProduct.quantity === 0) {
@@ -1885,6 +2025,10 @@ const addProductToTable = async (product) => {
       
       // 加载推荐
       await loadRecommendationsForProduct(product.productId, 1);
+      
+      // 新增：加载包装件
+      await loadPackageComponents(product.productId, 1);
+      
       ElMessage.success(`已更新 ${product.productName} 数量为1`);
     } else {
       ElMessage.warning(`${product.productName} 已存在于出库单中`);
@@ -1893,26 +2037,30 @@ const addProductToTable = async (product) => {
   }
   
   // 新增产品
-  const newProduct = {
-    ...product,
-    quantity: 1,
-    price: product.originalPrice || 0,
-    priceUnitUsd: product.originalPriceUnitUsd || 0,
-    remark: '',
-    batchAllocations: [],
-    isTriggerProduct: true,
-    isRecommend: false,
-    triggerProductId: null,
-    // 添加扩展信息
-    extension: {
-      productId: product.productId,
-      isTriggerProduct: 0, // 0=是触发产品
-      isRecommendProduct: 1, // 1=不是推荐产品
-      triggerProductId: null
-    },
-    historyPrice: null,
-    lastQuantity: 0
-  };
+    const newProduct = {
+      ...product,
+      quantity: 1,
+      price: product.originalPrice || 0,
+      priceUnitUsd: product.originalPriceUsd || 0,
+      remark: '',
+      batchAllocations: [],
+      // 产品类型
+      isTriggerProduct: true, // 新增的触发产品
+      isRecommend: false,
+      isPackage: false,
+      triggerProductId: null,
+      // 扩展信息 - 根据新结构
+      extension: {
+        productId: product.productId,
+        isTriggerProduct: 0, // 0=是触发产品
+        isRecommendProduct: 0, // 0=不是推荐产品（普通触发产品）
+        triggerProductId: null,
+        isPackageProduct: 1, // 1=不是包装件
+        packageRatio: 0
+      },
+      historyPrice: null,
+      lastQuantity: 0
+    };
   
   outboundProducts.value.push(newProduct);
   
@@ -1923,12 +2071,13 @@ const addProductToTable = async (product) => {
   // 加载推荐
   await loadRecommendationsForProduct(product.productId, 1);
   
+  // 新增：加载包装件（批量添加方式）
+  await addPackageComponentsBatch(product.productId, 1);
 
   // 如果有推荐产品被添加，更新推荐面板中的选择状态
-    if (outboundProducts.value.some(p => p.isRecommend && p.quantity > 0)) {
-      updateRecommendationDetails();
-    }
-
+  if (outboundProducts.value.some(p => p.isRecommend && p.quantity > 0)) {
+    updateRecommendationDetails();
+  }
 
   nextTick(() => {
     const element = document.querySelector('.product-table');
@@ -1937,6 +2086,208 @@ const addProductToTable = async (product) => {
     }
   });
 };
+
+
+
+// 在现有代码中添加以下方法：
+
+// 批量添加包装件并保持父子顺序
+const addPackageComponentsBatch = async (parentProductId, parentQuantity) => {
+  try {
+    const res = await get(`/api/auth/product/bomDetailOnlyPackageInfo?productId=${parentProductId}`);
+    
+    if (res && res.list && res.list.length > 0) {
+      console.log('批量加载包装件原始数据:', res.list);
+      
+      // 找到父产品在数组中的位置
+      const parentIndex = outboundProducts.value.findIndex(p => 
+        p.productId === parentProductId && !p.isPackage
+      );
+      
+      if (parentIndex === -1) {
+        console.error('未找到父产品:', parentProductId);
+        return;
+      }
+      
+      // 获取父产品对象
+      const parentProduct = outboundProducts.value[parentIndex];
+      
+      // 清空现有的包装件列表
+      parentProduct.packageComponents = [];
+      
+      // 为每个包装件添加到表格中
+      const packageItems = [];
+      for (const component of res.list) {
+        const packageItem = await createPackageComponent(component, parentProductId, parentQuantity);
+        if (packageItem) {
+          packageItems.push(packageItem);
+          parentProduct.packageComponents.push(packageItem.productId);
+        }
+      }
+      
+      // 将包装件插入到父产品后面
+      if (packageItems.length > 0) {
+        // 首先移除可能已存在的相同父产品的包装件
+        const existingPackageIndices = [];
+        outboundProducts.value.forEach((item, index) => {
+          if (item.parentProductId === parentProductId && item.isPackage) {
+            existingPackageIndices.push(index);
+          }
+        });
+        
+        // 从后往前移除，避免索引变化
+        existingPackageIndices.sort((a, b) => b - a).forEach(index => {
+          outboundProducts.value.splice(index, 1);
+        });
+        
+        // 插入新的包装件到父产品后面
+        packageItems.forEach((packageItem, index) => {
+          outboundProducts.value.splice(parentIndex + 1 + index, 0, packageItem);
+        });
+        
+        console.log(`已添加 ${packageItems.length} 个包装件到 ${parentProduct.productName} 后面`);
+      }
+    }
+  } catch (error) {
+    console.error('批量添加包装件失败:', error);
+  }
+};
+
+// 创建包装件对象
+const createPackageComponent = async (component, parentProductId, parentQuantity) => {
+  // 查找包装件在可用产品列表中的信息
+  const availableProduct = availableProducts.value.find(p => 
+    p.productId === component.componentProductId
+  );
+  
+  if (!availableProduct) {
+    console.warn(`包装件 ${component.componentProductId} 不在可用产品列表中`);
+    return null;
+  }
+  
+  // 计算包装件数量：成品数量 / otherQuantity
+  const packageRatio = component.otherQuantity ? Number(component.otherQuantity) : 1;
+  const packageQuantity = parentQuantity ? Math.ceil(parentQuantity / packageRatio) : 0;
+  
+  return {
+    ...availableProduct,
+    productId: component.componentProductId,
+    productName: component.componentProductName || availableProduct.productName,
+    sku: component.componentProductSku || availableProduct.sku,
+    spec: component.componentProductSpec || availableProduct.spec,
+    color: component.componentProductColor || availableProduct.color,
+    quantity: packageQuantity,
+    price: availableProduct.originalPrice || 0,
+    priceUnitUsd: availableProduct.originalPriceUsd || 0,
+    remark: `包装件 - ${component.remark || ''}`,
+    batchAllocations: [],
+    // 产品类型 - 包装件
+    isTriggerProduct: false,
+    isRecommend: false,
+    isPackage: true,
+    parentProductId: parentProductId,
+    packageRatio: packageRatio,
+    triggerProductId: parentProductId,
+    // 扩展信息
+    extension: {
+      productId: component.componentProductId,
+      isTriggerProduct: 1, // 不是触发产品
+      isRecommendProduct: 2, // 2=包装件
+      parentProductId: parentProductId,
+      triggerProductId: parentProductId,
+      isPackageProduct: 0, // 0=是包装件
+      packageRatio: packageRatio
+    },
+    historyPrice: null,
+    lastQuantity: packageQuantity,
+    availableQuantity: availableProduct.availableQuantity || 0,
+    unitName: availableProduct.unitName || '个'
+  };
+};
+
+
+// 加载产品的包装件
+const loadPackageComponents = async (productId, productQuantity) => {
+  try {
+    const res = await get(`/api/auth/product/bomDetailOnlyPackageInfo?productId=${productId}`);
+    
+    if (res && res.list && res.list.length > 0) {
+      console.log('加载包装件原始数据:', res.list);
+      // 过滤出包装件（type=2可能是辅料，您需要根据实际业务调整）
+      const packageComponents = res.list; // 假设type=2是包装件
+      
+      if (packageComponents.length > 0) {
+        for (const component of packageComponents) {
+          await addPackageComponentToTable(component, productId, productQuantity);
+        }
+        return packageComponents.length;
+      }
+    }
+    return 0;
+  } catch (error) {
+    console.error('加载包装件失败:', error);
+    return 0;
+  }
+};
+
+// 添加包装件到表格
+const addPackageComponentToTable = async (component, parentProductId, parentQuantity) => {
+  // 检查是否已存在
+  const existingProduct = outboundProducts.value.find(p => 
+    p.productId === component.componentProductId && p.isPackage
+  );
+  
+  // 计算包装件数量：成品数量 / otherQuantity
+  const packageRatio = component.otherQuantity ? Number(component.otherQuantity) : 1;
+  const packageQuantity = parentQuantity ? Math.ceil(parentQuantity / packageRatio) : 0;
+  
+  if (existingProduct) {
+    // 已存在包装件，更新数量
+    existingProduct.quantity = packageQuantity;
+    existingProduct.parentProductId = parentProductId;
+    existingProduct.packageRatio = packageRatio;
+    existingProduct.lastQuantity = packageQuantity;
+  } else {
+    // 查找包装件在可用产品列表中的信息
+    const availableProduct = availableProducts.value.find(p => 
+      p.productId === component.componentProductId
+    );
+    
+    if (availableProduct) {
+      const newPackage = {
+        ...availableProduct,
+        quantity: packageQuantity,
+        price: availableProduct.originalPrice || 0,
+        priceUnitUsd: availableProduct.originalPriceUnitUsd || 0,
+        remark: `包装件 - ${component.remark || ''}`,
+        batchAllocations: [],
+        isTriggerProduct: false,
+        isRecommend: false,
+        isPackage: true, // 标记为包装件
+        parentProductId: parentProductId,
+        packageRatio: packageRatio,
+        triggerProductId: parentProductId, // 使用父产品作为触发产品
+        extension: {
+          productId: component.componentProductId,
+          isTriggerProduct: 1, // 不是触发产品
+          isRecommendProduct: 1, // 不是推荐产品
+          isPackageProduct: 0, // 是包装件产品
+          parentProductId: parentProductId,
+          triggerProductId: parentProductId
+        },
+        historyPrice: null,
+        lastQuantity: packageQuantity,
+        componentProductSku: component.componentProductSku,
+        componentProductName: component.componentProductName,
+        componentProductSpec: component.componentProductSpec,
+        componentProductColor: component.componentProductColor
+      };
+      
+      outboundProducts.value.push(newPackage);
+    }
+  }
+};
+
 
 // 获取行的触发产品ID
 const getTriggerIdForRow = (row) => {
@@ -1948,12 +2299,19 @@ const getTriggerIdForRow = (row) => {
   return null;
 };
 
+
 // 产品数量变化处理
+
 const handleQuantityChange = async (row, value) => {
   if (value > 0) {
     // 如果是触发产品且数量从0变成有值，查询推荐
     if (row.isTriggerProduct && value > 0 && (!row.lastQuantity || row.lastQuantity === 0)) {
       await loadRecommendationsForProduct(row.productId, value);
+
+      // 更新包装件数量（批量更新）
+      if (!row.isPackage && !row.isRecommend) {
+        await updatePackageComponentsBatch(row.productId, value);
+      }
     }
     
     // 更新价格
@@ -1979,9 +2337,9 @@ const handleQuantityChange = async (row, value) => {
       await loadProductHistoryPrice(row);
     }
     
-    // 如果是触发产品，更新相关推荐的数量
-    if (row.isTriggerProduct) {
-      updateRecommendationQuantities(row.productId, value);
+    // 如果是触发产品，更新相关包装件的数量
+    if (row.isTriggerProduct && !row.isPackage && !row.isRecommend) {
+      updatePackageComponentsQuantityBatch(row.productId, value);
     }
 
     // 更新推荐面板中相关产品的选择状态
@@ -1999,11 +2357,110 @@ const handleQuantityChange = async (row, value) => {
     // 如果是触发产品，移除相关推荐（但不删除推荐商品）
     if (row.isTriggerProduct) {
       removeRecommendationsForTrigger(row.productId, false); // 不删除推荐商品
+      
+      // 更新包装件数量为0（不删除）
+      updatePackageComponentsQuantityBatch(row.productId, 0);
     }
   }
   
   row.lastQuantity = value;
 };
+
+// 批量更新包装件数量
+const updatePackageComponentsQuantityBatch = (parentProductId, parentQuantity) => {
+  // 查找所有关联的包装件
+  const packageComponents = outboundProducts.value.filter(p => 
+    p.parentProductId === parentProductId && p.isPackage
+  );
+  
+  packageComponents.forEach(packageItem => {
+    if (packageItem.packageRatio && packageItem.packageRatio > 0) {
+      const newQuantity = Math.ceil(parentQuantity / packageItem.packageRatio);
+      packageItem.quantity = newQuantity;
+      packageItem.lastQuantity = newQuantity;
+      
+      // 如果包装件数量为0，清空相关数据
+      if (newQuantity === 0) {
+        packageItem.price = 0;
+        packageItem.priceUnitUsd = 0;
+        packageItem.remark = '';
+        packageItem.batchAllocations = [];
+      }
+    }
+  });
+  
+  // 重新排序，确保包装件紧跟在父产品后面
+  resortProductsWithPackages();
+};
+
+// 重新排序产品（确保包装件位置正确）
+const resortProductsWithPackages = () => {
+  // 创建一个临时数组来重新排序
+  const mainProducts = outboundProducts.value.filter(p => !p.isPackage);
+  const packages = outboundProducts.value.filter(p => p.isPackage);
+  
+  // 清空数组
+  outboundProducts.value = [];
+  
+  // 按顺序添加主产品和其包装件
+  mainProducts.forEach(mainProduct => {
+    // 添加主产品
+    outboundProducts.value.push(mainProduct);
+    
+    // 找到该主产品的包装件
+    const productPackages = packages.filter(p => p.parentProductId === mainProduct.productId);
+    
+    // 添加包装件
+    outboundProducts.value.push(...productPackages);
+  });
+};
+
+// 更新包装件数量
+const updatePackageComponentsQuantity = (parentProductId, parentQuantity) => {
+  // 查找所有关联的包装件
+  const packageComponents = outboundProducts.value.filter(p => 
+    p.parentProductId === parentProductId && p.isPackage
+  );
+  
+  packageComponents.forEach(packageItem => {
+    if (packageItem.packageRatio && packageItem.packageRatio > 0) {
+      const newQuantity = Math.ceil(parentQuantity / packageItem.packageRatio);
+      packageItem.quantity = newQuantity;
+      packageItem.lastQuantity = newQuantity;
+    }
+  });
+};
+
+
+
+// 移除包装件
+const removePackageComponents = (parentProductId, deletePackages = false) => {
+  if (deletePackages) {
+    // 删除包装件
+    const indices = [];
+    outboundProducts.value.forEach((item, index) => {
+      if (item.parentProductId === parentProductId && item.isPackage) {
+        indices.unshift(index);
+      }
+    });
+    
+    indices.forEach(index => {
+      outboundProducts.value.splice(index, 1);
+    });
+  } else {
+    // 只清空包装件数量
+    outboundProducts.value.forEach(item => {
+      if (item.parentProductId === parentProductId && item.isPackage) {
+        item.quantity = 0;
+        item.price = 0;
+        item.priceUnitUsd = 0;
+        item.remark = '';
+        item.batchAllocations = [];
+      }
+    });
+  }
+};
+
 
 // 更新推荐产品的数量
 const updateRecommendationQuantities = (triggerProductId, quantity) => {
@@ -2079,17 +2536,13 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
       applyScene: 1
     };
     
-    console.log('推荐接口响应,请求参数:', requestData);
+    console.log('推荐接口请求参数:', requestData);
     const res = await post('/api/auth/recommend/queryRuleItems', requestData);
     
     console.log('推荐接口响应:', res);
     
     if (res && res.recommendations && res.recommendations.length > 0) {
-      // 过滤掉已经在出库单中且数量大于0的产品
-      const existingProductIds = outboundProducts.value
-        .filter(p => p.quantity > 0 && p.productId !== productId) // 排除当前触发产品本身
-        .map(p => p.productId);
-      
+      // 重要：不要过滤已存在的产品，保留所有推荐
       const recommendations = res.recommendations.map(item => {
         const productInfo = availableProducts.value.find(p => p.productId === item.productId);
         const availableQuantity = productInfo ? productInfo.availableQuantity : 0;
@@ -2121,15 +2574,10 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
           availableQuantity: availableQuantity,
           calculatedQuantity: calculatedQuantity,
           triggerProductId: productId, // 记录触发产品ID
-          // 如果是编辑模式且已存在，使用实际数量
           actualQuantity: actualQuantity,
-          // 记录这个推荐是否为当前触发产品的推荐
           isCurrentTriggerRecommendation: true
         };
       });
-
-      // 重要：不移除过滤逻辑，保留所有推荐产品
-      // .filter(item => !existingProductIds.includes(item.productId));
       
       console.log('处理后的推荐数据:', recommendations);
       
@@ -2157,17 +2605,21 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
           applyRequiredRecommendations(productId);
         }
         
-        ElMessage.success(`发现 ${recommendations.length} 条推荐规则`);
+        console.log(`发现 ${recommendations.length} 条推荐规则，触发产品ID: ${productId}`);
       }
     } else {
       console.log('未找到推荐规则或推荐列表为空', res);
     }
   } catch (error) {
     console.error('加载推荐失败:', error);
-    ElMessage.error('获取推荐规则失败');
+    // 编辑模式下不显示错误提示，避免干扰用户体验
+    if (!isEditMode.value) {
+      ElMessage.error('获取推荐规则失败');
+    }
   }
 };
 
+// 新增：更新推荐详情数据
 // 新增：更新推荐详情数据
 const updateRecommendationDetails = () => {
   recommendationDetails.value = {};
@@ -2190,7 +2642,9 @@ const updateRecommendationDetails = () => {
       } else {
         recommendationDetails.value[item.productId].push({
           triggerProductId: group.triggerProductId,
-          recommendedQuantity: recommendedQuantity
+          recommendedQuantity: recommendedQuantity,
+          productName: item.productName,
+          isRequired: item.isRequired
         });
       }
     });
@@ -2198,7 +2652,6 @@ const updateRecommendationDetails = () => {
   
   console.log('推荐详情数据:', recommendationDetails.value);
 };
-
 // 新增：获取产品推荐详情
 const getRecommendationDetails = (productId) => {
   return recommendationDetails.value[productId] || [];
@@ -2291,25 +2744,28 @@ const addRecommendationToOrder = (recommendation) => {
     return;
   }
   
-  const newProduct = {
-    ...product,
-    quantity: actualQuantity,
-    price: product.originalPrice || 0,
-    priceUnitUsd: product.originalPriceUnitUsd || 0,
-    // remark: recommendation.remark || '',
-    batchAllocations: [],
-    isTriggerProduct: false,
-    isRecommend: true,
-    triggerProductId: recommendation.triggerProductId,
-    // 添加扩展信息
-    extension: {
-      productId: recommendation.productId,
-      isTriggerProduct: 1, // 1=不是触发产品
-      isRecommendProduct: 0, // 0=是推荐产品
-      triggerProductId: recommendation.triggerProductId || 0
-    },
-    historyPrice: null
-  };
+    const newProduct = {
+      ...product,
+      quantity: actualQuantity,
+      price: product.originalPrice || 0,
+      priceUnitUsd: product.originalPriceUsd || 0,
+      batchAllocations: [],
+      // 产品类型 - 推荐产品
+      isTriggerProduct: false,
+      isRecommend: true,
+      isPackage: false,
+      triggerProductId: recommendation.triggerProductId,
+      // 扩展信息
+      extension: {
+        productId: recommendation.productId,
+        isTriggerProduct: 1, // 1=不是触发产品
+        isRecommendProduct: 1, // 1=推荐产品
+        triggerProductId: recommendation.triggerProductId || 0,
+        isPackageProduct: 1, // 1=不是包装件
+        packageRatio: 0
+      },
+      historyPrice: null
+    };
   
   outboundProducts.value.push(newProduct);
   
@@ -2487,11 +2943,25 @@ const getTruncatedProductName = (productId) => {
 
 
 // 获取产品名称
+// 获取产品名称
 const getProductName = (productId) => {
   const product = outboundProducts.value.find(p => p.productId === productId) || 
                   availableProducts.value.find(p => p.productId === productId);
-                  console.log("dsjnfdskanksf",product);
-  return product ? `${product.productName} - ${product.spec ? product.spec : '无规格'} - ${product.color ? product.color : '无颜色'}` : '未知产品';
+  
+  if (!product) {
+    console.log(`未找到产品ID: ${productId}`);
+    return '未知产品';
+  }
+  
+  let name = product.productName || '';
+  if (product.spec && product.spec !== '-') {
+    name += ` - ${product.spec}`;
+  }
+  if (product.color && product.color !== '-') {
+    name += ` - ${product.color}`;
+  }
+  
+  return name;
 };
 
 // 获取产品数量
@@ -2551,6 +3021,7 @@ const handleProductSelectorClosed = () => {
   filteredSelectorProducts.value = [...availableProducts.value];
 };
 
+// 找到 addSelectedProducts 方法，修改如下：
 const addSelectedProducts = async () => {
   if (selectedProductsForSelector.value.length === 0) {
     ElMessage.warning('请先选择产品');
@@ -2558,11 +3029,15 @@ const addSelectedProducts = async () => {
   }
   
   let addedCount = 0;
+  const addedProducts = []; // 记录已添加的主产品
+  
   for (const product of selectedProductsForSelector.value) {
-    const existingProduct = outboundProducts.value.find(p => p.productId === product.productId);
+    const existingProduct = outboundProducts.value.find(p => 
+      p.productId === product.productId && !p.isPackage
+    );
     
     if (!existingProduct) {
-      // 新增产品
+      // 新增主产品
       const newProduct = {
         ...product,
         quantity: 1,
@@ -2574,14 +3049,19 @@ const addSelectedProducts = async () => {
         isRecommend: false,
         historyPrice: null,
         lastQuantity: 0,
-        triggerProductId: null
+        triggerProductId: null,
+        isPackage: false,
+        parentProductId: null,
+        packageComponents: []
       };
       
       outboundProducts.value.push(newProduct);
+      addedProducts.push(newProduct);
       addedCount++;
       
       // 加载推荐
       await loadRecommendationsForProduct(product.productId, 1);
+      
     } else if (existingProduct.quantity === 0) {
       // 已存在但数量为0，更新数量
       existingProduct.quantity = 1;
@@ -2590,11 +3070,17 @@ const addSelectedProducts = async () => {
       existingProduct.isTriggerProduct = true;
       existingProduct.isRecommend = false;
       existingProduct.triggerProductId = null;
+      addedProducts.push(existingProduct);
       addedCount++;
       
       // 加载推荐
       await loadRecommendationsForProduct(product.productId, 1);
     }
+  }
+  
+  // 批量添加包装件，保持顺序
+  for (const product of addedProducts) {
+    await addPackageComponentsBatch(product.productId, product.quantity);
   }
   
   showProductSelector.value = false;
@@ -2612,6 +3098,7 @@ const addSelectedProducts = async () => {
 };
 
 // 从表格中删除产品
+// 修改 removeProductFromTable 方法：
 const removeProductFromTable = (row, index) => {
   ElMessageBox.confirm(
     `确定要删除 ${row.productName} 吗？`,
@@ -2621,18 +3108,35 @@ const removeProductFromTable = (row, index) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    if (row.isTriggerProduct) {
+  ).then(async () => {
+    if (row.isTriggerProduct && !row.isPackage) {
+      // 如果是主产品，删除其包装件
+      const packageIndices = [];
+      outboundProducts.value.forEach((item, idx) => {
+        if (item.parentProductId === row.productId && item.isPackage) {
+          packageIndices.unshift(idx);
+        }
+      });
+      
+      // 删除包装件
+      packageIndices.forEach(idx => {
+        outboundProducts.value.splice(idx, 1);
+      });
+      
+      // 删除推荐
       removeRecommendationsForTrigger(row.productId, true);
     } else if (row.isRecommend) {
       // 从推荐详情中移除
       delete recommendationDetails.value[row.productId];
     }
     
+    // 删除当前行
     outboundProducts.value.splice(index, 1);
+    
     ElMessage.success('删除成功');
   });
 };
+
 
 // 批量操作
 const handleBatchCommand = async (command) => {
@@ -3827,24 +4331,41 @@ const handleSubmit = async () => {
 };
 
 // 准备提交数据
+// 准备提交数据
 const prepareSubmitData = () => {
   const items = outboundProducts.value
     .filter(item => item.quantity > 0)
     .map(item => {
+      // 根据产品类型确定 isRecommendProduct 的值
+      let isRecommendProductValue;
+      
+      if (item.isPackage) {
+        // 包装件类型
+        isRecommendProductValue = 2;
+      } else if (item.isRecommend) {
+        // 推荐产品类型
+        isRecommendProductValue = 1;
+      } else {
+        // 普通产品（包括触发产品）
+        isRecommendProductValue = 0;
+      }
+      
       // 构建扩展信息
-      // 优先使用已存在的 extension，否则新建
       const extension = item.extension || {
         productId: item.productId,
-        isTriggerProduct: item.isTriggerProduct ? 0 : 1, // 0=是触发产品, 1=不是触发产品
-        isRecommendProduct: item.isRecommend ? 0 : 1, // 0=是推荐产品, 1=不是推荐产品
+        isTriggerProduct: item.isTriggerProduct ? 0 : 1, // 0=是触发产品, 1=不是
+        isRecommendProduct: isRecommendProductValue, // 0=不是推荐产品, 1=推荐产品, 2=包装件
         triggerProductId: item.triggerProductId || 0, // 关联的触发产品ID，没有则为0
-        remark: item.remark || ''
+        remark: item.remark || '',
+        // 新增字段保持不变
+        isPackageProduct: item.isPackage ? 0 : 1, // 0=是包装件, 1=不是
+        packageRatio: item.packageRatio || 0,
       };
       
       // 如果 extension 存在但需要更新字段
       if (item.extension) {
         extension.isTriggerProduct = item.isTriggerProduct ? 0 : 1;
-        extension.isRecommendProduct = item.isRecommend ? 0 : 1;
+        extension.isRecommendProduct = isRecommendProductValue;
         extension.triggerProductId = item.triggerProductId || 0;
       }
       
@@ -3872,6 +4393,7 @@ const prepareSubmitData = () => {
         // 保留原来的字段，用于前端显示
         isTriggerProduct: item.isTriggerProduct || false,
         isRecommend: item.isRecommend || false,
+        isPackage: item.isPackage || false, // 新增
         triggerProductId: item.triggerProductId || null,
         // 扩展信息
         extension: extension
@@ -5308,6 +5830,58 @@ watch(
   font-size: 18px;    /* 增大图标 */
 }
 
+
+/* 在样式中添加包装件相关样式 */
+.package-tag {
+  height: 20px;
+  line-height: 18px;
+  background-color: #fdf6ec;
+  border-color: #fac858;
+  color: #e6a23c;
+}
+
+.package-source-row {
+  margin-top: 4px;
+  padding: 3px 6px;
+  background-color: #fdf6ec;
+  border-radius: 3px;
+  border: 1px solid #fac858;
+  max-width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.package-source-text {
+  font-size: 11px;
+  color: #e6a23c;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.package-ratio {
+  font-size: 11px;
+  color: #909399;
+  white-space: nowrap;
+}
+
+/* 包装件行的特殊样式 */
+:deep(.package-product-row) {
+  background-color: #fdf6ec !important;
+}
+
+:deep(.package-product-row:hover > td) {
+  background-color: #faecd8 !important;
+}
+
 /* 调整整体容器，为返回按钮腾出空间 */
 .inbound-create-container {
   padding: 20px;
@@ -5330,5 +5904,35 @@ watch(
     font-size: 16px;
     margin-right: 4px;
   }
+}
+
+/* 在现有样式中添加以下样式，增强父子关系视觉表现 */
+
+/* 主产品和包装件的缩进关系 */
+:deep(.package-product-row .el-table__cell:first-child .cell) {
+  padding-left: 32px !important;
+  position: relative;
+}
+
+:deep(.package-product-row .el-table__cell:first-child .cell:before) {
+  content: "└─ ";
+  position: absolute;
+  left: 16px;
+  color: #e6a23c;
+  font-size: 14px;
+}
+
+/* 主产品行的特殊样式 */
+:deep(.trigger-product-row) {
+  border-bottom: 2px solid #91d5ff !important;
+}
+
+:deep(.trigger-product-row + .package-product-row) {
+  border-top: none !important;
+}
+
+/* 最后一个包装件行的特殊样式 */
+:deep(.package-product-row:not(:has(+ .package-product-row)) + .trigger-product-row) {
+  border-top: 2px solid #dcdfe6 !important;
 }
 </style>

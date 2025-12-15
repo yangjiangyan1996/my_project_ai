@@ -31,6 +31,7 @@ public class ProductBomExcelImportModel {
     @ExcelProperty(value = "颜色", index = 5)
     private String color;
 
+    //基础单位数量（多少成品用一个包装）
     @ExcelProperty(value = "数量", index = 6)
     private String otherQuantity;
 

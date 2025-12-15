@@ -924,7 +924,7 @@ const updateSelectedProductIdsCache = () => {
 
 // 获取产品选项标签（添加已选标识）
 const getProductOptionLabel = (product) => {
-  const baseLabel = `${product.sku} - ${product.name} ${product.spec || ''} ${product.color === null ? '' : product.color}`;
+  const baseLabel = `${product.name}-${product.spec || ''}-${product.color === null ? '' : product.color}-${product.sku} `;
   
   // 如果产品已被其他行选中，添加标识
   if (selectedProductIdsCache.value.has(product.id)) {

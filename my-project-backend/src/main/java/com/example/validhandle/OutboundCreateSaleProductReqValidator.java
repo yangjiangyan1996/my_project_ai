@@ -115,13 +115,13 @@ public class OutboundCreateSaleProductReqValidator {
             }
 
             // 2. 重复产品校验
-            if (item.getProductId() != null) {
-                if (productIds.contains(item.getProductId())) {
-                    throw new ValidationException("产品ID重复:" + item.getProductId());
-                } else {
-                    productIds.add(item.getProductId());
-                }
-            }
+//            if (item.getProductId() != null) {
+//                if (productIds.contains(item.getProductId())) {
+//                    throw new ValidationException("产品ID重复:" + item.getProductId());
+//                } else {
+//                    productIds.add(item.getProductId());
+//                }
+//            }
 
             // 3. 金额计算校验
             if (item.getQuantity() != null && item.getPrice() != null) {

@@ -244,6 +244,7 @@ public class CKProductFacade {
                 detail.setTenantId(req.getTenantId());
                 detail.setComponentProductId(v.getComponentProductId());
                 detail.setQuantity(new BigDecimal(v.getQuantity()));
+                detail.setOtherQuantity(v.getOtherQuantity());
                 detail.setLossRate(new BigDecimal(v.getLossRate()));
                 detail.setType(v.getType());
                 detail.setRemark(v.getRemark());
@@ -326,6 +327,7 @@ public class CKProductFacade {
                 }
                 d.setType(z.getType());
                 d.setQuantity(z.getQuantity());
+                d.setOtherQuantity(z.getOtherQuantity());
                 d.setLossRate(z.getLossRate());
                 d.setRemark(z.getRemark());
                 d.setSortOrder(z.getSortOrder());
@@ -397,6 +399,7 @@ public class CKProductFacade {
                 detail.setTenantId(req.getTenantId());
                 detail.setComponentProductId(v.getComponentProductId());
                 detail.setQuantity(new BigDecimal(v.getQuantity()));
+                detail.setOtherQuantity(v.getOtherQuantity());
                 detail.setLossRate(new BigDecimal(v.getLossRate()));
                 detail.setRemark(v.getRemark());
                 detail.setType(v.getType());
@@ -541,6 +544,7 @@ public class CKProductFacade {
                     }
                     r.setType(s.getType());
                     r.setQuantity(s.getQuantity());
+                    r.setOtherQuantity(s.getOtherQuantity());
                     r.setLossRate(s.getLossRate());
                     r.setRemark(s.getRemark());
                     r.setSortOrder(s.getSortOrder());
@@ -588,6 +592,7 @@ public class CKProductFacade {
                 r.setComponentProductUnit(finalUnitCode2UnitMap.getOrDefault(pp.getUnitCode(), new Unit()).getUnitName());
                 r.setComponentProductSpec(pp.getSpec());
                 r.setQuantity(new BigDecimal(1));
+                r.setOtherQuantity(new BigDecimal(1));
                 r.setLossRate(new BigDecimal(1));
                 r.setRemark(pp.getRemark());
                 r.setSortOrder(0);
@@ -1760,7 +1765,7 @@ public class CKProductFacade {
             detail.setLossRate(StringUtils.isBlank(v.getLossRate()) ? BigDecimal.ZERO : NumUtils.parsePercentStrict(v.getLossRate()));
             detail.setRemark(v.getRemark());
             detail.setType(CkProductEnums.BomDetailType.getNameLike(v.getTypeName()));
-            detail.setOtherQuantity(StringUtils.isBlank(v.getOtherQuantity()) ? BigDecimal.ZERO : new BigDecimal(v.getOtherQuantity()));
+            detail.setOtherQuantity(StringUtils.isBlank(v.getOtherQuantity()) ? BigDecimal.ONE : new BigDecimal(v.getOtherQuantity()));
             detail.setQuantityBeforeLoss(StringUtils.isBlank(v.getQuantityBeforeLoss()) ? BigDecimal.ZERO : new BigDecimal(v.getQuantityBeforeLoss()));
             detail.setCreatedAt(new Date());
             detail.setCreatedBy(userId);
@@ -1817,6 +1822,55 @@ public class CKProductFacade {
             r.setTypeName(CkProductEnums.BomDetailType.getDescByCode(v.getType()));
             return r;
         }).collect(Collectors.toList());
+
+        BomListOfProductResp rr = new BomListOfProductResp();
+        rr.setBomId(pb.getId());
+        rr.setBomCode(pb.getBomCode());
+        rr.setRemark(pb.getRemark());
+        rr.setVersion(pb.getVersion());
+        rr.setList(list);
+        rr.setStatus(pb.getStatus());
+        return rr;
+    }
+
+    public BomListOfProductResp bomDetailOnlyPackageInfo(Long productId, Long tenantId) {
+        ProductBom pb = productBomService.selectByProduectId(productId,tenantId);
+        if (pb == null) {
+            return null;
+        }
+        List<ProductBomDetail> pbdList = productBomDetailService.selectByBomId(pb.getId(), tenantId);
+
+        Map<Long, Product> productId2ProductMap = new HashMap<>();
+        List<Long> productIds = pbdList.stream().map(v -> v.getComponentProductId()).distinct().collect(Collectors.toList());
+        List<Product> products = productService.selectByIds(tenantId, productIds);
+        if (!CollectionUtils.isEmpty(products)) {
+            productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+        }
+
+        Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
+        List<BomDetailListOfProductResp> list = pbdList.stream()
+                .filter(v -> v.getType().equals(CkProductEnums.BomDetailType.BOM_DETAIL_TYPE_PACKAGE.getCode()))
+                .map(v -> {
+                    BomDetailListOfProductResp r = new BomDetailListOfProductResp();
+                    r.setBomDetailId(v.getId());
+                    r.setComponentProductId(v.getComponentProductId());
+                    Product componentProduct = finalProductId2ProductMap.getOrDefault(v.getComponentProductId(), new Product());
+                    if (componentProduct != null) {
+                        r.setComponentProductName(componentProduct.getName());
+                        r.setComponentProductSku(componentProduct.getSku());
+                        r.setComponentProductSpec(componentProduct.getSpec());
+                        r.setComponentProductColor(componentProduct.getColor());
+                    }
+                    r.setQuantity(v.getQuantity());
+                    r.setLossRate(NumUtils.toPercentString(v.getLossRate(), 4));
+                    r.setQuantityBeforeLoss(v.getQuantityBeforeLoss());
+                    r.setOtherQuantity(v.getOtherQuantity());
+                    r.setRemark(v.getRemark());
+                    r.setSortOrder(v.getSortOrder());
+                    r.setType(v.getType());
+                    r.setTypeName(CkProductEnums.BomDetailType.getDescByCode(v.getType()));
+                    return r;
+                }).collect(Collectors.toList());
 
         BomListOfProductResp rr = new BomListOfProductResp();
         rr.setBomId(pb.getId());

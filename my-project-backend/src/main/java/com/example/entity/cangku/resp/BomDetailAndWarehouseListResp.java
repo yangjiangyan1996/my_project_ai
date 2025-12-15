@@ -22,6 +22,8 @@ public class BomDetailAndWarehouseListResp {
     String componentProductColor;
     String componentProductUnit;
     BigDecimal quantity;
+    //基础单位数量（多少成品用一个包装）
+    BigDecimal otherQuantity;
     Integer type;
     BigDecimal lossRate;
     String remark;

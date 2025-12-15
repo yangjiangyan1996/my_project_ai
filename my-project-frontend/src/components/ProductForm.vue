@@ -260,12 +260,12 @@
                   style="width: 100%"
                   filterable
                   @change="(value) => handleComponentChange(value, $index)"
-                  :disabled="isEdit"
+                  
                 >
                   <el-option
                     v-for="product in availableComponentProducts"
                     :key="product.id"
-                    :label="`${product.name}`"
+                    :label="`${product.name}-${product.sku || ''}`"
                     :value="product.id"
                     :disabled="isComponentSelected(product.id)"
                   />
@@ -306,6 +306,20 @@
             <el-table-column label="单位" width="80" align="center">
               <template #default="{ row }">
                 {{ row.componentProductUnit || '-' }}
+              </template>
+            </el-table-column>
+
+            <el-table-column label="包装件比例" width="120">
+              <template #default="{ row, $index }">
+                <el-input-number
+                  v-model="row.otherQuantity"
+                  :min="1"
+                  :precision="4"
+                  :step="0.0001"
+                  controls-position="right"
+                  style="width: 100%"
+                  placeholder="包装件比例"
+                />
               </template>
             </el-table-column>
             
@@ -557,6 +571,7 @@ watchEffect(() => {
           componentProductColor: item.componentProductColor,
           componentProductUnit: item.componentProductUnit,
           quantity: item.quantity,
+          otherQuantity: item.otherQuantity,
           type: item.type || 1, // 确保类型字段有值
           lossRate: item.lossRate,
           remark: item.remark,
@@ -742,6 +757,7 @@ const handleAddComponent = () => {
     componentProductColor: '',
     componentProductUnit: '',
     quantity: 1,
+    otherQuantity: 1,
     type: 1, // 默认选择主料
     lossRate: 0,
     remark: '',
@@ -875,6 +891,7 @@ const handleSubmit = async () => {
         remark: `${formModel.name}的默认配方`,
         details: formModel.bomDetails.map(detail => ({
           componentProductId: detail.componentProductId,
+          otherQuantity: detail.otherQuantity,
           quantity: detail.quantity,
           lossRate: detail.lossRate,
           type: detail.type, // 新增类型字段

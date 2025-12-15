@@ -326,6 +326,27 @@ public class ProductController {
         }
     }
 
+    /**
+     * 这个接口现在在销售出库页面中使用， 展示用户的包装件
+     * @param productId
+     * @return
+     */
+    @GetMapping("/bomDetailOnlyPackageInfo")
+    public RespBean<BomListOfProductResp> bomDetailOnlyPackageInfo(@RequestParam("productId") Long productId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            BomListOfProductResp result = CKProductFacade.bomDetailOnlyPackageInfo(productId, user.getTenantId());
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ProductController#bomDetailOnlyPackageInfo,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ProductController#bomDetailOnlyPackageInfo,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
     //获取可用商品列表
     @GetMapping("/bom/detail")
     public RespBean<List<BomDetailAndWarehouseListResp>> bomDetail(@RequestParam("bomId") Long bomId) {
