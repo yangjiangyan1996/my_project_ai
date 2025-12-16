@@ -627,6 +627,7 @@
           </el-table-column>
           
           <el-table-column label="推荐数量" width="180" align="center" v-if="hasRecommendationDetails">
+            
             <template #default="{ row }">
               <el-popover
                 v-if="row.isRecommend && getRecommendationDetails(row.productId).length > 0"
@@ -643,7 +644,12 @@
                       </el-tag>
                     </div>
                     <div class="total-quantity-display">
+                      <!-- 显示关联触发商品的推荐总数 -->
                       {{ getTotalRecommendedQuantity(row.productId) }} 个
+                      <!-- 添加提示，如果有关联触发商品 -->
+                      <span v-if="row.parentTriggerId" class="trigger-hint">
+                        (来自: {{ getTruncatedProductName(row.parentTriggerId) }})
+                      </span>
                     </div>
                     <el-icon class="expand-icon"><ArrowRight /></el-icon>
                   </div>
@@ -655,10 +661,11 @@
                       <el-icon><Connection /></el-icon>
                       <span class="product-name">{{ row.productName }}</span>
                     </div>
-                    <div class="recommend-title">推荐来源详情</div>
+                    <div class="recommend-title">推荐来源详情（关联触发商品）</div>
                   </div>
                   
                   <div class="detail-scroll">
+                    <!-- 只显示关联触发商品的详情 -->
                     <div 
                       v-for="(detail, index) in getRecommendationDetails(row.productId)" 
                       :key="detail.triggerProductId" 
@@ -693,6 +700,7 @@
               
               <span v-else>-</span>
             </template>
+
           </el-table-column>
           
           <el-table-column label="出库数量" width="150">
@@ -2195,12 +2203,25 @@ const updateRecommendationDetails = () => {
   });
 };
 
+// 修改后的函数（只展示关联的触发商品）
 const getRecommendationDetails = (productId) => {
-  return recommendationDetails.value[productId] || [];
+  const allDetails = recommendationDetails.value[productId] || [];
+  
+  // 如果当前产品是推荐商品，只返回与其关联的触发商品推荐
+  const product = outboundProducts.value.find(p => p.productId === productId);
+  if (product && product.isRecommend && product.parentTriggerId) {
+    // 只返回与该推荐商品有直接关联的触发商品推荐
+    return allDetails.filter(detail => 
+      detail.triggerProductId === product.parentTriggerId
+    );
+  }
+  
+  return allDetails;
 };
 
+// 修改后的函数（只计算关联触发商品的推荐数量）
 const getTotalRecommendedQuantity = (productId) => {
-  const details = recommendationDetails.value[productId];
+  const details = getRecommendationDetails(productId);
   if (!details || details.length === 0) return 0;
   
   return details.reduce((sum, detail) => sum + (detail.recommendedQuantity || 0), 0);
@@ -2380,11 +2401,13 @@ const handleRecommendationToggle = (recommendation) => {
     );
     
     if (existingProduct) {
-      const triggerCount = Object.values(recommendationDetails.value)
-        .filter(details => details.some(d => d.triggerProductId === recommendation.triggerProductId))
-        .length;
+      // 获取与该推荐商品关联的所有触发商品
+      const relatedTriggerIds = allDetails
+        .filter(detail => detail.triggerProductId === product.parentTriggerId)
+        .map(detail => detail.triggerProductId);
       
-      if (triggerCount > 1) {
+      // 如果有多个触发商品关联，只清空数量
+      if (relatedTriggerIds.length > 1) {
         existingProduct.quantity = 0;
         existingProduct.price = 0;
         existingProduct.priceUnitUsd = 0;
@@ -5531,5 +5554,19 @@ watch(
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* 添加新的样式 */
+.trigger-hint {
+  font-size: 11px;
+  color: #69c0ff;
+  margin-left: 4px;
+  font-style: italic;
+}
+
+.count-tag {
+  background-color: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1890ff;
 }
 </style>
