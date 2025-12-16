@@ -1,9 +1,5 @@
-
-
 <template>
   <div class="outbound-create-container">
-
-
     <!-- 返回按钮行 -->
     <div class="back-header">
       <el-button 
@@ -1338,6 +1334,8 @@
 </template>
 
 <script setup>
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -4343,54 +4341,108 @@ const exportCurrentData = () => {
 };
 
 // 下载模板
-const handleDownloadTemplate = async () => {
-  if (!formData.warehouseId) {
-    ElMessage.warning('请先选择仓库');
-    return;
-  }
-  
+/**
+ * 生成并下载Excel模板
+ */
+const handleDownloadTemplate = () => {
   downloadLoading.value = true;
-
+  
   try {
-    // 获取产品ID列表
-    const productIds = filteredProducts.value
-      .filter(p => p.quantity > 0)
-      .map(p => p.productId)
-      .filter(id => id);
-
-    const response = await axios.post('/api/auth/outbound/exportExcel', {
-      warehouseId: formData.warehouseId,
-      productIds: productIds
-    }, {
-      headers: {
-        ...accessHeader(),
-        'Content-Type': 'application/json'
-      },
-      responseType: 'blob'
-    });
-
-    const blob = new Blob([response.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '销售出库数量导入模版.xlsx';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-
+    // 获取当前产品列表
+    const exportProducts = filteredProducts.value
+      .filter(product => product.productId && product.productName)
+      .map(product => ({
+        '产品ID': product.productId,
+        '产品名称': product.productName,
+        'SKU': product.sku || '',
+        '规格': product.spec || '',
+        '颜色': product.color || '',
+        '库存数量': product.availableQuantity || 0,
+        '当前数量': product.quantity || 0,
+        '人民币单价': product.price || 0,
+        '美元单价': product.priceUnitUsd || 0,
+        '备注': product.remark || '',
+      }));
+    
+    if (exportProducts.length === 0) {
+      ElMessage.warning('没有产品可以导出');
+      return;
+    }
+    
+    // 创建工作簿
+    const wb = XLSX.utils.book_new();
+    
+    // 创建工作表数据
+    const ws = XLSX.utils.json_to_sheet(exportProducts);
+    
+    // 设置列宽
+    const colWidths = [
+      { wch: 15 },  // 产品ID
+      { wch: 30 },  // 产品名称
+      { wch: 20 },  // SKU
+      { wch: 15 },  // 规格
+      { wch: 10 },  // 颜色
+      { wch: 8 },   // 单位
+      { wch: 12 },  // 库存数量
+      { wch: 12 },  // 当前数量
+      { wch: 15 },  // 人民币单价
+      { wch: 15 },  // 美元单价
+      { wch: 30 },  // 备注
+      { wch: 12 },  // 是否是触发商品
+      { wch: 12 },  // 是否是推荐商品
+      { wch: 12 },  // 是否是包装件
+      { wch: 15 },  // 关联触发产品ID
+      { wch: 12 }   // 包装比例
+    ];
+    ws['!cols'] = colWidths;
+    
+    // 添加工作表到工作簿
+    XLSX.utils.book_append_sheet(wb, ws, '销售出库模板');
+    
+    // 添加说明工作表
+    const instructionData = [
+      ['使用说明'],
+      ['1. 请在"当前数量"列填写出库数量'],
+      ['2. 请在"人民币单价"列填写人民币单价'],
+      ['3. 请在"美元单价"列填写美元单价'],
+      ['4. "产品ID"和"SKU"是系统标识，请勿修改'],
+      ['5. 请勿删除或修改表头'],
+      ['6. 表格中已包含当前产品的初始数据，请直接修改数值'],
+      ['7. 导入时系统会根据产品ID匹配并更新数据'],
+      ['', ''],
+      ['注意：'],
+      ['- 只有"当前数量"大于0的产品才会被处理'],
+      ['- 数量和价格不能为负数'],
+      ['- 如果导入的产品不在当前列表中，将被忽略']
+    ];
+    
+    const instructionWs = XLSX.utils.aoa_to_sheet(instructionData);
+    const instructionColWidths = [{ wch: 50 }];
+    instructionWs['!cols'] = instructionColWidths;
+    XLSX.utils.book_append_sheet(wb, instructionWs, '使用说明');
+    
+    // 生成Excel文件
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    
+    // 创建Blob并下载
+    const blob = new Blob([wbout], { type: 'application/octet-stream' });
+    const fileName = `销售出库单模板_${formData.orderNo || new Date().toISOString().slice(0, 10)}.xlsx`;
+    
+    saveAs(blob, fileName);
+    
+    ElMessage.success('模板下载成功');
   } catch (error) {
-    console.error('下载模板失败', error);
-    ElMessage.error('下载模板失败，请稍后重试');
+    console.error('下载模板失败:', error);
+    ElMessage.error('下载模板失败');
   } finally {
     downloadLoading.value = false;
   }
 };
 
-// 文件选择处理
+
+/**
+ * 处理文件选择
+ */
 const handleFileChange = (file) => {
   const isLt10M = file.size / 1024 / 1024 < 10;
   if (!isLt10M) {
@@ -4399,116 +4451,289 @@ const handleFileChange = (file) => {
   }
   
   currentFile.value = file;
-};
-
-// 清空选择的文件
-const clearSelectedFile = () => {
-  currentFile.value = null;
   importResult.value = null;
+  
+  // 立即解析文件
+  parseExcelFile(file);
 };
 
-// 导入提交处理
-const handleImportSubmit = async () => {
-  console.log("开始导入销售出库数量");
-  if (!formData.warehouseId) {
-    ElMessage.warning('请先选择仓库');
-    return;
-  }
+
+/**
+ * 解析Excel文件
+ */
+const parseExcelFile = async (file) => {
+  importLoading.value = true;
   
-  if (!currentFile.value) {
-    ElMessage.warning('请选择要上传的文件');
-    return;
-  }
-
   try {
-    importLoading.value = true;
-    const fd = new FormData();
-
-    const realFile = currentFile.value.raw || currentFile.value;
-    fd.append('file', realFile);
-    fd.append('warehouseId', formData.warehouseId);
-
-    ElMessage.info('开始导入数据，请稍候...');
-
-    const result = await post('/api/auth/outbound/importOutboundSaleQuantity', fd);
-
-    if (result) {
-      importResult.value = result;
-      ElMessage.success(`导入成功！`);
-      
-      if (result && Array.isArray(result)) {
-        result.forEach(importedItem => {
-          const product = availableProducts.value.find(p => 
-            p.productId === importedItem.productId || p.sku === importedItem.sku
-          );
-          
-          if (product) {
-            const existingProduct = outboundProducts.value.find(p => p.productId === product.productId);
-            
-            if (existingProduct) {
-              existingProduct.quantity = importedItem.quantity || 0;
-              existingProduct.price = importedItem.price || product.originalPrice || 0;
-              existingProduct.priceUnitUsd = importedItem.priceUnitUsd || product.originalPriceUnitUsd || 0;
-              existingProduct.remark = importedItem.remark || '';
-            } else {
-              const newProduct = {
-                ...product,
-                quantity: importedItem.quantity || 0,
-                price: importedItem.price || product.originalPrice || 0,
-                priceUnitUsd: importedItem.priceUnitUsd || product.originalPriceUnitUsd || 0,
-                remark: importedItem.remark || '',
-                batchAllocations: [],
-                isTriggerProduct: true,
-                isRecommend: false,
-                historyPrice: null,
-                triggerProductId: null,
-                isPackage: false
-              };
-              
-              outboundProducts.value.push(newProduct);
-            }
-            
-            // 加载推荐
-            if (importedItem.quantity > 0) {
-              loadRecommendationsForProduct(product.productId, importedItem.quantity || 0);
-              
-              // 关键修改：自动添加必选推荐
-              applyRequiredRecommendations(product.productId);
-            }
-          }
-        });
-        
-        importDialog.visible = false;
-        currentFile.value = null;
-        importResult.value = null;
-        
-        ElMessage.success('导入完成');
-      }
-    } else {
-      ElMessage.error('导入失败，请检查数据格式');
+    const data = await readExcelFile(file);
+    
+    if (!data || data.length === 0) {
+      importResult.value = {
+        success: false,
+        message: '文件内容为空或格式不正确'
+      };
+      return;
     }
+    
+    // 处理导入的数据
+    const processedData = processImportData(data);
+    
+    importResult.value = {
+      success: true,
+      data: processedData,
+      message: `成功解析 ${processedData.length} 条记录`
+    };
+    
   } catch (error) {
-    console.error('导入失败详情:', error);
-    ElMessage.error("导入失败，请重试");
+    console.error('解析Excel文件失败:', error);
     importResult.value = {
       success: false,
-      message: error.message || '导入失败，请重试'
+      message: `解析失败: ${error.message || '未知错误'}`
     };
   } finally {
     importLoading.value = false;
   }
 };
 
-// 导入Excel
-const handleImportExcel = () => {
-  if (!formData.warehouseId) {
-    ElMessage.warning('请先选择仓库');
+/**
+ * 读取Excel文件
+ */
+const readExcelFile = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        // 获取第一个工作表
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // 转换为JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        resolve(jsonData);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('读取文件失败'));
+    };
+    
+    reader.readAsArrayBuffer(file.raw || file);
+  });
+};
+
+/**
+ * 处理导入数据并更新产品列表
+ */
+const processImportData = (importData) => {
+  const processedItems = [];
+  let updatedCount = 0;
+  let ignoredCount = 0;
+  
+  // 构建产品ID映射
+  const productMap = new Map();
+  outboundProducts.value.forEach(product => {
+    productMap.set(product.productId, product);
+    if (product.sku) {
+      productMap.set(product.sku, product);
+    }
+  });
+  
+  // 处理每条导入的数据
+  importData.forEach((row, index) => {
+    // 尝试通过不同的标识符查找产品
+    let product = null;
+    let matchBy = '';
+    
+    // 1. 通过产品ID查找
+    if (row['产品ID']) {
+      product = productMap.get(String(row['产品ID']));
+      matchBy = '产品ID';
+    }
+    
+    // 2. 通过SKU查找
+    if (!product && row['SKU']) {
+      product = productMap.get(String(row['SKU']));
+      matchBy = 'SKU';
+    }
+    
+    if (!product) {
+      ignoredCount++;
+      processedItems.push({
+        index: index + 1,
+        productId: row['产品ID'] || row['SKU'],
+        productName: row['产品名称'],
+        status: '忽略',
+        reason: '未在当前产品列表中找到匹配的产品'
+      });
+      return;
+    }
+    
+    // 验证和更新数据
+    let errors = [];
+    
+    // 验证数量
+    const quantity = parseFloat(row['当前数量'] || row['数量'] || 0);
+    if (isNaN(quantity) || quantity < 0) {
+      errors.push('数量无效');
+    }
+    
+    // 验证人民币单价
+    const price = parseFloat(row['人民币单价'] || row['单价'] || 0);
+    if (isNaN(price) || price < 0) {
+      errors.push('人民币单价无效');
+    }
+    
+    // 验证美元单价
+    const priceUnitUsd = parseFloat(row['美元单价'] || row['USD单价'] || 0);
+    if (isNaN(priceUnitUsd) || priceUnitUsd < 0) {
+      errors.push('美元单价无效');
+    }
+    
+    if (errors.length > 0) {
+      ignoredCount++;
+      processedItems.push({
+        index: index + 1,
+        productId: product.productId,
+        productName: product.productName,
+        status: '错误',
+        reason: errors.join(', ')
+      });
+      return;
+    }
+    
+    // 只有数量大于0时才更新
+    if (quantity > 0) {
+      const oldQuantity = product.quantity || 0;
+      const oldPrice = product.price || 0;
+      const oldPriceUsd = product.priceUnitUsd || 0;
+      
+      // 更新产品数据
+      product.quantity = quantity;
+      product.price = price;
+      product.priceUnitUsd = priceUnitUsd;
+      
+      // 如果产品有备注，也更新备注
+      if (row['备注'] !== undefined) {
+        product.remark = row['备注'];
+      }
+      
+      // 如果是触发产品且数量变化，需要重新处理推荐和包装件
+      if (product.isTriggerProduct && Math.abs(oldQuantity - quantity) > 0.001) {
+        handleQuantityChange(product, quantity);
+      }
+      
+      updatedCount++;
+      
+      processedItems.push({
+        index: index + 1,
+        productId: product.productId,
+        productName: product.productName,
+        status: '成功',
+        matchBy: matchBy,
+        changes: {
+          数量: `${oldQuantity} → ${quantity}`,
+          人民币单价: `${oldPrice} → ${price}`,
+          美元单价: `${oldPriceUsd} → ${priceUnitUsd}`
+        }
+      });
+    } else {
+      // 数量为0，忽略
+      ignoredCount++;
+      processedItems.push({
+        index: index + 1,
+        productId: product.productId,
+        productName: product.productName,
+        status: '忽略',
+        reason: '数量为0'
+      });
+    }
+  });
+  
+  // 显示处理结果
+  const resultMessage = `处理完成: ${updatedCount} 个产品已更新，${ignoredCount} 个被忽略`;
+  
+  // 如果有更新，显示成功消息
+  if (updatedCount > 0) {
+    ElMessage.success(`成功更新 ${updatedCount} 个产品的数据`);
+    
+    // 重新计算总计
+    calculateTotals();
+    
+    // 重新排序
+    resortProducts();
+  }
+  
+  return {
+    items: processedItems,
+    summary: {
+      total: importData.length,
+      updated: updatedCount,
+      ignored: ignoredCount
+    },
+    message: resultMessage
+  };
+};
+
+/**
+ * 计算总计
+ */
+const calculateTotals = () => {
+  // 重新计算触发计算属性
+  totalQuantity.value = filteredProducts.value
+    .filter(p => p.quantity > 0)
+    .reduce((sum, item) => sum + (item.quantity || 0), 0);
+  
+  totalAmount.value = filteredProducts.value
+    .filter(p => p.quantity > 0)
+    .reduce((sum, item) => {
+      const price = item.price || 0;
+      const quantity = item.quantity || 0;
+      return sum + (price * quantity);
+    }, 0);
+  
+  totalAmountUsd.value = filteredProducts.value
+    .filter(p => p.quantity > 0)
+    .reduce((sum, item) => {
+      const priceUsd = item.priceUnitUsd || 0;
+      const quantity = item.quantity || 0;
+      return sum + (priceUsd * quantity);
+    }, 0);
+};
+
+/**
+ * 处理导入提交
+ */
+const handleImportSubmit = () => {
+  if (!currentFile.value) {
+    ElMessage.warning('请选择要上传的文件');
     return;
   }
   
-  importDialog.visible = true;
+  // 数据已经在选择文件时处理过了
+  // 关闭对话框
+  importDialog.visible = false;
   currentFile.value = null;
-  importResult.value = null;
+  
+  // 如果需要，可以显示更详细的结果
+  if (importResult.value && importResult.value.success) {
+    const result = importResult.value.data;
+    ElMessage.success(`导入完成: 更新了 ${result.summary.updated} 个产品`);
+  }
+};
+
+
+
+/**
+ * 导入Excel文件并更新产品数据
+ */
+const handleImportExcel = () => {
+  importDialog.visible = true;
 };
 
 // 查看历史价格
@@ -6384,5 +6609,51 @@ watch(
 
 :deep(.product-level-0:hover > td) {
   background-color: #e6f7ff !important;
+}
+
+
+.import-result-details {
+  margin-top: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+
+.import-result-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 12px;
+}
+
+.import-result-item:last-child {
+  border-bottom: none;
+}
+
+.import-result-item.success {
+  background-color: #f0f9eb;
+  color: #67c23a;
+}
+
+.import-result-item.error {
+  background-color: #fef0f0;
+  color: #f56c6c;
+}
+
+.import-result-item.ignore {
+  background-color: #f5f7fa;
+  color: #909399;
+}
+
+.import-result-item .product-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.import-result-item .changes {
+  font-size: 11px;
+  color: #606266;
+  padding-left: 8px;
 }
 </style>

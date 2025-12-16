@@ -17,9 +17,11 @@
     "dayjs": "^1.11.13",
     "echarts": "^6.0.0",
     "element-plus": "^2.10.2",
+    "file-saver": "^2.0.5",
     "markdown-it": "^14.1.0",
     "vue": "^3.3.4",
-    "vue-router": "^4.2.4"
+    "vue-router": "^4.2.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.2.3",
