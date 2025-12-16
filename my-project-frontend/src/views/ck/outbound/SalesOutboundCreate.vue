@@ -353,6 +353,7 @@
         </div>
         
         <!-- 在查看模式下的推荐汇总 -->
+        <!-- 在查看模式下的推荐汇总 -->
         <div v-if="isViewMode && !groupedRecommendations.length && hasRecommendationDetails" class="view-mode-recommendations">
           <div class="recommendation-summary">
             <h4>推荐产品汇总</h4>
@@ -363,8 +364,15 @@
                 class="recommendation-item"
               >
                 <span class="product-name">{{ getProductName(productId) }}</span>
-                <!-- 显示来自不同触发商品的总和 -->
-                <span class="total-recommended">
+                <!-- 显示包装件 -->
+                <span v-if="details[0]?.isPackage" class="total-recommended">
+                  包装推荐: {{ details[0]?.recommendedQuantity }} 个/件
+                  <span class="source-count" v-if="details[0]?.packageRatio">
+                    (比例: 1:{{ details[0]?.packageRatio }})
+                  </span>
+                </span>
+                <!-- 显示普通推荐商品 -->
+                <span v-else class="total-recommended">
                   总推荐量: {{ getTotalRecommendedQuantity(productId) }} 个
                   <span class="source-count">(来自 {{ details.length }} 个来源)</span>
                 </span>
@@ -615,7 +623,7 @@
             </template>
           </el-table-column>
           
-          <el-table-column label="历史价格" width="140">
+          <!-- <el-table-column label="历史价格" width="140">
             <template #default="{ row }">
               <div class="price-history" v-if="row.historyPrice">
                 <div class="history-price-item">
@@ -629,11 +637,13 @@
               </div>
               <span v-else>-</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
           
           <!-- 在推荐数量列中 -->
-          <el-table-column label="推荐数量" width="180" align="center" v-if="hasRecommendationDetails">
+          <!-- 推荐数量列 - 固定显示 -->
+          <el-table-column label="推荐数量" width="180" align="center">
             <template #default="{ row }">
+              <!-- 1. 推荐商品的显示 -->
               <el-popover
                 v-if="row.isRecommend && getRecommendationDetails(row.productId, row.parentTriggerId).length > 0"
                 placement="top-start"
@@ -708,6 +718,25 @@
                 </div>
               </el-popover>
               
+              <!-- 2. 包装件的显示 -->
+              <div v-else-if="row.isPackage && row.recommendedQuantity" class="package-recommended-quantity">
+                <div class="recommended-value">{{ row.quantity.toFixed(2) }} 个</div>
+                <div v-if="row.packageRatio" class="ratio-info">
+                  比例: 1:{{ row.packageRatio }} (每{{ row.packageRatio }}个成品需要1个包装)
+                </div>
+                <div class="trigger-info" v-if="row.parentProductId">
+                  <el-icon><Connection /></el-icon>
+                  <span class="trigger-name">来自: {{ getTruncatedProductName(row.parentProductId) }}</span>
+                </div>
+              </div>
+              
+              <!-- 3. 触发商品的显示 -->
+              <div v-else-if="row.isTriggerProduct && row.productLevel === 0" class="trigger-recommend-info">
+                <el-tag size="small" type="success" class="trigger-tag">触发商品</el-tag>
+                <div class="trigger-tip">点击"刷新推荐"获取推荐商品</div>
+              </div>
+              
+              <!-- 4. 其他情况显示"-" -->
               <span v-else>-</span>
             </template>
           </el-table-column>
@@ -2080,8 +2109,22 @@ const createPackageComponent = async (component, parentProductId, parentQuantity
     return null;
   }
   
-  const packageRatio = component.otherQuantity ? Number(component.otherQuantity) : 1;
-  const packageQuantity = parentQuantity ? Math.ceil(parentQuantity / packageRatio) : 0;
+  // 修正包装件数量的计算逻辑
+  // otherQuantity: 多少个成品用一个包装
+  // parentQuantity: 触发产品的数量
+  // 包装件数量 = parentQuantity ÷ otherQuantity
+  const otherQuantity = component.otherQuantity ? Number(component.otherQuantity) : 1;
+  
+  let recommendedQuantity = 0;
+  if (otherQuantity > 0 && parentQuantity > 0) {
+    // 修正：包装件推荐数量 = 成品数量 ÷ 比例值
+    recommendedQuantity = 1 / otherQuantity;
+  }
+  
+  // 包装件总数量 = 成品数量 × 包装件推荐数量
+  const packageQuantity = recommendedQuantity > 0 ? 
+    (parentQuantity * recommendedQuantity) : 
+    0;
   
   return {
     ...availableProduct,
@@ -2100,7 +2143,8 @@ const createPackageComponent = async (component, parentProductId, parentQuantity
     isPackage: true,
     productLevel: 2,
     parentProductId: parentProductId,
-    packageRatio: packageRatio,
+    packageRatio: otherQuantity,
+    recommendedQuantity: recommendedQuantity, // 包装件推荐数量（比例值）
     triggerProductId: parentProductId,
     extension: {
       productId: component.componentProductId,
@@ -2109,7 +2153,8 @@ const createPackageComponent = async (component, parentProductId, parentQuantity
       parentProductId: parentProductId,
       triggerProductId: parentProductId,
       isPackageProduct: 0,
-      packageRatio: packageRatio
+      packageRatio: otherQuantity,
+      recommendedQuantity: recommendedQuantity
     },
     historyPrice: null,
     lastQuantity: packageQuantity,
@@ -2296,6 +2341,7 @@ const updateRecommendationDetails = () => {
   console.log('开始更新推荐详情...');
   recommendationDetails.value = {};
   
+  // 处理普通推荐商品
   groupedRecommendations.value.forEach(group => {
     console.log(`处理推荐组 - 触发商品: ${group.triggerProductId}`);
     
@@ -2334,6 +2380,27 @@ const updateRecommendationDetails = () => {
         console.log(`添加新记录 - 触发商品: ${group.triggerProductId}, 数量: ${recommendedQuantity}`);
       }
     });
+  });
+  
+  // 处理包装件的推荐详情
+  outboundProducts.value.forEach(product => {
+    if (product.isPackage && product.recommendedQuantity) {
+      console.log(`处理包装件推荐: ${product.productName} (${product.productId})`);
+      
+      if (!recommendationDetails.value[product.productId]) {
+        recommendationDetails.value[product.productId] = [];
+      }
+      
+      // 包装件的推荐逻辑是固定的，基于包装比例
+      recommendationDetails.value[product.productId].push({
+        triggerProductId: product.parentProductId,
+        recommendedQuantity: product.recommendedQuantity,
+        productName: product.productName,
+        isRequired: true, // 包装件通常是必选的
+        isPackage: true,
+        packageRatio: product.packageRatio
+      });
+    }
   });
   
   console.log('推荐详情更新完成:', recommendationDetails.value);
@@ -4393,15 +4460,71 @@ const updatePackageComponentsBatch = async (parentProductId, parentQuantity) => 
       if (parentIndex === -1) return;
       
       for (const component of res.list) {
-        const packageItem = await createPackageComponent(component, parentProductId, parentQuantity);
-        if (packageItem) {
-          const existingPackageIndex = outboundProducts.value.findIndex(p => 
-            p.isPackage && p.productId === packageItem.productId && p.parentProductId === parentProductId
-          );
-          
-          if (existingPackageIndex === -1) {
-            outboundProducts.value.splice(parentIndex + 1, 0, packageItem);
-          }
+        const availableProduct = availableProducts.value.find(p => 
+          p.productId === component.componentProductId
+        );
+        
+        if (!availableProduct) continue;
+        
+        // 修正包装件的推荐数量计算
+        const packageRatio = component.otherQuantity ? Number(component.otherQuantity) : 1;
+        let recommendedQuantity = 0;
+        if (packageRatio > 0 && parentQuantity > 0) {
+          // 修正：包装件推荐数量 = 1 ÷ 比例值
+          recommendedQuantity = 1 / packageRatio;
+        }
+        
+        // 包装件总数量 = 成品数量 × 包装件推荐数量
+        const packageQuantity = parentQuantity * recommendedQuantity;
+        
+        const packageItem = {
+          ...availableProduct,
+          productId: component.componentProductId,
+          productName: component.componentProductName || availableProduct.productName,
+          sku: component.componentProductSku || availableProduct.sku,
+          spec: component.componentProductSpec || availableProduct.spec,
+          color: component.componentProductColor || availableProduct.color,
+          quantity: packageQuantity,
+          price: availableProduct.originalPrice || 0,
+          priceUnitUsd: availableProduct.originalPriceUnitUsd || 0,
+          remark: `包装件 - ${component.remark || ''}`,
+          batchAllocations: [],
+          isTriggerProduct: false,
+          isRecommend: false,
+          isPackage: true,
+          productLevel: 2,
+          parentProductId: parentProductId,
+          packageRatio: packageRatio,
+          recommendedQuantity: recommendedQuantity,
+          triggerProductId: parentProductId,
+          extension: {
+            productId: component.componentProductId,
+            isTriggerProduct: 1,
+            isRecommendProduct: 2,
+            parentProductId: parentProductId,
+            triggerProductId: parentProductId,
+            isPackageProduct: 0,
+            packageRatio: packageRatio,
+            recommendedQuantity: recommendedQuantity
+          },
+          historyPrice: null,
+          lastQuantity: packageQuantity,
+          availableQuantity: availableProduct.availableQuantity || 0,
+          unitName: availableProduct.unitName || '个'
+        };
+        
+        const existingPackageIndex = outboundProducts.value.findIndex(p => 
+          p.isPackage && p.productId === packageItem.productId && p.parentProductId === parentProductId
+        );
+        
+        if (existingPackageIndex === -1) {
+          outboundProducts.value.splice(parentIndex + 1, 0, packageItem);
+        } else {
+          // 更新现有的包装件
+          outboundProducts.value[existingPackageIndex] = {
+            ...outboundProducts.value[existingPackageIndex],
+            ...packageItem
+          };
         }
       }
     }
@@ -5925,5 +6048,101 @@ watch(
   font-size: 11px;
   color: #909399;
   margin-left: 4px;
+}
+
+.package-recommended-quantity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 4px 8px;
+  background-color: #fdf6ec;
+  border-radius: 4px;
+  border: 1px solid #fac858;
+}
+
+.package-recommended-quantity .package-tag {
+  margin: 0;
+}
+
+.recommended-value {
+  font-weight: 500;
+  color: #e6a23c;
+  font-size: 14px;
+}
+
+.ratio-info {
+  font-size: 11px;
+  color: #909399;
+  font-style: italic;
+}
+
+/* 包装件推荐数量样式 */
+.package-recommended-quantity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 8px;
+  background-color: #fdf6ec;
+  border-radius: 4px;
+  border: 1px solid #fac858;
+}
+
+.package-recommended-quantity .recommended-value {
+  font-weight: 500;
+  color: #e6a23c;
+  font-size: 14px;
+}
+
+.package-recommended-quantity .ratio-info {
+  font-size: 12px;
+  color: #909399;
+}
+
+.package-recommended-quantity .trigger-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #67c23a;
+  margin-top: 2px;
+}
+
+.package-recommended-quantity .trigger-info .el-icon {
+  font-size: 10px;
+}
+
+.package-recommended-quantity .trigger-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+/* 触发商品推荐信息样式 */
+.trigger-recommend-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  background-color: #f0f9ff;
+  border-radius: 4px;
+  border: 1px solid #91d5ff;
+}
+
+.trigger-recommend-info .trigger-tag {
+  height: 20px;
+  line-height: 18px;
+  background-color: #f0f9ff;
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+.trigger-recommend-info .trigger-tip {
+  font-size: 11px;
+  color: #69c0ff;
+  font-style: italic;
 }
 </style>
