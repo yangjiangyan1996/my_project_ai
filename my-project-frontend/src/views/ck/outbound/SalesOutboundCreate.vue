@@ -352,6 +352,7 @@
           </el-table>
         </div>
         
+        <!-- 在查看模式下的推荐汇总 -->
         <div v-if="isViewMode && !groupedRecommendations.length && hasRecommendationDetails" class="view-mode-recommendations">
           <div class="recommendation-summary">
             <h4>推荐产品汇总</h4>
@@ -362,7 +363,11 @@
                 class="recommendation-item"
               >
                 <span class="product-name">{{ getProductName(productId) }}</span>
-                <span class="total-recommended">推荐总量: {{ getTotalRecommendedQuantity(productId) }}</span>
+                <!-- 显示来自不同触发商品的总和 -->
+                <span class="total-recommended">
+                  总推荐量: {{ getTotalRecommendedQuantity(productId) }} 个
+                  <span class="source-count">(来自 {{ details.length }} 个来源)</span>
+                </span>
               </div>
             </div>
           </div>
@@ -626,11 +631,11 @@
             </template>
           </el-table-column>
           
+          <!-- 在推荐数量列中 -->
           <el-table-column label="推荐数量" width="180" align="center" v-if="hasRecommendationDetails">
-            
             <template #default="{ row }">
               <el-popover
-                v-if="row.isRecommend && getRecommendationDetails(row.productId).length > 0"
+                v-if="row.isRecommend && getRecommendationDetails(row.productId, row.parentTriggerId).length > 0"
                 placement="top-start"
                 :width="280"
                 trigger="click"
@@ -640,13 +645,12 @@
                   <div class="recommend-quantity-summary" @click.stop>
                     <div class="summary-badge">
                       <el-tag size="small" type="info" class="count-tag">
-                        {{ getRecommendationDetails(row.productId).length }}
+                        {{ getRecommendationDetails(row.productId, row.parentTriggerId).length }}
                       </el-tag>
                     </div>
                     <div class="total-quantity-display">
-                      <!-- 显示关联触发商品的推荐总数 -->
-                      {{ getTotalRecommendedQuantity(row.productId) }} 个
-                      <!-- 添加提示，如果有关联触发商品 -->
+                      {{ getTotalRecommendedQuantity(row.productId, row.parentTriggerId) }} 个
+                      <!-- 显示触发商品信息 -->
                       <span v-if="row.parentTriggerId" class="trigger-hint">
                         (来自: {{ getTruncatedProductName(row.parentTriggerId) }})
                       </span>
@@ -661,16 +665,21 @@
                       <el-icon><Connection /></el-icon>
                       <span class="product-name">{{ row.productName }}</span>
                     </div>
-                    <div class="recommend-title">推荐来源详情（关联触发商品）</div>
+                    <div class="recommend-title">
+                      推荐来源详情
+                      <span class="trigger-source-badge" v-if="row.parentTriggerId">
+                        (来自 {{ getTruncatedProductName(row.parentTriggerId) }})
+                      </span>
+                    </div>
                   </div>
                   
                   <div class="detail-scroll">
-                    <!-- 只显示关联触发商品的详情 -->
+                    <!-- 显示特定触发商品的推荐 -->
                     <div 
-                      v-for="(detail, index) in getRecommendationDetails(row.productId)" 
-                      :key="detail.triggerProductId" 
+                      v-for="(detail, index) in getRecommendationDetails(row.productId, row.parentTriggerId)" 
+                      :key="`${detail.triggerProductId}_${index}`" 
                       class="detail-item"
-                      :class="{'last-item': index === getRecommendationDetails(row.productId).length - 1}"
+                      :class="{'last-item': index === getRecommendationDetails(row.productId, row.parentTriggerId).length - 1}"
                     >
                       <div class="trigger-source">
                         <el-icon><Promotion /></el-icon>
@@ -684,6 +693,7 @@
                       <div class="recommend-quantity">
                         <span class="quantity-label">推荐数量</span>
                         <span class="quantity-value">{{ detail.recommendedQuantity }} 个</span>
+                        <span v-if="detail.isRequired" class="required-badge">必选</span>
                       </div>
                     </div>
                   </div>
@@ -691,7 +701,7 @@
                   <div class="popover-footer">
                     <div class="footer-summary">
                       <span class="total-label">推荐总数:</span>
-                      <span class="total-number">{{ getTotalRecommendedQuantity(row.productId) }}</span>
+                      <span class="total-number">{{ getTotalRecommendedQuantity(row.productId, row.parentTriggerId) }}</span>
                       <span class="total-unit">个</span>
                     </div>
                   </div>
@@ -700,7 +710,6 @@
               
               <span v-else>-</span>
             </template>
-
           </el-table-column>
           
           <el-table-column label="出库数量" width="150">
@@ -713,7 +722,13 @@
                   :max="getQuantityMax(row)"
                   controls-position="right"
                   size="small"
-                  @change="(value) => handleQuantityChange(row, value)"
+                 @change="(value) => {
+                    console.log(`Quantity change for  ${row.triggerProductId} ${row.productName}: ${row.quantity} -> ${value}`);
+                    handleQuantityChange(row, value);
+                  }"
+                  @blur="(e) => {
+                    console.log(`Quantity blur for ${row.productName}: ${row.quantity}`);
+                  }"
                   placeholder="数量"
                   :disabled="row.availableQuantity <= 0"
                   class="quantity-input"
@@ -1894,6 +1909,40 @@ const clearSearch = () => {
   searchResults.value = [];
 };
 
+
+// 清理错误关联的推荐商品
+const cleanupIncorrectRecommendations = () => {
+  // 清理推荐商品中的错误关联
+  outboundProducts.value.forEach(product => {
+    if (product.isRecommend && product.parentTriggerId) {
+      // 检查父触发商品是否存在
+      const triggerProduct = outboundProducts.value.find(p => 
+        p.productId === product.parentTriggerId
+      );
+      
+      if (!triggerProduct) {
+        // 如果父触发商品不存在，清除关联
+        product.parentTriggerId = null;
+        product.isRecommend = false;
+        product.productLevel = 0;
+      }
+    }
+  });
+  
+  // 清理推荐面板中的错误分组
+  const validTriggerIds = outboundProducts.value
+    .filter(p => p.productLevel === 0 && p.quantity > 0)
+    .map(p => p.productId);
+  
+  groupedRecommendations.value = groupedRecommendations.value.filter(group => 
+    validTriggerIds.includes(group.triggerProductId)
+  );
+  
+  // 重新计算推荐详情
+  updateRecommendationDetails();
+};
+
+
 const addProductToTable = async (product) => {
   const existingProduct = outboundProducts.value.find(p => p.productId === product.productId && !p.isPackage);
   if (existingProduct) {
@@ -1905,19 +1954,25 @@ const addProductToTable = async (product) => {
       existingProduct.isRecommend = false;
       existingProduct.triggerProductId = null;
       existingProduct.productLevel = 0;
+      existingProduct.parentTriggerId = null; // 明确设置为null
       
       existingProduct.extension = existingProduct.extension || {};
       existingProduct.extension.isTriggerProduct = 0;
       existingProduct.extension.isRecommendProduct = 0;
       existingProduct.extension.triggerProductId = null;
       
+      // 加载推荐 - 确保只加载当前商品的推荐
       await loadRecommendationsForProduct(product.productId, 1);
       
+      // 应用必选推荐 - 确保只应用当前商品的必选推荐
       await applyRequiredRecommendations(product.productId);
       
       await addPackageComponentsBatch(product.productId, 1);
       
       resortProducts();
+
+      // 在添加完成后清理可能存在的错误关联
+      cleanupIncorrectRecommendations();
       
       ElMessage.success(`已更新 ${product.productName} 数量为1`);
     } else {
@@ -1937,6 +1992,7 @@ const addProductToTable = async (product) => {
     isRecommend: false,
     isPackage: false,
     triggerProductId: null,
+    parentTriggerId: null, // 明确设置为null
     productLevel: 0,
     extension: {
       productId: product.productId,
@@ -1956,8 +2012,10 @@ const addProductToTable = async (product) => {
   
   ElMessage.success(`已添加 ${product.productName} 到出库单`);
   
+  // 加载推荐 - 确保只加载当前商品的推荐
   await loadRecommendationsForProduct(product.productId, 1);
   
+  // 应用必选推荐 - 确保只应用当前商品的必选推荐
   await applyRequiredRecommendations(product.productId);
   
   await addPackageComponentsBatch(product.productId, 1);
@@ -2061,18 +2119,35 @@ const createPackageComponent = async (component, parentProductId, parentQuantity
 };
 
 const calculateRecommendedQuantity = (recommendation, triggerProductId, triggerQuantity) => {
-  const quantity = triggerQuantity !== undefined 
-    ? triggerQuantity 
-    : getProductQuantity(triggerProductId);
+  console.log(`calculateRecommendedQuantity: 
+    triggerProductId=${triggerProductId}, 
+    product=${recommendation.productName}, 
+    trigger=${triggerProductId}, 
+    quantity=${triggerQuantity},
+    type=${recommendation.quantityType},
+    value=${recommendation.quantityValue}`);
+  
+  let quantity = triggerQuantity;
+  
+  // 如果triggerQuantity未提供，尝试从产品中获取
+  if (quantity === undefined) {
+    const product = outboundProducts.value.find(p => p.productId === triggerProductId);
+    quantity = product ? product.quantity : 0;
+  }
   
   if (quantity <= 0) return 0;
   
   if (recommendation.quantityType === 1) {
+    // 固定数量
     return Number(recommendation.quantityValue) || 0;
   } else {
+    // 比例计算
     const ratio = Number(recommendation.quantityValue) || 0;
     const calculated = quantity * ratio;
-    return Math.round(calculated);
+    const rounded = Math.round(calculated);
+    
+    console.log(`Ratio calculation: ${quantity} × ${ratio} = ${rounded}`);
+    return rounded;
   }
 };
 
@@ -2101,8 +2176,14 @@ const refreshRecommendations = async (triggerProductId) => {
   }
 };
 
+
 const loadRecommendationsForProduct = async (productId, quantity) => {
-  if (!formData.customerId || !formData.warehouseId) return;
+  console.log(`loadRecommendationsForProduct: product=${productId}, quantity=${quantity}`);
+  
+  if (!formData.customerId || !formData.warehouseId) {
+    console.warn('Missing customer or warehouse info');
+    return;
+  }
   
   try {
     const requestData = {
@@ -2113,20 +2194,39 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
       applyScene: 1
     };
     
+    console.log('Requesting recommendations with:', requestData);
+    
     const res = await post('/api/auth/recommend/queryRuleItems', requestData);
     
     if (res && res.recommendations && res.recommendations.length > 0) {
+      console.log(`Received ${res.recommendations.length} recommendations for product ${productId}`);
+      
       const recommendations = res.recommendations.map(item => {
         const productInfo = availableProducts.value.find(p => p.productId === item.productId);
         const availableQuantity = productInfo ? productInfo.availableQuantity : 0;
         
-        const isSelected = false;
-        const actualQuantity = 0;
+        // 创建唯一标识
+        const uniqueId = `${item.productId}_${productId}`;
         
+        // 使用唯一标识查找已存在的推荐商品
+        const existingProduct = outboundProducts.value.find(p => 
+          p.recommendationUniqueId === uniqueId
+        );
+        
+        const isSelected = !!existingProduct;
+        const actualQuantity = existingProduct ? existingProduct.quantity : 0;
+        
+        // 重新计算推荐数量
         const calculatedQuantity = calculateRecommendedQuantity({
           quantityType: item.quantityType,
           quantityValue: item.quantityValue
         }, productId, quantity);
+        
+        console.log(`Recommendation ${item.productName} for trigger ${productId}: 
+          selected=${isSelected}, 
+          calculated=${calculatedQuantity}, 
+          actual=${actualQuantity},
+          uniqueId=${uniqueId}`);
         
         return {
           productId: item.productId,
@@ -2145,163 +2245,299 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
           triggerProductId: productId,
           actualQuantity: actualQuantity,
           isCurrentTriggerRecommendation: true,
-          uniqueId: `${productId}_${item.productId}_${Date.now()}_${Math.random()}`
+          uniqueId: uniqueId  // 使用一致的唯一标识
         };
       });
       
       if (recommendations.length > 0) {
+        // 移除旧的推荐组（如果有）
         const existingGroupIndex = groupedRecommendations.value.findIndex(
           g => g.triggerProductId === productId
         );
         
         if (existingGroupIndex >= 0) {
-          groupedRecommendations.value[existingGroupIndex].items = recommendations;
-          groupedRecommendations.value[existingGroupIndex].hasValidItems = recommendations.some(item => item.availableQuantity > 0);
-        } else {
-          groupedRecommendations.value.push({
-            triggerProductId: productId,
-            items: recommendations,
-            hasValidItems: recommendations.some(item => item.availableQuantity > 0)
-          });
+          console.log(`Updating existing recommendation group for trigger ${productId}`);
+          groupedRecommendations.value.splice(existingGroupIndex, 1);
         }
+        
+        console.log(`Creating new recommendation group for trigger ${productId}`);
+        groupedRecommendations.value.push({
+          triggerProductId: productId,
+          items: recommendations,
+          hasValidItems: recommendations.some(item => item.availableQuantity > 0),
+          triggerProductName: getProductName(productId),
+          triggerProductQuantity: quantity
+        });
+        
+        // 更新推荐详情
+        updateRecommendationDetails();
+      }
+    } else {
+      console.log(`No recommendations received for product ${productId}`);
+      
+      // 清除该触发商品的推荐组
+      const existingGroupIndex = groupedRecommendations.value.findIndex(
+        g => g.triggerProductId === productId
+      );
+      if (existingGroupIndex >= 0) {
+        groupedRecommendations.value.splice(existingGroupIndex, 1);
       }
     }
   } catch (error) {
-    console.error('加载推荐失败:', error);
+    console.error(`加载产品 ${productId} 的推荐失败:`, error);
     if (!isEditMode.value) {
-      ElMessage.error('获取推荐规则失败');
+      ElMessage.error(`获取推荐失败: ${error.message || '未知错误'}`);
     }
   }
 };
 
+
 const updateRecommendationDetails = () => {
+  console.log('开始更新推荐详情...');
   recommendationDetails.value = {};
   
   groupedRecommendations.value.forEach(group => {
+    console.log(`处理推荐组 - 触发商品: ${group.triggerProductId}`);
+    
     group.items.forEach(item => {
+      console.log(`处理推荐项: ${item.productName} (${item.productId})`);
+      
       if (!recommendationDetails.value[item.productId]) {
         recommendationDetails.value[item.productId] = [];
       }
       
+      // 计算推荐数量
       const recommendedQuantity = calculateRecommendedQuantity(item, group.triggerProductId);
       
-      const existingDetail = recommendationDetails.value[item.productId].find(
+      // 检查是否已存在相同的触发商品记录
+      const existingIndex = recommendationDetails.value[item.productId].findIndex(
         detail => detail.triggerProductId === group.triggerProductId
       );
       
-      if (existingDetail) {
-        existingDetail.recommendedQuantity = recommendedQuantity;
+      if (existingIndex >= 0) {
+        // 更新现有记录
+        recommendationDetails.value[item.productId][existingIndex] = {
+          triggerProductId: group.triggerProductId,
+          recommendedQuantity: recommendedQuantity,
+          productName: item.productName,
+          isRequired: item.isRequired
+        };
+        console.log(`更新现有记录 - 触发商品: ${group.triggerProductId}, 数量: ${recommendedQuantity}`);
       } else {
+        // 添加新记录
         recommendationDetails.value[item.productId].push({
           triggerProductId: group.triggerProductId,
           recommendedQuantity: recommendedQuantity,
           productName: item.productName,
           isRequired: item.isRequired
         });
+        console.log(`添加新记录 - 触发商品: ${group.triggerProductId}, 数量: ${recommendedQuantity}`);
       }
     });
   });
+  
+  console.log('推荐详情更新完成:', recommendationDetails.value);
 };
 
-// 修改后的函数（只展示关联的触发商品）
-const getRecommendationDetails = (productId) => {
+// 获取推荐详情 - 只返回与指定产品相关的推荐详情
+const getRecommendationDetails = (productId, triggerProductId = null) => {
   const allDetails = recommendationDetails.value[productId] || [];
+  console.log(`获取推荐详情 - 产品 ${productId} 的所有详情:`, allDetails);
   
-  // 如果当前产品是推荐商品，只返回与其关联的触发商品推荐
-  const product = outboundProducts.value.find(p => p.productId === productId);
-  if (product && product.isRecommend && product.parentTriggerId) {
-    // 只返回与该推荐商品有直接关联的触发商品推荐
-    return allDetails.filter(detail => 
-      detail.triggerProductId === product.parentTriggerId
+  // 如果提供了 triggerProductId，则返回该触发商品的特定推荐
+  if (triggerProductId) {
+    const specificDetails = allDetails.filter(detail => 
+      detail.triggerProductId === triggerProductId
     );
+    console.log(`获取特定触发商品 ${triggerProductId} 的推荐详情: ${specificDetails.length} 条记录`);
+    return specificDetails;
   }
   
+  // 找到产品信息
+  const product = outboundProducts.value.find(p => p.productId === productId);
+  
+  if (product) {
+    console.log(`获取推荐详情 - 产品信息:`, {
+      productId,
+      isRecommend: product.isRecommend,
+      isTriggerProduct: product.isTriggerProduct,
+      parentTriggerId: product.parentTriggerId,
+      triggerProductId: product.triggerProductId
+    });
+    
+    // 如果是推荐商品，并且有具体的触发商品ID，只返回该触发商品的推荐
+    if (product.isRecommend && product.parentTriggerId) {
+      const filteredDetails = allDetails.filter(detail => 
+        detail.triggerProductId === product.parentTriggerId
+      );
+      console.log(`推荐商品 - 只显示来自父触发商品 ${product.parentTriggerId} 的推荐: ${filteredDetails.length} 条记录`);
+      return filteredDetails;
+    }
+    
+    // 如果是触发商品，显示所有相关的推荐
+    if (product.isTriggerProduct) {
+      console.log(`触发商品 - 显示所有关联推荐`);
+      return allDetails;
+    }
+  }
+  
+  console.log(`返回所有详情: ${allDetails.length} 条记录`);
   return allDetails;
 };
 
-// 修改后的函数（只计算关联触发商品的推荐数量）
-const getTotalRecommendedQuantity = (productId) => {
-  const details = getRecommendationDetails(productId);
-  if (!details || details.length === 0) return 0;
+
+const getTotalRecommendedQuantity = (productId, triggerProductId = null) => {
+  const product = outboundProducts.value.find(p => p.productId === productId);
+  if (!product) {
+    console.log(`getTotalRecommendedQuantity - 未找到产品: ${productId}`);
+    return 0;
+  }
   
-  return details.reduce((sum, detail) => sum + (detail.recommendedQuantity || 0), 0);
+  // 如果指定了触发商品，只计算该触发商品的推荐总量
+  if (triggerProductId) {
+    const details = getRecommendationDetails(productId, triggerProductId);
+    console.log(`getTotalRecommendedQuantity - 产品 ${productId} 来自触发商品 ${triggerProductId} 的推荐详情:`, details);
+    
+    const total = details.reduce((sum, detail) => sum + (detail.recommendedQuantity || 0), 0);
+    console.log(`getTotalRecommendedQuantity - 来自触发商品 ${triggerProductId} 的推荐总量: ${total}`);
+    return total;
+  }
+  
+  // 否则计算来自所有触发商品的总推荐量
+  const details = getRecommendationDetails(productId);
+  console.log(`getTotalRecommendedQuantity - 产品 ${productId} 的所有推荐详情:`, details);
+  
+  if (!details || details.length === 0) {
+    console.log(`getTotalRecommendedQuantity - 无推荐详情`);
+    return 0;
+  }
+  
+  const total = details.reduce((sum, detail) => sum + (detail.recommendedQuantity || 0), 0);
+  console.log(`getTotalRecommendedQuantity - 来自 ${details.length} 个来源的总推荐量: ${total}`);
+  return total;
 };
 
+
 const applyRequiredRecommendations = async (triggerProductId) => {
+  console.log(`applyRequiredRecommendations: trigger=${triggerProductId}`);
+  
   const group = groupedRecommendations.value.find(g => g.triggerProductId === triggerProductId);
-  if (!group) return;
+  if (!group) {
+    console.warn(`No recommendation group found for ${triggerProductId}`);
+    return;
+  }
   
   const triggerProduct = outboundProducts.value.find(p => 
     p.productId === triggerProductId && p.productLevel === 0
   );
   
-  if (!triggerProduct) return;
+  if (!triggerProduct) {
+    console.warn(`No trigger product found: ${triggerProductId}`);
+    return;
+  }
   
   const triggerQuantity = triggerProduct ? triggerProduct.quantity : 0;
+  console.log(`Trigger product quantity: ${triggerQuantity}`);
   
-  const sortedRecommendations = [...group.items].sort((a, b) => {
-    if (a.isRequired && !b.isRequired) return -1;
-    if (!a.isRequired && b.isRequired) return 1;
-    return 0;
-  });
+  if (triggerQuantity <= 0) {
+    console.log('Trigger product quantity is 0, skipping recommendations');
+    return;
+  }
+  
+  // 只处理当前触发商品的必选推荐
+  const requiredRecommendations = group.items.filter(item => 
+    item.isRequired && 
+    item.availableQuantity > 0 &&
+    item.triggerProductId === triggerProductId
+  );
+  
+  console.log(`Found ${requiredRecommendations.length} required recommendations for ${triggerProductId}`);
   
   let addedCount = 0;
   let updatedCount = 0;
   
-  for (const item of sortedRecommendations) {
-    if (item.isRequired && item.availableQuantity > 0) {
-      const calculatedQuantity = calculateRecommendedQuantity(item, triggerProductId, triggerQuantity);
-      const actualQuantity = Math.min(calculatedQuantity, item.availableQuantity);
-      
-      if (actualQuantity <= 0) {
-        continue;
-      }
-      
-      const existingProduct = outboundProducts.value.find(p => 
-        p.productId === item.productId && 
-        p.productLevel === 1 &&
-        p.parentTriggerId === triggerProductId
-      );
-      
-      if (!existingProduct) {
-        const product = availableProducts.value.find(p => p.productId === item.productId);
-        if (product) {
-          const newRecommendation = {
-            ...product,
-            quantity: actualQuantity,
-            price: product.originalPrice || 0,
-            priceUnitUsd: product.originalPriceUsd || 0,
-            batchAllocations: [],
-            isTriggerProduct: false,
-            isRecommend: true,
-            isPackage: false,
-            productLevel: 1,
-            parentTriggerId: triggerProductId,
-            isRequired: item.isRequired,
-            recommendationUniqueId: item.uniqueId,
-            extension: {
-              productId: item.productId,
-              isTriggerProduct: 1,
-              isRecommendProduct: 1,
-              triggerProductId: triggerProductId,
-              isPackageProduct: 1
-            },
-            historyPrice: null
-          };
-          
-          outboundProducts.value.push(newRecommendation);
-          addedCount++;
-        }
-      } else if (existingProduct.isRecommend) {
-        const newQuantity = Math.max(existingProduct.quantity, actualQuantity);
-        existingProduct.quantity = newQuantity;
-        existingProduct.isRequired = item.isRequired;
-        updatedCount++;
-      }
-      
-      item.selected = true;
-      item.actualQuantity = actualQuantity;
+  for (const item of requiredRecommendations) {
+    const calculatedQuantity = calculateRecommendedQuantity(item, triggerProductId, triggerQuantity);
+    const actualQuantity = Math.min(calculatedQuantity, item.availableQuantity);
+    
+    console.log(`Required recommendation ${item.productName}: 
+      calculated=${calculatedQuantity}, 
+      available=${item.availableQuantity}, 
+      actual=${actualQuantity}`);
+    
+    if (actualQuantity <= 0) {
+      console.log(`Skipping ${item.productName}, actual quantity is 0`);
+      continue;
     }
+    
+    // 查找已存在的推荐商品 - 确保来自同一触发商品
+    // const existingProduct = outboundProducts.value.find(p => 
+    //   p.productId === item.productId && 
+    //   p.isRecommend &&
+    //   p.parentTriggerId === triggerProductId  // 关键：确保来自同一触发商品
+    // );
+
+    const uniqueId = `${item.productId}_${triggerProductId}`;
+    const existingProduct = outboundProducts.value.find(p => 
+      p.recommendationUniqueId === uniqueId
+    );
+
+    console.log(`唯一标识: ${uniqueId}`);
+    console.log(`查找结果: `,existingProduct);  
+    
+    if (!existingProduct) {
+      const product = availableProducts.value.find(p => p.productId === item.productId);
+      if (product) {
+        const newRecommendation = {
+          ...product,
+          quantity: actualQuantity,
+          price: product.originalPrice || 0,
+          priceUnitUsd: product.originalPriceUnitUsd || 0,
+          batchAllocations: [],
+          isTriggerProduct: false,
+          isRecommend: true,
+          isPackage: false,
+          productLevel: 1,
+          parentTriggerId: triggerProductId,  // 正确设置父触发商品ID
+          triggerProductId: triggerProductId, // 也设置 triggerProductId
+          isRequired: item.isRequired,
+          recommendationUniqueId: item.uniqueId,
+          extension: {
+            productId: item.productId,
+            isTriggerProduct: 1,
+            isRecommendProduct: 1,
+            triggerProductId: triggerProductId,  // 正确设置触发商品ID
+            isPackageProduct: 1
+          },
+          historyPrice: null,
+          lastQuantity: 0
+        };
+        
+        outboundProducts.value.push(newRecommendation);
+        addedCount++;
+        
+        console.log(`Added new required recommendation: ${item.productName} (${actualQuantity}) for trigger ${triggerProductId}`);
+      }
+    } else if (existingProduct.isRecommend) {
+      const newQuantity = Math.max(existingProduct.quantity, actualQuantity);
+      
+      if (newQuantity !== existingProduct.quantity) {
+        existingProduct.quantity = newQuantity;
+        updatedCount++;
+        
+        console.log(`Updated existing recommendation: ${item.productName} ${existingProduct.quantity} -> ${newQuantity} for trigger ${triggerProductId}`);
+      }
+      
+      existingProduct.isRequired = item.isRequired;
+      // 确保关联关系正确
+      existingProduct.parentTriggerId = triggerProductId;
+      existingProduct.triggerProductId = triggerProductId;
+    }
+    
+    // 更新推荐面板中的选择状态
+    item.selected = true;
+    item.calculatedQuantity = actualQuantity;
+    item.actualQuantity = actualQuantity;
   }
   
   if (addedCount > 0 || updatedCount > 0) {
@@ -2309,13 +2545,19 @@ const applyRequiredRecommendations = async (triggerProductId) => {
     if (addedCount > 0) message.push(`已自动添加 ${addedCount} 个必选推荐商品`);
     if (updatedCount > 0) message.push(`已更新 ${updatedCount} 个推荐商品数量`);
     
-    ElMessage.success(message.join('，'));
+    const fullMessage = message.join('，');
+    console.log(fullMessage);
+    ElMessage.success(fullMessage);
+    
+    // 更新推荐详情
+    updateRecommendationDetails();
     
     resortProducts();
+  } else {
+    console.log('No required recommendations to add or update');
   }
-  
-  updateRecommendationDetails();
 };
+
 
 const addRecommendationToOrder = (recommendation) => {
   const product = availableProducts.value.find(p => p.productId === recommendation.productId);
@@ -2332,6 +2574,7 @@ const addRecommendationToOrder = (recommendation) => {
     return;
   }
   
+  // 查找触发商品是否存在
   const triggerProduct = outboundProducts.value.find(p => 
     p.productId === recommendation.triggerProductId && p.productLevel === 0
   );
@@ -2341,18 +2584,19 @@ const addRecommendationToOrder = (recommendation) => {
     return;
   }
   
+  // 创建唯一标识：productId_triggerProductId
+  const uniqueId = `${recommendation.productId}_${recommendation.triggerProductId}`;
+  
+  // 关键：查找已存在的推荐商品时，要同时匹配产品ID和触发商品ID
   const existingProduct = outboundProducts.value.find(p => 
-    p.productId === recommendation.productId && 
-    p.productLevel === 1 &&
-    p.parentTriggerId === recommendation.triggerProductId
+    p.recommendationUniqueId === uniqueId
   );
   
   if (existingProduct) {
     existingProduct.quantity = Math.max(existingProduct.quantity, actualQuantity);
     existingProduct.isRequired = recommendation.isRequired;
     existingProduct.parentTriggerId = recommendation.triggerProductId;
-    
-    resortProducts();
+    existingProduct.triggerProductId = recommendation.triggerProductId;
     
     ElMessage.success(`已更新 ${recommendation.productName} 数量为 ${existingProduct.quantity}`);
   } else {
@@ -2367,8 +2611,9 @@ const addRecommendationToOrder = (recommendation) => {
       isPackage: false,
       productLevel: 1,
       parentTriggerId: recommendation.triggerProductId,
+      triggerProductId: recommendation.triggerProductId,
       isRequired: recommendation.isRequired,
-      recommendationUniqueId: recommendation.uniqueId,
+      recommendationUniqueId: uniqueId, // 使用唯一标识
       extension: {
         productId: recommendation.productId,
         isTriggerProduct: 1,
@@ -2381,46 +2626,42 @@ const addRecommendationToOrder = (recommendation) => {
     
     outboundProducts.value.push(newProduct);
     
-    resortProducts();
-    
     ElMessage.success(`已添加 ${recommendation.productName} 到出库单`);
   }
   
+  // 更新推荐面板中的选中状态
   recommendation.selected = true;
   recommendation.actualQuantity = actualQuantity;
   
+  // 更新推荐详情
   updateRecommendationDetails();
+  
+  // 重新排序
+  resortProducts();
 };
+
 
 const handleRecommendationToggle = (recommendation) => {
   if (recommendation.selected) {
     addRecommendationToOrder(recommendation);
   } else {
+    // 使用唯一标识查找并移除
+    const uniqueId = `${recommendation.productId}_${recommendation.triggerProductId}`;
     const existingProduct = outboundProducts.value.find(p => 
-      p.productId === recommendation.productId && p.quantity > 0 && p.isRecommend
+      p.recommendationUniqueId === uniqueId
     );
     
     if (existingProduct) {
-      // 获取与该推荐商品关联的所有触发商品
-      const relatedTriggerIds = allDetails
-        .filter(detail => detail.triggerProductId === product.parentTriggerId)
-        .map(detail => detail.triggerProductId);
-      
-      // 如果有多个触发商品关联，只清空数量
-      if (relatedTriggerIds.length > 1) {
-        existingProduct.quantity = 0;
-        existingProduct.price = 0;
-        existingProduct.priceUnitUsd = 0;
-        existingProduct.remark = '';
-        existingProduct.batchAllocations = [];
-        
-        ElMessage.success(`已清空 ${recommendation.productName} 的数量`);
-        
-        updateRecommendationSelection(recommendation.productId, false);
-      } else {
-        removeProductFromTableByProductId(recommendation.productId);
+      const index = outboundProducts.value.findIndex(p => 
+        p.recommendationUniqueId === uniqueId
+      );
+      if (index > -1) {
+        outboundProducts.value.splice(index, 1);
       }
     }
+    
+    // 更新推荐面板中的选中状态
+    updateRecommendationSelection(recommendation.productId, recommendation.triggerProductId, false);
   }
 };
 
@@ -2446,15 +2687,20 @@ const removeRecommendationsForTrigger = (triggerProductId, deleteRecommendProduc
   updateRecommendationDetails();
 };
 
-const updateRecommendationSelection = (productId, isSelected) => {
-  groupedRecommendations.value.forEach(group => {
+
+const updateRecommendationSelection = (productId, triggerProductId, isSelected) => {
+  const group = groupedRecommendations.value.find(g => g.triggerProductId === triggerProductId);
+  if (group) {
     const item = group.items.find(i => i.productId === productId);
     if (item) {
       item.selected = isSelected;
       
       if (isViewMode.value || isEditMode.value) {
         const existingProduct = outboundProducts.value.find(p => 
-          p.productId === productId && p.quantity > 0 && p.isRecommend
+          p.productId === productId && 
+          p.parentTriggerId === triggerProductId &&
+          p.quantity > 0 && 
+          p.isRecommend
         );
         if (existingProduct) {
           item.actualQuantity = existingProduct.quantity;
@@ -2463,20 +2709,33 @@ const updateRecommendationSelection = (productId, isSelected) => {
         }
       }
     }
-  });
+  }
 };
 
-const removeProductFromTableByProductId = (productId) => {
-  const index = outboundProducts.value.findIndex(p => p.productId === productId && p.isRecommend);
+const removeProductFromTableByProductId = (productId, triggerProductId) => {
+  const uniqueId = `${productId}_${triggerProductId}`;
+  
+  const index = outboundProducts.value.findIndex(p => 
+    p.recommendationUniqueId === uniqueId
+  );
+  
   if (index >= 0) {
     outboundProducts.value.splice(index, 1);
     
-    delete recommendationDetails.value[productId];
+    // 只删除与该触发商品相关的推荐详情
+    if (recommendationDetails.value[productId]) {
+      recommendationDetails.value[productId] = recommendationDetails.value[productId]
+        .filter(detail => detail.triggerProductId !== triggerProductId);
+      
+      if (recommendationDetails.value[productId].length === 0) {
+        delete recommendationDetails.value[productId];
+      }
+    }
     
     updateRecommendationDetails();
   }
   
-  updateRecommendationSelection(productId, false);
+  updateRecommendationSelection(productId, triggerProductId, false);
 };
 
 const applyAllRecommendations = () => {
@@ -3996,14 +4255,29 @@ const resortProducts = () => {
 };
 
 const handleQuantityChange = async (row, value) => {
+  console.log(`handleQuantityChange: ${row.productName}, value: ${value}, lastQuantity: ${row.lastQuantity}`);
+  
   if (value > 0) {
-    if (row.isTriggerProduct && value > 0 && (!row.lastQuantity || row.lastQuantity === 0)) {
-      await loadRecommendationsForProduct(row.productId, value);
+    // 修改这个条件：只要数量有变化就更新推荐，不只是从0到有值
+    if (row.isTriggerProduct && row.productLevel === 0) {
+      const quantityChanged = value !== row.lastQuantity;
       
-      await applyRequiredRecommendations(row.productId);
-      
-      if (!row.isPackage && !row.isRecommend) {
-        await updatePackageComponentsBatch(row.productId, value);
+      if (quantityChanged) {
+        console.log(`Trigger product quantity changed: ${row.lastQuantity} -> ${value}`);
+        
+        // 更新当前产品的推荐
+        await loadRecommendationsForProduct(row.productId, value);
+        
+        // 重新计算并应用必选推荐
+        await applyRequiredRecommendations(row.productId);
+        
+        // 更新包装件
+        if (!row.isPackage && !row.isRecommend) {
+          await updatePackageComponentsBatch(row.productId, value);
+        }
+        
+        // 更新已经存在的推荐商品数量
+        await updateExistingRecommendationQuantities(row.productId, value);
       }
     }
     
@@ -4026,15 +4300,85 @@ const handleQuantityChange = async (row, value) => {
     row.remark = '';
     row.batchAllocations = [];
     
-    if (row.isTriggerProduct) {
+    if (row.isTriggerProduct && row.productLevel === 0) {
       removeRecommendationsForTrigger(row.productId, true);
       removePackageComponents(row.productId, true);
+    }
+
+     // 清理可能存在的错误关联
+    if (value === 0) {
+      cleanupIncorrectRecommendations();
     }
   }
   
   row.lastQuantity = value;
   
+  // 确保触发重新排序
   resortProducts();
+};
+
+const updateExistingRecommendationQuantities = async (triggerProductId, newTriggerQuantity) => {
+  if (!triggerProductId || !newTriggerQuantity) return;
+  
+  console.log(`updateExistingRecommendationQuantities: trigger=${triggerProductId}, quantity=${newTriggerQuantity}`);
+  
+  // 找到与该触发商品相关的推荐商品
+  const relatedRecommendations = outboundProducts.value.filter(p => 
+    p.parentTriggerId === triggerProductId && 
+    p.isRecommend && 
+    p.productLevel === 1 &&
+    p.triggerProductId === triggerProductId  // 确保触发商品ID匹配
+  );
+  
+  console.log(`找到 ${relatedRecommendations.length} 个相关的推荐商品`);
+  
+  if (relatedRecommendations.length === 0) return;
+  
+  // 找到对应的推荐规则组
+  const triggerGroup = groupedRecommendations.value.find(g => g.triggerProductId === triggerProductId);
+  if (!triggerGroup) return;
+  
+  let updatedCount = 0;
+  
+  for (const recommendation of relatedRecommendations) {
+    // 在推荐规则中找到对应的项
+    const ruleItem = triggerGroup.items.find(item => 
+      item.productId === recommendation.productId && 
+      item.triggerProductId === triggerProductId
+    );
+    
+    if (!ruleItem) {
+      console.log(`未找到推荐规则: ${recommendation.productName}`);
+      continue;
+    }
+    
+    // 计算新的推荐数量
+    const calculatedQuantity = calculateRecommendedQuantity(ruleItem, triggerProductId, newTriggerQuantity);
+    
+    if (calculatedQuantity > 0 && calculatedQuantity !== recommendation.quantity) {
+      const oldQuantity = recommendation.quantity;
+      recommendation.quantity = calculatedQuantity;
+      
+      // 更新推荐面板中的数量
+      ruleItem.calculatedQuantity = calculatedQuantity;
+      ruleItem.actualQuantity = calculatedQuantity;
+      
+      console.log(`更新推荐商品 ${recommendation.productName}: ${oldQuantity} -> ${calculatedQuantity}`);
+      updatedCount++;
+    }
+  }
+  
+  if (updatedCount > 0) {
+    // 更新推荐详情
+    updateRecommendationDetails();
+    
+    // 显示提示信息
+    if (updatedCount > 0) {
+      ElMessage.info(`已更新 ${updatedCount} 个推荐商品的数量`);
+    }
+  }
+  
+  return updatedCount;
 };
 
 const updatePackageComponentsBatch = async (parentProductId, parentQuantity) => {
@@ -5568,5 +5912,18 @@ watch(
   background-color: #e6f7ff;
   border-color: #91d5ff;
   color: #1890ff;
+}
+
+.trigger-source-badge {
+  font-size: 11px;
+  color: #69c0ff;
+  margin-left: 4px;
+  font-style: italic;
+}
+
+.source-count {
+  font-size: 11px;
+  color: #909399;
+  margin-left: 4px;
 }
 </style>
