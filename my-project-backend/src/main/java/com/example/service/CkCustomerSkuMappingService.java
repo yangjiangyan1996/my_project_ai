@@ -19,4 +19,6 @@ public interface CkCustomerSkuMappingService extends IService<CustomerSkuMapping
     List<CustomerSkuMapping> selectByCustomerId(Long customerId, Long tenantId);
 
     CustomerSkuMapping selectByCustomerIdAndCustomerSku(Long tenantId,String productSku, Long customerId, String customerSku);
+
+    List<CustomerSkuMapping> selectByCustomerIdAndSkus(Long customerId, List<String> skuList, Long tenantId);
 }

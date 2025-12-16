@@ -60,6 +60,8 @@ public class CkOutboundFacade {
     @Resource
     CkProductBomDetailService productBomDetailService;
     @Resource
+    CkCustomerSkuMappingService customerSkuMappingService;
+    @Resource
     CkProductService productService;
     @Resource
     CkShelfService shelfService;
@@ -837,6 +839,10 @@ public class CkOutboundFacade {
             productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
         }
 
+        List<String> skuList = products.stream().map(v -> v.getSku()).distinct().collect(Collectors.toList());
+        List<CustomerSkuMapping> customerSkuMappings = customerSkuMappingService.selectByCustomerIdAndSkus(outboundOrder.getCustomerId(), skuList, tenantId);
+        Map<String, String> sku2CustomerSkuMap = customerSkuMappings.stream().collect(Collectors.toMap(CustomerSkuMapping::getProductSku, CustomerSkuMapping::getCustomerSku,  (v1, v2) -> v1));
+
 
         Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
         Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
@@ -855,6 +861,7 @@ public class CkOutboundFacade {
                 Product product = finalProductId2ProductMap.get(v.getProductId());
                 model.setEnglishName(product.getEnglishName());
                 model.setSku(product.getSku());
+                model.setCustomerSku(sku2CustomerSkuMap.getOrDefault(product.getSku(), ""));
                 model.setName(product.getName());
                 model.setSpec(product.getSpec());
                 model.setColor(product.getColor());

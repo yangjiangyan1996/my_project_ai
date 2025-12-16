@@ -23,6 +23,17 @@ import java.util.Objects;
 @Service
 public class CkCustomerSkuMappingServiceImpl extends ServiceImpl<CkCustomerSkuMappingMapper, CustomerSkuMapping> implements CkCustomerSkuMappingService {
     @Override
+    public List<CustomerSkuMapping> selectByCustomerIdAndSkus(Long customerId, List<String> skuList, Long tenantId) {
+        return baseMapper.selectList(
+                new QueryWrapper<CustomerSkuMapping>()
+                        .eq("customer_id", customerId)
+                        .in("product_sku", skuList)
+                        .eq("tenant_id", tenantId)
+                        .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
     public CustomerSkuMapping selectByCustomerIdAndCustomerSku(Long tenantId,String productSku, Long customerId, String customerSku) {
         return baseMapper.selectOne(
                 new QueryWrapper<CustomerSkuMapping>()

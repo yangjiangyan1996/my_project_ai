@@ -413,7 +413,7 @@
               自动全部分配
             </el-button>
 
-            <el-button 
+            <!-- <el-button 
               type="success" 
               @click="handleDownloadTemplate"
               :loading="downloadLoading"
@@ -429,7 +429,7 @@
             >
               <el-icon><Upload /></el-icon>
               导入模板
-            </el-button>
+            </el-button> -->
           </div>
         </div>
 
@@ -877,15 +877,24 @@
           </el-table-column>
           
           <el-table-column label="备注" min-width="150" fixed="right">
-            <template #default="{ row }">
-              <el-input
-                v-model="row.remark"
-                placeholder="产品备注"
-                maxlength="100"
-                show-word-limit
-                :disabled="!row.quantity || row.quantity <= 0 || isViewMode"
-                size="small"
-              />
+            <template #default="{ row, $index }">
+              <div 
+                class="remark-cell" 
+                @click="openRemarkDialog(row, $index)"
+                :class="{ 'remark-disabled': isViewMode || !row.quantity || row.quantity <= 0 }"
+              >
+                <div v-if="row.remark" class="remark-content">
+                  <span class="remark-text">{{ row.remark }}</span>
+                  <el-icon v-if="!isViewMode && row.quantity > 0" class="edit-icon"><Edit /></el-icon>
+                </div>
+                <div v-else class="remark-empty">
+                  <span>点击添加备注</span>
+                  <el-icon v-if="!isViewMode && row.quantity > 0" class="edit-icon"><Edit /></el-icon>
+                </div>
+                <div v-if="row.remark" class="remark-length">
+                  {{ row.remark.length }}/200
+                </div>
+              </div>
             </template>
           </el-table-column>
           
@@ -1351,6 +1360,35 @@
         </el-table>
       </div>
     </el-dialog>
+
+    <!-- 备注编辑对话框 -->
+    <el-dialog
+      v-model="remarkDialog.visible"
+      :title="`编辑备注 - ${remarkDialog.productName}`"
+      width="500px"
+      destroy-on-close
+      @closed="handleRemarkDialogClosed"
+      @keydown.enter="saveRemark"
+      @keydown.esc="remarkDialog.visible = false"
+    >
+      <div class="remark-dialog-content">
+        <el-input
+          v-model="remarkDialog.remark"
+          type="textarea"
+          :rows="6"
+          placeholder="请输入产品备注"
+          maxlength="200"
+          show-word-limit
+          resize="none"
+          class="remark-textarea"
+        />
+        
+        <div class="remark-dialog-actions">
+          <el-button @click="remarkDialog.visible = false">取消</el-button>
+          <el-button type="primary" @click="saveRemark">保存</el-button>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -1364,7 +1402,7 @@ import {
   Plus, Upload, Download, Document, Close, Search, 
   MagicStick, Warning, InfoFilled, Refresh, 
   SetUp, ArrowUp, Goods, Connection, ArrowLeft,
-  ArrowRight, Promotion
+  ArrowRight, Promotion, Edit
 } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
@@ -1438,6 +1476,14 @@ const historyDialog = reactive({
   maxPrice: null,
   minPrice: null,
   priceList: []
+});
+
+const remarkDialog = reactive({
+  visible: false,
+  productId: null,
+  productName: '',
+  remark: '',
+  rowIndex: -1
 });
 
 const loadingHistory = ref(false);
@@ -1518,6 +1564,38 @@ const totalAmountUsd = computed(() => {
       return sum + (priceUsd * quantity);
     }, 0);
 });
+
+
+// 打开备注编辑对话框
+const openRemarkDialog = (row, index) => {
+  if (isViewMode.value || !row.quantity || row.quantity <= 0) {
+    return;
+  }
+  
+  remarkDialog.visible = true;
+  remarkDialog.productId = row.productId;
+  remarkDialog.productName = row.productName;
+  remarkDialog.remark = row.remark || '';
+  remarkDialog.rowIndex = index;
+};
+
+// 保存备注
+const saveRemark = () => {
+  if (remarkDialog.rowIndex >= 0 && remarkDialog.rowIndex < outboundProducts.value.length) {
+    outboundProducts.value[remarkDialog.rowIndex].remark = remarkDialog.remark;
+    remarkDialog.visible = false;
+    ElMessage.success('备注保存成功');
+  }
+};
+
+// 关闭备注对话框
+const handleRemarkDialogClosed = () => {
+  remarkDialog.productId = null;
+  remarkDialog.productName = '';
+  remarkDialog.remark = '';
+  remarkDialog.rowIndex = -1;
+};
+
 
 const hasValidRecommendations = computed(() => {
   return groupedRecommendations.value.some(group => 
@@ -6310,5 +6388,121 @@ watch(
 
 .package-recommended-quantity .trigger-info .el-icon {
   font-size: 10px;
+}
+
+/* 备注单元格样式 */
+.remark-cell {
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid #ebeef5;
+  transition: all 0.2s;
+  background-color: #fafafa;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.remark-cell:hover {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.remark-disabled {
+  cursor: not-allowed;
+  background-color: #f5f7fa;
+  opacity: 0.6;
+}
+
+.remark-disabled:hover {
+  border-color: #ebeef5;
+  background-color: #f5f7fa;
+  box-shadow: none;
+}
+
+.remark-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.remark-text {
+  flex: 1;
+  color: #303133;
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 4.2em;
+}
+
+.remark-empty {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #909399;
+  font-size: 13px;
+}
+
+.edit-icon {
+  color: #409eff;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.remark-cell:hover .edit-icon {
+  transform: scale(1.1);
+}
+
+.remark-length {
+  font-size: 11px;
+  color: #909399;
+  text-align: right;
+  margin-top: 4px;
+}
+
+/* 备注对话框样式 */
+.remark-dialog-content {
+  padding: 10px 0;
+}
+
+.remark-textarea {
+  margin-bottom: 20px;
+}
+
+.remark-textarea :deep(.el-textarea__inner) {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.remark-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .remark-cell {
+    min-height: 50px;
+  }
+  
+  .remark-text {
+    font-size: 12px;
+    -webkit-line-clamp: 2;
+    max-height: 2.8em;
+  }
+}
+
+.remark-cell:active {
+  transform: translateY(1px);
 }
 </style>

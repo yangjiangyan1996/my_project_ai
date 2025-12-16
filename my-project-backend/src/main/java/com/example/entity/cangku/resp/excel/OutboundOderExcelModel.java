@@ -27,6 +27,9 @@ public class OutboundOderExcelModel {
     @ExcelProperty("sku")
     private String sku;
 
+    @ExcelProperty("客户sku")
+    private String customerSku;
+
     @ExcelProperty("商品名称")
     private String name;
 
@@ -45,14 +48,14 @@ public class OutboundOderExcelModel {
     @ExcelProperty("箱数")
     private String boxCount;
 
-    @ExcelProperty("出货单位高度")
-    private String outUnitHeight;
-
     @ExcelProperty("出货单位长度")
     private String outUnitLength;
 
     @ExcelProperty("出货单位宽度")
     private String outUnitWidth;
+
+    @ExcelProperty("出货单位高度")
+    private String outUnitHeight;
 
     @ExcelProperty("体积(m3)")
     private String volume;
