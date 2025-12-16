@@ -353,7 +353,6 @@
         </div>
         
         <!-- 在查看模式下的推荐汇总 -->
-        <!-- 在查看模式下的推荐汇总 -->
         <div v-if="isViewMode && !groupedRecommendations.length && hasRecommendationDetails" class="view-mode-recommendations">
           <div class="recommendation-summary">
             <h4>推荐产品汇总</h4>
@@ -364,17 +363,17 @@
                 class="recommendation-item"
               >
                 <span class="product-name">{{ getProductName(productId) }}</span>
-                <!-- 显示包装件 -->
-                <span v-if="details[0]?.isPackage" class="total-recommended">
-                  包装推荐: {{ details[0]?.recommendedQuantity }} 个/件
-                  <span class="source-count" v-if="details[0]?.packageRatio">
-                    (比例: 1:{{ details[0]?.packageRatio }})
+                <!-- 检查是否为包装件 -->
+                <span v-if="details[0] && details[0].isPackage" class="total-recommended">
+                  包装推荐: {{ details[0].recommendedQuantity ? details[0].recommendedQuantity.toFixed(2) : '0.00' }} 个/件
+                  <span class="source-count" v-if="details[0].packageRatio">
+                    (比例: 1:{{ details[0].packageRatio }})
                   </span>
                 </span>
                 <!-- 显示普通推荐商品 -->
                 <span v-else class="total-recommended">
                   总推荐量: {{ getTotalRecommendedQuantity(productId) }} 个
-                  <span class="source-count">(来自 {{ details.length }} 个来源)</span>
+                  <span class="source-count" v-if="details.length > 0">(来自 {{ details.length }} 个来源)</span>
                 </span>
               </div>
             </div>
@@ -718,9 +717,15 @@
                 </div>
               </el-popover>
               
+              <!-- 在推荐数量列中 -->
               <!-- 2. 包装件的显示 -->
-              <div v-else-if="row.isPackage && row.recommendedQuantity" class="package-recommended-quantity">
-                <div class="recommended-value">{{ row.quantity.toFixed(2) }} 个</div>
+              <div v-else-if="row.isPackage" class="package-recommended-quantity">
+                <div class="recommended-value">
+                  {{ (row.quantity || 0).toFixed(2) }} 个
+                  <span v-if="row.recommendedQuantity" class="recommend-tip">
+                    (推荐: {{ row.recommendedQuantity.toFixed(2) }} 个/件)
+                  </span>
+                </div>
                 <div v-if="row.packageRatio" class="ratio-info">
                   比例: 1:{{ row.packageRatio }} (每{{ row.packageRatio }}个成品需要1个包装)
                 </div>
@@ -1723,6 +1728,8 @@ const loadOutboundDetail = async (id) => {
           let isTriggerProduct, isRecommend, isPackage;
           let productLevel = 0;
           let parentTriggerId = null;
+          let packageRatioValue = null;
+          let recommendedQuantityValue = 0;
           
           if (isRecommendProduct === 1) {
             isTriggerProduct = extension.isTriggerProduct === 0;
@@ -1736,6 +1743,14 @@ const loadOutboundDetail = async (id) => {
             isPackage = true;
             productLevel = 2;
             parentTriggerId = extension.parentProductId || null;
+            
+            // 修复：使用正确的变量名
+            packageRatioValue = extension.packageRatio || null;
+            
+            // 计算包装件推荐数量
+            if (packageRatioValue && packageRatioValue > 0) {
+              recommendedQuantityValue = 1 / packageRatioValue;
+            }
           } else {
             isTriggerProduct = extension.isTriggerProduct === 0;
             isRecommend = false;
@@ -1761,7 +1776,8 @@ const loadOutboundDetail = async (id) => {
             isPackage: isPackage,
             triggerProductId: extension.triggerProductId || null,
             parentProductId: extension.parentProductId || null,
-            packageRatio: extension.packageRatio || null,
+            packageRatio: packageRatioValue, // 使用正确的变量名
+            recommendedQuantity: recommendedQuantityValue, // 添加推荐数量
             extension: extension,
             originalPrice: item.priceUnit ? Number(item.priceUnit) : 0,
             originalPriceUnitUsd: item.priceUnitUsd ? Number(item.priceUnitUsd) : 0,
@@ -1802,8 +1818,32 @@ const loadRecommendationsForExistingProducts = async () => {
   groupedRecommendations.value = [];
   recommendationDetails.value = {};
   
+  // 先处理包装件的推荐信息
+  outboundProducts.value.forEach(product => {
+    if (product.isPackage && product.packageRatio) {
+      console.log(`处理包装件推荐信息: ${product.productName}`);
+      
+      if (!recommendationDetails.value[product.productId]) {
+        recommendationDetails.value[product.productId] = [];
+      }
+      
+      const recommendedQuantity = product.recommendedQuantity || (1 / product.packageRatio);
+      
+      recommendationDetails.value[product.productId].push({
+        triggerProductId: product.parentProductId,
+        recommendedQuantity: recommendedQuantity,
+        productName: product.productName,
+        isRequired: true,
+        isPackage: true,
+        packageRatio: product.packageRatio,
+        calculatedQuantity: product.quantity || 0
+      });
+    }
+  });
+  
+  // 再处理触发商品的推荐
   const triggerProducts = outboundProducts.value.filter(p => 
-    (p.isTriggerProduct || p.isRecommend) && p.quantity > 0
+    p.isTriggerProduct && p.quantity > 0
   );
   
   for (const product of triggerProducts) {
@@ -1818,8 +1858,7 @@ const loadRecommendationsForExistingProducts = async () => {
     }
   }
   
-  updateRecommendationDetails();
-  
+  // 更新推荐面板中的选中状态
   const recommendProducts = outboundProducts.value.filter(p => p.isRecommend && p.quantity > 0);
   
   recommendProducts.forEach(recommendProduct => {
@@ -2336,18 +2375,13 @@ const loadRecommendationsForProduct = async (productId, quantity) => {
   }
 };
 
-
 const updateRecommendationDetails = () => {
   console.log('开始更新推荐详情...');
   recommendationDetails.value = {};
   
   // 处理普通推荐商品
   groupedRecommendations.value.forEach(group => {
-    console.log(`处理推荐组 - 触发商品: ${group.triggerProductId}`);
-    
     group.items.forEach(item => {
-      console.log(`处理推荐项: ${item.productName} (${item.productId})`);
-      
       if (!recommendationDetails.value[item.productId]) {
         recommendationDetails.value[item.productId] = [];
       }
@@ -2368,7 +2402,6 @@ const updateRecommendationDetails = () => {
           productName: item.productName,
           isRequired: item.isRequired
         };
-        console.log(`更新现有记录 - 触发商品: ${group.triggerProductId}, 数量: ${recommendedQuantity}`);
       } else {
         // 添加新记录
         recommendationDetails.value[item.productId].push({
@@ -2377,28 +2410,28 @@ const updateRecommendationDetails = () => {
           productName: item.productName,
           isRequired: item.isRequired
         });
-        console.log(`添加新记录 - 触发商品: ${group.triggerProductId}, 数量: ${recommendedQuantity}`);
       }
     });
   });
   
   // 处理包装件的推荐详情
   outboundProducts.value.forEach(product => {
-    if (product.isPackage && product.recommendedQuantity) {
-      console.log(`处理包装件推荐: ${product.productName} (${product.productId})`);
-      
+    if (product.isPackage && product.packageRatio) {
       if (!recommendationDetails.value[product.productId]) {
         recommendationDetails.value[product.productId] = [];
       }
       
       // 包装件的推荐逻辑是固定的，基于包装比例
+      const recommendedQuantity = product.recommendedQuantity || (product.packageRatio > 0 ? 1 / product.packageRatio : 0);
+      
       recommendationDetails.value[product.productId].push({
         triggerProductId: product.parentProductId,
-        recommendedQuantity: product.recommendedQuantity,
+        recommendedQuantity: recommendedQuantity,
         productName: product.productName,
-        isRequired: true, // 包装件通常是必选的
+        isRequired: true,
         isPackage: true,
-        packageRatio: product.packageRatio
+        packageRatio: product.packageRatio,
+        calculatedQuantity: product.quantity || 0
       });
     }
   });
@@ -2453,35 +2486,27 @@ const getRecommendationDetails = (productId, triggerProductId = null) => {
 };
 
 
-const getTotalRecommendedQuantity = (productId, triggerProductId = null) => {
+const getTotalRecommendedQuantity = (productId) => {
   const product = outboundProducts.value.find(p => p.productId === productId);
   if (!product) {
-    console.log(`getTotalRecommendedQuantity - 未找到产品: ${productId}`);
     return 0;
   }
   
-  // 如果指定了触发商品，只计算该触发商品的推荐总量
-  if (triggerProductId) {
-    const details = getRecommendationDetails(productId, triggerProductId);
-    console.log(`getTotalRecommendedQuantity - 产品 ${productId} 来自触发商品 ${triggerProductId} 的推荐详情:`, details);
-    
-    const total = details.reduce((sum, detail) => sum + (detail.recommendedQuantity || 0), 0);
-    console.log(`getTotalRecommendedQuantity - 来自触发商品 ${triggerProductId} 的推荐总量: ${total}`);
-    return total;
+  // 如果是包装件，返回包装件的推荐数量
+  if (product.isPackage && product.recommendedQuantity) {
+    return product.recommendedQuantity;
   }
   
-  // 否则计算来自所有触发商品的总推荐量
-  const details = getRecommendationDetails(productId);
-  console.log(`getTotalRecommendedQuantity - 产品 ${productId} 的所有推荐详情:`, details);
-  
+  // 其他情况从推荐详情中获取
+  const details = recommendationDetails.value[productId];
   if (!details || details.length === 0) {
-    console.log(`getTotalRecommendedQuantity - 无推荐详情`);
     return 0;
   }
   
-  const total = details.reduce((sum, detail) => sum + (detail.recommendedQuantity || 0), 0);
-  console.log(`getTotalRecommendedQuantity - 来自 ${details.length} 个来源的总推荐量: ${total}`);
-  return total;
+  // 计算所有推荐的总和
+  return details.reduce((sum, detail) => {
+    return sum + (detail.recommendedQuantity || 0);
+  }, 0);
 };
 
 
@@ -6144,5 +6169,146 @@ watch(
   font-size: 11px;
   color: #69c0ff;
   font-style: italic;
+}
+
+/* 包装件推荐提示 */
+.recommend-tip {
+  font-size: 11px;
+  color: #67c23a;
+  font-style: italic;
+  margin-left: 4px;
+}
+
+/* 包装件推荐数量显示 */
+.package-recommended-quantity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 8px;
+  background-color: #fdf6ec;
+  border-radius: 4px;
+  border: 1px solid #fac858;
+}
+
+.package-recommended-quantity .recommended-value {
+  font-weight: 500;
+  color: #e6a23c;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.package-recommended-quantity .ratio-info {
+  font-size: 12px;
+  color: #909399;
+}
+
+.package-recommended-quantity .trigger-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #67c23a;
+  margin-top: 2px;
+}
+
+.package-recommended-quantity .trigger-info .el-icon {
+  font-size: 10px;
+}
+
+/* 包装件推荐提示 */
+.recommend-tip {
+  font-size: 11px;
+  color: #67c23a;
+  font-style: italic;
+  margin-left: 4px;
+}
+
+/* 包装件推荐数量显示 */
+.package-recommended-quantity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 8px;
+  background-color: #fdf6ec;
+  border-radius: 4px;
+  border: 1px solid #fac858;
+}
+
+.package-recommended-quantity .recommended-value {
+  font-weight: 500;
+  color: #e6a23c;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.package-recommended-quantity .ratio-info {
+  font-size: 12px;
+  color: #909399;
+}
+
+.package-recommended-quantity .trigger-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #67c23a;
+  margin-top: 2px;
+}
+
+.package-recommended-quantity .trigger-info .el-icon {
+  font-size: 10px;
+}
+
+/* 包装件推荐提示 */
+.recommend-tip {
+  font-size: 11px;
+  color: #67c23a;
+  font-style: italic;
+  margin-left: 4px;
+}
+
+/* 包装件推荐数量显示 */
+.package-recommended-quantity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px 8px;
+  background-color: #fdf6ec;
+  border-radius: 4px;
+  border: 1px solid #fac858;
+}
+
+.package-recommended-quantity .recommended-value {
+  font-weight: 500;
+  color: #e6a23c;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.package-recommended-quantity .ratio-info {
+  font-size: 12px;
+  color: #909399;
+}
+
+.package-recommended-quantity .trigger-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #67c23a;
+  margin-top: 2px;
+}
+
+.package-recommended-quantity .trigger-info .el-icon {
+  font-size: 10px;
 }
 </style>
