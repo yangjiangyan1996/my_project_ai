@@ -815,12 +815,12 @@ public class CkOutboundFacade {
 
     }
 
-    public String exportOutboundOrderExcelName (Long tenantId, Long orderId) {
+    public OutboundOrder exportOutboundOrderExcelName (Long tenantId, Long orderId) {
         OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);
         if (Objects.isNull(outboundOrder)) {
             throw new ValidationException("出库单不存在");
         }
-        return "出库单" + outboundOrder.getRelatedOrderNo();
+        return outboundOrder;
     }
     public List<OutboundOderExcelModel> exportOutboundOrderExcel(Long tenantId, Long orderId) {
         OutboundOrder outboundOrder = outboundOrderService.selectById(orderId, tenantId);

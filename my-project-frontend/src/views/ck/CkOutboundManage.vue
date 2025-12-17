@@ -119,6 +119,16 @@
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="handleReset">重置</el-button>
             <el-button @click="handleExport">导出</el-button>
+            <!-- 新增：组合导出按钮 -->
+            <el-button 
+              type="success" 
+              @click="handleBatchExport"
+              :disabled="selectedRows.length === 0"
+              :loading="batchExportLoading"
+            >
+              <el-icon><Download /></el-icon>
+              批量导出（{{ selectedRows.length }}）
+            </el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -181,7 +191,16 @@
           empty-text="暂无出库单数据"
           class="outbound-table"
           row-key="id"
+           @selection-change="handleSelectionChange"
         >
+          <!-- 新增：选择列 -->
+          <el-table-column 
+            type="selection" 
+            width="55" 
+            align="center"
+            :reserve-selection="false"
+          />
+          
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column label="出库单号" width="180" fixed="left">
             <template #default="{ row }">
@@ -316,7 +335,7 @@
                 >
                   取消
                 </el-button>
-                <el-button
+                <!-- <el-button
                   type="success"
                   link
                   size="small"
@@ -324,7 +343,7 @@
                   v-if="row.status === 2"
                 >
                   完成
-                </el-button>
+                </el-button> -->
               </div>
             </template>
           </el-table-column>
@@ -553,7 +572,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Refresh, Document, Clock, CircleCheck, Finished, ArrowDown } from '@element-plus/icons-vue';
+import { Plus, Refresh, Document, Clock, CircleCheck, Finished, ArrowDown, Download } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 import axios from 'axios';
 import { accessHeader } from '@/net'; 
@@ -588,6 +607,10 @@ const stats = reactive({
   approved: 0,
   completed: 0
 });
+
+// 新增：选中的行数据
+const selectedRows = ref([]);
+const batchExportLoading = ref(false);
 
 // 出库单列表
 const outboundList = ref([]);
@@ -676,121 +699,82 @@ const loadStats = async () => {
   }
 };
 
-// // 加载出库单详情
-// const loadOutboundDetail = async (id) => {
-//   try {
-//     const res = await get(`/api/auth/outbound/detail?orderId=${id}`);
-//     console.log('出库单详情响应:', res);
+// 新增：处理选择变化
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection;
+};
+
+// 新增：批量导出方法
+const handleBatchExport = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择要导出的出库单');
+    return;
+  }
+  
+  try {
+    // 检查是否都是相同的出库类型
+    const orderTypes = [...new Set(selectedRows.value.map(row => row.orderType))];
+    if (orderTypes.length > 1) {
+      ElMessage.warning('请选择相同出库类型的订单进行批量导出');
+      return;
+    }
     
-//     if (res && res.code === 200) {
-//       // 如果接口返回了标准响应格式
-//       const detailData = res.data || res;
-//       return {
-//         // 基本信息
-//         id: detailData.id,
-//         orderNo: detailData.orderNo,
-//         orderType: detailData.orderType,
-//         warehouseId: detailData.warehouseId,
-//         warehouseName: detailData.warehouseName,
-//         customerId: detailData.customerId,
-//         customerName: detailData.customerName,
-//         relatedOrderNo: detailData.relatedOrderNo,
-//         expectedDate: detailData.expectedDate,
-//         remark: detailData.remark,
-//         status: detailData.status,
-//         itemCount: detailData.itemCount,
-//         totalQuantity: detailData.totalQuantity,
-//         totalAmount: detailData.totalAmount,
-//         totalAmountUsd: detailData.totalAmountUsd || 0, // 新增：USD总额
-//         applicantId: detailData.applicantId,
-//         applicantName: detailData.applicantName,
-//         applicantAvatar: detailData.applicantAvatar,
-//         isUrgent: detailData.isUrgent || false,
-//         createdAt: detailData.createdAt,
-//         updatedAt: detailData.updatedAt,
-        
-//         // 扩展字段，保留所有原始数据
-//         ...detailData,
-        
-//         // 产品明细
-//         items: detailData.items ? detailData.items.map(item => ({
-//           id: item.id,
-//           productId: item.productId,
-//           productName: item.productName,
-//           sku: item.sku,
-//           spec: item.spec,
-//           unit: item.unit,
-//           quantity: item.quantity,
-//           price: item.price,
-//           priceUnitUsd: item.priceUnitUsd || 0, // 新增：USD单价
-//           priceTotalUsd: item.priceTotalUsd || 0, // 新增：USD总额
-//           batchAllocations: item.batchAllocations || [],
-//           remark: item.remark,
-//           // 保留所有原始字段
-//           ...item
-//         })) : [],
-        
-//         // 附件信息
-//         attachments: detailData.attachments || []
-//       };
-//     } else if (res) {
-//       // 如果接口直接返回数据对象
-//       return {
-//         // 基本信息
-//         id: res.id,
-//         orderNo: res.orderNo,
-//         orderType: res.orderType,
-//         warehouseId: res.warehouseId,
-//         warehouseName: res.warehouseName,
-//         customerId: res.customerId,
-//         customerName: res.customerName,
-//         relatedOrderNo: res.relatedOrderNo,
-//         expectedDate: res.expectedDate,
-//         remark: res.remark,
-//         status: res.status,
-//         itemCount: res.itemCount,
-//         totalQuantity: res.totalQuantity,
-//         totalAmount: res.totalAmount,
-//         totalAmountUsd: res.totalAmountUsd || 0, // 新增：USD总额
-//         applicantId: res.applicantId,
-//         applicantName: res.applicantName,
-//         applicantAvatar: res.applicantAvatar,
-//         isUrgent: res.isUrgent || false,
-//         createdAt: res.createdAt,
-//         updatedAt: res.updatedAt,
-        
-//         // 扩展字段，保留所有原始数据
-//         ...res,
-        
-//         // 产品明细
-//         items: res.items ? res.items.map(item => ({
-//           id: item.id,
-//           productId: item.productId,
-//           productName: item.productName,
-//           sku: item.sku,
-//           spec: item.spec,
-//           unit: item.unit,
-//           quantity: item.quantity,
-//           price: item.price,
-//           priceUnitUsd: item.priceUnitUsd || 0, // 新增：USD单价
-//           priceTotalUsd: item.priceTotalUsd || 0, // 新增：USD总额
-//           batchAllocations: item.batchAllocations || [],
-//           remark: item.remark,
-//           // 保留所有原始字段
-//           ...item
-//         })) : [],
-        
-//         // 附件信息
-//         attachments: res.attachments || []
-//       };
-//     }
-//     return null;
-//   } catch (error) {
-//     console.error('加载出库单详情失败:', error);
-//     ElMessage.error('加载详情失败: ' + (error.message || '未知错误'));
-//     return null;
-//   }
-// };
+    batchExportLoading.value = true;
+    
+    const orderIds = selectedRows.value.map(row => row.id);
+    
+    const response = await axios.get(
+      '/api/auth/outbound/exportOutboundOrderExcel',
+      {
+        params: {
+          orderIds: orderIds.join(',')  // 将数组转换为逗号分隔的字符串
+        },
+        headers: accessHeader(),
+        responseType: 'blob',
+      }
+    );
+    
+    // 从响应头读取文件名
+    let fileName = '批量出库单.xlsx';
+    const disposition = response.headers['content-disposition'];
+    
+    if (disposition) {
+      const fileNameMatch = disposition.match(/filename=([^;]+)/);
+      if (fileNameMatch && fileNameMatch[1]) {
+        fileName = decodeURIComponent(fileNameMatch[1]);
+      }
+    }
+    
+    // 创建Blob并触发下载
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    
+    // 清理
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+    ElMessage.success(`成功导出 ${selectedRows.value.length} 个出库单`);
+    
+    // 清空选择
+    selectedRows.value = [];
+    
+  } catch (error) {
+    console.error('批量导出失败', error);
+    ElMessage.error('批量导出失败，请稍后重试');
+  } finally {
+    // 无论成功或失败，都清空选择并关闭loading
+    selectedRows.value = [];
+    batchExportLoading.value = false;
+  }
+};
 
 // 计算属性
 const pendingOutbounds = computed(() => {
@@ -1732,5 +1716,43 @@ onMounted(() => {
 
 :deep(.el-dropdown-menu__item .el-icon) {
   margin-right: 8px;
+}
+
+/* 批量导出按钮样式 */
+:deep(.el-button--success) {
+  background-color: #67c23a;
+  border-color: #67c23a;
+}
+
+:deep(.el-button--success:hover) {
+  background-color: #5daf34;
+  border-color: #5daf34;
+}
+
+:deep(.el-button--success.is-disabled) {
+  background-color: #b3e19d;
+  border-color: #b3e19d;
+}
+
+/* 选中行高亮样式 */
+:deep(.el-table__row.selected-row) {
+  background-color: #f0f9ff !important;
+}
+
+:deep(.el-table__row.selected-row:hover) {
+  background-color: #e0f2ff !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .filter-section .el-form-item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .filter-section .el-button {
+    margin-bottom: 8px;
+  }
 }
 </style>

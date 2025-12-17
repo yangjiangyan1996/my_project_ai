@@ -1,11 +1,13 @@
 package com.example.controller.cangku;
 
+import cn.hutool.core.collection.CollUtil;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CkOutboundFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
+import com.example.entity.cangku.dto.OutboundOrder;
 import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.*;
 import com.example.entity.cangku.resp.excel.OutboundOderExcelModel;
@@ -15,11 +17,13 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -304,8 +308,13 @@ public class OutboundContorller {
 
 
     @GetMapping("/exportOutboundOrderExcel")
-    public void exportOutboundOrderExcel(HttpServletResponse response, @RequestParam("orderId") Long orderId) throws IOException {
+    public void exportOutboundOrderExcel(HttpServletResponse response,
+                                         @RequestParam(required = false, value = "orderId") Long orderId,
+                                         @RequestParam(required = false, value = "orderIds") String orderIds) throws IOException {
         try{
+            if (orderId == null && StringUtils.isEmpty(orderIds)) {
+                throw new ValidationException("请选择出库单");
+            }
             Long tenantId = UserUtil.getCurrentUser().getTenantId();
             // 设置响应头
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -314,14 +323,37 @@ public class OutboundContorller {
 
 
             // 文件名
-            String fileName = outboundFacade.exportOutboundOrderExcelName(tenantId, orderId);
+            String fileName = null;
+
+            // 准备数据，这里示例用空数据，如果有实际数据可以填充
+            List<OutboundOderExcelModel> dataList = new ArrayList<>();
+            // 如果不想预填充测试数据，可传空列表 data = new ArrayList<>();
+            if (StringUtils.isNotBlank(orderIds)) {
+                String[] ids = orderIds.split(",");
+                StringBuilder sb = new StringBuilder();
+                sb.append("出库单-");
+                for (String id : ids) {
+                    if (StringUtils.isNotBlank(id)) {
+                        OutboundOrder o = outboundFacade.exportOutboundOrderExcelName(tenantId, Long.valueOf(id));
+                        sb.append(o.getRelatedOrderNo());
+                        sb.append("-");
+                        List<OutboundOderExcelModel> outboundOderExcelModels = outboundFacade.exportOutboundOrderExcel(tenantId, Long.valueOf(id));
+                        if (CollUtil.isNotEmpty(outboundOderExcelModels)) {
+                            dataList.addAll(outboundOderExcelModels);
+                        }
+                    }
+                }
+                fileName = sb.toString();
+            } else {
+                OutboundOrder o = outboundFacade.exportOutboundOrderExcelName(tenantId, orderId);
+                fileName = "出库单-"+ o.getRelatedOrderNo();
+                dataList = outboundFacade.exportOutboundOrderExcel(tenantId, orderId);
+            }
+
             // URL编码文件名，防止中文乱码
             String encodedFileName = URLEncoder.encode(fileName, "UTF-8").replaceAll("\\+", "%20");
             response.setHeader("Content-Disposition", "attachment;filename=" + encodedFileName + ".xlsx");
 
-            // 准备数据，这里示例用空数据，如果有实际数据可以填充
-            // 如果不想预填充测试数据，可传空列表 data = new ArrayList<>();
-            List<OutboundOderExcelModel> dataList = outboundFacade.exportOutboundOrderExcel(tenantId, orderId);
 
             // EasyExcel 写入
             EasyExcel.write(response.getOutputStream(), OutboundOderExcelModel.class)
