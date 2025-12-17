@@ -53,6 +53,10 @@ public class CkOutboundFacade {
     CkOutboundOrderItemService outboundOrderItemService;
 
     @Resource
+    CkRecommendRuleItemService recommendRuleItemService;
+    @Resource
+    CkRecommendRuleService recommendRuleService;
+    @Resource
     CkOutboundOrderService outboundOrderService;
 
     @Resource
@@ -844,9 +848,28 @@ public class CkOutboundFacade {
         Map<String, String> sku2CustomerSkuMap = customerSkuMappings.stream().collect(Collectors.toMap(CustomerSkuMapping::getProductSku, CustomerSkuMapping::getCustomerSku,  (v1, v2) -> v1));
 
 
+//        //获取推荐产品
+//        List<RecommendRule> ruleList = recommendRuleService.selectList(tenantId);
+//        Map<Long, RecommendRule> ruleId2RuleMap = ruleList.stream().collect(Collectors.toMap(RecommendRule::getId, v -> v));
+//        List<RecommendRuleItem> ruleItemList = recommendRuleItemService.selectByRuleIds(tenantId, Lists.newArrayList(ruleId2RuleMap.keySet()));
+//        Map<Long, RecommendRuleItem> ruleItemId2RuleItemMap = ruleItemList.stream().collect(Collectors.toMap(RecommendRuleItem::getId, v -> v));
+//
+//
+//        //判断产品在不在规则中
+        List<OutboundOrderItemSaleExt> outboundOrderItemSaleExts = outboundOrderItemSaleExtService.selectByOrderId(orderId, tenantId);
+        Map<Long, OutboundOrderItemSaleExt> outboundOrderItemId2OutboundOrderItemSaleExtMap = outboundOrderItemSaleExts.stream().collect(Collectors.toMap(OutboundOrderItemSaleExt::getOrderItemId, v -> v));
+
         Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
         Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
         return outboundOrderItems.stream().map(v -> {
+            OutboundOrderItemSaleExt saleExt = outboundOrderItemId2OutboundOrderItemSaleExtMap.getOrDefault(v.getId(), null);
+
+            //如果不是触发产品，并且是包装件，则不导出
+            if (saleExt != null
+                    && CkInOutboundEnums.IsTriggerProduct.No.getCode().equals(saleExt.getIsTriggerProduct())
+                    && CkInOutboundEnums.IsRecommendProduct.PackageProduct.getCode().equals(saleExt.getIsRecommendProduct())) {
+                return null;
+            }
             OutboundOderExcelModel model = new OutboundOderExcelModel();
             model.setOrderNumber(outboundOrder.getRelatedOrderNo());
             model.setShelfName(finalShelfId2ShelfMap.getOrDefault(v.getShelfLocationId(), new WarehouseShelf()).getShelfName());
@@ -872,26 +895,36 @@ public class CkOutboundFacade {
                 if (product.getOutUnitPerNum() != null) {
                     model.setOutUnitPerNum(product.getOutUnitPerNum() == null ? "" : product.getOutUnitPerNum().toString());
 
-                    // 计算箱数 = 数量 / 出货单位数量 (有小数，则进1)
-                    BigDecimal boxNumB = v.getQuantity().divide(product.getOutUnitPerNum(), 2, RoundingMode.HALF_UP);
-                    model.setBoxCount(boxNumB.toString());
 
-                    //体积 = 长 * 宽 * 高 * 箱数 / 1000000
-                    BigDecimal volumeB = product.getOutUnitHeight()
-                            .multiply(product.getOutUnitLength())
-                            .multiply(product.getOutUnitWidth())
-                            .multiply(boxNumB)
-                            .divide(new BigDecimal(1000000), 2, RoundingMode.HALF_UP);
-                    model.setVolume(volumeB.toString());
+                    //如果不是触发产品，并且是推荐产品，则不设置数量
+                    if (saleExt != null
+                            && CkInOutboundEnums.IsTriggerProduct.No.getCode().equals(saleExt.getIsTriggerProduct())
+                            && CkInOutboundEnums.IsRecommendProduct.RecommendProduct.getCode().equals(saleExt.getIsRecommendProduct())) {
+
+                    } else {
+                        // 计算箱数 = 数量 / 出货单位数量 (有小数，则进1)
+                        BigDecimal boxNumB = v.getQuantity().divide(product.getOutUnitPerNum(), 2, RoundingMode.HALF_UP);
+                        model.setBoxCount(boxNumB.toString());
+
+                        //体积 = 长 * 宽 * 高 * 箱数 / 1000000
+                        BigDecimal volumeB = product.getOutUnitHeight()
+                                .multiply(product.getOutUnitLength())
+                                .multiply(product.getOutUnitWidth())
+                                .multiply(boxNumB)
+                                .divide(new BigDecimal(1000000), 2, RoundingMode.HALF_UP);
+                        model.setVolume(volumeB.toString());
 
 
-                    //总重量 = 单件重量 * 箱数
-                    BigDecimal wall = product.getWeightPerUnit().multiply(boxNumB);
-                    model.setWeightAll(wall.toString());
+                        //总重量 = 单件重量 * 箱数
+                        BigDecimal wall = product.getWeightPerUnit().multiply(boxNumB);
+                        model.setWeightAll(wall.toString());
+                    }
+
+
                 }
             }
             return model;
-        }).collect(Collectors.toList());
+        }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
 

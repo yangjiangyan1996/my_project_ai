@@ -36,6 +36,16 @@ public class CkRecommendRuleServiceImpl extends ServiceImpl<CkRecommendRuleMappe
     }
 
     @Override
+    public List<RecommendRule> selectList(Long tenantId) {
+        return baseMapper.selectList(
+                new QueryWrapper<RecommendRule>()
+                        .eq("tenant_id", tenantId)
+                        .eq("status", 1)
+                        .eq("is_deleted",0)
+        );
+    }
+
+    @Override
     public RecommendRule selectById(Long id, Long tenantId) {
         return this.query()
                 .eq("id", id)

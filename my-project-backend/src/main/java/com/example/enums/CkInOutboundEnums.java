@@ -10,6 +10,53 @@ import lombok.Getter;
  */
 public class CkInOutboundEnums {
 
+    //    //    //是否为推荐产品, 0=不是 1=推荐产品 2=包装件
+    @Getter
+    public enum IsRecommendProduct {
+        // 0=不是
+        No(0,"不是"),
+        RecommendProduct(1,"推荐产品"),
+        PackageProduct(2,"包装件");
+
+        private Integer code;
+        private String desc;
+        IsRecommendProduct(Integer code, String desc) {
+            this.code = code;
+            this.desc = desc;
+        }
+        public static String getDescByCode(Integer code) {
+            for (CkInOutboundEnums.IsRecommendProduct value : CkInOutboundEnums.IsRecommendProduct.values()) {
+                if (value.getCode().equals(code)) {
+                    return value.getDesc();
+                }
+            }
+            return null;
+        }
+    }
+
+
+    //是否为触发产品, 0=是。1=不是
+    @Getter
+    public enum IsTriggerProduct {
+        Yes(0,"是"),
+        No(1,"不是");
+        private Integer code;
+        private String desc;
+        IsTriggerProduct(Integer code, String desc) {
+            this.code = code;
+            this.desc = desc;
+        }
+
+        public static String getDescByCode(Integer code) {
+            for (CkInOutboundEnums.IsTriggerProduct value : CkInOutboundEnums.IsTriggerProduct.values()) {
+                if (value.getCode().equals(code)) {
+                    return value.getDesc();
+                }
+            }
+            return null;
+        }
+    }
+
     //状态:
     // 1-等待生产, (刚申请生产领料出库单，未审核)
     // 2-等待生产入库, (申请生产领料出库单，已审核)

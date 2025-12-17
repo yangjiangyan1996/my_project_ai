@@ -1004,6 +1004,8 @@ const handleDelete = async (outbound) => {
 
 const handleCancel = async (outbound) => {
   try {
+    ElMessage.success('功能还待开发');
+    return;
     await ElMessageBox.confirm(
       `确定要取消出库单"${outbound.orderNo}"吗？`,
       '取消确认',

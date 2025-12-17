@@ -19,6 +19,8 @@ public interface CkRecommendRuleService extends IService<RecommendRule> {
 
     RecommendRule selectById(Long id, Long tenantId);
 
+    List<RecommendRule> selectList(Long tenantId);
+
     List<RecommendRule> selectList(Long tenantId, RecommendRuleQueryReq req);
 
 }
