@@ -239,6 +239,8 @@
                  <div v-if="row.productName" class="product-details">
                   <div class="product-name">name:{{ row.productName }}</div>
                   <div class="product-sku">sku:{{ row.sku }}</div>
+                  <div class="product-spec">spec:{{ row.spec }}</div>
+                  <div class="product-color">color:{{ row.color }}</div>
                 </div>
               </template>
             </el-table-column>

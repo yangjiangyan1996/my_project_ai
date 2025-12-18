@@ -4263,6 +4263,37 @@ const prepareSubmitData = () => {
   const items = outboundProducts.value
     .filter(item => item.quantity > 0)
     .map(item => {
+      // 修正数量计算 - 包装件需要特殊处理
+      let quantity = item.quantity;
+      
+      // 如果是包装件，需要根据父产品数量计算
+      if (item.isPackage && item.parentProductId && item.packageRatio) {
+        const parentProduct = outboundProducts.value.find(p => 
+          p.productId === item.parentProductId && !p.isPackage
+        );
+        
+        if (parentProduct) {
+          // 修正：包装件数量 = 父产品数量 / packageRatio
+          // packageRatio 表示 "多少成品用1个包装"
+          quantity = parentProduct.quantity / item.packageRatio;
+          
+          // 四舍五入保留4位小数
+          quantity = Math.round(quantity * 10000) / 10000;
+        }
+      }
+      
+      // 确保数量有效
+      quantity = quantity || 0;
+      
+      // 计算总金额 - 添加四舍五入
+      const price = item.price || 0;
+      const priceUnitUsd = item.priceUnitUsd || 0;
+      
+      // 使用精确计算
+      const priceTotal = preciseCalculate.multiply(item.price, item.quantity, 2);
+      const priceTotalUsd = preciseCalculate.multiply(item.priceUnitUsd, item.quantity, 2);
+      
+      // 确定产品类型
       let isRecommendProductValue;
       
       if (item.isPackage) {
@@ -4297,17 +4328,17 @@ const prepareSubmitData = () => {
         unit: item.unitName,
         color: item.color,
         currentStock: item.availableQuantity,
-        quantity: item.quantity,
-        price: item.price,
-        priceTotal: item.price * (item.quantity || 0),
-        priceUnitUsd: item.priceUnitUsd || 0,
-        priceTotalUsd: (item.priceUnitUsd || 0) * (item.quantity || 0),
+        quantity: quantity,
+        price: price,
+        priceTotal: priceTotal,
+        priceUnitUsd: priceUnitUsd,
+        priceTotalUsd: priceTotalUsd,
         batchAllocations: (item.batchAllocations || []).map(allocation => ({
           batchNo: allocation.batchNo,
           shelfId: allocation.shelfId,
           shelfName: allocation.shelfName,
           quantity: allocation.quantity,
-          price: allocation.price || item.price || 0
+          price: allocation.price || price || 0
         })),
         remark: item.remark || '',
         isTriggerProduct: item.isTriggerProduct || false,
@@ -4318,12 +4349,25 @@ const prepareSubmitData = () => {
       };
     });
   
+  // 计算总计 - 使用精确计算
+  const totalQuantity = items.reduce((sum, item) => {
+    return Math.round((sum + (item.quantity || 0)) * 10000) / 10000;
+  }, 0);
+  
+  const totalAmount = items.reduce((sum, item) => {
+    return preciseCalculate.add(sum, item.priceTotal || 0, 2);
+  }, 0);
+  
+  const totalAmountUsd = items.reduce((sum, item) => {
+    return Math.round((sum + (item.priceTotalUsd || 0)) * 100) / 100;
+  }, 0);
+  
   return {
     ...formData,
     items: items,
-    totalQuantity: totalQuantity.value,
-    totalAmount: totalAmount.value,
-    totalAmountUsd: totalAmountUsd.value
+    totalQuantity: totalQuantity,
+    totalAmount: totalAmount,
+    totalAmountUsd: totalAmountUsd
   };
 };
 
@@ -4551,6 +4595,30 @@ const updateExistingRecommendationQuantities = async (triggerProductId, newTrigg
   return updatedCount;
 };
 
+
+// 精确计算函数
+const preciseCalculate = {
+  // 乘法，保留指定位数
+  multiply: (a, b, precision = 2) => {
+    const result = a * b;
+    return Math.round(result * Math.pow(10, precision)) / Math.pow(10, precision);
+  },
+  
+  // 加法，保留指定位数
+  add: (a, b, precision = 2) => {
+    const result = a + b;
+    return Math.round(result * Math.pow(10, precision)) / Math.pow(10, precision);
+  },
+  
+  // 除法，保留指定位数
+  divide: (a, b, precision = 4) => {
+    if (b === 0) return 0;
+    const result = a / b;
+    return Math.round(result * Math.pow(10, precision)) / Math.pow(10, precision);
+  }
+};
+
+
 const updatePackageComponentsBatch = async (parentProductId, parentQuantity) => {
   try {
     const res = await get(`/api/auth/product/bomDetailOnlyPackageInfo?productId=${parentProductId}`);
@@ -4569,16 +4637,21 @@ const updatePackageComponentsBatch = async (parentProductId, parentQuantity) => 
         
         if (!availableProduct) continue;
         
-        // 修正包装件的推荐数量计算
+        // 修正包装件数量的计算逻辑
         const packageRatio = component.otherQuantity ? Number(component.otherQuantity) : 1;
-        let recommendedQuantity = 0;
-        if (packageRatio > 0 && parentQuantity > 0) {
-          // 修正：包装件推荐数量 = 1 ÷ 比例值
-          recommendedQuantity = 1 / packageRatio;
+        
+        // 计算包装件数量
+        // packageRatio = 5 表示 "5个成品用1个包装"
+        // 包装件数量 = 成品数量 ÷ packageRatio
+        let packageQuantity = 0;
+        if (packageRatio > 0) {
+          packageQuantity = preciseCalculate.divide(parentQuantity, packageRatio, 4);
+          // 四舍五入保留4位小数
+          packageQuantity = Math.round(packageQuantity * 10000) / 10000;
         }
         
-        // 包装件总数量 = 成品数量 × 包装件推荐数量
-        const packageQuantity = parentQuantity * recommendedQuantity;
+        // 包装件推荐数量是比例值
+        const recommendedQuantity = packageRatio > 0 ? (1 / packageRatio) : 0;
         
         const packageItem = {
           ...availableProduct,

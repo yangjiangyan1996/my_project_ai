@@ -305,6 +305,7 @@
                   size="small"
                   @click="handleDownloadTemplate(row)"
                   :loading="row.exportLoading"
+                  v-if="row.orderType === 1 && row.status === 2"
                 >
                   导出
                 </el-button>
