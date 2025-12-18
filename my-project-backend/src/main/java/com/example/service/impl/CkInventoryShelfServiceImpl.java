@@ -21,6 +21,18 @@ import java.util.Set;
 @Service
 public class CkInventoryShelfServiceImpl extends ServiceImpl<CkInventoryShelfMapper, InventoryShelf> implements CkInventoryShelfService {
     @Override
+    public InventoryShelf getByTenantWarehouseProductShelfBatch(Long tenantId, Long warehouseId, Long productId, Long shelfId, String batchNo) {
+        return baseMapper.selectOne(new QueryWrapper<InventoryShelf>()
+                .eq("tenant_id", tenantId)
+                .eq("warehouse_id", warehouseId)
+                .eq("product_id", productId)
+                .eq("shelf_id", shelfId)
+                .eq(StringUtils.isNotBlank(batchNo), "batch_no", batchNo)
+                .eq("is_deleted", 0)
+        );
+    }
+
+    @Override
     public List<InventoryShelf> selectByShelfIds(Long tenantId, List<Long> shelfIds) {
         return baseMapper.selectList(new QueryWrapper<InventoryShelf>()
                 .eq("tenant_id", tenantId)

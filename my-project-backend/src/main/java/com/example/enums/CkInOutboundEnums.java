@@ -9,8 +9,86 @@ import lombok.Getter;
  * @Date 2025/11/5 22:08
  */
 public class CkInOutboundEnums {
+    /**
+     * 库存锁定类型枚举
+     */
+    @Getter
+    public enum InventoryLockType {
+        SALES_OUTBOUND(1, "销售出库"),
+        PRODUCTION_OUTBOUND(2, "生产领料出库"),
+        RETURN_OUTBOUND(3, "退货出库"),
+        ALLOCATION_OUTBOUND(4, "调拨出库"),
+        INVENTORY_CHECK(5, "盘点锁定"),
+        OTHER(99, "其他");
 
-    //    //    //是否为推荐产品, 0=不是 1=推荐产品 2=包装件
+        private final Integer code;
+        private final String desc;
+
+        InventoryLockType(Integer code, String desc) {
+            this.code = code;
+            this.desc = desc;
+        }
+    }
+
+    /**
+     * 库存锁定状态枚举
+     */
+    @Getter
+    public enum InventoryLockStatus {
+        LOCKED(1, "锁定中"),
+        PARTIALLY_UNLOCKED(2, "部分解锁"),
+        FULLY_UNLOCKED(3, "全部解锁"),
+        FORCE_RELEASED(4, "强制释放");
+
+        private final Integer code;
+        private final String desc;
+
+        InventoryLockStatus(Integer code, String desc) {
+            this.code = code;
+            this.desc = desc;
+        }
+    }
+
+    /**
+     * 锁定用途枚举
+     */
+    @Getter
+    public enum LockPurpose {
+        SALES_OCCUPY(1, "销售占用"),
+        PRODUCTION_OCCUPY(2, "生产占用"),
+        RETURN_OCCUPY(3, "退货占用"),
+        ALLOCATION_OCCUPY(4, "调拨占用"),
+        INVENTORY_FREEZE(5, "盘点冻结"),
+        LOCATION_RESERVE(6, "仓位预留");
+
+        private final Integer code;
+        private final String desc;
+
+        LockPurpose(Integer code, String desc) {
+            this.code = code;
+            this.desc = desc;
+        }
+    }
+
+    /**
+     * 锁定方向枚举
+     */
+    @Getter
+    public enum LockDirection {
+        OUTBOUND_LOCK(1, "出库锁定"),
+        INBOUND_RESERVE(2, "入库预占");
+
+        private final Integer code;
+        private final String desc;
+
+        LockDirection(Integer code, String desc) {
+            this.code = code;
+            this.desc = desc;
+        }
+    }
+
+
+    //是否为推荐产品, 0=不是 1=推荐产品 2=包装件
     @Getter
     public enum IsRecommendProduct {
         // 0=不是

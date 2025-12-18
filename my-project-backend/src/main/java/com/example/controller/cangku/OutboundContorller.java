@@ -127,7 +127,6 @@ public class OutboundContorller {
     }
 
 
-
     /**
      * 创建生产领料出库单
      * @param req 创建出库单请求参数
