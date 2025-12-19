@@ -107,7 +107,21 @@
               </el-select>
             </el-form-item>
           </el-col>
+
+          <el-col :xs="24" :sm="12" :lg="8">
+            <el-form-item label="默认批次号" prop="defaultBatchNo">
+              <el-tooltip :content="defaultBatchNo || '未生成'" placement="top">
+                <el-input 
+                  v-model="defaultBatchNo" 
+                  placeholder="生成中..." 
+                  disabled
+                  style="width: 100%"
+                />
+              </el-tooltip>
+            </el-form-item>
+          </el-col>
         </el-row>
+
 
         <el-form-item label="备注" prop="remark">
           <el-input
@@ -176,8 +190,8 @@
                   </el-select>
                   <div v-if="row.productName" class="product-details">
                     <div class="product-name">name:{{ row.productName }}</div>
-                    <div class="product-spec">spec:{{ row.spec }}</div>
-                    <div class="product-color">color:{{ row.color }}</div>
+                    <!-- <div class="product-spec">spec:{{ row.spec }}</div> -->
+                    <!-- <div class="product-color">color:{{ row.color }}</div> -->
                     <div class="product-sku">sku:{{ row.sku }}</div>
                   </div>
                 </div>
@@ -514,6 +528,9 @@ const formData = reactive({
   items: [],
 });
 
+// 默认批次号
+const defaultBatchNo = ref('');
+
 // 货架分配对话框数据
 const shelfAllocationDialog = reactive({
   visible: false,
@@ -524,6 +541,8 @@ const shelfAllocationDialog = reactive({
   allocatedQuantity: 0,
   remainingQuantity: 0
 });
+
+
 
 // 选项数据
 const warehouseList = ref([]);
@@ -752,6 +771,12 @@ const copyBatchNoToAll = (batchNo) => {
     return;
   }
   
+  // 验证批次号格式
+  if (!/^[A-Za-z0-9-]+$/.test(batchNo)) {
+    ElMessage.warning('批次号只能包含字母、数字和连字符（-）');
+    return;
+  }
+  
   ElMessageBox.confirm(
     `确定要将批次号 "${batchNo}" 复制到所有产品的批次号吗？`,
     '批量复制批次号',
@@ -761,11 +786,15 @@ const copyBatchNoToAll = (batchNo) => {
       cancelButtonText: '取消'
     }
   ).then(() => {
+    // 更新默认批次号为用户输入的批次号
+    defaultBatchNo.value = batchNo;
+    
     // 复制到所有有产品的行
     formData.items.forEach((item, index) => {
-      if (item.productId) { // 只复制给已选择产品的行
-        item.batchNo = batchNo;
+      if (item.productId) {
+        // 对每个产品验证批次号
         validateBatchNo(batchNo, index);
+        item.batchNo = batchNo;
       }
     });
     ElMessage.success(`已成功将批次号 "${batchNo}" 复制到所有产品`);
@@ -790,7 +819,50 @@ const copyCurrentBatchToAll = (index) => {
   copyBatchNoToAll(currentItem.batchNo);
 };
 
-
+// 生成默认批次号
+// 生成默认批次号 - 修复版（只允许字母和数字）
+const generateDefaultBatchNo = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  // 生成6位随机数字
+  const random = Math.floor(Math.random() * 900000 + 100000).toString();
+  
+  // 方案1：只使用纯数字格式 - 年月日+随机数
+  // 格式：purchase20251219123456
+  let batchNo = `purchase${year}${month}${day}${random}`;
+  
+  // 如果有采购单号，只取其中的数字部分
+  if (formData.relatedOrderNo) {
+    // 提取采购单号中的数字部分
+    const relatedNumbers = formData.relatedOrderNo.replace(/\D/g, '');
+    if (relatedNumbers) {
+      batchNo += relatedNumbers.slice(0, 6); // 最多取6位
+    }
+  }
+  
+  // 如果有供应商ID，直接添加数字
+  if (formData.supplierId) {
+    batchNo += formData.supplierId.toString().slice(0, 4); // 最多取4位
+  }
+  
+  // 确保批次号长度合理
+  if (batchNo.length > 50) {
+    batchNo = batchNo.substring(0, 50);
+  }
+  
+  defaultBatchNo.value = batchNo;
+  
+  // 将默认批次号应用到所有已有商品行
+  formData.items.forEach((item, index) => {
+    if (item.productId && (!item.batchNo || item.batchNo.trim() === '')) {
+      item.batchNo = batchNo;
+      validateBatchNo(batchNo, index);
+    }
+  });
+};
 
 const calculateItemTotal = (index) => {
   const item = formData.items[index];
@@ -1006,7 +1078,7 @@ const handleAddProduct = () => {
     priceTotal: 0,
     shelfLocationIds: [],
     shelfAllocations: [],
-    batchNo: '',
+    batchNo: defaultBatchNo.value || '',
     remark: ''
   });
 };
@@ -1029,6 +1101,12 @@ const handleProductChange = (productId, index) => {
     item.sku = product.sku;
     item.spec = product.spec;
     item.unit = product.unitName;
+    if (!item.batchNo || item.batchNo.trim() === '') {
+      item.batchNo = defaultBatchNo.value || '';
+      if (item.batchNo) {
+        validateBatchNo(item.batchNo, index);
+      }
+    }
   } else {
     // 清空产品信息
     item.productName = '';
@@ -1051,9 +1129,33 @@ const handleProductChange = (productId, index) => {
 
 
 const validateBatchNo = (batchNo, index) => {
-  if (batchNo && !/^[A-Za-z0-9_-]+$/.test(batchNo)) {
-    ElMessage.warning('批次号只能包含字母、数字、下划线和横线');
+  if (!batchNo || batchNo.trim() === '') {
+    return; // 空批次号不验证
+  }
+  
+  // 更严格的验证：只允许字母、数字和连字符
+  if (!/^[A-Za-z0-9-]+$/.test(batchNo)) {
+    ElMessage.warning('批次号只能包含字母、数字和连字符（-）');
     formData.items[index].batchNo = '';
+    return;
+  }
+  
+  // 可选：验证长度
+  if (batchNo.length > 50) {
+    ElMessage.warning('批次号长度不能超过50个字符');
+    formData.items[index].batchNo = batchNo.substring(0, 50);
+  }
+  
+  // 可选：验证不能以特殊字符开头或结尾
+  if (batchNo.startsWith('-') || batchNo.endsWith('-')) {
+    ElMessage.warning('批次号不能以连字符开头或结尾');
+    formData.items[index].batchNo = batchNo.replace(/^-|-$/g, '');
+  }
+  
+  // 可选：验证不能有连续的连字符
+  if (batchNo.includes('--')) {
+    ElMessage.warning('批次号不能有连续的连字符');
+    formData.items[index].batchNo = batchNo.replace(/--+/g, '-');
   }
 };
 
@@ -1286,6 +1388,7 @@ const handleReset = () => {
       generateOrderNo();
       // 清除缓存
       selectedProductIdsCache.value.clear();
+      defaultBatchNo.value = ''
       ElMessage.success('表单已重置');
     }
   });
@@ -1405,6 +1508,7 @@ onMounted(() => {
     loadInboundDetail(route.params.id);
   } else {
     generateOrderNo();
+    generateDefaultBatchNo();
   }
   loadWarehouseList();
   loadSupplierList();
@@ -1442,9 +1546,23 @@ watch(
       generateOrderNo();
       // 清除缓存
       selectedProductIdsCache.value.clear();
+      generateDefaultBatchNo();
     }
   }
 );
+
+// 监听相关字段变化，重新生成批次号
+watch(() => formData.relatedOrderNo, (newVal) => {
+  if (newVal) {
+    generateDefaultBatchNo();
+  }
+});
+
+watch(() => formData.supplierId, (newVal) => {
+  if (newVal) {
+    generateDefaultBatchNo();
+  }
+});
 </script>
 
 <style scoped>

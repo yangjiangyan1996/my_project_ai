@@ -211,56 +211,56 @@
 
           
 
-          <el-table-column label="单位" width="80" align="center">
+          <!-- <el-table-column label="单位" width="80" align="center">
             <template #default="{ row }">
               <span>{{ row.unitName }}</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
 
           <!-- 出货信息 -->
-          <el-table-column label="出货单位" width="100" align="center">
+          <!-- <el-table-column label="出货单位" width="100" align="center">
             <template #default="{ row }">
               <span>{{ row.outUnitName || '--' }}</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
 
-          <el-table-column label="出货单位数量" width="100" align="center">
+          <!-- <el-table-column label="出货单位数量" width="100" align="center">
             <template #default="{ row }">
               <span>{{ row.outUnitPerNum || '--' }}</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
 
-          <el-table-column label="出货数量" width="120" align="center">
+          <!-- <el-table-column label="出货数量" width="120" align="center">
             <template #default="{ row }">
               <span>{{ formatNumber(row.outUnitTotalNum) }}</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
 
           <!-- 价格信息 -->
-          <el-table-column label="单价(¥)" width="120" align="right">
+          <!-- <el-table-column label="单价(¥)" width="120" align="right">
             <template #default="{ row }">
               <span class="amount">{{ formatCurrency(row.priceRmb) }}</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
 
-          <el-table-column label="总价(¥)" width="120" align="right" sortable="custom" prop="totalPriceRmb">
+          <!-- <el-table-column label="总价(¥)" width="120" align="right" sortable="custom" prop="totalPriceRmb">
             <template #default="{ row }">
               <span class="amount">{{ formatCurrency(row.totalPriceRmb) }}</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
 
           <!-- 物理信息 -->
-          <el-table-column label="总体积" width="100" align="center">
+          <!-- <el-table-column label="总体积" width="100" align="center">
             <template #default="{ row }">
               <span>{{ formatNumber(row.volume) }} m³</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
 
-          <el-table-column label="总重量" width="100" align="center">
+          <!-- <el-table-column label="总重量" width="100" align="center">
             <template #default="{ row }">
               <span>{{ formatNumber(row.weightAll) }} kg</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
 
           <!-- 仓库库存详情 -->
           <el-table-column label="仓库库存详情" width="200">
@@ -281,6 +281,30 @@
                 </div>
                 <div v-if="!row.warehouseInventoryList || row.warehouseInventoryList.length === 0" class="no-warehouse">
                   无仓库库存
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+
+          <!-- 新增：货架库存详情 -->
+          <el-table-column label="货架库存详情" width="220">
+            <template #default="{ row }">
+              <div class="shelf-inventory-list">
+                <!-- 如果没有货架库存数据 -->
+                <div v-if="!row.shelfInventoryList || row.shelfInventoryList.length === 0" class="no-shelf-data">
+                  <span class="no-shelf-text">无货架库存数据</span>
+                </div>
+                
+                <!-- 显示所有货架库存 -->
+                <div 
+                  v-for="shelf in row.shelfInventoryList" 
+                  :key="shelf.shelfId"
+                  class="shelf-item"
+                >
+                  <div class="shelf-info">
+                    <span class="shelf-name">{{ shelf.shelfName || `货架${shelf.shelfId}` }}:</span>
+                    <span class="shelf-quantity">{{ formatNumber(shelf.quantity) }}</span>
+                  </div>
                 </div>
               </div>
             </template>
@@ -924,5 +948,106 @@ onMounted(() => {
 
 .inventory-table :deep(.el-table__row:hover) {
   background-color: #f5f7fa;
+}
+
+/* 货架库存列表样式 */
+.shelf-inventory-list {
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.shelf-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 12px;
+  min-height: 24px;
+}
+
+.shelf-item:last-child {
+  border-bottom: none;
+}
+
+.shelf-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.shelf-name {
+  color: #606266;
+  flex-shrink: 0;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shelf-quantity {
+  font-weight: bold;
+  color: #409EFF;
+  flex-shrink: 0;
+}
+
+.no-shelf-data {
+  text-align: center;
+  padding: 8px;
+  color: #909399;
+  font-style: italic;
+}
+
+.no-shelf-text {
+  font-size: 12px;
+}
+
+/* 如果需要按仓库分组显示，可以使用以下样式 */
+.shelf-warehouse-group {
+  margin-bottom: 6px;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.warehouse-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 4px;
+  background-color: #f5f7fa;
+  border-radius: 2px;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.warehouse-header .warehouse-name {
+  color: #409EFF;
+  font-weight: bold;
+}
+
+.warehouse-header .warehouse-total {
+  color: #E6A23C;
+  font-size: 10px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .shelf-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .shelf-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .shelf-quantity {
+    margin-left: 8px;
+  }
 }
 </style>

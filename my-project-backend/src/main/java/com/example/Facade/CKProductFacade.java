@@ -9,6 +9,7 @@ import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.req.excel.ProductBomExcelImportModel;
 import com.example.entity.cangku.req.excel.ProductCreateImportModel;
 import com.example.entity.cangku.resp.*;
+import com.example.enums.CkInOutboundEnums;
 import com.example.enums.CkProductEnums;
 import com.example.service.*;
 import com.example.utils.*;
@@ -1410,6 +1411,7 @@ public class CKProductFacade {
         inventoryTransaction.setWarehouseId(warehouseId);
         inventoryTransaction.setProductId(productId);
         inventoryTransaction.setOrderType(1); // 1表示入库
+        inventoryTransaction.setOrderTypeDetail(CkInOutboundEnums.InBoundType.PurchaseInbound.getCode());
         inventoryTransaction.setOrderId(orderId);
         inventoryTransaction.setOrderItemId(itemId);
         inventoryTransaction.setChangeQuantity(quantity);

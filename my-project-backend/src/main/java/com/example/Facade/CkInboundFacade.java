@@ -335,6 +335,7 @@ public class CkInboundFacade {
         transaction.setWarehouseId(req.getWarehouseId());
         transaction.setProductId(item.getProductId());
         transaction.setOrderType(1); // 1-入库单
+        transaction.setOrderTypeDetail(req.getOrderType());
         transaction.setOrderId(orderId);
         transaction.setOrderItemId(item.getId());
         transaction.setChangeQuantity(item.getActualQuantity()); // 正数表示增加
@@ -778,6 +779,10 @@ public class CkInboundFacade {
         order.setRemark(req.getRemark());
         order.setStatus(req.getStatus());
         order.setTotalQuantity(BigDecimal.valueOf(req.getTotalQuantity()));
+        if (!StringUtils.isEmpty(req.getExpectedDate())) {
+            order.setExpectedDate(DateUtil.parseDate(req.getExpectedDate()));
+        }
+        order.setTotalAmount(req.getTotalAmount());
         order.setModifiedBy(req.getUserId());
         order.setModifiedAt(new Date());
 

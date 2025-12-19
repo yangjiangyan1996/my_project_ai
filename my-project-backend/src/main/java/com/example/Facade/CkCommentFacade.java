@@ -38,21 +38,18 @@ public class CkCommentFacade {
         //商品ID对应的需要分配的数量
         Map<Long, BigDecimal> productId2QuantityMap = req.getList().stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getQuantity()));
 
-        Map<Long, String> productId2SkuMap = req.getList().stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getSku()));
-
         //货架ID对应货架剩余可用数量
         Map<Long, BigDecimal> shelfId2AvailableCapacityMap = shelfList.stream().collect(Collectors.toMap(v -> v.getId(), v -> v.getAvailableCapacity()));
+        Map<Long, BigDecimal> shelfId2AvailableCapacityCopyMap = new HashMap<>(shelfId2AvailableCapacityMap);
 
         //商品ID对应商品常用的货架ID
         Map<Long, List<Long>> productId2UsedShelfIdsMap = commonlyUsedShelvesForGoods.stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getShelfIds()));
 
         List<InboundProductUsedShelfResp> result = new ArrayList<>();
 
-        //开始分配
-        for (Map.Entry<Long, BigDecimal> entry : productId2QuantityMap.entrySet()) {
-
-            Long productId = entry.getKey();
-            BigDecimal remainQty = entry.getValue(); // 还需要分配的数量
+        for (InboundProductUsedShelfReq.InboundProductUsedShelfInner inner : req.getList()) {
+            Long productId = inner.getProductId();
+            BigDecimal remainQty = productId2QuantityMap.get(productId);
 
             InboundProductUsedShelfResp resp = new InboundProductUsedShelfResp();
             resp.setProductId(productId);
@@ -98,15 +95,15 @@ public class CkCommentFacade {
 
             // 3. 若还有剩余，说明货架容量不足 —— 给你暴露接口，可用于前端提示
             if (remainQty.compareTo(BigDecimal.ZERO) > 0) {
-                // 你可以用抛异常，也可以在 resp 里加字段记录
-                String sku = productId2SkuMap.get(productId);
-                throw new ValidationException("商品sku " + sku + " 货架容量不足，剩余未分配数量：" + remainQty);
+                BigDecimal totalProductQuantity = productId2QuantityMap.values().stream().reduce(BigDecimal::add).orElse(BigDecimal.ZERO);
+                BigDecimal shelfCapacity = shelfId2AvailableCapacityCopyMap.values().stream().reduce(BigDecimal::add).orElse(BigDecimal.ZERO);
+
+                throw new ValidationException("货架容量不足，需要分配的产品总数是: "+totalProductQuantity+",货架可分配容量：" + shelfCapacity);
             }
 
             resp.setShelfQuantityList(allocList);
             result.add(resp);
         }
-
         return result;
     }
 

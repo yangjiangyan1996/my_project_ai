@@ -49,6 +49,13 @@ public class CkInboundOrderItemServiceImpl extends ServiceImpl<CkInboundOrderIte
     }
 
     @Override
+    public List<InboundOrderItem> selectByBatNoList(Long tenantId, List<String> batchNos) {
+        return baseMapper.selectList(new QueryWrapper<InboundOrderItem>().eq("is_deleted", 0)
+                .in("batch_no", batchNos)
+                .eq("tenant_id", tenantId));
+    }
+
+    @Override
     public List<InboundOrderItem> selectByOrderItemIds(Long tenantId, List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return Collections.emptyList();

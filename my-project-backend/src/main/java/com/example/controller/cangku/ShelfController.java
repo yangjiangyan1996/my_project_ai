@@ -132,7 +132,11 @@ public class ShelfController {
     }
 
 
-    //采购入库自动分配货架
+    /**
+     * 采购入库自动分配货架
+     * @param req
+     * @return
+     */
     @PostMapping("/allocateIShelfnventoryQuantity")
     public RespBean<List<ShelfProductUsedAllResp>> allocateIShelfnventoryQuantity(@RequestBody List<ShelfProductUsedAllReq> req) {
         try {

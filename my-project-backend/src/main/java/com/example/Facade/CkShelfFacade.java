@@ -14,15 +14,13 @@ import com.example.service.CkShelfService;
 import com.example.service.CkWareHouseService;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +30,7 @@ import java.util.stream.Collectors;
  * @Date 2025/10/30 01:21
  */
 @Service
+@Slf4j
 public class CkShelfFacade {
     @Resource
     CkInventoryShelfService inventoryShelfService;
@@ -41,12 +40,12 @@ public class CkShelfFacade {
     CkWareHouseService wareHouseService;
 
     /**
-     * 根据货架ID集合获取可用容量
+     * 根据货架ID集合获取已经使用的容量
      * @param tenantId 租户ID
      * @param shelfIds 货架ID集合
      * @return key是shelfId， value是每个shelfId的quantity的和
      */
-    public Map<Long , BigDecimal> getAvailableCapacity(Long tenantId, List<Long> shelfIds) {
+    public Map<Long , BigDecimal> getShelfUsedCapacity(Long tenantId, List<Long> shelfIds) {
         if (CollUtil.isEmpty(shelfIds)) {
             return null;
         }
@@ -154,7 +153,7 @@ public class CkShelfFacade {
         }
         //获取货架剩余容量
         List<Long> shelfIds  = list.stream().map(v -> v.getId()).collect(Collectors.toList());
-        Map<Long, BigDecimal> shelfId2AcailableCapacityMap = getAvailableCapacity(tenantId, shelfIds);
+        Map<Long, BigDecimal> shelfId2AcailableCapacityMap = getShelfUsedCapacity(tenantId, shelfIds);
 
         return list.stream().map(v -> {
             ShelfPageListResp p = new ShelfPageListResp();
@@ -165,6 +164,10 @@ public class CkShelfFacade {
                 p.setAvailableCapacity(availableCapacity);
             } else {
                 p.setAvailableCapacity(new BigDecimal(v.getCapacity()));
+            }
+            //如果剩余容量小于0
+            if (p.getAvailableCapacity().compareTo(BigDecimal.ZERO) <= 0) {
+                p.setAvailableCapacity(BigDecimal.ZERO);
             }
             return p;
         }).collect(Collectors.toList());

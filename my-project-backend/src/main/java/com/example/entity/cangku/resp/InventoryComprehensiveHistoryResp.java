@@ -17,6 +17,7 @@ public class InventoryComprehensiveHistoryResp {
     private String spec;
     private String unitName;
     private Integer orderType;
+    private Integer orderTypeDetail;
     private Long orderId;
     private Long orderItemId;
     private BigDecimal changeQuantity;

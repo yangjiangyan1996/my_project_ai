@@ -202,6 +202,16 @@
             >
               自动全部分配
             </el-button>
+            <!-- 新增：批量更新批次号按钮 -->
+            <el-button 
+              type="info" 
+              @click="handleBatchUpdateBatchNo"
+              :disabled="formData.items.length === 0"
+              icon="Refresh"
+              class="batch-update-btn"
+            >
+              批量更新批次号
+            </el-button>
             <el-button type="primary" @click="handleAddProduct" :icon="Plus" :disabled="!formData.warehouseId">
               添加产品
             </el-button>
@@ -232,15 +242,14 @@
                   <el-option
                     v-for="product in productList"
                     :key="product.id"
-                    :label="`${product.sku} - ${product.name}`"
+                    :label="`${product.name}-${product.sku}`"
                     :value="product.id"
                   />
                 </el-select>
                  <div v-if="row.productName" class="product-details">
                   <div class="product-name">name:{{ row.productName }}</div>
                   <div class="product-sku">sku:{{ row.sku }}</div>
-                  <div class="product-spec">spec:{{ row.spec }}</div>
-                  <div class="product-color">color:{{ row.color }}</div>
+                 
                 </div>
               </template>
             </el-table-column>
@@ -375,6 +384,7 @@
       </div>
     </el-card>
   </div>
+
 </template>
 
 <script setup>
@@ -701,6 +711,9 @@ const importPickingData = async () => {
   try {
     const pickingOrder = selectedPickingOrder.value;
     
+     // 生成默认批次号
+    const defaultBatchNo = generateBatchNo();
+
     // 设置基本信息（如果是第一次导入）
     if (!formData.warehouseId && pickingOrder.warehouseId) {
       //formData.warehouseId = pickingOrder.warehouseId;
@@ -721,7 +734,7 @@ const importPickingData = async () => {
       relatedPickingOrderNo: pickingOrder.orderNo, // 关联单号放到产品明细
       shelfLocationIds: [],
       shelfAllocations: [],
-      batchNo: generateBatchNo(),
+      batchNo: defaultBatchNo,
       remark: ''
     }));
     
@@ -764,6 +777,41 @@ const removeImportedPickingOrder = (orderId) => {
   }
 };
 
+
+// 批量更新批次号的方法
+const handleBatchUpdateBatchNo = () => {
+  if (formData.items.length === 0) {
+    ElMessage.warning('没有产品需要更新批次号');
+    return;
+  }
+  
+  ElMessageBox.confirm(
+    '确定要批量更新所有产品的批次号吗？现有批次号将被覆盖。',
+    '批量更新确认',
+    {
+      type: 'warning',
+      confirmButtonText: '确定更新',
+      cancelButtonText: '取消'
+    }
+  ).then(() => {
+    const newBatchNo = generateBatchNo();
+    let updatedCount = 0;
+    
+    formData.items.forEach((item, index) => {
+      if (item.productId) {
+        item.batchNo = newBatchNo;
+        validateBatchNo(newBatchNo, index);
+        updatedCount++;
+      }
+    });
+    
+    ElMessage.success(`成功为 ${updatedCount} 个产品更新批次号: ${newBatchNo}`);
+  }).catch(() => {
+    // 用户取消
+  });
+};
+
+
 // 根据领料数据推导产成品（简化逻辑）
 const deriveFinishedProducts = (pickingItems) => {
   // 这里需要根据您的BOM逻辑来推导
@@ -780,13 +828,59 @@ const deriveFinishedProducts = (pickingItems) => {
 };
 
 // 生成批次号
+// 生成批次号 - 按照指定规则
 const generateBatchNo = () => {
   const date = new Date();
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  const random = Math.random().toString(36).substr(2, 6).toUpperCase();
-  return `B${year}${month}${day}${random}`;
+  
+  // 生成6位随机数字
+  const random = Math.floor(Math.random() * 900000 + 100000).toString();
+  
+  // 方案1：只使用纯数字格式 - 年月日+随机数
+  // 格式：production20251219123456
+  let batchNo = `production${year}${month}${day}${random}`;
+  
+  // 如果有导入的领料单，取领料单号中的数字部分
+  if (importedPickingOrders.value.length > 0) {
+    // 取第一个已导入领料单的订单号
+    const firstOrderNo = importedPickingOrders.value[0]?.orderNo || '';
+    if (firstOrderNo) {
+      // 提取采购单号中的数字部分
+      const relatedNumbers = firstOrderNo.replace(/\D/g, '');
+      if (relatedNumbers) {
+        batchNo += relatedNumbers.slice(0, 6); // 最多取6位
+      }
+    }
+  }
+  
+  // 如果有入库仓库ID，直接添加数字
+  if (formData.warehouseId) {
+    batchNo += formData.warehouseId.toString().slice(0, 4); // 最多取4位
+  }
+  
+  // 确保批次号长度合理
+  if (batchNo.length > 50) {
+    batchNo = batchNo.substring(0, 50);
+  }
+  
+  return batchNo;
+};
+
+// 生成默认批次号并应用到所有产品
+const generateDefaultBatchNo = () => {
+  const defaultBatchNo = generateBatchNo();
+  
+  // 将默认批次号应用到所有已有商品行
+  formData.items.forEach((item, index) => {
+    if (item.productId && (!item.batchNo || item.batchNo.trim() === '')) {
+      item.batchNo = defaultBatchNo;
+      validateBatchNo(defaultBatchNo, index);
+    }
+  });
+  
+  return defaultBatchNo;
 };
 
 // 获取货架名称
@@ -814,6 +908,7 @@ const handleWarehouseChange = async (value) => {
 };
 
 const handleAddProduct = () => {
+  const newBatchNo = generateBatchNo(); // 为新产品生成批次号
   formData.items.push({
     productId: null,
     productName: '',
@@ -824,7 +919,7 @@ const handleAddProduct = () => {
     relatedPickingOrderNo: '', // 手动添加的产品没有关联领料单
     shelfLocationIds: [],
     shelfAllocations: [],
-    batchNo: generateBatchNo(),
+    batchNo: newBatchNo,
     remark: ''
   });
 };
@@ -878,10 +973,37 @@ const handleProductChange = (productId, index) => {
 };
 
 const validateBatchNo = (batchNo, index) => {
-  if (batchNo && !/^[A-Za-z0-9_-]+$/.test(batchNo)) {
-    ElMessage.warning('批次号只能包含字母、数字、下划线和横线');
-    formData.items[index].batchNo = '';
+  if (!batchNo) return true;
+  
+  // 移除非字母数字字符，只保留字母和数字
+  const cleanedBatchNo = batchNo.replace(/[^A-Za-z0-9]/g, '');
+  
+  // 更新为清理后的批次号
+  if (cleanedBatchNo !== batchNo) {
+    formData.items[index].batchNo = cleanedBatchNo;
+    batchNo = cleanedBatchNo;
   }
+  
+  // 验证批次号格式
+  if (!/^[A-Za-z0-9]+$/.test(batchNo)) {
+    ElMessage.warning('批次号只能包含字母和数字');
+    formData.items[index].batchNo = '';
+    return false;
+  }
+  
+  // 检查批次号长度
+  if (batchNo.length < 5) {
+    ElMessage.warning('批次号长度至少为5位');
+    return false;
+  }
+  
+  if (batchNo.length > 50) {
+    ElMessage.warning('批次号长度不能超过50位');
+    formData.items[index].batchNo = batchNo.substring(0, 50);
+    return false;
+  }
+  
+  return true;
 };
 
 const getShelfLocationLabel = (location) => {

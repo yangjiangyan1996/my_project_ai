@@ -286,11 +286,11 @@
                   link
                   size="small"
                   @click="handleCancel(row)"
-                  v-if="row.status === 1 || row.status === 2"
+                  v-if="row.status === 1"
                 >
                   取消
                 </el-button>
-                <el-button
+                <!-- <el-button
                   type="success"
                   link
                   size="small"
@@ -298,7 +298,7 @@
                   v-if="row.status === 2"
                 >
                   完成
-                </el-button>
+                </el-button> -->
               </div>
             </template>
           </el-table-column>

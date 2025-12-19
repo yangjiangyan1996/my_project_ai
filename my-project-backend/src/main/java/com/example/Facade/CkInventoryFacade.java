@@ -125,6 +125,10 @@ public class CkInventoryFacade {
         Map<Long, Warehouse> warehouseMap = warehouseList.stream()
                 .collect(Collectors.toMap(Warehouse::getId, v -> v));
 
+        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(req.getTenantId());
+        Map<Long, WarehouseShelf> shelfId2ShelfMap = warehouseShelves.stream()
+                .collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+
         // 获取相关的产品信息
 
         List<Product> products = productService.selectByIds(req.getTenantId(), productIds);
@@ -173,6 +177,10 @@ public class CkInventoryFacade {
         Map<Long, List<InventoryWarehouse>> productId2InventoryWarehouseListMap = byProductIds.stream()
                 .collect(Collectors.groupingBy(InventoryWarehouse::getProductId));
 
+        List<InventoryShelf> inventoryShelves = inventoryShelfService.selectByProductIds(productIds, req.getTenantId());
+        Map<Long, List<InventoryShelf>> productId2InventoryShelfListMap = inventoryShelves.stream()
+                .collect(Collectors.groupingBy(InventoryShelf::getProductId));
+
 
         // 构建响应列表
         List<InventoryPageListResp> resultList = productInventoryMap.entrySet().stream()
@@ -196,7 +204,7 @@ public class CkInventoryFacade {
                     for (InboundOrderItem item : inboundList) {
                         Long orderId = item.getOrderId();
                         InboundOrder inboundOrder = inboundOrderId2InfoMap.getOrDefault(orderId, new InboundOrder());
-                        if (!inboundOrder.getStatus().equals(3)) {
+                        if (inboundOrder.getStatus() < CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode()) {
                             continue;
                         }
 
@@ -217,10 +225,16 @@ public class CkInventoryFacade {
 
                     List<InventoryWarehouse> inventoryWareOfProductList
                             = productId2InventoryWarehouseListMap.getOrDefault(productId, new ArrayList<>());
+
+                    List<InventoryShelf> inventoryShelfOfProductList =
+                            productId2InventoryShelfListMap.getOrDefault(productId, new ArrayList<>());
+
                     //inventoryWareOfProductList 获取map, key是warehouseId ，value是计算每个组中的quantity和，
                     Map<Long, BigDecimal> warehouseId2QuantityMap = inventoryWareOfProductList.stream()
                             .collect(Collectors.groupingBy(InventoryWarehouse::getWarehouseId,
                                     Collectors.mapping(InventoryWarehouse::getQuantity, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))));
+
+
                     List<InventoryPageListResp.WarehouseInventory> warehouseInventoryList = new ArrayList<>();
                     for (Long wareHourseId : warehouseId2QuantityMap.keySet()) {
                         InventoryPageListResp.WarehouseInventory w = new InventoryPageListResp.WarehouseInventory();
@@ -229,8 +243,21 @@ public class CkInventoryFacade {
                         w.setQuantity(warehouseId2QuantityMap.get(wareHourseId));
                         warehouseInventoryList.add(w);
                     }
-
                     r.setWarehouseInventoryList(warehouseInventoryList);
+
+                    Map<Long, BigDecimal> shelfId2QuantityMap = inventoryShelfOfProductList.stream()
+                            .collect(Collectors.groupingBy(InventoryShelf::getShelfId,
+                                    Collectors.mapping(InventoryShelf::getQuantity, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))));
+
+                    List<InventoryPageListResp.ShelfInventory> shelfInventoryList = new ArrayList<>();
+                    for (Long shelfId : shelfId2QuantityMap.keySet()) {
+                        InventoryPageListResp.ShelfInventory w = new InventoryPageListResp.ShelfInventory();
+                        w.setShelfId(shelfId);
+                        w.setShelfName(shelfId2ShelfMap.getOrDefault(shelfId, new WarehouseShelf()).getShelfName());
+                        w.setQuantity(shelfId2QuantityMap.get(shelfId));
+                        shelfInventoryList.add(w);
+                    }
+                    r.setShelfInventoryList(shelfInventoryList);
 
 
                     List<OutboundOrderItem> outboundList = productId2OutboundItemListMap.getOrDefault(productId, new ArrayList<>());
@@ -238,7 +265,7 @@ public class CkInventoryFacade {
                     for (OutboundOrderItem item : outboundList) {
                         Long orderId = item.getOrderId();
                         OutboundOrder outboundOrder = outboundOrderId2InfoMap.getOrDefault(orderId, new OutboundOrder());
-                        if (CkInOutboundEnums.InOutBoundStatus.AuditPass.equals(outboundOrder.getStatus()) || CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.equals(outboundOrder.getStatus())) {
+                        if (CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode().equals(outboundOrder.getStatus()) || CkInOutboundEnums.InOutBoundStatus.InOutboundComplete.getCode().equals(outboundOrder.getStatus())) {
 
                         } else {
                             continue;
@@ -385,6 +412,7 @@ public class CkInventoryFacade {
             InventoryBatchResp resp = new InventoryBatchResp();
             resp.setQuantity(c.getQuantity());
             resp.setBatchNo(c.getBatchNo());
+            resp.setCreatedAt(c.getCreatedAt());
             resp.setShelfList(batchNo2InventoryShelfMap.getOrDefault(c.getBatchNo(), Collections.emptyList()).stream().map(s -> {
                 InventoryBatchResp.ShelfInfo shelfInfo = new InventoryBatchResp.ShelfInfo();
                 shelfInfo.setShelfId(s.getShelfId());
@@ -533,6 +561,7 @@ public class CkInventoryFacade {
                     resp.setSpec(product.getSpec());
                     resp.setUnitName(unitCode2UnitMap.getOrDefault(product.getUnitCode(), new Unit()).getUnitName());
                     resp.setOrderType(transaction.getOrderType());
+                    resp.setOrderTypeDetail(transaction.getOrderTypeDetail());
                     resp.setOrderId(transaction.getOrderId());
                     resp.setOrderItemId(transaction.getOrderItemId());
                     resp.setChangeQuantity(transaction.getChangeQuantity());
@@ -1294,6 +1323,16 @@ public class CkInventoryFacade {
         return response;
     }
 
+
+    /**
+     * 获取批次及批次创建的时间
+     */
+    public Map<String, Date> getBatch2BatchCreateDate(Long tenantId, List<String> batchNos) {
+        List<InboundOrderItem> inboundOrderItems = inboundOrderItemService.selectByBatNoList(tenantId, batchNos);
+        //获取 batNo 对应的 createdAt
+        return inboundOrderItems.stream()
+                .collect(Collectors.toMap(InboundOrderItem::getBatchNo, InboundOrderItem::getCreatedAt, (key1, key2) -> key1));
+    }
     /**
      * 计算剩余数量 - 确保不为负数
      */

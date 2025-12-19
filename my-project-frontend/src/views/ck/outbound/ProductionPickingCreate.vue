@@ -146,7 +146,7 @@
           empty-text="请添加产品明细"
         >
           <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column label="产品信息" min-width="200">
+          <el-table-column label="产品信息" min-width="150">
             <template #default="{ row, $index }">
               <el-select
                 v-model="row.productId"
@@ -162,12 +162,15 @@
                   :value="product.id"
                 />
               </el-select>
-               <div v-if="row.productName" class="product-details">
-                  <div class="product-name">name:{{ row.productName }}</div>
-                  <div class="product-sku">sku:{{ row.sku }}</div>
-                </div>
             </template>
           </el-table-column>
+
+           <el-table-column label="名称" width="100">
+            <template #default="{ row }">
+              <span>{{ row.productName || '-' }}</span>
+            </template>
+          </el-table-column>
+
           <el-table-column label="规格" width="100">
             <template #default="{ row }">
               <span>{{ row.spec || '-' }}</span>
@@ -179,6 +182,13 @@
               <span>{{ row.color || '-' }}</span>
             </template>
           </el-table-column>
+          
+           <el-table-column label="sku" width="100">
+            <template #default="{ row }">
+              <span>{{ row.sku || '-' }}</span>
+            </template>
+          </el-table-column>
+
           <el-table-column label="单位" width="80" align="center">
             <template #default="{ row }">
               <span>{{ row.unit || '-' }}</span>
@@ -1948,7 +1958,10 @@ const handleSaveDraft = async () => {
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新草稿成功' : '保存草稿成功');
-      router.push({ path: '/index/CkOutboundManage/' });
+       router.replace({
+        path: '/',
+        query: { mode: 'outbound' }
+      });
     }
   } catch (error) {
     ElMessage.error(isEditMode.value ? '更新草稿失败' : '保存草稿失败');
@@ -2004,7 +2017,10 @@ const handleSubmit = async () => {
     const res = await post(url, submitData);
     if (res) {
       ElMessage.success(isEditMode.value ? '更新成功' : '提交成功，等待审核');
-      router.push({ path: '/index/productionPickingManage' });
+      router.replace({
+        path: '/',
+        query: { mode: 'outbound' }
+      });
     }
   } catch (error) {
     ElMessage.error(isEditMode.value ? '更新失败' : '提交失败');
@@ -2014,24 +2030,46 @@ const handleSubmit = async () => {
 };
 
 // 准备提交数据
+// 准备提交数据 - 修复多个产品共享原料的问题
 const prepareSubmitData = () => {
-  const items = formData.items.map(item => {
+  const items = formData.items.map((item, itemIndex) => {
     const productInfo = productionProductList.value.find(p => p.id === item.productId);
     
-    const bomAllocations = (item.bomAllocations || [])
-      .filter(allocation => parseFloat(allocation.quantity) > 0)
-      .map(allocation => {
-        console.log(`准备提交: ${item.productName} -> ${allocation.componentProductName}, 批次${allocation.batchNo}, 货架${allocation.shelfId}, 数量${allocation.quantity}`);
+    // 修复：直接从当前产品的实际分配数据中获取，避免从全局数据中获取导致的重复计算
+    const bomAllocations = [];
+    
+    if (item.bomAllocations && item.bomAllocations.length > 0) {
+      // 只处理当前产品的分配数据
+      const currentProductAllocations = item.bomAllocations.filter(
+        allocation => parseFloat(allocation.quantity) > 0
+      );
+      
+      // 使用Set去重，避免重复记录
+      const uniqueAllocations = new Map();
+      
+      currentProductAllocations.forEach(allocation => {
+        // 创建唯一键：原料ID + 批次 + 货架
+        const uniqueKey = `${allocation.componentProductId}_${allocation.batchNo}_${allocation.shelfId}`;
         
-        return {
-          componentProductId: allocation.componentProductId,
-          componentProductName: allocation.componentProductName,
-          batchNo: allocation.batchNo,
-          shelfId: allocation.shelfId,
-          shelfName: allocation.shelfName,
-          quantity: parseFloat(allocation.quantity) || 0
-        };
+        // 检查是否已经存在相同键的分配
+        if (uniqueAllocations.has(uniqueKey)) {
+          console.warn(`重复的分配记录: 产品${item.productId} 原料${allocation.componentProductId} 批次${allocation.batchNo} 货架${allocation.shelfId}`);
+        } else {
+          uniqueAllocations.set(uniqueKey, {
+            componentProductId: allocation.componentProductId,
+            componentProductName: allocation.componentProductName,
+            componentProductSku: allocation.componentProductSku,
+            batchNo: allocation.batchNo,
+            shelfId: allocation.shelfId,
+            shelfName: allocation.shelfName || `货架${allocation.shelfId}`,
+            quantity: parseFloat(allocation.quantity) || 0
+          });
+        }
       });
+      
+      // 将Map转换为数组
+      bomAllocations.push(...Array.from(uniqueAllocations.values()));
+    }
     
     return {
       productId: item.productId,
@@ -2049,8 +2087,18 @@ const prepareSubmitData = () => {
     };
   });
   
-  console.log('提交数据检查 - bomAllocations总数:', 
-    items.reduce((sum, item) => sum + (item.bomAllocations?.length || 0), 0));
+  console.log('提交数据详细检查:');
+  items.forEach((item, index) => {
+    console.log(`\n=== 产品 ${item.productName} (ID: ${item.productId}) ===`);
+    if (item.bomAllocations && item.bomAllocations.length > 0) {
+      item.bomAllocations.forEach(alloc => {
+        console.log(`  原料 ${alloc.componentProductName} (${alloc.componentProductId})`);
+        console.log(`    批次: ${alloc.batchNo}, 货架: ${alloc.shelfName}, 数量: ${alloc.quantity}`);
+      });
+    } else {
+      console.log('  无分配记录');
+    }
+  });
   
   return {
     id: formData.id,

@@ -125,6 +125,7 @@
               @click="handleBatchExport"
               :disabled="selectedRows.length === 0"
               :loading="batchExportLoading"
+              class="batch-export-btn"
             >
               <el-icon><Download /></el-icon>
               批量导出（{{ selectedRows.length }}）
@@ -315,6 +316,7 @@
                   size="small"
                   @click="handleSubmit(row)"
                   v-if="row.status === 0"
+                  
                 >
                   提交
                 </el-button>
@@ -1720,7 +1722,7 @@ onMounted(() => {
 }
 
 /* 批量导出按钮样式 */
-:deep(.el-button--success) {
+/* :deep(.el-button--success) {
   background-color: #67c23a;
   border-color: #67c23a;
 }
@@ -1728,6 +1730,37 @@ onMounted(() => {
 :deep(.el-button--success:hover) {
   background-color: #5daf34;
   border-color: #5daf34;
+} */
+ /* 替换原来的批量导出按钮样式 */
+.batch-export-btn {
+  background-color: #67c23a !important;
+  border-color: #67c23a !important;
+  color: white !important;
+}
+
+.batch-export-btn:hover:not(.is-disabled) {
+  background-color: #5daf34 !important;
+  border-color: #5daf34 !important;
+  color: white !important;
+}
+
+.batch-export-btn.is-disabled {
+  background-color: #b3e19d !important;
+  border-color: #b3e19d !important;
+  color: white !important;
+}
+
+/* 修复链接按钮的样式 */
+.action-buttons .el-button.el-button--link.el-button--success {
+  color: #67c23a !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.action-buttons .el-button.el-button--link.el-button--success:hover {
+  color: #5daf34 !important;
+  background: transparent !important;
 }
 
 :deep(.el-button--success.is-disabled) {
@@ -1756,4 +1789,6 @@ onMounted(() => {
     margin-bottom: 8px;
   }
 }
+
+
 </style>

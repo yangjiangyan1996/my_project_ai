@@ -153,6 +153,7 @@ public class InventoryHolder {
         transaction.setShelfId(item.getShelfLocationId());
         transaction.setProductId(item.getProductId());
         transaction.setOrderType(1); // 1-入库单
+        transaction.setOrderTypeDetail(inboundOrder.getOrderType());
         transaction.setOrderId(inboundOrder.getId());
         transaction.setOrderItemId(item.getId());
         transaction.setChangeQuantity(item.getActualQuantity()); // 正数表示增加
@@ -208,6 +209,7 @@ public class InventoryHolder {
         transaction.setShelfId(item.getShelfLocationId());
         transaction.setProductId(item.getProductId());
         transaction.setOrderType(2); // 1-入库单
+        transaction.setOrderTypeDetail(outboundOrder.getOrderType());
         transaction.setOrderId(outboundOrder.getId());
         transaction.setOrderItemId(item.getId());
         transaction.setChangeQuantity(item.getQuantity());

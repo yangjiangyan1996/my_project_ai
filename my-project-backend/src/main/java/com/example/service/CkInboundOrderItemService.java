@@ -21,4 +21,6 @@ public interface CkInboundOrderItemService extends IService<InboundOrderItem> {
     List<InboundOrderItem> selectByProductIds(Long tenantId, List<Long> productIds);
 
     List<InboundOrderItem> selectByOrderItemIds(Long tenantId, List<Long> ids);
+
+    List<InboundOrderItem> selectByBatNoList(Long tenantId, List<String> batchNos);
 }

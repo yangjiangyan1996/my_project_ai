@@ -28,6 +28,9 @@ public class InventoryPageListResp {
     //仓库的存储数量细节
     List<WarehouseInventory> warehouseInventoryList;
 
+    //货架的存储数量细节
+    List<ShelfInventory> shelfInventoryList;
+
     //出库数量细节
     List<WarehouseInventory> outboundQuantityList;
 
@@ -88,5 +91,15 @@ public class InventoryPageListResp {
         private BigDecimal availableQuantity;
         //锁定数量
         private BigDecimal lockedQuantity;
+    }
+
+    @Data
+    public static class ShelfInventory {
+        //货架ID
+        private Long shelfId;
+        //货架名称
+        private String shelfName;
+        //库存数量
+        private BigDecimal quantity;
     }
 }

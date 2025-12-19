@@ -27,6 +27,8 @@ public class InventoryTransaction extends BaseModel {
     private Long productId;
     //单据类型:1-入库单,2-出库单
     private Integer orderType;
+    //出入库类型，具体到销售出库，采购入库表的类型
+    private Integer orderTypeDetail;
     //单据ID
     private Long orderId;
     //单据明细ID
