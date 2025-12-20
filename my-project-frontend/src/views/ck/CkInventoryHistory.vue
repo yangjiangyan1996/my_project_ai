@@ -185,6 +185,15 @@
             </template>
           </el-table-column>
 
+          <!-- 在业务类型列后面添加业务明细列 -->
+          <el-table-column label="业务明细" width="120" align="center">
+            <template #default="{ row }">
+              <el-tag :type="getOrderTypeDetailTagType(row.orderType, row.orderTypeDetail)" size="small">
+                {{ getOrderTypeDetailText(row.orderType, row.orderTypeDetail) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+
           <el-table-column label="单据编号" width="180">
             <template #default="{ row }">
               <div class="order-info">
@@ -467,6 +476,50 @@ const loadProductInfo = async () => {
   }
 };
 
+
+
+// 获取业务明细的文本
+const getOrderTypeDetailText = (orderType, orderTypeDetail) => {
+  const detailMap = {
+    1: { // 入库单
+      1: '采购入库',
+      2: '生产入库',
+      3: '退货入库',
+      4: '调拨入库'
+    },
+    2: { // 出库单
+      1: '销售出库',
+      2: '生产领料',
+      3: '退货出库',
+      4: '调拨出库'
+    }
+  };
+  
+  return detailMap[orderType]?.[orderTypeDetail] || '--';
+};
+
+// 获取业务明细的标签类型
+const getOrderTypeDetailTagType = (orderType, orderTypeDetail) => {
+  // 根据不同类型的业务明细设置不同的标签颜色
+  const typeConfig = {
+    1: { // 入库单
+      1: 'success', // 采购入库
+      2: 'primary', // 生产入库
+      3: 'info',    // 退货入库
+      4: ''         // 调拨入库
+    },
+    2: { // 出库单
+      1: 'warning', // 销售出库
+      2: 'danger',  // 生产领料
+      3: 'info',    // 退货出库
+      4: ''         // 调拨出库
+    }
+  };
+  
+  return typeConfig[orderType]?.[orderTypeDetail] || '';
+};
+
+
 const loadInventoryStats = async () => {
   const productId = route.params.id;
   if (!productId) return;
@@ -529,6 +582,7 @@ const loadHistoryList = async () => {
         // 流水表数据
         id: item.id,
         orderType: item.orderType,
+        orderTypeDetail: item.orderTypeDetail, // 新增字段
         orderNo: item.orderNo,
         warehouseId: item.warehouseId,
         warehouseName: item.warehouseName,
