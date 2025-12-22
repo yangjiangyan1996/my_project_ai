@@ -874,7 +874,7 @@ public class CkOutboundFacade {
             LockResult lockResult = inventoryLockService.lockForProductionOutbound(req, outboundOrder.getId());
 
             // 记录锁定结果
-            recordLockResult(outboundOrder, lockResult, req.getUserId());
+            //recordLockResult(outboundOrder, lockResult, req.getUserId());
 
             // 如果是已完成状态，需要解锁锁定并扣减库存
             if (req.getStatus() == 3) {
@@ -989,7 +989,7 @@ public class CkOutboundFacade {
                 LockResult lockResult = inventoryLockService.lockForProductionOutbound(req, newOrder.getId());
 
                 // 记录锁定结果
-                recordLockResultToOrder(newOrder, lockResult, req.getUserId());
+                //recordLockResultToOrder(newOrder, lockResult, req.getUserId());
 
                 // 如果是已完成状态，需要解锁锁定
 //                if (req.getStatus() == 3) {
@@ -1099,7 +1099,7 @@ public class CkOutboundFacade {
                 LockResult lockResult = inventoryLockService.lockForSaleOutbound(req, outboundOrder.getId());
 
                 // 记录锁定结果
-                recordSaleLockResult(outboundOrder, lockResult, req.getUserId());
+                //recordSaleLockResult(outboundOrder, lockResult, req.getUserId());
 
                 // 如果是已完成状态，需要立即解锁并扣减库存
                 if (req.getStatus() == 3 && lockResult != null && lockResult.getSuccess()) {

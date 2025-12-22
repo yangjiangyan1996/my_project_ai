@@ -110,16 +110,17 @@
           </el-col>
         </el-row>
 
-        <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="formData.remark"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入备注信息"
-            maxlength="500"
-            show-word-limit
-          />
-        </el-form-item>
+       <el-form-item label="备注" prop="remark">
+        <el-input
+          v-model="formData.remark"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入备注信息（备注将用于生产入库时的订单标题提示）"
+          maxlength="500"
+          show-word-limit
+        />
+        <div class="remark-tip">提示：此备注信息将作为生产入库单的标题提示，请填写清晰的生产要求或注意事项。</div>
+      </el-form-item>
       </el-form>
 
       <!-- 产品明细 -->
@@ -584,6 +585,10 @@ const formRules = {
   ],
   expectedDate: [
     { required: true, message: '请选择预计出库日期', trigger: 'change' }
+  ],
+  remark: [
+    { required: true, message: '请输入备注信息', trigger: 'blur' },
+    { min: 2, message: '备注长度至少为2个字符', trigger: 'blur' }
   ]
 };
 
@@ -1935,6 +1940,7 @@ const handleReset = () => {
     } else {
       formRef.value?.resetFields();
       formData.items = [];
+      formData.remark = ''; // 确保备注也被清空
       fileList.value = [];
       latestAllocationData.value = {};
       allocationCheckResult.value = { success: true, message: '' };
@@ -2910,6 +2916,37 @@ watch(
   .back-btn i {
     font-size: 16px;
     margin-right: 4px;
+  }
+}
+
+/* 备注提示样式 */
+:deep(.el-form-item .el-form-item__content) {
+  position: relative;
+}
+
+.remark-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 6px;
+  padding: 6px 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #409eff;
+  line-height: 1.4;
+}
+
+/* 验证失败时的提示 */
+:deep(.el-form-item.is-error .remark-tip) {
+  color: #f56c6c;
+  background-color: #fef0f0;
+  border-left-color: #f56c6c;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .remark-tip {
+    font-size: 11px;
+    padding: 5px 8px;
   }
 }
 </style>

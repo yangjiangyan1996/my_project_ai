@@ -63,7 +63,7 @@
             <el-option
               v-for="order in availablePickingOrders"
               :key="order.id"
-              :label="`${order.orderNo} - ${order.mainProductName || '多产品'} (${order.remark})`"
+              :label="`${order.relatedOrderNo} - ${order.remark} (${order.mainProductName || '多产品'})`"
               :value="order.id"
             />
           </el-select>
