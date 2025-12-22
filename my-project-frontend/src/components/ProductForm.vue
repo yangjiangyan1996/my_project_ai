@@ -359,7 +359,7 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="80" fixed="right" align="center" v-if="!isEdit">
+            <el-table-column label="操作" width="80" fixed="right" align="center" >
               <template #default="{ $index }">
                 <el-button
                   type="danger"
@@ -372,6 +372,7 @@
               </template>
             </el-table-column>
           </el-table>
+          
 
           <!-- 配方统计 -->
           <div class="bom-summary" v-if="formModel.bomDetails.length > 0">
