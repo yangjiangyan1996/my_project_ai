@@ -2,9 +2,12 @@ package com.example.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.Tenant;
+import com.example.enums.CkCommonEnums;
 import com.example.mapper.CkTenantMapper;
 import com.example.service.CkTenantService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -14,6 +17,13 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class CkTenantServiceImpl extends ServiceImpl<CkTenantMapper, Tenant> implements CkTenantService {
+    @Override
+    public List<Tenant> selectAll() {
+        return this.query()
+                .eq("is_deleted",0)
+                .list();
+    }
+
     @Override
     public Tenant selectById(Long tenantId) {
         return this.query()

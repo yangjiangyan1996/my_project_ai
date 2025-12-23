@@ -35,8 +35,8 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
         UserDetails user = accountService.loadUserByUsername(phone);
         String codeOfRedis = accountService.getPhoneVerifyCode(phone);
 
-//        if (passwordEncoder.matches( password, user.getPassword())) {
-        if (code.equals(codeOfRedis)) {
+        if (passwordEncoder.matches( code, user.getPassword())) { // 密码登录
+//        if (code.equals(codeOfRedis)) { //验证码登录
             return new UsernamePasswordAuthenticationToken(
                     user, user.getAuthorities());
         } else {

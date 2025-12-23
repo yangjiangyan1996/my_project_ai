@@ -130,6 +130,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         account.setPassword(password);
         account.setSecrecyId(DateUtils.generateTimestamp());
         account.setPhone(phone);
+        account.setTenantId(info.getTenantId());
 
         if (!this.save(account)) {
             return "内部错误，注册失败";
@@ -147,13 +148,13 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      */
     @Override
     public String resetEmailAccountPassword(EmailResetVO info) {
-        String verify = resetConfirm(new ConfirmResetVO(info.getEmail(), info.getCode()));
+        String verify = resetConfirm(new ConfirmResetVO(info.getPhone(), info.getCode()));
         if (verify != null) return verify;
-        String email = info.getEmail();
+        String phone = info.getPhone();
         String password = passwordEncoder.encode(info.getPassword());
-        boolean update = this.update().eq("email", email).set("password", password).update();
+        boolean update = this.update().eq("phone", phone).set("password", password).update();
         if (update) {
-            this.deleteEmailVerifyCode(email);
+            this.deletePhoneVerifyCode(phone);
         }
         return update ? null : "更新失败，请联系管理员";
     }
@@ -166,8 +167,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      */
     @Override
     public String resetConfirm(ConfirmResetVO info) {
-        String email = info.getEmail();
-        String code = this.getEmailVerifyCode(email);
+        String phone = info.getPhone();
+        String code = this.getPhoneVerifyCode(phone);
         if (code == null) return "请先获取验证码";
         if (!code.equals(info.getCode())) return "验证码错误，请重新输入";
         return null;
@@ -237,6 +238,17 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                 .select("id", "username", "secrecy_id", "avatar_url", "sex", "province", "city", "county")
                 .eq("is_deleted", 0));
     }
+
+    /**
+     * 移除Redis中存储的手机验证码
+     *
+     */
+    private void deletePhoneVerifyCode(String phone) {
+//        String key = Const.VERIFY_EMAIL_DATA + email;
+//        stringRedisTemplate.delete(key);
+        redisService.deleteByK(Const.VERIFY_PHONE_DATA + phone);
+    }
+
 
     /**
      * 移除Redis中存储的邮件验证码

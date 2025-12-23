@@ -5,7 +5,7 @@ import com.example.Facade.CkTenantFacade;
 import com.example.annotations.LogOperation;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
-import com.example.entity.cangku.req.TentantCreateReq;
+import com.example.entity.cangku.req.TenantCreateReq;
 import com.example.entity.cangku.resp.CkTenantResp;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
@@ -29,7 +29,7 @@ public class CkTenantController {
     @PostMapping("/update")
     @LogOperation(module = "机构管理", operation = "更新机构",
             description = "更新机构信息")
-    public RespBean<Boolean> update(@RequestBody TentantCreateReq req) {
+    public RespBean<Boolean> update(@RequestBody TenantCreateReq req) {
         try {
             Long userId  = UserUtil.getCurrentUser().getId();
             Long tenantId = UserUtil.getCurrentUser().getTenantId();

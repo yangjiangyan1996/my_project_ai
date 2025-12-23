@@ -1,8 +1,9 @@
 package com.example.Facade;
 
 import com.example.entity.cangku.dto.Tenant;
-import com.example.entity.cangku.req.TentantCreateReq;
+import com.example.entity.cangku.req.TenantCreateReq;
 import com.example.entity.cangku.resp.CkTenantResp;
+import com.example.entity.cangku.resp.CkTenantUnauthResp;
 import com.example.service.CkTenantService;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -42,7 +44,7 @@ public class CkTenantFacade {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Boolean update(TentantCreateReq req) {
+    public Boolean update(TenantCreateReq req) {
         Tenant wh = ckTenantService.getById(req.getId());
         if (wh == null) {
             throw new ValidationException("机构不存在！");
@@ -56,5 +58,16 @@ public class CkTenantFacade {
         wh.setModifiedBy(req.getUserId());
 
         return ckTenantService.updateById(wh);
+    }
+
+    public List<CkTenantUnauthResp> getTenantList() {
+        List<Tenant> tenants = ckTenantService.selectAll();
+        return tenants.stream().map(tenant -> {
+            CkTenantUnauthResp r = new CkTenantUnauthResp();
+            r.setId(tenant.getId());
+            r.setName(tenant.getName());
+            r.setImage(tenant.getImage());
+            return r;
+        }).toList();
     }
 }

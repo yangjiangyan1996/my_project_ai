@@ -9,7 +9,7 @@ import lombok.Data;
  * @Date 2025/10/29 23:21
  */
 @Data
-public class TentantCreateReq {
+public class TenantCreateReq {
     private Long id;
     //租户/企业名称
     private String name;

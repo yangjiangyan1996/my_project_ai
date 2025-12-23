@@ -3,6 +3,8 @@ package com.example.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.Tenant;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -11,4 +13,6 @@ import com.example.entity.cangku.dto.Tenant;
  */
 public interface CkTenantService extends IService<Tenant> {
     Tenant selectById(Long tenantId);
+
+    List<Tenant> selectAll();
 }

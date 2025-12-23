@@ -2,7 +2,7 @@
     <div>
         <div style="margin: 30px 20px">
             <el-steps :active="active" finish-status="success" align-center>
-                <el-step title="验证电子邮件" />
+                <el-step title="验证手机号码" />
                 <el-step title="重新设定密码" />
             </el-steps>
         </div>
@@ -10,14 +10,14 @@
             <div style="text-align: center;margin: 0 20px;height: 100%" v-if="active === 0">
                 <div style="margin-top: 80px">
                     <div style="font-size: 25px;font-weight: bold">重置密码</div>
-                    <div style="font-size: 14px;color: grey">请输入需要重置密码的电子邮件地址</div>
+                    <div style="font-size: 14px;color: grey">请输入需要重置密码的手机号码</div>
                 </div>
                 <div style="margin-top: 50px">
                     <el-form :model="form" :rules="rules" @validate="onValidate" ref="formRef">
-                        <el-form-item prop="email">
-                            <el-input v-model="form.email" type="email" placeholder="电子邮件地址">
+                        <el-form-item prop="phone">
+                            <el-input v-model="form.phone" type="tel" placeholder="手机号码">
                                 <template #prefix>
-                                    <el-icon><Message /></el-icon>
+                                    <el-icon><Iphone /></el-icon>
                                 </template>
                             </el-input>
                         </el-form-item>
@@ -31,8 +31,8 @@
                                     </el-input>
                                 </el-col>
                                 <el-col :span="5">
-                                    <el-button type="success" @click="validateEmail"
-                                               :disabled="!isEmailValid || coldTime > 0">
+                                    <el-button type="success" @click="validatePhoneCode"
+                                               :disabled="!isPhoneValid || coldTime > 0">
                                         {{coldTime > 0 ? '请稍后 ' + coldTime + ' 秒' : '获取验证码'}}
                                     </el-button>
                                 </el-col>
@@ -42,6 +42,10 @@
                 </div>
                 <div style="margin-top: 70px">
                     <el-button @click="confirmReset()" style="width: 270px;" type="danger" plain>开始重置密码</el-button>
+                </div>
+                 <div style="margin-top: 20px">
+                    <span style="font-size: 14px;line-height: 15px;color: grey">已有账号? </span>
+                    <el-link type="primary" style="translate: 0 -2px" @click="router.push('/login')">立即登录</el-link>
                 </div>
             </div>
         </transition>
@@ -54,14 +58,14 @@
                 <div style="margin-top: 50px">
                     <el-form :model="form" :rules="rules" @validate="onValidate" ref="formRef">
                         <el-form-item prop="password">
-                            <el-input v-model="form.password" :maxlength="16" type="password" placeholder="新密码">
+                            <el-input v-model="form.password" :maxlength="20" type="password" placeholder="新密码">
                                 <template #prefix>
                                     <el-icon><Lock /></el-icon>
                                 </template>
                             </el-input>
                         </el-form-item>
                         <el-form-item prop="password_repeat">
-                            <el-input v-model="form.password_repeat" :maxlength="16" type="password" placeholder="重复新密码">
+                            <el-input v-model="form.password_repeat" :maxlength="20" type="password" placeholder="重复新密码">
                                 <template #prefix>
                                     <el-icon><Lock /></el-icon>
                                 </template>
@@ -72,6 +76,7 @@
                 <div style="margin-top: 70px">
                     <el-button @click="doReset()" style="width: 270px;" type="danger" plain>立即重置密码</el-button>
                 </div>
+
             </div>
         </transition>
     </div>
@@ -79,7 +84,7 @@
 
 <script setup>
 import {reactive, ref} from "vue";
-import {EditPen, Lock, Message} from "@element-plus/icons-vue";
+import {EditPen, Lock, Iphone} from "@element-plus/icons-vue";
 import {get, post} from "@/net";
 import {ElMessage} from "element-plus";
 import router from "@/router";
@@ -87,11 +92,21 @@ import router from "@/router";
 const active = ref(0)
 
 const form = reactive({
-    email: '',
+    phone: '',
     code: '',
     password: '',
     password_repeat: '',
 })
+
+const validatePhone = (rule, value, callback) => {
+    if (value === '') {
+        callback(new Error('请输入手机号码'))
+    } else if (!/^1[3-9]\d{9}$/.test(value)) {
+        callback(new Error('请输入正确的手机号码格式'))
+    } else {
+        callback()
+    }
+}
 
 const validatePassword = (rule, value, callback) => {
     if (value === '') {
@@ -104,16 +119,16 @@ const validatePassword = (rule, value, callback) => {
 }
 
 const rules = {
-    email: [
-        { required: true, message: '请输入邮件地址', trigger: 'blur' },
-        {type: 'email', message: '请输入合法的电子邮件地址', trigger: ['blur', 'change']}
+    phone: [
+        { validator: validatePhone, trigger: ['blur', 'change'] }
     ],
     code: [
         { required: true, message: '请输入获取的验证码', trigger: 'blur' },
+        { min: 6, max: 6, message: '验证码长度必须为6位', trigger: ['blur', 'change'] }
     ],
     password: [
         { required: true, message: '请输入密码', trigger: 'blur' },
-        { min: 6, max: 16, message: '密码的长度必须在6-16个字符之间', trigger: ['blur'] }
+        { min: 6, max: 20, message: '密码的长度必须在6-20个字符之间', trigger: ['blur'] }
     ],
     password_repeat: [
         { validator: validatePassword, trigger: ['blur', 'change'] },
@@ -121,20 +136,19 @@ const rules = {
 }
 
 const formRef = ref()
-const isEmailValid = ref(false)
+const isPhoneValid = ref(false)
 const coldTime = ref(0)
 
 const onValidate = (prop, isValid) => {
-    if(prop === 'email')
-        isEmailValid.value = isValid
+    if(prop === 'phone')
+        isPhoneValid.value = isValid
 }
 
-const validateEmail = () => {
+const validatePhoneCode = () => {
     coldTime.value = 60
-    get(`/api/unauth/project/askPhoneCode?email=${form.email}&type=reset`, () => {
-        ElMessage.success(`验证码已发送到邮箱: ${form.email}，请注意查收`)
+    get(`/api/unauth/project/askPhoneCode?phone=${form.phone}&type=reset`, () => {
+        ElMessage.success(`验证码已发送到手机: ${form.phone}，请注意查收`)
         
-        // 修复的倒计时逻辑
         const handle = setInterval(() => {
             if(coldTime.value > 0) {
                 coldTime.value--
@@ -151,8 +165,8 @@ const validateEmail = () => {
 const confirmReset = () => {
     formRef.value.validate((isValid) => {
         if(isValid) {
-            post('/api/auth/reset-confirm', {
-                email: form.email,
+            post('/api/unauth/reset-confirm', {
+                phone: form.phone,
                 code: form.code
             }, () => active.value++)
         }
@@ -162,8 +176,8 @@ const confirmReset = () => {
 const doReset = () => {
     formRef.value.validate((isValid) => {
         if(isValid) {
-            post('/api/auth/reset-password', {
-                email: form.email,
+            post('/api/unauth/reset-password', {
+                phone: form.phone,
                 code: form.code,
                 password: form.password
             }, () => {

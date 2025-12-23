@@ -2,12 +2,12 @@
   <div style="text-align: center;margin: 0 20px">
     <div style="margin-top: 100px">
       <div style="font-size: 25px;font-weight: bold">登录</div>
-      <div style="font-size: 14px;color: grey">在进入系统之前请先输入手机号和验证码进行登录</div>
+      <div style="font-size: 14px;color: grey;margin-top: 8px">在进入系统之前请先输入手机号和密码进行登录</div>
     </div>
     <div style="margin-top: 50px">
       <el-form :model="form" :rules="rules" @validate="onValidate" ref="formRef">
         <el-form-item prop="phone">
-          <el-input v-model="form.phone" maxlength="11" type="tel" placeholder="手机号码">
+          <el-input v-model="form.phone" maxlength="11" type="tel" placeholder="手机号码" size="large">
             <template #prefix>
               <el-icon>
                 <Iphone/>
@@ -17,32 +17,48 @@
         </el-form-item>
         <el-form-item prop="code">
           <el-row :gutter="10" style="width: 100%">
-            <el-col :span="17">
-              <el-input v-model="form.code" :maxlength="6" type="text" placeholder="请输入验证码">
+            <el-col>
+              <el-input v-model="form.code" :maxlength="6" type="text" placeholder="请输入密码" size="large">
                 <template #prefix>
                   <el-icon><EditPen /></el-icon>
                 </template>
               </el-input>
             </el-col>
-            <el-col :span="5">
-              <el-button type="success" @click="sendCode"
-                         :disabled="!isPhoneValid || coldTime > 0">
-                {{coldTime > 0 ? '请稍后 ' + coldTime + ' 秒' : '获取验证码'}}
-              </el-button>
-            </el-col>
           </el-row>
         </el-form-item>
       </el-form>
     </div>
-    <div style="margin-top: 40px">
-      <el-button @click="userLogin()" style="width: 270px" type="success" plain>立即登录</el-button>
+    <div style="margin-top: 60px">
+      <el-button @click="userLogin()" style="width: 100%;height: 48px;font-size: 16px" type="primary" round>立即登录</el-button>
     </div>
-    <el-divider>
-      <span style="color: grey;font-size: 13px">没有账号</span>
+    <el-divider style="margin: 40px 0">
+      <span style="color: grey;font-size: 14px;background: white;padding: 0 15px">没有账号</span>
     </el-divider>
-    <div>
-      <el-button style="width: 270px" @click="router.push('/welcome/register')" type="warning" plain>注册账号</el-button>
+    <!-- 注册和忘记密码按钮 -->
+  <div style="padding: 0 20px;display: flex; flex-direction: column; gap: 16px; margin-bottom: 50px">
+    <div class="button-wrapper">
+      <el-button 
+        @click="router.push('/welcome/register')" 
+        class="uniform-button"
+        type="default" 
+        plain 
+        round
+      >
+        注册账号
+      </el-button>
     </div>
+    <div class="button-wrapper">
+      <el-button 
+        @click="router.push('/welcome/forget')" 
+        class="uniform-button"
+        type="default" 
+        plain 
+        round
+      >
+        忘记密码
+      </el-button>
+    </div>
+  </div>
   </div>
 </template>
 
@@ -129,5 +145,58 @@ const sendCode = () => {
 </script>
 
 <style scoped>
+/* 添加容器最大宽度限制，在大屏幕上不会太宽 */
+.login-container {
+  max-width: 400px;
+  margin: 0 auto;
+}
 
+/* 输入框聚焦效果增强 */
+:deep(.el-input) {
+  --el-input-focus-border-color: var(--el-color-primary);
+}
+
+/* 按钮悬停效果 */
+.el-button {
+  transition: all 0.3s ease;
+}
+
+.el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 分割线样式优化 */
+:deep(.el-divider__text) {
+  background-color: #f5f7fa;
+  padding: 0 15px;
+}
+
+.button-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.uniform-button {
+  width: 100%;
+  max-width: 320px; /* 设置最大宽度，避免太宽 */
+  height: 48px;
+  font-size: 16px;
+}
+
+/* 确保文字在按钮内完全居中 */
+:deep(.uniform-button span) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  letter-spacing: 2px; /* 微调字间距 */
+}
+
+/* 如果还有问题，可以强制设置字体 */
+:deep(.uniform-button) {
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-weight: 500;
+}
 </style>
