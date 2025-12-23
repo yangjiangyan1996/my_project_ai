@@ -13,6 +13,7 @@ import com.example.entity.cangku.req.ShelfUpdateStatusReq;
 import com.example.entity.cangku.resp.ShelfPageListResp;
 import com.example.entity.cangku.resp.ShelfProductUsedAllResp;
 import com.example.filter.UserUtil;
+import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -71,6 +72,7 @@ public class ShelfController {
         }
     }
 
+    @LogOperation(module = "货架管理", operation = "创建货架", description = "创建货架")
     @PostMapping("/create")
     public RespBean<Boolean> create(@RequestBody ShelfCreateReq req) {
         try {
@@ -91,6 +93,7 @@ public class ShelfController {
     }
 
 
+    @LogOperation(module = "货架管理", operation = "更新货架状态", description = "更新货架状态")
     @PostMapping("/updateStatus")
     public RespBean<Boolean> updateStatus(@RequestBody ShelfUpdateStatusReq req) {
         try {
@@ -112,6 +115,7 @@ public class ShelfController {
 
 
 
+    @LogOperation(module = "货架管理", operation = "更新货架", description = "更新货架")
     @PostMapping("/update")
     public RespBean<Boolean> update(@RequestBody ShelfCreateReq req) {
         try {

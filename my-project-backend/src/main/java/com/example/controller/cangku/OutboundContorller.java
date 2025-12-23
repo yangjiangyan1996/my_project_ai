@@ -13,6 +13,7 @@ import com.example.entity.cangku.resp.*;
 import com.example.entity.cangku.resp.excel.OutboundOderExcelModel;
 import com.example.entity.cangku.resp.excel.OutboundSaleExcelModel;
 import com.example.filter.UserUtil;
+import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ValidationException;
@@ -127,11 +128,14 @@ public class OutboundContorller {
     }
 
 
+
     /**
      * 创建生产领料出库单
      * @param req 创建出库单请求参数
      * @return 返回是否创建成功
      */
+    @LogOperation(module = "出库管理", operation = "创建出库单",
+            description = "创建生产领料出库单")
     @PostMapping("/createProductionPickingOutBound") // POST映射到/create路径
     public RespBean<Boolean> createProductionPicking(@RequestBody OutboundCreateReq req) {
         try {
@@ -158,6 +162,8 @@ public class OutboundContorller {
      * @param req 创建出库单请求参数
      * @return 返回是否创建成功
      */
+    @LogOperation(module = "出库管理", operation = "创建出库单",
+            description = "创建销售出库单")
     @PostMapping("/createProductionSaleOutBound") // POST映射到/create路径
     public RespBean<Boolean> createProductionPicking(@RequestBody OutboundCreateSaleProductReq req) {
         try {
@@ -184,6 +190,8 @@ public class OutboundContorller {
      * @param req 更新出库单请求参数
      * @return 返回是否更新成功
      */
+    @LogOperation(module = "出库管理", operation = "更新出库单",
+            description = "更新生产领料出库单")
     @PostMapping("/updateProductionPickingOutBound") // POST映射到/update路径
     public RespBean<Boolean> updateProductionPickingOutBound(@RequestBody OutboundCreateReq req) {
         try {
@@ -208,6 +216,8 @@ public class OutboundContorller {
      * @param req 更新出库单请求参数
      * @return 返回是否更新成功
      */
+    @LogOperation(module = "出库管理", operation = "更新出库单",
+            description = "更新销售出库单")
     @PostMapping("/updateProductionSaleOutBound") // POST映射到/update路径
     public RespBean<Boolean> updateProductionPickingOutBound(@RequestBody OutboundCreateSaleProductReq req) {
         try {
@@ -235,6 +245,8 @@ public class OutboundContorller {
      * @param req 审核通过请求参数
      * @return 返回是否审核成功
      */
+    @LogOperation(module = "出库管理", operation = "审核通过出库单",
+            description = "审核通过出库单")
     @PostMapping("/approveOk") // POST映射到/approveOk路径
     public RespBean<Boolean> approveOk(@RequestBody OutboundApproveOkReq req) {
         try {
@@ -258,6 +270,8 @@ public class OutboundContorller {
      * @param req 删除出库单请求参数
      * @return 返回是否删除成功
      */
+    @LogOperation(module = "出库管理", operation = "删除出库单",
+            description = "删除出库单")
     @PostMapping("/delete") // POST映射到/delete路径
     public RespBean<Boolean> delete(@RequestBody OutboundDeleteReq req) {
         try {
@@ -279,6 +293,8 @@ public class OutboundContorller {
 
 
     @PostMapping("/exportExcel")
+    @LogOperation(module = "出库管理", operation = "导出销售出库数量模版",
+            description = "导出销售出库数量模版")
     public void exportSkuExcel(HttpServletResponse response, @RequestBody OutboundExportSaleProductReq req) throws IOException {
         try{
             Long tenantId = UserUtil.getCurrentUser().getTenantId();
@@ -307,6 +323,8 @@ public class OutboundContorller {
 
 
     @GetMapping("/exportOutboundOrderExcel")
+    @LogOperation(module = "出库管理", operation = "导出销售出库数量模版",
+            description = "导出销售出库数量模版")
     public void exportOutboundOrderExcel(HttpServletResponse response,
                                          @RequestParam(required = false, value = "orderId") Long orderId,
                                          @RequestParam(required = false, value = "orderIds") String orderIds) throws IOException {
@@ -366,6 +384,7 @@ public class OutboundContorller {
     }
 
 
+    @LogOperation(module = "出库管理", operation = "导入商品及数量", description = "导入商品及数量")
     @PostMapping("/importOutboundSaleQuantity")
     public RespBean<List<OutBoundSaleQuantityImportResp>> importOutboundSaleQuantity(@RequestParam("file") MultipartFile file, @RequestParam("warehouseId") Long warehouseId) {
         try {

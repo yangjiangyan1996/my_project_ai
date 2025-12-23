@@ -124,13 +124,15 @@
               </div>
             </template>
             
+            <!-- 操作日志表格 -->
             <el-table 
               :data="operationLogs" 
               style="width: 100%"
               empty-text="暂无操作记录"
               v-loading="loading"
+              @sort-change="handleSortChange"
             >
-              <el-table-column prop="operationTime" label="操作时间" width="180">
+              <el-table-column prop="createdAt" label="操作时间" width="180" sortable="custom">
                 <template #default="scope">
                   {{ formatTime(scope.row.createdAt) }}
                 </template>
@@ -138,12 +140,43 @@
               <el-table-column prop="module" label="操作模块" width="120" />
               <el-table-column prop="operation" label="操作类型" width="120" />
               <el-table-column prop="description" label="操作描述" min-width="200" />
+              <el-table-column label="目标ID" width="100">
+                <template #default="scope">
+                  <span v-if="scope.row.targetId">{{ scope.row.targetId }}</span>
+                  <span v-else class="text-gray">-</span>
+                </template>
+              </el-table-column>
               <el-table-column prop="ipAddress" label="IP地址" width="130" />
+              <el-table-column label="操作" width="80">
+                <template #default="scope">
+                  <el-button 
+                    type="text" 
+                    size="small" 
+                    @click="viewLogDetail(scope.row)"
+                    v-if="scope.row.requestParams"
+                  >
+                    详情
+                  </el-button>
+                </template>
+              </el-table-column>
             </el-table>
+            
+            <!-- 分页 -->
+            <div class="pagination-container" v-if="pagination.total > 0">
+              <el-pagination
+                v-model:current-page="pagination.current"
+                v-model:page-size="pagination.size"
+                :page-sizes="[5, 10, 20, 50]"
+                :total="pagination.total"
+                layout="total, sizes, prev, pager, next, jumper"
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+              />
+            </div>
           </el-card>
 
           <!-- 统计信息 -->
-          <el-card class="stats-card" shadow="never">
+          <!-- <el-card class="stats-card" shadow="never">
             <template #header>
               <div class="card-header">
                 <span class="card-title">个人统计</span>
@@ -158,7 +191,7 @@
                 </div>
               </el-col>
             </el-row>
-          </el-card>
+          </el-card> -->
         </el-col>
       </el-row>
     </div>
@@ -236,6 +269,50 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 日志详情对话框 -->
+    <el-dialog 
+      v-model="logDetailDialogVisible" 
+      title="操作日志详情" 
+      width="600px"
+    >
+      <el-descriptions 
+        :column="1" 
+        border
+        v-if="currentLogDetail"
+      >
+        <el-descriptions-item label="操作时间">
+          {{ formatTime(currentLogDetail.createdAt) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="操作模块">
+          {{ currentLogDetail.module }}
+        </el-descriptions-item>
+        <el-descriptions-item label="操作类型">
+          {{ currentLogDetail.operation }}
+        </el-descriptions-item>
+        <el-descriptions-item label="操作描述">
+          {{ currentLogDetail.description }}
+        </el-descriptions-item>
+        <el-descriptions-item label="目标ID">
+          {{ currentLogDetail.targetId || '无' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="IP地址">
+          {{ currentLogDetail.ipAddress }}
+        </el-descriptions-item>
+        <el-descriptions-item label="用户代理">
+          {{ currentLogDetail.userAgent }}
+        </el-descriptions-item>
+        <el-descriptions-item label="请求参数" v-if="currentLogDetail.requestParams">
+          <div class="json-container">
+            <pre>{{ formatJson(currentLogDetail.requestParams) }}</pre>
+          </div>
+        </el-descriptions-item>
+      </el-descriptions>
+      
+      <template #footer>
+        <el-button @click="logDetailDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -250,6 +327,7 @@ const loading = ref(false)
 const saving = ref(false)
 const editDialogVisible = ref(false)
 const avatarDialogVisible = ref(false)
+const logDetailDialogVisible = ref(false)
 const avatarPreview = ref('')
 
 // 用户信息
@@ -271,8 +349,22 @@ const userInfo = ref({
 // 租户信息
 const tenantInfo = ref(null)
 
-// 操作日志
+// 操作日志相关
 const operationLogs = ref([])
+const currentLogDetail = ref(null)
+
+// 分页数据
+const pagination = reactive({
+  current: 1,
+  size: 5,
+  total: 0
+})
+
+// 排序数据
+const sortData = reactive({
+  prop: 'createdAt',
+  order: 'descending'
+})
 
 // 编辑表单
 const editForm = reactive({
@@ -293,7 +385,7 @@ const editRules = {
   ]
 }
 
-// 地区选项（简化版，实际项目中可以使用完整的地区数据）
+// 地区选项
 const regionOptions = [
   {
     value: 'beijing',
@@ -303,15 +395,14 @@ const regionOptions = [
       { value: 'xicheng', label: '西城区' }
     ]
   }
-  // 可以添加更多地区数据
 ]
 
 // 计算属性
 const userStats = computed(() => [
-  { label: '本月操作', value: '128' },
-  { label: '待办审批', value: '5' },
-  { label: '已完成', value: '89' },
-  { label: '登录次数', value: '156' }
+  { label: '操作总数', value: pagination.total },
+  { label: '当前页码', value: pagination.current },
+  { label: '每页条数', value: pagination.size },
+  { label: '登录次数', value: '156' } // 这个可以单独获取
 ])
 
 const isExpireSoon = computed(() => {
@@ -345,6 +436,16 @@ const padZero = (num) => {
   return num < 10 ? `0${num}` : num
 }
 
+// 格式化JSON字符串
+const formatJson = (jsonString) => {
+  try {
+    const jsonObj = JSON.parse(jsonString)
+    return JSON.stringify(jsonObj, null, 2)
+  } catch (e) {
+    return jsonString
+  }
+}
+
 // 数据加载
 const loadUserInfo = async () => {
   try {
@@ -360,6 +461,7 @@ const loadUserInfo = async () => {
     })
   } catch (e) {
     console.error('加载用户信息失败:', e)
+    ElMessage.error('加载用户信息失败')
   }
 }
 
@@ -372,19 +474,61 @@ const loadTenantInfo = async () => {
   }
 }
 
+// 加载操作日志
 const loadOperationLogs = async () => {
   loading.value = true
   try {
-    const res = await post('/api/auth/operation-log/user', {
-      page: 1,
-      size: 10
-    })
+    const params = {
+      page: pagination.current,
+      size: pagination.size
+      // 可以根据需要添加其他查询条件，如：
+      // module: '产品管理',
+      // startTime: '2024-01-01',
+      // endTime: '2024-12-31'
+    }
+    
+    const res = await post('/api/auth/operationLog/pageList', params)
+    
     operationLogs.value = res.records || []
+    pagination.total = res.total || 0
+    // 更新统计信息中的总操作数
+    userStats.value[0].value = pagination.total
   } catch (e) {
     console.error('加载操作记录失败:', e)
+    ElMessage.error('加载操作记录失败')
+    operationLogs.value = []
   } finally {
     loading.value = false
   }
+}
+
+// 分页处理
+const handleSizeChange = (size) => {
+  pagination.size = size
+  pagination.current = 1 // 重置到第一页
+  loadOperationLogs()
+}
+
+const handleCurrentChange = (current) => {
+  pagination.current = current
+  loadOperationLogs()
+}
+
+// 排序处理
+const handleSortChange = ({ prop, order }) => {
+  if (prop && order) {
+    sortData.prop = prop
+    sortData.order = order
+    
+    // 这里可以根据需要将排序参数传递给后端
+    // loadOperationLogs()
+  }
+}
+
+// 查看日志详情
+const viewLogDetail = (log) => {
+  currentLogDetail.value = log
+  logDetailDialogVisible.value = true
 }
 
 // 事件处理
@@ -670,6 +814,37 @@ onMounted(() => {
   margin: 4px 0;
 }
 
+/* 分页样式 */
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* JSON展示样式 */
+.json-container {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.json-container pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* 灰色文字 */
+.text-gray {
+  color: #909399;
+  font-style: italic;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .profile-container {
@@ -690,6 +865,18 @@ onMounted(() => {
   
   .info-value {
     text-align: left;
+  }
+  
+  .pagination-container {
+    justify-content: center;
+  }
+  
+  .stat-item {
+    padding: 15px 0;
+  }
+  
+  .stat-value {
+    font-size: 22px;
   }
 }
 </style>

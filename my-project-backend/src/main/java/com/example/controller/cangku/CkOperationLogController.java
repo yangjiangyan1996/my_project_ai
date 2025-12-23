@@ -1,0 +1,52 @@
+package com.example.controller.cangku;
+
+import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.Facade.CkOperationLogFacade;
+import com.example.entity.base.RespBean;
+import com.example.entity.base.UserInfo;
+import com.example.entity.cangku.req.OperationLogListPageReq;
+import com.example.entity.cangku.resp.OperationLogPageListResp;
+import com.example.filter.UserUtil;
+import jakarta.annotation.Resource;
+import jakarta.validation.ValidationException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/12/23 13:48
+ */
+@RestController
+@Slf4j
+@RequestMapping("/api/auth/operationLog/")
+public class CkOperationLogController {
+    @Resource
+    private CkOperationLogFacade ckOperationLogFacade;
+
+
+    @PostMapping("/pageList")
+    public RespBean<Page<OperationLogPageListResp>> pageList(@RequestBody OperationLogListPageReq req) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            req.setTenantId(tenantId);
+            req.setUserId(user.getId());
+
+            Page<OperationLogPageListResp> result = ckOperationLogFacade.pageList(Page.of(req.getPage(), req.getSize()), req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("CkOperationLogController#pageList,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("CkUnitController#pageList,req:{}",JSON.toJSONString( req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+}

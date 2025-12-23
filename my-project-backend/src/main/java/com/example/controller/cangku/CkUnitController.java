@@ -5,9 +5,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CkUnitFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
-import com.example.entity.cangku.req.*;
+import com.example.entity.cangku.req.UnitCreateReq;
+import com.example.entity.cangku.req.UnitDeleteReq;
+import com.example.entity.cangku.req.UnitListPageReq;
+import com.example.entity.cangku.req.UnitUpdateStatusReq;
 import com.example.entity.cangku.resp.UnitPageListResp;
 import com.example.filter.UserUtil;
+import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +54,8 @@ public class CkUnitController {
     }
 
     @PostMapping("/delete")
+    @LogOperation(module = "单位管理", operation = "删除单位",
+            description = "删除存在的单位")
     public RespBean<Boolean> delete(@RequestBody UnitDeleteReq req) {
         try {
             Long userId  = UserUtil.getCurrentUser().getId();
@@ -70,6 +76,8 @@ public class CkUnitController {
 
 
     @PostMapping("/create")
+    @LogOperation(module = "单位管理", operation = "创建单位",
+            description = "创建新单位")
     public RespBean<Boolean> create(@RequestBody UnitCreateReq req) {
         try {
             Long userId  = UserUtil.getCurrentUser().getId();
@@ -90,6 +98,8 @@ public class CkUnitController {
 
 
     @PostMapping("/update")
+    @LogOperation(module = "单位管理", operation = "更新单位",
+            description = "更新存在的单位")
     public RespBean<Boolean> update(@RequestBody UnitCreateReq req) {
         try {
             Long userId  = UserUtil.getCurrentUser().getId();
@@ -109,6 +119,8 @@ public class CkUnitController {
     }
 
     @PostMapping("/updateStatus")
+    @LogOperation(module = "单位管理", operation = "更新单位状态",
+            description = "更新存在的单位状态")
     public RespBean<Boolean> updateStatus(@RequestBody UnitUpdateStatusReq req) {
         try {
             Long userId  = UserUtil.getCurrentUser().getId();

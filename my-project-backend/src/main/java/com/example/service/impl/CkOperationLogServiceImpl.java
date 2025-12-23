@@ -1,7 +1,10 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.OperationLog;
+import com.example.entity.cangku.req.OperationLogListPageReq;
 import com.example.mapper.CkOperationLogMapper;
 import com.example.service.CkOperationLogService;
 import jakarta.annotation.Resource;
@@ -50,6 +53,18 @@ public class CkOperationLogServiceImpl extends ServiceImpl<CkOperationLogMapper,
         
         saveLog(currentTenantId, currentUserId, module, operation, description, 
                 targetId, ipAddress, userAgent);
+    }
+
+    @Override
+    public Page<OperationLog> getPage(Page<OperationLog> page, OperationLogListPageReq req) {
+        return baseMapper.selectPage(
+                page,
+                new QueryWrapper<OperationLog>()
+                        .eq( "tenant_id", req.getTenantId())
+                        .eq( req.getUserId() != null,"user_id", req.getUserId())
+                        .eq("is_deleted",0)
+                        .orderByAsc("created_at")
+        );
     }
 
     @Override

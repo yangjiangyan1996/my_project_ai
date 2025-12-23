@@ -11,6 +11,7 @@ import com.example.entity.cangku.req.SupplierListPageReq;
 import com.example.entity.cangku.req.SupplierUpdateStatusReq;
 import com.example.entity.cangku.resp.SupplierPageListResp;
 import com.example.filter.UserUtil;
+import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class SupplierController {
     @Resource
     CkSupplierFacade supplierFacade;
 
+    @LogOperation(module = "供应商管理", operation = "更新供应商状态", description = "更新供应商状态")
     @PostMapping("/updateStatus")
     public RespBean<Boolean> updateStatus(@RequestBody SupplierUpdateStatusReq req) {
         try {
@@ -85,6 +87,8 @@ public class SupplierController {
         }
     }
 
+
+    @LogOperation(module = "供应商管理", operation = "创建供应商", description = "创建供应商")
     @PostMapping("/create")
     public RespBean<Boolean> create(@RequestBody SupplierCreateReq req) {
         try {
@@ -102,6 +106,8 @@ public class SupplierController {
         }
     }
 
+
+    @LogOperation(module = "供应商管理", operation = "更新供应商", description = "更新供应商")
     @PostMapping("/update")
     public RespBean<Boolean> update(@RequestBody SupplierCreateReq req) {
         try {
@@ -121,6 +127,8 @@ public class SupplierController {
         }
     }
 
+
+    @LogOperation(module = "供应商管理", operation = "删除供应商", description = "删除供应商")
     @PostMapping("/delete")
     public RespBean<Boolean> delete(@RequestBody SupplierDeleteReq req) {
         try {

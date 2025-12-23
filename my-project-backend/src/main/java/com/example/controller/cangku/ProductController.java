@@ -11,6 +11,7 @@ import com.example.entity.cangku.resp.*;
 import com.example.entity.cangku.resp.excel.ProductBomExcelModel;
 import com.example.entity.cangku.resp.excel.ProductCreateExportModel;
 import com.example.filter.UserUtil;
+import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ValidationException;
@@ -65,6 +66,7 @@ public class ProductController {
     }
 
 
+    @LogOperation(module = "产品管理", operation = "删除产品", description = "删除产品")
     @PostMapping("/delete")
     public RespBean<Boolean> delete(@RequestBody ProductDeleteReq req) {
         try {
@@ -84,6 +86,7 @@ public class ProductController {
         }
     }
 
+    @LogOperation(module = "产品管理", operation = "更新产品状态", description = "更新产品状态")
     @PostMapping("/updateStatus")
     public RespBean<Boolean> updateStatus(@RequestBody ProductUpdateStatusReq req) {
         try {
@@ -122,6 +125,7 @@ public class ProductController {
         }
     }
 
+    @LogOperation(module = "产品管理", operation = "创建产品", description = "创建产品")
     @PostMapping("/create")
     public RespBean<Boolean> productCreate(@RequestBody ProductCreateReq req) {
         try {
@@ -139,6 +143,7 @@ public class ProductController {
         }
     }
 
+    @LogOperation(module = "产品管理", operation = "更新产品", description = "更新产品")
     @PostMapping("/update")
     public RespBean<Boolean> update(@RequestBody ProductCreateReq req) {
         try {
@@ -158,6 +163,7 @@ public class ProductController {
         }
     }
 
+    @LogOperation(module = "产品管理", operation = "创建产品分类", description = "创建产品分类")
     @PostMapping("/category/create")
     public RespBean<Boolean> categoryCreate(@RequestBody CategoryCreateReq req) {
         try {
@@ -391,6 +397,7 @@ public class ProductController {
     }
 
 
+    @LogOperation(module = "产品管理", operation = "导入产品创建模版", description = "导入产品创建模版")
     @PostMapping("/importProductCreateExcel")
     public RespBean<Boolean> importProductCreateExcel(@RequestParam("file") MultipartFile file) {
         try {
@@ -434,6 +441,7 @@ public class ProductController {
     }
 
 
+    @LogOperation(module = "产品管理", operation = "导入成品原材料导入模板", description = "导入成品原材料导入模板")
     @PostMapping("/bom/importBomExcel")
     public RespBean<Boolean> importBomExcel(@RequestParam("file") MultipartFile file, @RequestParam("productId") Long productId) {
         try {

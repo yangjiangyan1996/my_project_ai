@@ -1,16 +1,18 @@
-package com.example.entity.cangku.dto;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
+package com.example.entity.cangku.resp;
+
 import lombok.Data;
 
-//17. 操作日志表
+import java.util.Date;
+
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/10/30 22:31
+ */
 @Data
-@TableName("ck_operation_log")
-public class OperationLog extends BaseModel {
-    @TableId(type = IdType.AUTO)
+public class OperationLogPageListResp {
     private Long id;
     //租户ID
     private Long tenantId;
@@ -30,4 +32,7 @@ public class OperationLog extends BaseModel {
     private String userAgent;
 
     private String requestParams;
+
+    private Date createdAt;
+
 }

@@ -12,6 +12,7 @@ import com.example.entity.cangku.req.CustomerUpdateStatusReq;
 import com.example.entity.cangku.resp.CustomerEnabledListResp;
 import com.example.entity.cangku.resp.CustomerPageListResp;
 import com.example.filter.UserUtil;
+import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,8 @@ public class CustomerController {
         }
     }
 
+    @LogOperation(module = "客户管理", operation = "更新客户",
+            description = "更新存在的客户")
     @PostMapping("/update")
     public RespBean<Boolean> update(@RequestBody CustomerCreateReq req) {
         try {
@@ -68,6 +71,8 @@ public class CustomerController {
         }
     }
 
+    @LogOperation(module = "客户管理", operation = "删除客户",
+            description = "删除存在的客户")
     @PostMapping("/delete")
     public RespBean<Boolean> delete(@RequestBody CustomerDeleteReq req) {
         try {
@@ -87,6 +92,8 @@ public class CustomerController {
         }
     }
 
+    @LogOperation(module = "客户管理", operation = "更新客户状态",
+            description = "更新存在的客户状态")
     @PostMapping("/updateStatus")
     public RespBean<Boolean> updateStatus(@RequestBody CustomerUpdateStatusReq req) {
         try {
@@ -126,6 +133,8 @@ public class CustomerController {
     }
 
 
+    @LogOperation(module = "客户管理", operation = "创建客户",
+            description = "创建新的客户")
     @PostMapping("/create")
     public RespBean<Boolean> create(@RequestBody CustomerCreateReq req) {
         try {

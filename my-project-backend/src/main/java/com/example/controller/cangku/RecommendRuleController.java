@@ -11,6 +11,7 @@ import com.example.entity.cangku.resp.ReCommendRulePageListResp;
 import com.example.entity.cangku.resp.RecommendRuleItemDetailResp;
 import com.example.entity.cangku.resp.RecommendRuleQueryResp;
 import com.example.filter.UserUtil;
+import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -96,6 +97,7 @@ public class RecommendRuleController {
     }
 
 
+    @LogOperation(module = "推荐规则管理", operation = "删除推荐规则", description = "删除推荐规则")
     @PostMapping("/delete")
     public RespBean<Boolean> delete(@RequestBody CommendRuleDeleteReq req) {
         try {
@@ -116,6 +118,7 @@ public class RecommendRuleController {
     }
 
 
+    @LogOperation(module = "推荐规则管理", operation = "创建推荐规则", description = "创建推荐规则")
     @PostMapping("/create")
     public RespBean<Boolean> create(@RequestBody RecommendRuleCreateReq req) {
         try {
@@ -135,6 +138,7 @@ public class RecommendRuleController {
         }
     }
 
+    @LogOperation(module = "推荐规则管理", operation = "更新推荐规则", description = "更新推荐规则")
     @PostMapping("/update")
     public RespBean<Boolean> update(@RequestBody RecommendRuleCreateReq req) {
         try {
@@ -154,6 +158,7 @@ public class RecommendRuleController {
         }
     }
 
+    @LogOperation(module = "推荐规则管理", operation = "更新推荐规则状态", description = "更新推荐规则状态")
     @PostMapping("/updateStatus")
     public RespBean<Boolean> updateStatus(@RequestBody RecommendRuleUpdateStatusReq req) {
         try {

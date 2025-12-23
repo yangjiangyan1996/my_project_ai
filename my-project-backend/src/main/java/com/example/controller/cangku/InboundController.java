@@ -9,6 +9,7 @@ import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.*;
 import com.example.filter.UserUtil;
+import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,8 @@ public class InboundController {
     CkInboundFacade ckInboundFacade;
 
 
+    @LogOperation(module = "入库管理", operation = "审核入库",
+            description = "审核通过入库单")
     @PostMapping("/approveOk")
     public RespBean<Boolean> approveOk(@RequestBody InboundApproveOkReq req) {
         try {
@@ -82,6 +85,8 @@ public class InboundController {
         }
     }
 
+    @LogOperation(module = "入库管理", operation = "修改入库单",
+            description = "修改入库单")
     @PostMapping("/update")
     public RespBean<Boolean> update(@RequestBody InboundCreateReq req) {
         try {
@@ -99,6 +104,8 @@ public class InboundController {
         }
     }
 
+    @LogOperation(module = "入库管理", operation = "创建入库单",
+            description = "创建入库单")
     @PostMapping("/create")
     public RespBean<Boolean> create(@RequestBody InboundCreateReq req) {
         try {
@@ -162,6 +169,8 @@ public class InboundController {
         }
     }
 
+    @LogOperation(module = "入库管理", operation = "删除入库单",
+            description = "删除入库单")
     @PostMapping("/delete")
     public RespBean<Boolean> delete(@RequestBody InboundDeleteReq req) {
         try {
@@ -181,6 +190,8 @@ public class InboundController {
         }
     }
 
+    @LogOperation(module = "入库管理", operation = "修改入库单状态",
+            description = "修改入库单状态")
     @PostMapping("/updateStatus")
     public RespBean<Boolean> updateStatus(@RequestBody InboundUpdateStatusReq req) {
         try {

@@ -9,6 +9,7 @@ import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.WareHouseResp;
 import com.example.filter.UserUtil;
+import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class WarehouseController {
     @Resource
     CkWarehouseFacade ckWarehouseFacade;
 
+    @LogOperation(module = "仓库管理", operation = "删除仓库", description = "删除仓库")
     @PostMapping("/delete")
     public RespBean<Boolean> delete(@RequestBody WareHouseDeleteReq req) {
         try {
@@ -49,6 +51,8 @@ public class WarehouseController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+    @LogOperation(module = "仓库管理", operation = "更新仓库状态", description = "更新仓库状态")
     @PostMapping("/updateStatus")
     public RespBean<Boolean> updateStatus(@RequestBody WareHourseUpdateStatusReq req) {
         try {
@@ -67,6 +71,8 @@ public class WarehouseController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
+    @LogOperation(module = "仓库管理", operation = "设置仓库默认", description = "设置仓库默认")
     @PostMapping("/setDefault")
     public RespBean<Boolean> setDefault(@RequestBody WareHourseSetDefaultReq req) {
         try {
@@ -86,6 +92,8 @@ public class WarehouseController {
         }
     }
 
+
+    @LogOperation(module = "仓库管理", operation = "创建仓库", description = "创建仓库")
     @PostMapping("/create")
     public RespBean<Boolean> create(@RequestBody WareHourseCreateReq req) {
         try {
@@ -105,6 +113,8 @@ public class WarehouseController {
         }
     }
 
+
+    @LogOperation(module = "仓库管理", operation = "更新仓库", description = "更新仓库")
     @PostMapping("/update")
     public RespBean<Boolean> update(@RequestBody WareHourseCreateReq req) {
         try {

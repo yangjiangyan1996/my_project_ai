@@ -13,6 +13,7 @@ import com.example.entity.cangku.resp.SkuCreateReq;
 import com.example.entity.cangku.resp.SkuPageListResp;
 import com.example.entity.cangku.resp.excel.SkuExcelModel;
 import com.example.filter.UserUtil;
+import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ValidationException;
@@ -57,6 +58,7 @@ public class SkuController {
     }
 
 
+    @LogOperation(module = "SKU管理", operation = "删除SKU", description = "删除SKU")
     @PostMapping("/delete")
     public RespBean<Boolean> delete(@RequestBody SkuDeleteReq req) {
         try {
@@ -98,6 +100,7 @@ public class SkuController {
     }
 
 
+    @LogOperation(module = "SKU管理", operation = "导入SKU", description = "导入SKU")
     @PostMapping("/import")
     public RespBean<Boolean> importSku(@RequestParam("file") MultipartFile file, @RequestParam("customerId") Long customerId) {
         try {
@@ -124,6 +127,7 @@ public class SkuController {
     }
 
 
+    @LogOperation(module = "SKU管理", operation = "创建SKU", description = "创建SKU")
     @PostMapping("/create")
     public RespBean<Boolean> create(@RequestBody SkuCreateReq req) {
         try {
@@ -143,6 +147,7 @@ public class SkuController {
         }
     }
 
+    @LogOperation(module = "SKU管理", operation = "更新SKU", description = "更新SKU")
     @PostMapping("/update")
     public RespBean<Boolean> update(@RequestBody SkuCreateReq req) {
         try {
@@ -162,6 +167,7 @@ public class SkuController {
         }
     }
 
+    @LogOperation(module = "SKU管理", operation = "更新SKU状态", description = "更新SKU状态")
     @PostMapping("/updateStatus")
     public RespBean<Boolean> updateStatus(@RequestBody SkuUpdateStatusReq req) {
         try {
