@@ -107,6 +107,8 @@ public class LogInterceptor implements HandlerInterceptor {
         if (uri.contains("/recommend")) return "推荐规则管理";
         if (uri.contains("/shelf")) return "货架管理";
         if (uri.contains("/sku")) return "sku管理";
+        if (uri.contains("/user")) return "用户管理";
+        if (uri.contains("/tenant")) return "机构管理";
         return "系统管理";
     }
     

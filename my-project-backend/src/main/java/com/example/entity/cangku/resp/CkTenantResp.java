@@ -1,31 +1,31 @@
-package com.example.entity.cangku.dto;
+package com.example.entity.cangku.resp;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2025/12/23 15:13
+ */
 @Data
-@TableName("ck_tenant")
-public class Tenant extends BaseModel {
-    @TableId(type = IdType.AUTO)
+public class CkTenantResp {
     private Long id;
     //租户/企业名称
     private String name;
 
     private String image;
-
     //状态:0-禁用,1-启用
     private Integer status;
     //联系人
-    private Long contactId;
-
     private String contactPerson;
     //联系电话
     private String contactPhone;
     //服务到期时间
     private LocalDateTime expireAt;
+
+    //老板权限
+    private boolean bossAuth;
 }

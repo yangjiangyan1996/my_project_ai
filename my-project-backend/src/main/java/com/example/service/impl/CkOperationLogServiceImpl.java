@@ -63,7 +63,7 @@ public class CkOperationLogServiceImpl extends ServiceImpl<CkOperationLogMapper,
                         .eq( "tenant_id", req.getTenantId())
                         .eq( req.getUserId() != null,"user_id", req.getUserId())
                         .eq("is_deleted",0)
-                        .orderByAsc("created_at")
+                        .orderByDesc("created_at")
         );
     }
 

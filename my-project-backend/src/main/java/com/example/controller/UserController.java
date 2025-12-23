@@ -2,7 +2,7 @@ package com.example.controller;
 
 import com.example.Facade.CommonFacade;
 import com.example.Facade.UserFacade;
-import com.example.annotations.TaskProgress;
+import com.example.annotations.LogOperation;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.resp.UserResp;
@@ -48,7 +48,8 @@ public class UserController {
     }
 
 
-    @TaskProgress(category = {"wanshanziliao"})
+    @LogOperation(module = "用户管理", operation = "编辑用户信息",
+            description = "编辑用户信息")
     @PostMapping("/updateUserInfo")
     public RespBean<Boolean> updateUserInfo(@RequestBody UpdateUserInfoReq req) {
         try {

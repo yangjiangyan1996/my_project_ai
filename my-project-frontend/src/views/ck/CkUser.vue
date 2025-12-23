@@ -2,164 +2,283 @@
   <div class="profile-container">
     <!-- 页面标题 -->
     <div class="page-header">
-      <h2 class="page-title">个人中心</h2>
+      <div class="header-left">
+        <div class="header-icon">
+          <el-icon size="24"><UserFilled /></el-icon>
+        </div>
+        <div>
+          <h2 class="page-title">个人中心</h2>
+          <p class="page-subtitle">管理您的个人信息和操作记录</p>
+        </div>
+      </div>
       <div class="page-actions">
-        <el-button type="primary" @click="handleEditProfile">编辑资料</el-button>
+        <el-button type="primary" @click="handleEditProfile" :icon="Edit">
+          编辑资料
+        </el-button>
       </div>
     </div>
 
     <!-- 主要内容区域 -->
     <div class="profile-content">
-      <el-row :gutter="20">
-        <!-- 左侧：用户信息卡片 -->
-        <el-col :xs="24" :lg="8">
-          <!-- 用户信息卡片 -->
-          <el-card class="user-card" shadow="never">
+      <!-- 第一行：企业信息和个人信息并排 -->
+      <div class="info-row">
+        <!-- 左侧：企业信息 -->
+        <el-col :xs="24" :md="12" class="info-col">
+          <el-card class="tenant-card" shadow="hover" v-if="tenantInfo">
             <template #header>
               <div class="card-header">
-                <span class="card-title">个人信息</span>
+                <div class="header-content">
+                  <el-icon class="header-icon"><OfficeBuilding /></el-icon>
+                  <span class="card-title">企业信息</span>
+                </div>
+                <div class="card-header-right">
+                  <el-tag :type="tenantInfo.status === 1 ? 'success' : 'danger'">
+                    {{ getTenantStatusText(tenantInfo.status) }}
+                  </el-tag>
+                  <el-button 
+                    v-if="tenantInfo.bossAuth"
+                    type="text" 
+                    @click="handleEditTenant"
+                    :icon="Edit"
+                    class="edit-tenant-btn"
+                  >
+                    编辑
+                  </el-button>
+                </div>
+              </div>
+            </template>
+            
+            <div class="tenant-info">
+              <div class="company-header">
+                <div class="company-logo">
+                  <el-image 
+                    v-if="tenantInfo.image"
+                    :src="tenantInfo.image" 
+                    :preview-src-list="[tenantInfo.image]"
+                    :initial-index="0"
+                    fit="cover"
+                    class="company-image"
+                  >
+                    <template #error>
+                      <el-icon size="48"><OfficeBuilding /></el-icon>
+                    </template>
+                  </el-image>
+                  <el-icon v-else size="48"><OfficeBuilding /></el-icon>
+                </div>
+                <div class="company-details">
+                  <h4 class="company-name">{{ tenantInfo.name || '未设置企业名称' }}</h4>
+                  <p class="company-contact">{{ tenantInfo.contactPerson || '未设置董事长' }}</p>
+                  <el-tag v-if="tenantInfo.bossAuth" type="success" size="small" class="boss-tag">
+                    老板权限
+                  </el-tag>
+                </div>
+              </div>
+              
+              <div class="company-info-grid">
+                <div class="info-item">
+                  <div class="item-label">
+                    <el-icon><User /></el-icon>
+                    <span>董事长</span>
+                  </div>
+                  <div class="item-value">{{ tenantInfo.contactPerson || '未设置' }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="item-label">
+                    <el-icon><Phone /></el-icon>
+                    <span>联系电话</span>
+                  </div>
+                  <div class="item-value">{{ tenantInfo.contactPhone || '未设置' }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="item-label">
+                    <el-icon><CircleCheck /></el-icon>
+                    <span>服务状态</span>
+                  </div>
+                  <div class="item-value">
+                    <el-tag :type="tenantInfo.status === 1 ? 'success' : 'danger'" size="small">
+                      {{ getTenantStatusText(tenantInfo.status) }}
+                    </el-tag>
+                  </div>
+                </div>
+
+
+                <!-- <div class="info-item" v-if="tenantInfo.expireAt">
+                  <div class="item-label">
+                    <el-icon><Clock /></el-icon>
+                    <span>服务到期时间</span>
+                  </div>
+                  <div class="item-value" :class="{ 'expire-soon': isExpireSoon }">
+                    {{ formatTime(tenantInfo.expireAt) }}
+                  </div>
+                </div>
+                 -->
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+
+        <!-- 右侧：个人信息 -->
+        <el-col :xs="24" :md="12" class="info-col">
+          <el-card class="user-card" shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <div class="header-content">
+                  <el-icon class="header-icon"><User /></el-icon>
+                  <span class="card-title">个人信息</span>
+                </div>
+                <el-tag :type="getRoleType(userInfo.role)" class="role-tag">
+                  {{ getRoleText(userInfo.role) }}
+                </el-tag>
               </div>
             </template>
             
             <div class="user-info">
               <!-- 头像区域 -->
               <div class="avatar-section">
-                <el-avatar 
-                  :src="userInfo.avatarUrl || '/images/default-avatar.png'" 
-                  :size="100"
-                  class="user-avatar"
-                />
-                <div class="avatar-actions">
-                  <el-button type="text" @click="handleAvatarEdit">更换头像</el-button>
+                <div class="avatar-wrapper">
+                  <el-avatar 
+                    :src="userInfo.avatarUrl || '/images/default-avatar.png'" 
+                    :size="100"
+                    class="user-avatar"
+                  />
+                  <div class="avatar-status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">在线</span>
+                  </div>
+                </div>
+                <div class="user-names">
+                  <h3 class="user-name">{{ userInfo.nickname || '未设置昵称' }}</h3>
+                  <p class="user-realname">{{ userInfo.username || '未设置真实姓名' }}</p>
                 </div>
               </div>
 
               <!-- 基本信息 -->
               <div class="basic-info">
-                <div class="info-item">
-                  <span class="info-label">用户名：</span>
-                  <span class="info-value">{{ userInfo.username }}</span>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <div class="item-label">
+                      <el-icon><Iphone /></el-icon>
+                      <span>手机号</span>
+                    </div>
+                    <div class="item-value">{{ userInfo.phone || '未设置' }}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="item-label">
+                      <el-icon><Message /></el-icon>
+                      <span>邮箱</span>
+                    </div>
+                    <div class="item-value">{{ userInfo.email || '未设置' }}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="item-label">
+                      <el-icon><Male /></el-icon>
+                      <span>性别</span>
+                    </div>
+                    <div class="item-value">{{ getGenderText(userInfo.sex) }}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="item-label">
+                      <el-icon><MapLocation /></el-icon>
+                      <span>地区</span>
+                    </div>
+                    <div class="item-value">
+                      {{ [userInfo.province, userInfo.city, userInfo.county].filter(Boolean).join(' ') || '未设置' }}
+                    </div>
+                  </div>
+                  <div class="info-item">
+                    <div class="item-label">
+                      <el-icon><Calendar /></el-icon>
+                      <span>注册时间</span>
+                    </div>
+                    <div class="item-value">{{ formatTime(userInfo.registerTime) || '未设置' }}</div>
+                  </div>
                 </div>
-                <div class="info-item">
-                  <span class="info-label">真实姓名：</span>
-                  <span class="info-value">{{ userInfo.nickname || '未设置' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">角色：</span>
-                  <el-tag :type="getRoleType(userInfo.role)" class="role-tag">
-                    {{ getRoleText(userInfo.role) }}
-                  </el-tag>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">手机号：</span>
-                  <span class="info-value">{{ userInfo.phone || '未设置' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">邮箱：</span>
-                  <span class="info-value">{{ userInfo.email || '未设置' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">性别：</span>
-                  <span class="info-value">{{ getGenderText(userInfo.sex) }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">地区：</span>
-                  <span class="info-value">
-                    {{ [userInfo.province, userInfo.city, userInfo.county].filter(Boolean).join(' ') || '未设置' }}
-                  </span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">注册时间：</span>
-                  <span class="info-value">{{ formatTime(userInfo.registerTime) }}</span>
-                </div>
-              </div>
-            </div>
-          </el-card>
-
-          <!-- 租户信息卡片 -->
-          <el-card class="tenant-card" shadow="never" v-if="tenantInfo">
-            <template #header>
-              <div class="card-header">
-                <span class="card-title">企业信息</span>
-              </div>
-            </template>
-            
-            <div class="tenant-info">
-              <div class="info-item">
-                <span class="info-label">企业名称：</span>
-                <span class="info-value">{{ tenantInfo.name }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">联系人：</span>
-                <span class="info-value">{{ tenantInfo.contactPerson || '未设置' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">联系电话：</span>
-                <span class="info-value">{{ tenantInfo.contactPhone || '未设置' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">服务状态：</span>
-                <el-tag :type="tenantInfo.status === 1 ? 'success' : 'danger'">
-                  {{ tenantInfo.status === 1 ? '正常' : '禁用' }}
-                </el-tag>
-              </div>
-              <div class="info-item" v-if="tenantInfo.expireAt">
-                <span class="info-label">服务到期：</span>
-                <span class="info-value" :class="{ 'expire-soon': isExpireSoon }">
-                  {{ formatTime(tenantInfo.expireAt) }}
-                </span>
               </div>
             </div>
           </el-card>
         </el-col>
+      </div>
 
-        <!-- 右侧：操作日志和其他信息 -->
-        <el-col :xs="24" :lg="16">
-          <!-- 操作日志 -->
-          <el-card class="operation-log-card" shadow="never">
+      <!-- 第二行：操作日志 -->
+      <div class="log-row">
+        <el-col :xs="24" class="log-col">
+          <el-card class="operation-log-card" shadow="hover">
             <template #header>
               <div class="card-header">
-                <span class="card-title">最近操作记录</span>
-                <el-button type="text" @click="viewAllOperations">查看全部</el-button>
+                <div class="header-content">
+                  <el-icon class="header-icon"><Histogram /></el-icon>
+                  <span class="card-title">最近操作记录</span>
+                </div>
+                <el-button type="primary" text @click="viewAllOperations">
+                  查看全部
+                  <el-icon><ArrowRight /></el-icon>
+                </el-button>
               </div>
             </template>
             
             <!-- 操作日志表格 -->
-            <el-table 
-              :data="operationLogs" 
-              style="width: 100%"
-              empty-text="暂无操作记录"
-              v-loading="loading"
-              @sort-change="handleSortChange"
-            >
-              <el-table-column prop="createdAt" label="操作时间" width="180" sortable="custom">
-                <template #default="scope">
-                  {{ formatTime(scope.row.createdAt) }}
-                </template>
-              </el-table-column>
-              <el-table-column prop="module" label="操作模块" width="120" />
-              <el-table-column prop="operation" label="操作类型" width="120" />
-              <el-table-column prop="description" label="操作描述" min-width="200" />
-              <el-table-column label="目标ID" width="100">
-                <template #default="scope">
-                  <span v-if="scope.row.targetId">{{ scope.row.targetId }}</span>
-                  <span v-else class="text-gray">-</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="ipAddress" label="IP地址" width="130" />
-              <el-table-column label="操作" width="80">
-                <template #default="scope">
-                  <el-button 
-                    type="text" 
-                    size="small" 
-                    @click="viewLogDetail(scope.row)"
-                    v-if="scope.row.requestParams"
-                  >
-                    详情
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
+            <div class="log-table-container">
+              <el-table 
+                :data="operationLogs" 
+                style="width: 100%"
+                empty-text="暂无操作记录"
+                v-loading="loading"
+                @sort-change="handleSortChange"
+                class="log-table"
+                :row-class-name="tableRowClassName"
+              >
+                <el-table-column prop="createdAt" label="操作时间" width="180" sortable="custom">
+                  <template #default="scope">
+                    <div class="time-cell">
+                      <div class="time-date">{{ formatDate(scope.row.createdAt) }}</div>
+                      <div class="time-time">{{ formatTimeOnly(scope.row.createdAt) }}</div>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="module" label="操作模块" width="120">
+                  <template #default="scope">
+                    <el-tag size="small" :type="getModuleType(scope.row.module)">
+                      {{ scope.row.module }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="operation" label="操作类型" width="120">
+                  <template #default="scope">
+                    <span class="operation-type" :class="getOperationClass(scope.row.operation)">
+                      {{ scope.row.operation }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="description" label="操作描述" min-width="200">
+                  <template #default="scope">
+                    <div class="description-cell">
+                      {{ scope.row.description }}
+                      <div v-if="scope.row.targetId" class="target-id">
+                        ID: {{ scope.row.targetId }}
+                      </div>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="ipAddress" label="IP地址" width="130">
+                  <template #default="scope">
+                    <span class="ip-address">{{ scope.row.ipAddress || '-' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="80" align="center">
+                  <template #default="scope">
+                    <el-button 
+                      type="text" 
+                      size="small"
+                      class="detail-btn"
+                      @click="viewLogDetail(scope.row)"
+                      v-if="scope.row.requestParams"
+                    >
+                      <el-icon><View /></el-icon>
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
             
             <!-- 分页 -->
             <div class="pagination-container" v-if="pagination.total > 0">
@@ -171,103 +290,296 @@
                 layout="total, sizes, prev, pager, next, jumper"
                 @size-change="handleSizeChange"
                 @current-change="handleCurrentChange"
+                class="custom-pagination"
               />
             </div>
           </el-card>
-
-          <!-- 统计信息 -->
-          <!-- <el-card class="stats-card" shadow="never">
-            <template #header>
-              <div class="card-header">
-                <span class="card-title">个人统计</span>
-              </div>
-            </template>
-            
-            <el-row :gutter="20">
-              <el-col :xs="12" :sm="6" v-for="stat in userStats" :key="stat.label">
-                <div class="stat-item">
-                  <div class="stat-value">{{ stat.value }}</div>
-                  <div class="stat-label">{{ stat.label }}</div>
-                </div>
-              </el-col>
-            </el-row>
-          </el-card> -->
         </el-col>
-      </el-row>
+      </div>
     </div>
 
-    <!-- 编辑资料对话框 -->
+    <!-- 编辑个人资料对话框 -->
     <el-dialog 
-      v-model="editDialogVisible" 
-      title="编辑资料" 
-      width="500px"
-      :before-close="handleEditDialogClose"
+      v-model="editUserDialogVisible" 
+      title="编辑个人资料" 
+      width="600px"
+      :before-close="handleEditUserDialogClose"
+      class="edit-dialog"
     >
       <el-form 
-        :model="editForm" 
-        :rules="editRules" 
-        ref="editFormRef"
-        label-width="80px"
+        :model="editUserForm" 
+        :rules="editUserRules" 
+        ref="editUserFormRef"
+        label-width="100px"
+        label-position="left"
+        class="edit-form"
       >
-        <el-form-item label="真实姓名" prop="nickname">
-          <el-input v-model="editForm.nickname" placeholder="请输入真实姓名" />
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-form-item label="头像" prop="avatarUrl">
+              <div class="avatar-upload-container">
+                <el-upload
+                  class="avatar-uploader"
+                  :action="uploadAction"
+                  :show-file-list="false"
+                  :on-success="(res) => handleUploadSuccess(res, 'avatarUrl', editUserForm)"
+                  :before-upload="beforeImageUpload"
+                  :headers="uploadHeaders">
+                  <div class="upload-content">
+                    <img v-if="editUserForm.avatarUrl" :src="editUserForm.avatarUrl" class="avatar">
+                    <div v-else class="upload-placeholder">
+                      <el-icon size="40"><CameraFilled /></el-icon>
+                      <div>点击上传头像</div>
+                    </div>
+                  </div>
+                </el-upload>
+                <div class="upload-tips">
+                  <p>建议尺寸：200×200像素</p>
+                  <p>支持 JPG/PNG 格式，不超过2MB</p>
+                </div>
+              </div>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-form-item label="基础信息">
+          <div class="form-section-divider"></div>
         </el-form-item>
         
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="editForm.phone" placeholder="请输入手机号" />
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="昵称" prop="nickname">
+              <el-input 
+                v-model="editUserForm.nickname" 
+                placeholder="请输入您的网名"
+                size="large"
+                :prefix-icon="User"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="真实姓名" prop="username">
+              <el-input 
+                v-model="editUserForm.username" 
+                placeholder="请输入真实姓名"
+                size="large"
+                :prefix-icon="Avatar"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="手机号" prop="phone">
+              <el-input 
+                v-model="editUserForm.phone" 
+                placeholder="请输入手机号"
+                size="large"
+                :prefix-icon="Iphone"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="邮箱" prop="email">
+              <el-input 
+                v-model="editUserForm.email" 
+                placeholder="请输入邮箱"
+                size="large"
+                :prefix-icon="Message"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-form-item label="其他信息">
+          <div class="form-section-divider"></div>
         </el-form-item>
         
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="editForm.email" placeholder="请输入邮箱" />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="性别" prop="sex">
+              <el-radio-group v-model="editUserForm.sex" class="gender-group">
+                <el-radio-button :label="0">
+                  <el-icon><User /></el-icon>
+                  <span>未知</span>
+                </el-radio-button>
+                <el-radio-button :label="1">
+                  <el-icon><Male /></el-icon>
+                  <span>男</span>
+                </el-radio-button>
+                <el-radio-button :label="2">
+                  <el-icon><Female /></el-icon>
+                  <span>女</span>
+                </el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
         
-        <el-form-item label="性别" prop="sex">
-          <el-radio-group v-model="editForm.sex">
-            <el-radio :label="0">未知</el-radio>
-            <el-radio :label="1">男</el-radio>
-            <el-radio :label="2">女</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        
-        <el-form-item label="地区" prop="region">
-          <el-cascader
-            v-model="editForm.region"
-            :options="regionOptions"
-            placeholder="请选择地区"
-            style="width: 100%"
-          />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="省份" prop="province">
+              <el-input 
+                v-model="editUserForm.province" 
+                placeholder="请输入省份"
+                size="large"
+                :prefix-icon="Location"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="城市" prop="city">
+              <el-input 
+                v-model="editUserForm.city" 
+                placeholder="请输入城市"
+                size="large"
+                :prefix-icon="MapLocation"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="区县" prop="county">
+              <el-input 
+                v-model="editUserForm.county" 
+                placeholder="请输入区县"
+                size="large"
+                :prefix-icon="Place"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
       
       <template #footer>
-        <el-button @click="handleEditDialogClose">取消</el-button>
-        <el-button type="primary" @click="handleSaveProfile" :loading="saving">保存</el-button>
+        <div class="dialog-footer">
+          <el-button @click="handleEditUserDialogClose" size="large">取消</el-button>
+          <el-button type="primary" @click="handleSaveUserProfile" :loading="savingUser" size="large">
+            保存更改
+          </el-button>
+        </div>
       </template>
     </el-dialog>
 
-    <!-- 头像上传对话框 -->
+    <!-- 编辑企业信息对话框 -->
     <el-dialog 
-      v-model="avatarDialogVisible" 
-      title="更换头像" 
-      width="400px"
+      v-model="editTenantDialogVisible" 
+      title="编辑企业信息" 
+      width="600px"
+      :before-close="handleEditTenantDialogClose"
+      class="edit-dialog"
     >
-      <div class="avatar-upload">
-        <el-upload
-          class="avatar-uploader"
-          action="/api/auth/user/uploadAvatar"
-          :show-file-list="false"
-          :before-upload="beforeAvatarUpload"
-          :on-success="handleAvatarSuccess"
-          :on-error="handleAvatarError"
-        >
-          <img v-if="avatarPreview" :src="avatarPreview" class="avatar-preview" />
-          <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-        </el-upload>
-        <div class="upload-tips">
-          <p>建议上传 1:1 比例的图片</p>
-          <p>支持 JPG、PNG 格式，大小不超过 2MB</p>
+      <el-form 
+        :model="editTenantForm" 
+        :rules="editTenantRules" 
+        ref="editTenantFormRef"
+        label-width="120px"
+        label-position="left"
+        class="edit-form"
+      >
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-form-item label="企业图片" prop="image">
+              <div class="avatar-upload-container">
+                <el-upload
+                  class="avatar-uploader"
+                  :action="uploadAction"
+                  :show-file-list="false"
+                  :on-success="(res) => handleUploadSuccess(res, 'image', editTenantForm)"
+                  :before-upload="beforeImageUpload"
+                  :headers="uploadHeaders">
+                  <div class="upload-content">
+                    <img v-if="editTenantForm.image" :src="editTenantForm.image" class="avatar">
+                    <div v-else class="upload-placeholder">
+                      <el-icon size="40"><CameraFilled /></el-icon>
+                      <div>点击上传企业图片</div>
+                    </div>
+                  </div>
+                </el-upload>
+                <div class="upload-tips">
+                  <p>建议尺寸：200×200像素</p>
+                  <p>支持 JPG/PNG 格式，不超过2MB</p>
+                </div>
+              </div>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-form-item label="基本信息">
+          <div class="form-section-divider"></div>
+        </el-form-item>
+        
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-form-item label="企业名称" prop="name">
+              <el-input 
+                v-model="editTenantForm.name" 
+                placeholder="请输入企业名称"
+                size="large"
+                :prefix-icon="OfficeBuilding"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="联系人" prop="contactPerson">
+              <el-input 
+                v-model="editTenantForm.contactPerson" 
+                placeholder="请输入联系人姓名"
+                size="large"
+                :prefix-icon="User"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="联系电话" prop="contactPhone">
+              <el-input 
+                v-model="editTenantForm.contactPhone" 
+                placeholder="请输入联系电话"
+                size="large"
+                :prefix-icon="Phone"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="服务状态" prop="status">
+              <el-select 
+                v-model="editTenantForm.status" 
+                placeholder="请选择服务状态"
+                size="large"
+                style="width: 100%"
+              >
+                <el-option label="启用" :value="1" />
+                <el-option label="禁用" :value="0" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <!-- <el-col :span="12" v-if="editTenantForm.expireAt">
+            <el-form-item label="到期时间">
+              <el-input 
+                :value="formatTime(editTenantForm.expireAt)"
+                disabled
+                size="large"
+                :prefix-icon="Clock"
+              />
+            </el-form-item>
+          </el-col> -->
+        </el-row>
+      </el-form>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="handleEditTenantDialogClose" size="large">取消</el-button>
+          <el-button type="primary" @click="handleSaveTenant" :loading="savingTenant" size="large">
+            保存更改
+          </el-button>
         </div>
-      </div>
+      </template>
     </el-dialog>
 
     <!-- 日志详情对话框 -->
@@ -275,32 +587,41 @@
       v-model="logDetailDialogVisible" 
       title="操作日志详情" 
       width="600px"
+      class="log-detail-dialog"
     >
       <el-descriptions 
         :column="1" 
         border
         v-if="currentLogDetail"
+        class="log-descriptions"
       >
         <el-descriptions-item label="操作时间">
-          {{ formatTime(currentLogDetail.createdAt) }}
+          <div class="detail-time">
+            <div>{{ formatDate(currentLogDetail.createdAt) }}</div>
+            <div class="time-secondary">{{ formatTimeOnly(currentLogDetail.createdAt) }}</div>
+          </div>
         </el-descriptions-item>
         <el-descriptions-item label="操作模块">
-          {{ currentLogDetail.module }}
+          <el-tag :type="getModuleType(currentLogDetail.module)" size="small">
+            {{ currentLogDetail.module || '无' }}
+          </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="操作类型">
-          {{ currentLogDetail.operation }}
+          <span class="operation-type" :class="getOperationClass(currentLogDetail.operation)">
+            {{ currentLogDetail.operation || '无' }}
+          </span>
         </el-descriptions-item>
         <el-descriptions-item label="操作描述">
-          {{ currentLogDetail.description }}
+          {{ currentLogDetail.description || '无' }}
         </el-descriptions-item>
         <el-descriptions-item label="目标ID">
-          {{ currentLogDetail.targetId || '无' }}
+          <span class="target-id-detail">{{ currentLogDetail.targetId || '无' }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="IP地址">
-          {{ currentLogDetail.ipAddress }}
+          <span class="ip-address-detail">{{ currentLogDetail.ipAddress || '无' }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="用户代理">
-          {{ currentLogDetail.userAgent }}
+          <div class="user-agent">{{ currentLogDetail.userAgent || '无' }}</div>
         </el-descriptions-item>
         <el-descriptions-item label="请求参数" v-if="currentLogDetail.requestParams">
           <div class="json-container">
@@ -310,25 +631,33 @@
       </el-descriptions>
       
       <template #footer>
-        <el-button @click="logDetailDialogVisible = false">关闭</el-button>
+        <el-button @click="logDetailDialogVisible = false" size="large">关闭</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, getCurrentInstance } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
-import { get, post } from '@/net'
+import { 
+  UserFilled, Edit, User, Phone, Iphone, Message, Location, 
+  Male, Female, MapLocation, Calendar, OfficeBuilding, 
+  CircleCheck, Histogram, ArrowRight, View, CameraFilled,
+  Avatar, Place, Clock
+} from '@element-plus/icons-vue'
+import { get, post, takeAccessToken } from '@/net'
+
+// 获取全局实例
+const { proxy } = getCurrentInstance()
 
 // 响应式数据
 const loading = ref(false)
-const saving = ref(false)
-const editDialogVisible = ref(false)
-const avatarDialogVisible = ref(false)
+const savingUser = ref(false)
+const savingTenant = ref(false)
+const editUserDialogVisible = ref(false)
+const editTenantDialogVisible = ref(false)
 const logDetailDialogVisible = ref(false)
-const avatarPreview = ref('')
 
 // 用户信息
 const userInfo = ref({
@@ -356,7 +685,7 @@ const currentLogDetail = ref(null)
 // 分页数据
 const pagination = reactive({
   current: 1,
-  size: 5,
+  size: 10,
   total: 0
 })
 
@@ -366,45 +695,80 @@ const sortData = reactive({
   order: 'descending'
 })
 
-// 编辑表单
-const editForm = reactive({
+// 编辑个人表单
+const editUserForm = reactive({
+  id: null,
+  username: '',
   nickname: '',
+  avatarUrl: '',
   phone: '',
   email: '',
   sex: 0,
-  region: []
+  province: '',
+  city: '',
+  county: ''
 })
 
-const editFormRef = ref()
-const editRules = {
-  nickname: [
+// 编辑企业表单
+const editTenantForm = reactive({
+  id: null,
+  name: '',
+  image: '',
+  status: 1,
+  contactPerson: '',
+  contactPhone: '',
+  expireAt: null
+})
+
+// 表单引用
+const editUserFormRef = ref()
+const editTenantFormRef = ref()
+
+// 表单验证规则
+const editUserRules = {
+  username: [
     { required: true, message: '请输入真实姓名', trigger: 'blur' }
+  ],
+  nickname: [
+    { required: true, message: '请输入昵称', trigger: 'blur' }
   ],
   email: [
     { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  phone: [
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
   ]
 }
 
-// 地区选项
-const regionOptions = [
-  {
-    value: 'beijing',
-    label: '北京市',
-    children: [
-      { value: 'dongcheng', label: '东城区' },
-      { value: 'xicheng', label: '西城区' }
-    ]
+const editTenantRules = {
+  name: [
+    { required: true, message: '请输入企业名称', trigger: 'blur' }
+  ],
+  contactPerson: [
+    { required: true, message: '请输入联系人', trigger: 'blur' }
+  ],
+  contactPhone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' }
+  ],
+  status: [
+    { required: true, message: '请选择服务状态', trigger: 'change' }
+  ]
+}
+
+// 使用全局的 uploadAction
+const uploadAction = computed(() => {
+  return proxy.$uploadAction ? proxy.$uploadAction() : '/api/auth/common/upload'
+})
+
+// 上传 headers
+const uploadHeaders = computed(() => {
+  const token = takeAccessToken()
+  return {
+    'Authorization': token ? `Bearer ${token}` : ''
   }
-]
+})
 
 // 计算属性
-const userStats = computed(() => [
-  { label: '操作总数', value: pagination.total },
-  { label: '当前页码', value: pagination.current },
-  { label: '每页条数', value: pagination.size },
-  { label: '登录次数', value: '156' } // 这个可以单独获取
-])
-
 const isExpireSoon = computed(() => {
   if (!tenantInfo.value?.expireAt) return false
   const expireTime = new Date(tenantInfo.value.expireAt).getTime()
@@ -414,11 +778,21 @@ const isExpireSoon = computed(() => {
 
 // 方法
 const getRoleType = (role) => {
-  return role === 'ADMIN' ? 'danger' : 'primary'
+  const roleMap = {
+    'ADMIN': 'danger',
+    'SUPER_ADMIN': 'warning',
+    'USER': 'primary'
+  }
+  return roleMap[role] || 'primary'
 }
 
 const getRoleText = (role) => {
-  return role === 'ADMIN' ? '管理员' : '普通用户'
+  const roleMap = {
+    'ADMIN': '管理员',
+    'USER': '普通用户',
+    'SUPER_ADMIN': '超级管理员'
+  }
+  return roleMap[role] || '普通用户'
 }
 
 const getGenderText = (sex) => {
@@ -426,10 +800,63 @@ const getGenderText = (sex) => {
   return genderMap[sex] || '未知'
 }
 
+const getTenantStatusText = (status) => {
+  return status === 1 ? '正常' : '禁用'
+}
+
+const getModuleType = (module) => {
+  const moduleMap = {
+    '用户管理': 'primary',
+    '系统设置': 'success',
+    '权限管理': 'warning',
+    '日志管理': 'info'
+  }
+  return moduleMap[module] || 'info'
+}
+
+const getOperationClass = (operation) => {
+  const classMap = {
+    '新增': 'operation-create',
+    '修改': 'operation-update',
+    '删除': 'operation-delete',
+    '查询': 'operation-query',
+    '登录': 'operation-login',
+    '登出': 'operation-logout'
+  }
+  return classMap[operation] || ''
+}
+
 const formatTime = (timeString) => {
   if (!timeString) return ''
-  const date = new Date(timeString)
-  return `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}`
+  try {
+    const date = new Date(timeString)
+    if (isNaN(date.getTime())) return timeString
+    return `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}`
+  } catch (e) {
+    return timeString
+  }
+}
+
+const formatDate = (timeString) => {
+  if (!timeString) return ''
+  try {
+    const date = new Date(timeString)
+    if (isNaN(date.getTime())) return ''
+    return `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())}`
+  } catch (e) {
+    return ''
+  }
+}
+
+const formatTimeOnly = (timeString) => {
+  if (!timeString) return ''
+  try {
+    const date = new Date(timeString)
+    if (isNaN(date.getTime())) return ''
+    return `${padZero(date.getHours())}:${padZero(date.getMinutes())}:${padZero(date.getSeconds())}`
+  } catch (e) {
+    return ''
+  }
 }
 
 const padZero = (num) => {
@@ -446,25 +873,70 @@ const formatJson = (jsonString) => {
   }
 }
 
-// 数据加载
+// 表格行样式
+const tableRowClassName = ({ rowIndex }) => {
+  return rowIndex % 2 === 1 ? 'even-row' : ''
+}
+
+// ============ 通用上传方法 ============
+// 图片上传成功（通用方法）
+const handleUploadSuccess = (response, fieldName, form) => {
+  if (response && response.code === 0) {
+    form[fieldName] = response.data || ''
+    ElMessage.success('图片上传成功')
+  } else if (response && response.data) {
+    // 如果接口直接返回图片URL
+    form[fieldName] = response.data
+    ElMessage.success('图片上传成功')
+  } else {
+    ElMessage.error(response?.message || '图片上传失败')
+  }
+}
+
+// 图片上传前校验（通用方法）
+const beforeImageUpload = (file) => {
+  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
+  const isLt2M = file.size / 1024 / 1024 < 100
+
+  if (!isJpgOrPng) {
+    ElMessage.error('图片只能是 JPG/PNG 格式!')
+  }
+  
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 100MB!')
+  }
+
+  return isJpgOrPng && isLt2M
+}
+
+// ============ 数据加载 ============
+// 加载用户信息
 const loadUserInfo = async () => {
   try {
     const res = await get('/api/auth/user/info')
-    userInfo.value = res || {}
-    // 初始化编辑表单
-    Object.assign(editForm, {
-      nickname: userInfo.value.nickname || '',
-      phone: userInfo.value.phone || '',
-      email: userInfo.value.email || '',
-      sex: userInfo.value.sex || 0,
-      region: [userInfo.value.province, userInfo.value.city, userInfo.value.county].filter(Boolean)
-    })
+    if (res) {
+      userInfo.value = {
+        id: res.id || null,
+        username: res.username || '',
+        nickname: res.nickname || '',
+        avatarUrl: res.avatarUrl || '',
+        phone: res.phone || '',
+        email: res.email || '',
+        sex: res.sex || 0,
+        province: res.province || '',
+        city: res.city || '',
+        county: res.county || '',
+        role: res.role || 'USER',
+        registerTime: res.registerTime || ''
+      }
+    }
   } catch (e) {
     console.error('加载用户信息失败:', e)
     ElMessage.error('加载用户信息失败')
   }
 }
 
+// 加载租户信息
 const loadTenantInfo = async () => {
   try {
     const res = await get('/api/auth/tenant/info')
@@ -481,18 +953,13 @@ const loadOperationLogs = async () => {
     const params = {
       page: pagination.current,
       size: pagination.size
-      // 可以根据需要添加其他查询条件，如：
-      // module: '产品管理',
-      // startTime: '2024-01-01',
-      // endTime: '2024-12-31'
     }
     
     const res = await post('/api/auth/operationLog/pageList', params)
     
     operationLogs.value = res.records || []
     pagination.total = res.total || 0
-    // 更新统计信息中的总操作数
-    userStats.value[0].value = pagination.total
+   
   } catch (e) {
     console.error('加载操作记录失败:', e)
     ElMessage.error('加载操作记录失败')
@@ -502,7 +969,7 @@ const loadOperationLogs = async () => {
   }
 }
 
-// 分页处理
+// ============ 分页处理 ============
 const handleSizeChange = (size) => {
   pagination.size = size
   pagination.current = 1 // 重置到第一页
@@ -519,9 +986,6 @@ const handleSortChange = ({ prop, order }) => {
   if (prop && order) {
     sortData.prop = prop
     sortData.order = order
-    
-    // 这里可以根据需要将排序参数传递给后端
-    // loadOperationLogs()
   }
 }
 
@@ -531,106 +995,136 @@ const viewLogDetail = (log) => {
   logDetailDialogVisible.value = true
 }
 
-// 事件处理
+// ============ 个人信息编辑 ============
 const handleEditProfile = () => {
-  editDialogVisible.value = true
-}
-
-const handleEditDialogClose = () => {
-  editDialogVisible.value = false
-  // 重置表单
-  if (editFormRef.value) {
-    editFormRef.value.resetFields()
-  }
-  // 重新加载用户信息以恢复原始数据
-  Object.assign(editForm, {
+  // 填充编辑表单数据
+  Object.assign(editUserForm, {
+    id: userInfo.value.id || null,
+    username: userInfo.value.username || '',
     nickname: userInfo.value.nickname || '',
+    avatarUrl: userInfo.value.avatarUrl || '',
     phone: userInfo.value.phone || '',
     email: userInfo.value.email || '',
     sex: userInfo.value.sex || 0,
-    region: [userInfo.value.province, userInfo.value.city, userInfo.value.county].filter(Boolean)
+    province: userInfo.value.province || '',
+    city: userInfo.value.city || '',
+    county: userInfo.value.county || ''
   })
+  editUserDialogVisible.value = true
 }
 
-const handleSaveProfile = async () => {
-  if (!editFormRef.value) return
+const handleEditUserDialogClose = () => {
+  editUserDialogVisible.value = false
+  if (editUserFormRef.value) {
+    editUserFormRef.value.resetFields()
+  }
+}
+
+const handleSaveUserProfile = async () => {
+  if (!editUserFormRef.value) return
   
   try {
-    await editFormRef.value.validate()
-    saving.value = true
+    await editUserFormRef.value.validate()
+    savingUser.value = true
     
     const updateData = {
-      nickname: editForm.nickname,
-      phone: editForm.phone,
-      email: editForm.email,
-      sex: editForm.sex
+      id: editUserForm.id,
+      username: editUserForm.username || '',
+      nickname: editUserForm.nickname || '',
+      phone: editUserForm.phone || '',
+      email: editUserForm.email || '',
+      sex: editUserForm.sex || 0,
+      avatarUrl: editUserForm.avatarUrl || ''
     }
     
-    // 处理地区数据
-    if (editForm.region && editForm.region.length >= 2) {
-      updateData.province = editForm.region[0] || ''
-      updateData.city = editForm.region[1] || ''
-      updateData.county = editForm.region[2] || ''
+    if (editUserForm.province || editUserForm.city || editUserForm.county) {
+      updateData.province = editUserForm.province || ''
+      updateData.city = editUserForm.city || ''
+      updateData.county = editUserForm.county || ''
     }
     
-    await post('/api/auth/user/updateProfile', updateData)
-    ElMessage.success('资料更新成功')
-    editDialogVisible.value = false
-    // 重新加载用户信息
-    await loadUserInfo()
+    const res = await post('/api/auth/user/updateUserInfo', updateData)
+    console.log('更新用户信息响应:', res)
+    if (res) {
+      ElMessage.success('个人资料更新成功')
+      editUserDialogVisible.value = false
+      await loadUserInfo()
+    } else {
+      ElMessage.error(res.message || '个人资料更新失败')
+    }
   } catch (e) {
     if (e.errors) {
-      // 表单验证错误，不显示消息
       return
     }
-    ElMessage.error('资料更新失败')
+    ElMessage.error('个人资料更新失败: ' + (e.message || '未知错误'))
   } finally {
-    saving.value = false
+    savingUser.value = false
   }
 }
 
-const handleAvatarEdit = () => {
-  avatarDialogVisible.value = true
-}
-
-const beforeAvatarUpload = (file) => {
-  const isJPGOrPNG = file.type === 'image/jpeg' || file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
-
-  if (!isJPGOrPNG) {
-    ElMessage.error('头像只能是 JPG 或 PNG 格式!')
-    return false
-  }
-  if (!isLt2M) {
-    ElMessage.error('头像大小不能超过 2MB!')
-    return false
+// ============ 企业信息编辑 ============
+const handleEditTenant = () => {
+  if (!tenantInfo.value || !tenantInfo.value.bossAuth) {
+    ElMessage.warning('您没有权限编辑企业信息')
+    return
   }
   
-  // 预览图片
-  const reader = new FileReader()
-  reader.readAsDataURL(file)
-  reader.onload = (e) => {
-    avatarPreview.value = e.target.result
+  // 填充企业编辑表单数据
+  Object.assign(editTenantForm, {
+    id: tenantInfo.value.id || null,
+    name: tenantInfo.value.name || '',
+    image: tenantInfo.value.image || '',
+    status: tenantInfo.value.status || 1,
+    contactPerson: tenantInfo.value.contactPerson || '',
+    contactPhone: tenantInfo.value.contactPhone || '',
+    expireAt: tenantInfo.value.expireAt || null
+  })
+  editTenantDialogVisible.value = true
+}
+
+const handleEditTenantDialogClose = () => {
+  editTenantDialogVisible.value = false
+  if (editTenantFormRef.value) {
+    editTenantFormRef.value.resetFields()
   }
+}
+
+const handleSaveTenant = async () => {
+  if (!editTenantFormRef.value) return
   
-  return false // 手动上传
-}
-
-const handleAvatarSuccess = (response) => {
-  ElMessage.success('头像上传成功')
-  avatarDialogVisible.value = false
-  avatarPreview.value = ''
-  // 重新加载用户信息
-  loadUserInfo()
-}
-
-const handleAvatarError = () => {
-  ElMessage.error('头像上传失败')
+  try {
+    await editTenantFormRef.value.validate()
+    savingTenant.value = true
+    
+    const updateData = {
+      id: editTenantForm.id,
+      name: editTenantForm.name || '',
+      image: editTenantForm.image || '',
+      status: editTenantForm.status || 1,
+      contactPerson: editTenantForm.contactPerson || '',
+      contactPhone: editTenantForm.contactPhone || ''
+    }
+    
+    const res = await post('/api/auth/tenant/update', updateData)
+    console.log('更新企业信息响应:', res)
+    if (res) {
+      ElMessage.success('企业信息更新成功')
+      editTenantDialogVisible.value = false
+      await loadTenantInfo()
+    } else {
+      ElMessage.error(res.message || '企业信息更新失败')
+    }
+  } catch (e) {
+    if (e.errors) {
+      return
+    }
+    ElMessage.error('企业信息更新失败: ' + (e.message || '未知错误'))
+  } finally {
+    savingTenant.value = false
+  }
 }
 
 const viewAllOperations = () => {
-  // 跳转到完整的操作日志页面
-  // 这里可以根据需要实现跳转逻辑
   ElMessage.info('跳转到操作日志页面')
 }
 
@@ -644,8 +1138,8 @@ onMounted(() => {
 
 <style scoped>
 .profile-container {
-  padding: 20px;
-  background-color: #f5f7fa;
+  padding: 24px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
   min-height: calc(100vh - 60px);
 }
 
@@ -653,230 +1147,656 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 0 10px;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
+  border-radius: 12px;
+  color: white;
 }
 
 .page-title {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 28px;
+  font-weight: 700;
   color: #303133;
   margin: 0;
+  background: linear-gradient(135deg, #303133 0%, #606266 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #909399;
+  margin: 4px 0 0;
+}
+
+.page-actions .el-button {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 8px;
+  font-weight: 500;
 }
 
 .profile-content {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+}
+
+.info-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -12px 24px;
+}
+
+.info-col {
+  padding: 0 12px;
+  margin-bottom: 24px;
+}
+
+.log-row {
+  margin: 0 -12px;
+}
+
+.log-col {
+  padding: 0 12px;
 }
 
 .user-card,
 .tenant-card,
-.operation-log-card,
-.stats-card {
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 1px solid #e6e6e6;
+.operation-log-card {
+  border-radius: 12px;
+  border: none;
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+.user-card:hover,
+.tenant-card:hover,
+.operation-log-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 20px 24px !important;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon {
+  color: #409EFF;
+  font-size: 20px;
 }
 
 .card-title {
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 18px;
+  font-weight: 600;
   color: #303133;
+}
+
+.card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.edit-tenant-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.boss-tag {
+  margin-top: 4px;
+}
+
+/* 企业信息样式 */
+.tenant-info {
+  padding: 20px;
+}
+
+.company-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+}
+
+.company-logo {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
+  border-radius: 16px;
+  color: white;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.company-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.company-details {
+  flex: 1;
+}
+
+.company-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #303133;
+  margin: 0 0 8px;
+}
+
+.company-contact {
+  font-size: 16px;
+  color: #606266;
+  margin: 0;
+}
+
+.company-info-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.expire-soon {
+  color: #E6A23C;
+  font-weight: 500;
 }
 
 /* 用户信息样式 */
 .user-info {
-  text-align: center;
+  padding: 20px;
 }
 
 .avatar-section {
-  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+}
+
+.avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .user-avatar {
-  border: 3px solid #f0f0f0;
-  margin-bottom: 10px;
+  border: 4px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
 }
 
-.avatar-actions {
-  margin-top: 10px;
+.user-avatar:hover {
+  transform: scale(1.05);
+}
+
+.avatar-status {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #67C23A;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.status-text {
+  font-size: 12px;
+  color: #67C23A;
+  font-weight: 500;
+}
+
+.user-names {
+  flex: 1;
+}
+
+.user-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #303133;
+  margin: 0 0 8px;
+}
+
+.user-realname {
+  font-size: 18px;
+  color: #606266;
+  margin: 0;
 }
 
 .basic-info {
-  text-align: left;
+  padding: 0 8px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 992px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .info-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f5f5f5;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  transition: all 0.3s ease;
 }
 
-.info-item:last-child {
-  border-bottom: none;
+.info-item:hover {
+  background: #edf2f7;
+  transform: translateX(4px);
 }
 
-.info-label {
-  color: #909399;
+.item-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #606266;
   font-size: 14px;
+  font-weight: 500;
 }
 
-.info-value {
+.item-label .el-icon {
+  color: #409EFF;
+}
+
+.item-value {
+  font-size: 14px;
+  font-weight: 600;
   color: #303133;
-  font-size: 14px;
   text-align: right;
 }
 
-.role-tag {
-  margin-left: 8px;
+/* 操作日志样式 */
+.log-table-container {
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-/* 租户信息样式 */
-.tenant-info .info-item {
-  border-bottom: 1px solid #f5f5f5;
-  padding: 10px 0;
+.log-table {
+  --el-table-border-color: #f0f0f0;
+  --el-table-header-bg-color: #f8f9fa;
+  --el-table-row-hover-bg-color: #f8f9fa;
 }
 
-.expire-soon {
-  color: #e6a23c;
-  font-weight: bold;
+:deep(.log-table .el-table__row.even-row) {
+  background-color: #fafbfc;
 }
 
-/* 统计信息样式 */
-.stat-item {
-  text-align: center;
-  padding: 20px 0;
+.time-cell {
+  display: flex;
+  flex-direction: column;
 }
 
-.stat-value {
-  font-size: 28px;
-  font-weight: bold;
+.time-date {
+  font-weight: 500;
+  color: #303133;
+}
+
+.time-time {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
+}
+
+.operation-type {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.operation-create {
+  background: #e7f4e9;
+  color: #67C23A;
+}
+
+.operation-update {
+  background: #e8f4fd;
   color: #409EFF;
-  margin-bottom: 8px;
 }
 
-.stat-label {
-  font-size: 14px;
+.operation-delete {
+  background: #fdeeee;
+  color: #F56C6C;
+}
+
+.operation-query {
+  background: #f0f9ff;
+  color: #409EFF;
+}
+
+.operation-login {
+  background: #e8f4fd;
+  color: #409EFF;
+}
+
+.operation-logout {
+  background: #f0f9ff;
   color: #909399;
 }
 
-/* 头像上传样式 */
-.avatar-upload {
-  text-align: center;
+.description-cell {
+  line-height: 1.6;
+}
+
+.target-id {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
+}
+
+.ip-address {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #606266;
+}
+
+.detail-btn {
+  color: #409EFF;
+  transition: all 0.3s ease;
+}
+
+.detail-btn:hover {
+  color: #67C23A;
+  transform: scale(1.1);
+}
+
+/* 分页样式 */
+.pagination-container {
+  margin-top: 24px;
+  padding: 20px 0 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.custom-pagination {
+  justify-content: center;
+}
+
+/* 编辑对话框样式 */
+.edit-dialog :deep(.el-dialog__header) {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  margin: 0;
+}
+
+.edit-dialog :deep(.el-dialog__body) {
+  padding: 24px;
+}
+
+.edit-dialog :deep(.el-dialog__footer) {
+  padding: 16px 24px 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.avatar-upload-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
 }
 
 .avatar-uploader {
-  border: 2px dashed #d9d9d9;
-  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.avatar-uploader :deep(.el-upload) {
+  border: 2px dashed var(--el-border-color);
+  border-radius: 12px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.3s;
-  width: 178px;
-  height: 178px;
-  margin: 0 auto 20px;
+  transition: var(--el-transition-duration-fast);
+  width: 140px;
+  height: 140px;
 }
 
-.avatar-uploader:hover {
-  border-color: #409EFF;
+.avatar-uploader :deep(.el-upload:hover) {
+  border-color: var(--el-color-primary);
+  transform: translateY(-2px);
 }
 
-.avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-  width: 178px;
-  height: 178px;
-  line-height: 178px;
-  text-align: center;
+.upload-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.avatar-preview {
+.avatar {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.upload-tips {
+.upload-placeholder {
   text-align: center;
   color: #909399;
-  font-size: 12px;
+}
+
+.upload-placeholder .el-icon {
+  margin-bottom: 8px;
+  color: #c0c4cc;
 }
 
 .upload-tips p {
   margin: 4px 0;
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.4;
 }
 
-/* 分页样式 */
-.pagination-container {
-  margin-top: 20px;
+.form-section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
+  margin: 12px 0;
+}
+
+.gender-group {
+  width: 100%;
+}
+
+.gender-group :deep(.el-radio-button) {
+  flex: 1;
+}
+
+.gender-group :deep(.el-radio-button__inner) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  width: 100%;
+}
+
+.dialog-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
 }
 
-/* JSON展示样式 */
-.json-container {
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  padding: 10px;
-  max-height: 200px;
-  overflow-y: auto;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+/* 日志详情对话框 */
+.log-detail-dialog :deep(.el-dialog__body) {
+  padding: 20px 24px;
+}
+
+.log-descriptions :deep(.el-descriptions__label) {
+  font-weight: 500;
+  color: #606266;
+  width: 100px;
+}
+
+.log-descriptions :deep(.el-descriptions__content) {
+  color: #303133;
+}
+
+.detail-time {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-secondary {
   font-size: 12px;
-  line-height: 1.4;
+  color: #909399;
+  margin-top: 2px;
+}
+
+.target-id-detail {
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
+.ip-address-detail {
+  font-family: 'Courier New', monospace;
+  color: #606266;
+}
+
+.user-agent {
+  word-break: break-all;
+  font-size: 13px;
+  color: #606266;
+}
+
+.json-container {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e4e7ed;
 }
 
 .json-container pre {
   margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
-}
-
-/* 灰色文字 */
-.text-gray {
-  color: #909399;
-  font-style: italic;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #2c3e50;
 }
 
 /* 响应式设计 */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   .profile-container {
-    padding: 10px;
+    padding: 16px;
   }
   
   .page-header {
     flex-direction: column;
-    gap: 10px;
     align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .page-actions {
+    width: 100%;
+  }
+  
+  .page-actions .el-button {
+    width: 100%;
+  }
+  
+  .info-col {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .avatar-upload-container {
+    flex-direction: column;
+  }
+  
+  .upload-tips {
+    text-align: center;
+  }
+  
+  .company-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .avatar-section {
+    flex-direction: column;
+    text-align: center;
   }
   
   .info-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 8px;
   }
   
-  .info-value {
+  .item-value {
     text-align: left;
   }
   
-  .pagination-container {
-    justify-content: center;
+  .gender-group :deep(.el-radio-button) {
+    margin-bottom: 8px;
   }
   
-  .stat-item {
-    padding: 15px 0;
-  }
-  
-  .stat-value {
-    font-size: 22px;
+  .card-header-right {
+    flex-direction: column;
+    align-items: flex-end;
   }
 }
 </style>
