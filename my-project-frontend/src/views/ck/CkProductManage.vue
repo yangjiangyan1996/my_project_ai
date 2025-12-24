@@ -523,6 +523,13 @@
             <el-table-column label="规格" prop="componentProductSpec" width="120" />
             <el-table-column label="颜色" prop="componentProductColor" width="80" />
             <el-table-column label="单位" prop="componentProductUnit" width="80" align="center" />
+            <el-table-column label="类型" prop="type" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getBomTypeTagType(row.type)" size="small">
+                  {{ getBomTypeText(row.type) }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column label="用量" prop="quantity" width="100" align="center">
               <template #default="{ row }">
                 {{ row.quantity || 0 }}
@@ -867,6 +874,34 @@ const downloadBomTemplate = async () => {
     downloadLoading.value = false;
   }
 };
+
+
+// 获取BOM类型文本
+const getBomTypeText = (type) => {
+  const typeMap = {
+    0: '空标签',
+    1: '主料',
+    2: '布料',
+    10: '辅料',
+    20: '五金',
+    999: '包装'
+  };
+  return typeMap[type] || '未知';
+};
+
+// 获取BOM类型对应的标签样式
+const getBomTypeTagType = (type) => {
+  const typeStyleMap = {
+    0: 'info',      // 空标签 - 信息色
+    1: 'primary',   // 主料 - 主色
+    2: 'success',   // 布料 - 成功色
+    10: 'warning',  // 辅料 - 警告色
+    20: '',         // 五金 - 默认色
+    999: 'danger'   // 包装 - 危险色
+  };
+  return typeStyleMap[type] || '';
+};
+
 
 // 处理文件选择
 const handleBomFileChange = (file) => {
