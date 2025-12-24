@@ -20,8 +20,6 @@ public class OperationLog extends BaseModel {
     private String module;
     //操作类型
     private String operation;
-    //操作目标ID
-    private Long targetId;
     //操作描述
     private String description;
     //IP地址
@@ -30,4 +28,11 @@ public class OperationLog extends BaseModel {
     private String userAgent;
 
     private String requestParams;
+
+    private Integer status;           // 0-失败，1-成功，2-客户端错误，3-其他
+    private String statusMessage;     // 状态描述
+    private String requestUrl;        // 请求URL
+    private String requestMethod;     // 请求方法
+    private Long responseTime;        // 响应时间(毫秒)
+    private String responseData;      // 响应数据
 }

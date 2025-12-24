@@ -1,6 +1,7 @@
 package com.example.controller.cangku;
 
 import com.example.Facade.CkTenantFacade;
+import com.example.annotations.LogOperation;
 import com.example.entity.RestBean;
 import com.example.entity.base.RespBean;
 import com.example.entity.cangku.resp.CkTenantUnauthResp;
@@ -37,7 +38,8 @@ public class UnauthController {
      * @param vo 密码重置信息
      * @return 是否操作成功
      */
-    @PostMapping("/reset-confirm")
+    @LogOperation(module = "登录模块", operation = "密码重置确认",description = "密码重置确认")
+    @PostMapping("/login/reset-confirm")
     @Operation(summary = "密码重置确认")
     public RestBean<Void> resetConfirm(@RequestBody @Valid ConfirmResetVO vo) {
         return this.messageHandle(() -> accountService.resetConfirm(vo));
@@ -49,7 +51,8 @@ public class UnauthController {
      * @param vo 密码重置信息
      * @return 是否操作成功
      */
-    @PostMapping("/reset-password")
+    @LogOperation(module = "登录模块", operation = "密码重置操作",description = "密码重置操作")
+    @PostMapping("/login/reset-password")
     @Operation(summary = "密码重置操作")
     public RestBean<Void> resetPassword(@RequestBody @Valid EmailResetVO vo) {
         return this.messageHandle(() ->

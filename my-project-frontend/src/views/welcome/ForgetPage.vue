@@ -165,7 +165,7 @@ const validatePhoneCode = () => {
 const confirmReset = () => {
     formRef.value.validate((isValid) => {
         if(isValid) {
-            post('/api/unauth/reset-confirm', {
+            post('/api/unauth/login/reset-confirm', {
                 phone: form.phone,
                 code: form.code
             }, () => active.value++)
@@ -176,7 +176,7 @@ const confirmReset = () => {
 const doReset = () => {
     formRef.value.validate((isValid) => {
         if(isValid) {
-            post('/api/unauth/reset-password', {
+            post('/api/unauth/login/reset-password', {
                 phone: form.phone,
                 code: form.code,
                 password: form.password

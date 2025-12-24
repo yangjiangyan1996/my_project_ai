@@ -24,6 +24,12 @@ public class RequestParamUtil {
     }
 
     /**
+     * 获取 ObjectMapper 实例
+     */
+    public ObjectMapper getObjectMapper() {
+        return objectMapper;
+    }
+    /**
      * 将方法参数转换为JSON字符串
      */
     public String convertParamsToJson(Method method, Object[] args) {
