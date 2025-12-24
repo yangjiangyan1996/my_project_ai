@@ -52,6 +52,11 @@ public class ProductCreateReq {
 
     private String englishName;
 
+    //产品图集
+    private String productImages;
+    //主图片
+    private String productMainImage;
+
     private Long tenantId;
     private Long userId;
 }

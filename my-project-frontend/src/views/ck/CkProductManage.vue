@@ -145,6 +145,8 @@
           row-key="id"
         >
           <el-table-column type="index" label="序号" width="60" align="center" />
+         
+          <!-- 产品图片列保持不变，因为我们已经修改了imageUrl的映射逻辑 -->
           <el-table-column label="产品图片" width="100" align="center">
             <template #default="{ row }">
               <div class="product-image">
@@ -167,6 +169,7 @@
               </div>
             </template>
           </el-table-column>
+
           <el-table-column label="产品信息" min-width="220" fixed="left">
             <template #default="{ row }">
               <div class="product-info">
@@ -692,6 +695,11 @@ const loadProductList = async () => {
         remark: product.remark || '',
         status: product.status ,
         imageUrl: product.imageUrl || '',
+        // 修改这里：优先使用 productMainImage，如果不存在再使用 imageUrl
+        imageUrl: product.productMainImage || product.imageUrl || '',
+        // 新增：保存完整的图片数据用于编辑时回显
+        productMainImage: product.productMainImage || '',
+        productImages: product.productImages || '',
         createdAt: product.createdAt || new Date().toISOString(),
         updatedAt: product.updatedAt || new Date().toISOString(),
         bomData: product.bomData || [] // 确保 bomData 字段存在
@@ -809,6 +817,9 @@ const handleCreate = () => {
     weightPerUnit: 0,
     color: '',
     minStock: 0,
+    // 新增：初始化图片字段
+    productMainImage: '',
+    productImages: '',
     remark: '',
     status: 1,
     bomDetails: [] // 确保创建时也有 bomDetails 字段
@@ -840,7 +851,10 @@ const handleEdit = (product) => {
     // 确保出货单位体积字段有值
     outUnitLength: product.outUnitLength || 0,
     outUnitWidth: product.outUnitWidth || 0,
-    outUnitHeight: product.outUnitHeight || 0
+    outUnitHeight: product.outUnitHeight || 0,
+     // 新增：传递图片数据
+    productMainImage: product.productMainImage || '',
+    productImages: product.productImages || ''
   };
   
   console.log('编辑产品数据转换:', {

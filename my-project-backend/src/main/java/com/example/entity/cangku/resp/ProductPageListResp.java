@@ -54,6 +54,11 @@ public class ProductPageListResp {
     //出货单位的体积：宽度
     private BigDecimal outUnitWidth;
 
+    //产品图集
+    private String productImages;
+    //主图片
+    private String productMainImage;
+
     List<BomDetailAndWarehouseListResp> bomData;
 
 }

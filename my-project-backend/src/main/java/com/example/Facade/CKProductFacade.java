@@ -42,6 +42,8 @@ import static com.example.utils.SmartSkuGenerator.generateSmartSku;
 public class CKProductFacade {
 
     @Resource
+    CkProductImageService productImageService;
+    @Resource
     CkInventoryService inventoryService;
     @Resource
     CkInventoryBatchService inventoryBatchService;
@@ -222,6 +224,32 @@ public class CKProductFacade {
         if (!save) {
             throw new ValidationException("保存商品失败");
         }
+        if (StringUtils.isNotBlank(req.getProductImages()) || StringUtils.isNotBlank(req.getProductMainImage())) {
+            List<ProductImage> images = new ArrayList<>();
+            if (StringUtils.isNotBlank(req.getProductImages())) {
+                String[] split = req.getProductImages().split(",");
+                for (String image : split) {
+                    ProductImage image1 = new ProductImage();
+                    image1.setTenantId(req.getTenantId());
+                    image1.setProductId(product.getId());
+                    image1.setImage(image);
+                    image1.setProductImageType(CkProductEnums.ProductImageType.SUPPLEMENTARY_IMAGE.getCode());
+                    images.add(image1);
+                }
+            }
+            if (StringUtils.isNotBlank(req.getProductMainImage())) {
+                ProductImage image1 = new ProductImage();
+                image1.setTenantId(req.getTenantId());
+                image1.setProductId(product.getId());
+                image1.setImage(req.getProductMainImage());
+                image1.setProductImageType(CkProductEnums.ProductImageType.MAIN_IMAGE.getCode());
+                images.add(image1);
+            }
+            boolean saveImage = productImageService.saveBatch(images);
+            if (!saveImage) {
+                throw new ValidationException("保存商品图片失败");
+            }
+        }
         if (Objects.nonNull(req.getBomData())) {
             ProductBomReq bomReq = req.getBomData();
             ProductBom bom = new ProductBom();
@@ -274,7 +302,6 @@ public class CKProductFacade {
         List<ProductCategory> categories = productCategoryService.selectByTenantIdAndCodes(req.getTenantId(), categoryCodes);
         Map<String, ProductCategory> whMap = categories.stream().collect(Collectors.toMap(ProductCategory::getCategoryCode, v -> v));
 
-
         //获取list.getRecords() 数据的unitCode和OutUnitCOde放入一个集合中
         List<String> allUnitCodes = list.getRecords().stream()
                 .flatMap(v -> Stream.of(v.getUnitCode(), v.getOutUnitCode()))
@@ -289,6 +316,13 @@ public class CKProductFacade {
 
 
         List<Long> productIds = list.getRecords().stream().map(v -> v.getId()).collect(Collectors.toList());
+
+        List<ProductImage> productImages = productImageService.selectByProductIds(req.getTenantId(), productIds);
+        Map<Long, Map<Integer,List<ProductImage>>> productId2ProductImageType2ImageMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty(productImages)) {
+            productId2ProductImageType2ImageMap = productImages.stream().collect(Collectors.groupingBy(ProductImage::getProductId, Collectors.groupingBy(ProductImage::getProductImageType)));
+        }
+
         List<ProductBom> boms = productBomService.selectByBomIds(productIds, req.getTenantId());
         Map<Long, ProductBom> bomId2BomMap = new HashMap<>();
         Map<Long, List<ProductBomDetail>> bomId2BomDetailListMap = new HashMap<>();
@@ -308,9 +342,22 @@ public class CKProductFacade {
         Map<Long, ProductBom> finalBomId2BomMap = bomId2BomMap;
         Map<Long, List<ProductBomDetail>> finalBomId2BomDetailListMap = bomId2BomDetailListMap;
         Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
+        Map<Long, Map<Integer, List<ProductImage>>> finalProductId2ProductImageType2ImageMap = productId2ProductImageType2ImageMap;
+
         List<ProductPageListResp> collect = list.getRecords().stream().map(v -> {
             ProductPageListResp p = new ProductPageListResp();
             BeanUtils.copyProperties(v, p);
+
+            //设置图片
+            if (finalProductId2ProductImageType2ImageMap.containsKey(v.getId())) {
+                Map<Integer, List<ProductImage>> productImageType2ImageMap = finalProductId2ProductImageType2ImageMap.get(v.getId());
+                if (productImageType2ImageMap.containsKey(CkProductEnums.ProductImageType.MAIN_IMAGE.getCode())) {
+                    p.setProductMainImage(productImageType2ImageMap.get(CkProductEnums.ProductImageType.MAIN_IMAGE.getCode()).get(0).getImage());
+                }
+                if (productImageType2ImageMap.containsKey(CkProductEnums.ProductImageType.SUPPLEMENTARY_IMAGE.getCode())) {
+                    p.setProductImages(productImageType2ImageMap.get(CkProductEnums.ProductImageType.SUPPLEMENTARY_IMAGE.getCode()).stream().map(ProductImage::getImage).collect(Collectors.joining(",")));
+                }
+            }
 
             ProductBom bom = finalBomId2BomMap.getOrDefault(v.getId(), new ProductBom());
             List<ProductBomDetail> bomdetailList = finalBomId2BomDetailListMap.getOrDefault(bom.getId(), new ArrayList<>());
@@ -363,6 +410,36 @@ public class CKProductFacade {
         if (!updateP) {
             throw new ValidationException("更新商品失败");
         }
+        //删除图片
+        productImageService.deletedByProductId(p.getId(), req.getUserId(), req.getTenantId());
+        if (StringUtils.isNotBlank(req.getProductImages()) || StringUtils.isNotBlank(req.getProductMainImage())) {
+            List<ProductImage> images = new ArrayList<>();
+            if (StringUtils.isNotBlank(req.getProductImages())) {
+                String[] split = req.getProductImages().split(",");
+                for (String image : split) {
+                    ProductImage image1 = new ProductImage();
+                    image1.setTenantId(req.getTenantId());
+                    image1.setProductId(p.getId());
+                    image1.setImage(image);
+                    image1.setProductImageType(CkProductEnums.ProductImageType.SUPPLEMENTARY_IMAGE.getCode());
+                    images.add(image1);
+                }
+            }
+            if (StringUtils.isNotBlank(req.getProductMainImage())) {
+                ProductImage image1 = new ProductImage();
+                image1.setTenantId(req.getTenantId());
+                image1.setProductId(p.getId());
+                image1.setImage(req.getProductMainImage());
+                image1.setProductImageType(CkProductEnums.ProductImageType.MAIN_IMAGE.getCode());
+                images.add(image1);
+            }
+            boolean saveImage = productImageService.saveBatch(images);
+            if (!saveImage) {
+                throw new ValidationException("更新商品图片失败");
+            }
+        }
+
+
         if (Objects.nonNull(req.getBomData())) {
             ProductBom pb = productBomService.selectByProduectId(save.getId(), req.getTenantId());
             if (!Objects.isNull(pb)) {
@@ -374,7 +451,6 @@ public class CKProductFacade {
                 if (!deletedByProdectId) {
                     throw new ValidationException("删除商品BOM明细失败");
                 }
-
             }
 
 
@@ -516,6 +592,12 @@ public class CKProductFacade {
             shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
         }
 
+//        List<ProductImage> productImages = productImageService.selectByProductIds(user.getTenantId(), Lists.newArrayList(productId2ProductMap.keySet()));
+//        Map<Long, Map<Integer,List<ProductImage>>> productId2ProductImageType2ImageMap = new HashMap<>();
+//        if (!CollectionUtils.isEmpty(productImages)) {
+//            productId2ProductImageType2ImageMap = productImages.stream().collect(Collectors.groupingBy(ProductImage::getProductId, Collectors.groupingBy(ProductImage::getProductImageType)));
+//        }
+
         Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
         Map<Long, Long> finalProductId2BomIdMap = productId2BomIdMap;
         Map<Long, List<ProductBomDetail>> finalBomId2SubProductBomDetailMap = bomId2SubProductBomDetailMap;
@@ -523,12 +605,24 @@ public class CKProductFacade {
         Map<Long, Warehouse> finalWarehouseId2WarehouseMap = warehouseId2WarehouseMap;
         Map<Long, List<InventoryShelf>> finalProductId2InventoryShelfMap = productId2InventoryShelfMap;
         Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
+//        Map<Long, Map<Integer, List<ProductImage>>> finalProductId2ProductImageType2ImageMap = productId2ProductImageType2ImageMap;
         return list.stream().map(v -> {
             ProductPageListResp p = new ProductPageListResp();
             BeanUtils.copyProperties(v, p);
             p.setUnitName(finalUnitCode2UnitMap.getOrDefault(v.getUnitCode(), new Unit()).getUnitName());
             p.setOutUnitName(finalUnitCode2UnitMap.getOrDefault(v.getOutUnitCode(), new Unit()).getUnitName());
             Long productId = v.getId();
+
+//            //设置图片
+//            if (finalProductId2ProductImageType2ImageMap.containsKey(productId)) {
+//                Map<Integer, List<ProductImage>> productImageType2ImageMap = finalProductId2ProductImageType2ImageMap.get(productId);
+//                if (productImageType2ImageMap.containsKey(CkProductEnums.ProductImageType.MAIN_IMAGE.getCode())) {
+//                    p.setProductMainImage(productImageType2ImageMap.get(CkProductEnums.ProductImageType.MAIN_IMAGE.getCode()).get(0).getImage());
+//                }
+//                if (productImageType2ImageMap.containsKey(CkProductEnums.ProductImageType.SUPPLEMENTARY_IMAGE.getCode())) {
+//                    p.setProductImages(productImageType2ImageMap.get(CkProductEnums.ProductImageType.SUPPLEMENTARY_IMAGE.getCode()).stream().map(ProductImage::getImage).collect(Collectors.joining(",")));
+//                }
+//            }
             if (finalProductId2BomIdMap.containsKey(productId)) {
                 Long bomId = finalProductId2BomIdMap.get(productId);
                 List<ProductBomDetail> subProductDetails = finalBomId2SubProductBomDetailMap.get(bomId);

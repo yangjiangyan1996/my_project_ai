@@ -9,6 +9,27 @@ import lombok.Getter;
  * @Date 2025/11/27 00:14
  */
 public class CkProductEnums {
+    //  图片类型
+    @Getter
+    public enum ProductImageType {
+        MAIN_IMAGE(1, "主图"),
+        SUPPLEMENTARY_IMAGE(2, "补充图片"),
+        ;
+        private Integer code;
+        private String desc;
+        ProductImageType(Integer code, String desc) {
+            this.code = code;
+            this.desc = desc;
+        }
+        public static String getDescByCode(Integer code) {
+            for (CkProductEnums.ProductImageType value : CkProductEnums.ProductImageType.values()) {
+                if (value.getCode().equals(code)) {
+                    return value.getDesc();
+                }
+            }
+            return null;
+        }
+    }
 
     //`type` tinyint DEFAULT '2' COMMENT '0=空标签 1=主料， 2=布料，10=辅料,  20=五金 999=包装，
 
