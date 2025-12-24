@@ -146,7 +146,6 @@
         >
           <el-table-column type="index" label="序号" width="60" align="center" />
          
-          <!-- 产品图片列保持不变，因为我们已经修改了imageUrl的映射逻辑 -->
           <el-table-column label="产品图片" width="100" align="center">
             <template #default="{ row }">
               <div class="product-image">
@@ -154,6 +153,8 @@
                   v-if="row.imageUrl"
                   :src="row.imageUrl"
                   :preview-src-list="[row.imageUrl]"
+                  :preview-teleported="true"
+                  :z-index="9999"           
                   fit="cover"
                   class="product-img"
                 >
@@ -315,18 +316,233 @@
       />
     </el-dialog>
 
-    <!-- 产品详情对话框 -->
+    <!-- 产品详情对话框 - 修改为增强版 -->
     <el-dialog
       v-model="detailDialogVisible"
       :title="`产品详情 - ${currentProduct?.name}`"
-      width="75%" 
-      top="2vh"    
+      width="80%" 
+      top="2vh"
+      :close-on-click-modal="false"
+      class="product-detail-dialog"
     >
-      <ProductDetail
-        v-if="detailDialogVisible && currentProduct"
-        :product-data="currentProduct"
-        @close="detailDialogVisible = false"
-      />
+      <div v-if="detailDialogVisible && currentProduct" class="product-detail-container">
+        <el-row :gutter="24">
+          <!-- 左侧：图片展示区域 -->
+          <el-col :span="12">
+            <div class="detail-image-section">
+              <!-- 主图展示 -->
+              <div class="main-image-container">
+                <div class="main-image-wrapper">
+                  <el-image
+                    v-if="mainImageUrl"
+                    :src="mainImageUrl"
+                    :preview-src-list="currentPreviewImages"
+                    :initial-index="currentImageIndex"
+                    :preview-teleported="true"
+                    :z-index="9999"
+                    fit="contain"
+                    class="main-image"
+                  >
+                    <template #error>
+                      <div class="main-image-empty">
+                        <el-icon size="60"><Picture /></el-icon>
+                        <div class="empty-text">暂无产品图片</div>
+                      </div>
+                    </template>
+                  </el-image>
+                  <div v-else class="main-image-empty">
+                    <el-icon size="60"><Picture /></el-icon>
+                    <div class="empty-text">暂无产品图片</div>
+                  </div>
+                </div>
+                <div class="image-badge" v-if="isMainImageSet">
+                  <el-tag size="small" type="primary">主图</el-tag>
+                </div>
+              </div>
+
+              <!-- 缩略图列表 -->
+              <div class="thumbnail-section" v-if="allImages.length > 0">
+                <div class="thumbnail-title">
+                  <el-icon><Picture /></el-icon>
+                  <span>产品图片 ({{ allImages.length }})</span>
+                </div>
+                <div class="thumbnail-list">
+                  <div 
+                    v-for="(img, index) in allImages" 
+                    :key="index"
+                    class="thumbnail-item"
+                    :class="{ active: currentImageIndex === index }"
+                    @click="handleThumbnailClick(img, index)"
+                  >
+                    <el-image
+                      :src="img"
+                      fit="cover"
+                      class="thumbnail-img"
+                    >
+                      <template #error>
+                        <div class="thumbnail-empty">
+                          <el-icon><Picture /></el-icon>
+                        </div>
+                      </template>
+                    </el-image>
+                    <div class="thumbnail-badge" v-if="index === 0 && isMainImageSet">
+                      <el-tag size="mini" type="primary">主</el-tag>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </el-col>
+
+          <!-- 右侧：产品信息区域 -->
+          <el-col :span="12">
+            <div class="detail-info-section">
+              <!-- 基本信息卡片 -->
+              <el-card class="info-card basic-info" shadow="never">
+                <template #header>
+                  <div class="info-card-header">
+                    <el-icon><InfoFilled /></el-icon>
+                    <span>基本信息</span>
+                  </div>
+                </template>
+                <el-descriptions :column="2" border>
+                  <el-descriptions-item label="产品名称">
+                    <span class="info-value">{{ currentProduct.name || '--' }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="英文名称">
+                    <span class="info-value">{{ currentProduct.englishName || '--' }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="SKU编码">
+                    <span class="info-value">{{ currentProduct.sku || '--' }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="条形码">
+                    <span class="info-value">{{ currentProduct.barcode || '--' }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="规格">
+                    <span class="info-value">{{ currentProduct.spec || '--' }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="颜色">
+                    <span class="info-value">{{ currentProduct.color || '--' }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="产品分类">
+                    <span class="info-value">{{ currentProduct.categoryName || '--' }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="状态">
+                    <el-tag 
+                      :type="currentProduct.status === 1 ? 'success' : 'danger'" 
+                      size="small"
+                    >
+                      {{ currentProduct.status === 1 ? '启用' : '禁用' }}
+                    </el-tag>
+                  </el-descriptions-item>
+                </el-descriptions>
+              </el-card>
+
+              <!-- 单位信息卡片 -->
+              <el-card class="info-card unit-info-card" shadow="never">
+                <template #header>
+                  <div class="info-card-header">
+                    <el-icon><ScaleToOriginal /></el-icon>
+                    <span>单位信息</span>
+                  </div>
+                </template>
+                <el-descriptions :column="1" border>
+                  <el-descriptions-item label="基础单位">
+                    <span class="info-value">{{ currentProduct.unitName || '--' }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="出货单位">
+                    <span class="info-value">{{ currentProduct.outUnitName || '--' }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="单位转换率" v-if="currentProduct.outUnitPerNum">
+                    <span class="info-value">
+                      1{{ currentProduct.outUnitName }} = {{ currentProduct.outUnitPerNum }}{{ currentProduct.unitName }}
+                    </span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="单位重量">
+                    <span class="info-value">
+                      {{ currentProduct.weightPerUnit ? currentProduct.weightPerUnit + 'kg' : '--' }}
+                    </span>
+                  </el-descriptions-item>
+                </el-descriptions>
+              </el-card>
+
+              <!-- 库存信息卡片 -->
+              <el-card class="info-card stock-info" shadow="never">
+                <template #header>
+                  <div class="info-card-header">
+                    <el-icon><Box /></el-icon>
+                    <span>库存信息</span>
+                  </div>
+                </template>
+                <el-descriptions :column="2" border>
+                  <el-descriptions-item label="最低库存">
+                    <span :class="getStockClass(currentProduct.minStock)" class="info-value">
+                      {{ currentProduct.minStock || 0 }}
+                    </span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="当前库存">
+                    <span class="info-value">{{ currentProduct.currentStock || 0 }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="创建时间">
+                    <span class="info-value">{{ formatTime(currentProduct.createdAt) }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="更新时间">
+                    <span class="info-value">{{ formatTime(currentProduct.updatedAt) }}</span>
+                  </el-descriptions-item>
+                </el-descriptions>
+              </el-card>
+
+              <!-- 备注信息 -->
+              <el-card class="info-card remark-info" shadow="never" v-if="currentProduct.remark">
+                <template #header>
+                  <div class="info-card-header">
+                    <el-icon><EditPen /></el-icon>
+                    <span>备注信息</span>
+                  </div>
+                </template>
+                <div class="remark-content">
+                  {{ currentProduct.remark }}
+                </div>
+              </el-card>
+            </div>
+          </el-col>
+        </el-row>
+
+        <!-- BOM信息（如果有） -->
+        <el-card class="bom-info-card" shadow="never" v-if="currentProduct.bomData && currentProduct.bomData.length > 0">
+          <template #header>
+            <div class="info-card-header">
+              <el-icon><List /></el-icon>
+              <span>原材料清单 (BOM)</span>
+            </div>
+          </template>
+          <el-table :data="currentProduct.bomData" size="small" border class="bom-table">
+            <el-table-column label="序号" type="index" width="60" align="center" />
+            <el-table-column label="原材料名称" prop="componentProductName" min-width="180" />
+            <el-table-column label="SKU" prop="componentProductSku" width="120" />
+            <el-table-column label="规格" prop="componentProductSpec" width="120" />
+            <el-table-column label="颜色" prop="componentProductColor" width="80" />
+            <el-table-column label="单位" prop="componentProductUnit" width="80" align="center" />
+            <el-table-column label="用量" prop="quantity" width="100" align="center">
+              <template #default="{ row }">
+                {{ row.quantity || 0 }}
+              </template>
+            </el-table-column>
+            <el-table-column label="损耗率" prop="lossRate" width="100" align="center">
+              <template #default="{ row }">
+                {{ row.lossRate ? row.lossRate + '%' : '0%' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="备注" prop="remark" min-width="150" />
+          </el-table>
+        </el-card>
+      </div>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button type="primary" @click="detailDialogVisible = false">关闭</el-button>
+        </span>
+      </template>
     </el-dialog>
 
     <!-- 库存查看对话框 -->
@@ -417,7 +633,7 @@
               v-if="importResult.success"
               icon="success"
               :title="importResult.title"
-              :sub-title="importResult.message"
+              :subTitle="importResult.message"
             >
               <template #extra>
                 <el-button type="primary" @click="handleImportBomSuccess">完成</el-button>
@@ -427,7 +643,7 @@
               v-else
               icon="error"
               :title="importResult.title"
-              :sub-title="importResult.message"
+              :subTitle="importResult.message"
             >
               <template #extra>
                 <el-button @click="importBomStep = 1">重新上传</el-button>
@@ -475,14 +691,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { 
-  Plus, Refresh, Upload, Box, CircleCheck, Warning, Collection, Picture 
+  Plus, Refresh, Upload, Box, CircleCheck, Warning, Collection, Picture,
+  InfoFilled, ScaleToOriginal, EditPen, List, Download
 } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 import ProductForm from '@/components/ProductForm.vue';
-import ProductDetail from '@/components/ProductDetail.vue';
 import ProductInventory from '@/components/ProductInventory.vue';
 import ProductImport from '@/components/ProductImport.vue';
 import axios from 'axios';
@@ -503,6 +719,11 @@ const downloadLoading = ref(false);
 const importLoading = ref(false);
 const currentBomFile = ref(null);
 const bomUploadRef = ref(null);
+
+// 图片预览相关
+const mainImageUrl = ref('');
+const currentImageIndex = ref(0);
+const allImages = ref([]);
 
 // 筛选表单
 const filterForm = reactive({
@@ -548,6 +769,62 @@ const importResult = reactive({
   message: ''
 });
 
+// 计算属性
+const isMainImageSet = computed(() => {
+  return !!currentProduct.value?.productMainImage;
+});
+
+// 关键修改：使用计算属性动态生成预览列表，并根据当前选中索引设置初始预览索引
+const currentPreviewImages = computed(() => {
+  return allImages.value;
+});
+
+// 监听当前产品变化，处理图片数据
+watch(() => currentProduct.value, (newProduct) => {
+  if (newProduct && detailDialogVisible.value) {
+    processImageData(newProduct);
+  }
+});
+
+const processImageData = (product) => {
+  // 提取所有图片
+  const images = [];
+  
+  // 1. 添加主图
+  if (product.productMainImage) {
+    images.push(product.productMainImage);
+  } else if (product.imageUrl) {
+    images.push(product.imageUrl);
+  }
+  
+  // 2. 解析其他图片（productImages可能是逗号分隔的字符串）
+  if (product.productImages) {
+    if (Array.isArray(product.productImages)) {
+      images.push(...product.productImages);
+    } else if (typeof product.productImages === 'string') {
+      const otherImages = product.productImages.split(',').map(img => img.trim()).filter(img => img);
+      images.push(...otherImages);
+    }
+  }
+  
+  // 去重
+  allImages.value = [...new Set(images.filter(img => img))];
+  
+  // 设置主图和当前索引
+  if (allImages.value.length > 0) {
+    mainImageUrl.value = allImages.value[0];
+    currentImageIndex.value = 0;
+  } else {
+    mainImageUrl.value = '';
+    currentImageIndex.value = 0;
+  }
+};
+
+// 缩略图点击处理
+const handleThumbnailClick = (imageUrl, index) => {
+  mainImageUrl.value = imageUrl;
+  currentImageIndex.value = index;
+};
 
 // 导入成品原材料方法
 const handleImportBom = (product) => {
@@ -868,6 +1145,7 @@ const handleEdit = (product) => {
 
 const handleView = (product) => {
   currentProduct.value = product;
+  processImageData(product);
   detailDialogVisible.value = true;
 };
 
@@ -976,7 +1254,7 @@ onMounted(() => {
   padding: 20px;
   background-color: #f5f7fa;
   min-height: calc(100vh - 60px);
-   width: 95% !important;
+  width: 95% !important;
   max-width: 95% !important;
 }
 
@@ -1141,12 +1419,238 @@ onMounted(() => {
   border-top: 1px solid #ebeef5;
 }
 
+/* 产品详情对话框样式 */
+.product-detail-container {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.product-detail-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.product-detail-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.product-detail-container::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 3px;
+}
+
+/* 图片展示区域 */
+.detail-image-section {
+  padding-right: 12px;
+}
+
+.main-image-container {
+  position: relative;
+  margin-bottom: 20px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%);
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.main-image-wrapper {
+  aspect-ratio: 1/1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-image {
+  width: 100%;
+  height: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  cursor: zoom-in;
+  transition: transform 0.3s ease;
+}
+
+.main-image:hover {
+  transform: scale(1.02);
+}
+
+.main-image-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+}
+
+.empty-text {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.image-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+/* 缩略图区域 */
+.thumbnail-section {
+  margin-top: 20px;
+}
+
+.thumbnail-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.thumbnail-title .el-icon {
+  color: #409EFF;
+}
+
+.thumbnail-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.thumbnail-item {
+  width: 60px;
+  height: 60px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.thumbnail-item:hover {
+  border-color: #409EFF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
+}
+
+.thumbnail-item.active {
+  border-color: #409EFF;
+  border-width: 3px;
+}
+
+.thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0c4cc;
+}
+
+.thumbnail-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+
+/* 信息展示区域 */
+.detail-info-section {
+  padding-left: 12px;
+}
+
+.info-card {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+  transition: all 0.3s ease;
+}
+
+.info-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.info-card-header .el-icon {
+  color: #409EFF;
+}
+
+.info-value {
+  font-weight: 500;
+  color: #606266;
+}
+
+/* 不同信息卡片的颜色区分 */
+.basic-info :deep(.el-card__header) {
+  background: linear-gradient(135deg, #f6f8ff 0%, #e8f4ff 100%);
+  border-bottom: 1px solid #d9ecff;
+}
+
+.unit-info-card :deep(.el-card__header) {
+  background: linear-gradient(135deg, #f0fff4 0%, #e6fff0 100%);
+  border-bottom: 1px solid #c2e7b0;
+}
+
+.stock-info :deep(.el-card__header) {
+  background: linear-gradient(135deg, #fff7e6 0%, #ffeccc 100%);
+  border-bottom: 1px solid #faecd8;
+}
+
+.remark-info :deep(.el-card__header) {
+  background: linear-gradient(135deg, #f9f0ff 0%, #f0e6ff 100%);
+  border-bottom: 1px solid #e9dfff;
+}
+
+.remark-content {
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  line-height: 1.6;
+  color: #606266;
+  font-size: 14px;
+}
+
+/* BOM信息卡片 */
+.bom-info-card {
+  margin-top: 20px;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+}
+
+.bom-info-card :deep(.el-card__header) {
+  background: linear-gradient(135deg, #e6f7ff 0%, #d0f0ff 100%);
+  border-bottom: 1px solid #bae7ff;
+}
+
+.bom-table {
+  margin-top: 10px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .product-manage-container {
     padding: 10px;
     width: 95% !important;
-  max-width: 95% !important;
+    max-width: 95% !important;
   }
   
   .card-header {
@@ -1171,6 +1675,20 @@ onMounted(() => {
   .action-buttons {
     flex-direction: column;
     gap: 4px;
+  }
+  
+  /* 详情对话框响应式 */
+  .product-detail-container .el-row {
+    flex-direction: column;
+  }
+  
+  .detail-image-section {
+    padding-right: 0;
+    margin-bottom: 20px;
+  }
+  
+  .detail-info-section {
+    padding-left: 0;
   }
 }
 
@@ -1211,7 +1729,7 @@ onMounted(() => {
   color: #606266;
 }
 
-/* 新增导入BOM对话框样式 */
+/* 导入BOM对话框样式 */
 .import-bom-dialog {
   padding: 20px 0;
 }
@@ -1262,54 +1780,5 @@ onMounted(() => {
   margin: 2px;
 }
 
-/* 新增导入BOM对话框样式 */
-.import-bom-dialog {
-  padding: 20px 0;
-}
 
-.import-steps {
-  margin-bottom: 30px;
-}
-
-.step-content {
-  text-align: center;
-  padding: 20px 0;
-}
-
-.step-description {
-  margin-bottom: 20px;
-  color: #606266;
-}
-
-.download-section, .upload-section {
-  margin: 20px 0;
-}
-
-.upload-tips {
-  margin-top: 10px;
-  color: #909399;
-  font-size: 12px;
-}
-
-.import-result {
-  padding: 20px 0;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-/* 调整操作按钮间距 */
-.action-buttons {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.action-buttons .el-button {
-  margin: 2px;
-}
 </style>

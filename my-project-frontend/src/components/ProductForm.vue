@@ -880,7 +880,7 @@ const formRules = {
   ],
   englishName: [
     { required: true, message: '请输入英文名称', trigger: 'blur' },
-    { pattern: /^[A-Za-z0-9_]+$/, message: '英文名称只能包含字母、数字和下划线', trigger: 'blur' }
+    { pattern: /^[A-Za-z0-9_ ]+$/, message: '英文名称只能包含字母、数字、下划线和空格', trigger: 'blur' }
   ],
   spec: [
     { required: true, message: '请输入规格型号', trigger: 'blur' }
