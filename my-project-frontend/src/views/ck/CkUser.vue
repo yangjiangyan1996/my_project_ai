@@ -13,7 +13,7 @@
       </div>
       <div class="page-actions">
         <el-button type="primary" @click="handleEditProfile" :icon="Edit">
-          编辑资料
+          编辑个人资料
         </el-button>
       </div>
     </div>

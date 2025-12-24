@@ -42,7 +42,13 @@ public class ShelfPageListResp {
     //备注
     private String remark;
 
+    //仓库名称
     private String warehouseName;
 
+    //使用率
+    private BigDecimal utilizationRate;
 
+    //使用数量
+    private BigDecimal utilizationQuantity;
+    private BigDecimal productCount;
 }

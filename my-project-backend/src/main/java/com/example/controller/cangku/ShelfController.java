@@ -6,10 +6,7 @@ import com.example.Facade.CkCommentFacade;
 import com.example.Facade.CkShelfFacade;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
-import com.example.entity.cangku.req.ShelfCreateReq;
-import com.example.entity.cangku.req.ShelfListPageReq;
-import com.example.entity.cangku.req.ShelfProductUsedAllReq;
-import com.example.entity.cangku.req.ShelfUpdateStatusReq;
+import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.ShelfPageListResp;
 import com.example.entity.cangku.resp.ShelfProductUsedAllResp;
 import com.example.filter.UserUtil;
@@ -49,10 +46,10 @@ public class ShelfController {
             Page<ShelfPageListResp> result = shelfFacade.pageList(Page.of(req.getPage(), req.getSize()), req);
             return RespBean.success(result);
         } catch (ValidationException e) {
-            log.error("WarehouseController#pageList,req:{}", e);
+            log.error("ShelfController#pageList,req:{}", e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("WarehouseController#pageList,req:{}", e);
+            log.error("ShelfController#pageList,req:{}", e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -64,10 +61,10 @@ public class ShelfController {
             List<ShelfPageListResp> result = shelfFacade.listEnable(user.getTenantId(), warehouseId);
             return RespBean.success(result);
         } catch (ValidationException e) {
-            log.error("WarehouseController#listEnable,req:{}",warehouseId, e);
+            log.error("ShelfController#listEnable,req:{}",warehouseId, e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("WarehouseController#listEnable,req:{}",warehouseId, e);
+            log.error("ShelfController#listEnable,req:{}",warehouseId, e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
@@ -148,10 +145,30 @@ public class ShelfController {
             List<ShelfProductUsedAllResp> result = commentFacade.allocateShelfInventoryQuantity(req);
             return RespBean.success(result);
         }  catch (ValidationException e) {
-            log.error("InboundController#allocateIShelfnventoryQuantity,req:{}", JSON.toJSONString(req), e);
+            log.error("ShelfController#allocateIShelfnventoryQuantity,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
-            log.error("InboundController#allocateIShelfnventoryQuantity,req:{}", JSON.toJSONString(req), e);
+            log.error("ShelfController#allocateIShelfnventoryQuantity,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @LogOperation(module = "货架管理", operation = "删除货架", description = "删除货架")
+    @PostMapping("/delete")
+    public RespBean<Boolean> delete(@RequestBody ShelfDeleteReq req) {
+        try {
+            Long userId = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+            Boolean result = shelfFacade.delete(req);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("ShelfController#delete,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ShelfController#delete,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

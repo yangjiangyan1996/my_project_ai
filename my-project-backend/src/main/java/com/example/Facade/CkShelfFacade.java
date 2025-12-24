@@ -6,6 +6,7 @@ import com.example.entity.cangku.dto.InventoryShelf;
 import com.example.entity.cangku.dto.Warehouse;
 import com.example.entity.cangku.dto.WarehouseShelf;
 import com.example.entity.cangku.req.ShelfCreateReq;
+import com.example.entity.cangku.req.ShelfDeleteReq;
 import com.example.entity.cangku.req.ShelfListPageReq;
 import com.example.entity.cangku.req.ShelfUpdateStatusReq;
 import com.example.entity.cangku.resp.ShelfPageListResp;
@@ -17,9 +18,11 @@ import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -47,7 +50,7 @@ public class CkShelfFacade {
      */
     public Map<Long , BigDecimal> getShelfUsedCapacity(Long tenantId, List<Long> shelfIds) {
         if (CollUtil.isEmpty(shelfIds)) {
-            return null;
+            return new HashMap<>();
         }
         List<InventoryShelf> inventoryShelves = inventoryShelfService.selectByShelfIds(tenantId, shelfIds);
         //计算每个货架的 BigDecimal quantity 的和
@@ -92,10 +95,22 @@ public class CkShelfFacade {
         List<Warehouse> byIds = wareHouseService.getByIds(whIds, req.getTenantId());
         Map<Long, Warehouse> whMap = byIds.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
 
+        //处理使用率
+        List<Long> shelfIds = list.getRecords().stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
+        Map<Long, BigDecimal> shelfUsedCapacity = getShelfUsedCapacity(req.getTenantId(), shelfIds);
+
         List<ShelfPageListResp> collect = list.getRecords().stream().map(v -> {
             ShelfPageListResp p = new ShelfPageListResp();
             BeanUtils.copyProperties(v, p);
+            BigDecimal utilizationRate = BigDecimal.valueOf(0);
+            if (shelfUsedCapacity != null && shelfUsedCapacity.get(v.getId()) != null) {
+                BigDecimal quantityOfUsed = shelfUsedCapacity.get(v.getId());
+                utilizationRate = quantityOfUsed.divide(BigDecimal.valueOf(v.getCapacity()), 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+                p.setUtilizationQuantity(quantityOfUsed);
+                p.setProductCount(quantityOfUsed);
+            }
 
+            p.setUtilizationRate(utilizationRate);
             p.setWarehouseName(whMap.get(v.getWarehouseId()).getName());
             return p;
         }).collect(Collectors.toList());
@@ -173,4 +188,25 @@ public class CkShelfFacade {
         }).collect(Collectors.toList());
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean delete(ShelfDeleteReq req) {
+        WarehouseShelf p = shelfService.getById(req.getId());
+        if (p == null) {
+            throw new ValidationException("货架不存在");
+        }
+
+        Map<Long, BigDecimal> shelfUsedCapacity = getShelfUsedCapacity(req.getTenantId(), Collections.singletonList(req.getId()));
+        if (shelfUsedCapacity != null
+                && shelfUsedCapacity.get(req.getId()) != null
+                && shelfUsedCapacity.get(req.getId()).compareTo(BigDecimal.ZERO) > 0) {
+            throw new ValidationException("货架有商品存在");
+        }
+
+        WarehouseShelf save = new WarehouseShelf();
+        save.setId(req.getId());
+        save.setIsDeleted(1);
+        save.setModifiedAt(new Date());
+        save.setModifiedBy(req.getUserId());
+        return shelfService.updateById(save);
+    }
 }
