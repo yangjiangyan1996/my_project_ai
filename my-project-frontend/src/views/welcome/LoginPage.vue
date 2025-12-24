@@ -18,7 +18,7 @@
         <el-form-item prop="code">
           <el-row :gutter="10" style="width: 100%">
             <el-col>
-              <el-input v-model="form.code" :maxlength="6" type="text" placeholder="请输入密码" size="large">
+              <el-input v-model="form.code" :maxlength="20" type="password" placeholder="请输入密码" size="large">
                 <template #prefix>
                   <el-icon><EditPen /></el-icon>
                 </template>
@@ -26,53 +26,69 @@
             </el-col>
           </el-row>
         </el-form-item>
+        
+        <!-- 新增：记住我和忘记密码选项 -->
+        <el-form-item style="margin-top: -10px; margin-bottom: 10px">
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 5px">
+            <el-checkbox v-model="form.remember" label="记住我" size="large" />
+            <el-link 
+              type="primary" 
+              :underline="false" 
+              @click="router.push('/welcome/forget')" 
+              style="font-size: 14px"
+            >
+              忘记密码？
+            </el-link>
+          </div>
+        </el-form-item>
       </el-form>
     </div>
-    <div style="margin-top: 60px">
+    <div style="margin-top: 40px">
       <el-button @click="userLogin()" style="width: 100%;height: 48px;font-size: 16px" type="primary" round>立即登录</el-button>
     </div>
     <el-divider style="margin: 40px 0">
       <span style="color: grey;font-size: 14px;background: white;padding: 0 15px">没有账号</span>
     </el-divider>
     <!-- 注册和忘记密码按钮 -->
-  <div style="padding: 0 20px;display: flex; flex-direction: column; gap: 16px; margin-bottom: 50px">
-    <div class="button-wrapper">
-      <el-button 
-        @click="router.push('/welcome/register')" 
-        class="uniform-button"
-        type="default" 
-        plain 
-        round
-      >
-        注册账号
-      </el-button>
+    <div style="padding: 0 20px;display: flex; flex-direction: column; gap: 16px; margin-bottom: 50px">
+      <div class="button-wrapper">
+        <el-button 
+          @click="router.push('/welcome/register')" 
+          class="uniform-button"
+          type="default" 
+          plain 
+          round
+        >
+          注册账号
+        </el-button>
+      </div>
+      <div class="button-wrapper">
+        <el-button 
+          @click="router.push('/welcome/forget')" 
+          class="uniform-button"
+          type="default" 
+          plain 
+          round
+        >
+          忘记密码
+        </el-button>
+      </div>
     </div>
-    <div class="button-wrapper">
-      <el-button 
-        @click="router.push('/welcome/forget')" 
-        class="uniform-button"
-        type="default" 
-        plain 
-        round
-      >
-        忘记密码
-      </el-button>
-    </div>
-  </div>
   </div>
 </template>
 
 <script setup>
 import {Iphone, EditPen} from '@element-plus/icons-vue'
 import router from "@/router";
-import {reactive, ref} from "vue";
+import {reactive, ref, onMounted} from "vue";
 import {ElMessage} from "element-plus";
-import {get, post,login} from '@/net'
+import {get, login} from '@/net'
 
 const formRef = ref()
 const form = reactive({
   phone: '',
-  code: ''
+  code: '',
+  remember: false  // 新增：记住我选项
 })
 
 const validatePhone = (rule, value, callback) => {
@@ -90,7 +106,8 @@ const rules = {
     { validator: validatePhone, trigger: ['blur', 'change'] }
   ],
   code: [
-    { required: true, message: '请输入验证码', trigger: 'blur' }
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, message: '密码长度至少6位', trigger: ['blur', 'change'] }
   ]
 }
 
@@ -102,28 +119,53 @@ const onValidate = (prop, isValid) => {
     isPhoneValid.value = isValid
 }
 
+// 新增：从localStorage加载记住的账号
+const loadRememberedAccount = () => {
+  try {
+    const savedAccount = localStorage.getItem('remembered_account')
+    if (savedAccount) {
+      const account = JSON.parse(savedAccount)
+      if (account.phone && account.code) {
+        form.phone = account.phone
+        form.code = account.code
+        form.remember = true
+      }
+    }
+  } catch (e) {
+    console.error('加载记住的账号失败:', e)
+    localStorage.removeItem('remembered_account')
+  }
+}
+
+// 新增：保存账号到localStorage
+const saveAccountToLocalStorage = () => {
+  if (form.remember && form.phone && form.code) {
+    const account = {
+      phone: form.phone,
+      code: form.code,
+      timestamp: new Date().getTime()
+    }
+    localStorage.setItem('remembered_account', JSON.stringify(account))
+  } else {
+    localStorage.removeItem('remembered_account')
+  }
+}
+
+// 新增：页面加载时恢复账号
+onMounted(() => {
+  loadRememberedAccount()
+})
 
 function userLogin() {
   formRef.value.validate((isValid) => {
     if(isValid) {
+      // 新增：保存账号信息
+      saveAccountToLocalStorage()
+      
       login(form.phone, form.code, form.remember, () => router.push("/"))
     }
   });
 }
-
-// function userLogin() {
-//   formRef.value.validate((isValid) => {
-//     if(isValid) {
-//       post('/api/auth/login-by-code', {
-//         phone: form.phone,
-//         code: form.code
-//       }, () => {
-//         ElMessage.success('登录成功')
-//         router.push("/")
-//       })
-//     }
-//   });
-// }
 
 const sendCode = () => {
   coldTime.value = 60
@@ -145,7 +187,7 @@ const sendCode = () => {
 </script>
 
 <style scoped>
-/* 添加容器最大宽度限制，在大屏幕上不会太宽 */
+/* 保持原有样式不变，只新增必要的样式 */
 .login-container {
   max-width: 400px;
   margin: 0 auto;
@@ -180,7 +222,7 @@ const sendCode = () => {
 
 .uniform-button {
   width: 100%;
-  max-width: 320px; /* 设置最大宽度，避免太宽 */
+  max-width: 320px;
   height: 48px;
   font-size: 16px;
 }
@@ -191,12 +233,29 @@ const sendCode = () => {
   align-items: center;
   justify-content: center;
   width: 100%;
-  letter-spacing: 2px; /* 微调字间距 */
+  letter-spacing: 2px;
 }
 
 /* 如果还有问题，可以强制设置字体 */
 :deep(.uniform-button) {
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 500;
+}
+
+/* 新增：记住我复选框样式（保持与原风格一致） */
+:deep(.el-checkbox) {
+  margin-right: 0;
+}
+
+:deep(.el-checkbox__label) {
+  font-size: 14px;
+  color: #606266;
+  font-weight: normal;
+}
+
+/* 新增：忘记密码链接样式 */
+:deep(.el-link) {
+  font-size: 14px;
+  font-weight: normal;
 }
 </style>
