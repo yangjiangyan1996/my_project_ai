@@ -4,6 +4,7 @@ import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.dto.OperationLog;
 import com.example.filter.UserUtil;
 import com.example.mapper.CkOperationLogMapper;
+import com.example.utils.IpUtils;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -113,7 +114,6 @@ public class LogInterceptor implements HandlerInterceptor {
     }
     
     private String getClientIp(HttpServletRequest request) {
-        // 同上
-        return ""; // 实现省略
+        return IpUtils.getIpAddress( request);
     }
 }

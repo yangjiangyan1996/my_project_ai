@@ -4,6 +4,7 @@ import com.example.entity.cangku.dto.OperationLog;
 import com.example.filter.UserUtil;
 import com.example.annotations.LogOperation;
 import com.example.mapper.CkOperationLogMapper;
+import com.example.utils.IpUtils;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -174,7 +175,6 @@ public class LogAspect {
                 obj.getClass().isPrimitive();
     }
 
-    // 原有方法保持不变...
     private HttpServletRequest getRequest() {
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes)
@@ -186,7 +186,8 @@ public class LogAspect {
     }
 
     private String getIpAddress(HttpServletRequest request) {
-        // 实现同上，省略...
-        return "";
+        return IpUtils.getIpAddress( request);
     }
+
+
 }
