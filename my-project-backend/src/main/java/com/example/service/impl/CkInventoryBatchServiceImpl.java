@@ -19,7 +19,18 @@ import java.util.List;
 @Service
 public class CkInventoryBatchServiceImpl extends ServiceImpl<CkInventoryBatchMapper, InventoryBatch> implements CkInventoryBatchService {
     @Override
-    public List<InventoryBatch> getByProductIdsAndWarehouseIds(Long tenantId, List<Long> productIds, List<Long> warehouseIds) {
+    public InventoryBatch selectByProductBatchWarehouse(Long tenantId, Long productId, String batchNo, Long warehouseId) {
+        return baseMapper.selectOne(new QueryWrapper<InventoryBatch>()
+                .eq("product_id", productId)
+                .eq("batch_no", batchNo)
+                .eq("warehouse_id", warehouseId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+        );
+    }
+
+    @Override
+    public List<InventoryBatch> selectByProductIdsAndWarehouseIds(Long tenantId, List<Long> productIds, List<Long> warehouseIds) {
         return baseMapper.selectList(new QueryWrapper<InventoryBatch>()
                 .eq("tenant_id", tenantId)
                 .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())

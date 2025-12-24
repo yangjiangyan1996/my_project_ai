@@ -11,10 +11,12 @@ import com.example.enums.CkInOutboundEnums;
 import com.example.service.*;
 import com.example.utils.SnowflakeIdWorkerUtil;
 import jakarta.annotation.Resource;
+import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -40,6 +42,8 @@ public class CkInventoryLockService {
     private CkInventoryShelfService inventoryShelfService;
 
     @Resource
+    private CkInventoryService inventoryService;
+    @Resource
     private CkInventoryWarehouseService inventoryWarehouseService;
 
     @Resource
@@ -51,6 +55,361 @@ public class CkInventoryLockService {
     @Resource
     private SnowflakeIdWorkerUtil snowflakeIdWorkerUtil;
 
+    /**
+     * 删除申请单时回滚锁定库存（销售出库单）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public LockResult rollbackForSaleOutboundDelete(Long orderId, Long tenantId, Long userId) {
+        log.info("开始回滚销售出库单锁定库存（删除申请单）, 订单ID: {}, 租户ID: {}", orderId, tenantId);
+
+        LockResult result = LockResult.builder().build();
+        result.setSuccess(true);
+        result.setOrderId(orderId);
+
+        try {
+            // 查询销售出库单的所有锁定记录
+            List<StockLock> locks = stockLockService.findBySourceIdAndLockType(
+                    tenantId,
+                    orderId,
+                    CkInOutboundEnums.InventoryLockType.SALES_OUTBOUND.getCode());
+
+            if (CollectionUtils.isEmpty(locks)) {
+                result.setSuccess(true);
+                result.setMessage("未找到销售出库单的库存锁定记录");
+                return result;
+            }
+
+            List<LockResult.LockItemDetail> rollbackItems = new ArrayList<>();
+            List<LockResult.LockFailureItem> failures = new ArrayList<>();
+
+            // 按批次分组，处理相同的product+batch+shelf组合
+            Map<String, List<StockLock>> productId_batchNo_shelfId2LocksInfoMap = groupLocksByBatch(locks);
+
+            for (Map.Entry<String, List<StockLock>> entry : productId_batchNo_shelfId2LocksInfoMap.entrySet()) {
+                List<StockLock> sameBatchLocks = entry.getValue();
+                if (CollectionUtils.isEmpty(sameBatchLocks)) {
+                    continue;
+                }
+
+                // 取第一个锁定记录获取基本信息
+                StockLock firstLock = sameBatchLocks.get(0);
+
+                try {
+                    // 计算需要回滚的总数量
+                    BigDecimal totalRollbackQuantity = calculateTotalRollbackQuantity(sameBatchLocks);
+
+                    if (totalRollbackQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                        continue;
+                    }
+
+                    // 更新所有库存表的锁定数量（解锁）
+                    boolean updateSuccess = updateAllInventoryLockedQuantity(
+                            tenantId,
+                            firstLock.getWarehouseId(),
+                            firstLock.getProductId(),
+                            firstLock.getBatchNo(),
+                            firstLock.getShelfId(),
+                            totalRollbackQuantity,
+                            false); // 解锁
+
+                    if (!updateSuccess) {
+                        throw new RuntimeException("更新库存锁定数量失败");
+                    }
+
+                    // 更新锁定记录状态为已回滚
+                    updateLocksToRollback(sameBatchLocks, userId, "销售出库单删除");
+
+                    // 记录回滚明细
+                    rollbackItems.add(LockResult.LockItemDetail.builder()
+                            .productId(firstLock.getProductId())
+                            .batchNo(firstLock.getBatchNo())
+                            .shelfId(firstLock.getShelfId())
+                            .planQuantity(totalRollbackQuantity)
+                            .lockedQuantity(totalRollbackQuantity)
+                            .lockId(firstLock.getId())
+                            .build());
+
+                    // 记录回滚日志
+                    createRollbackLog(firstLock, totalRollbackQuantity, userId, "销售出库单删除");
+
+                } catch (Exception e) {
+                    log.error("回滚销售出库单锁定库存失败, productId: {}, batchNo: {}",
+                            firstLock.getProductId(), firstLock.getBatchNo(), e);
+                    failures.add(LockResult.LockFailureItem.builder()
+                            .productId(firstLock.getProductId())
+                            .batchNo(firstLock.getBatchNo())
+                            .planQuantity(firstLock.getLockQuantity())
+                            .reason(e.getMessage())
+                            .build());
+                }
+            }
+
+            if (CollectionUtils.isNotEmpty(failures)) {
+                result.setSuccess(false);
+                result.setMessage("部分库存回滚失败");
+                result.setFailureItems(failures);
+            }
+
+        } catch (Exception e) {
+            log.error("回滚销售出库单锁定库存异常", e);
+            result.setSuccess(false);
+            result.setMessage("库存回滚异常: " + e.getMessage());
+        }
+
+        return result;
+    }
+
+    /**
+     * 删除申请单时回滚锁定库存（生产领料出库单）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public LockResult rollbackForProductionOutboundDelete(Long orderId, Long tenantId, Long userId) {
+        log.info("开始回滚生产领料出库单锁定库存（删除申请单）, 订单ID: {}, 租户ID: {}", orderId, tenantId);
+
+        LockResult result = LockResult.builder().build();
+        result.setSuccess(true);
+        result.setOrderId(orderId);
+
+        try {
+            // 查询生产领料出库单的所有锁定记录
+            List<StockLock> locks = stockLockService.findBySourceIdAndLockType(
+                    tenantId,
+                    orderId,
+                    CkInOutboundEnums.InventoryLockType.PRODUCTION_OUTBOUND.getCode());
+
+            if (CollectionUtils.isEmpty(locks)) {
+                result.setSuccess(true);
+                result.setMessage("未找到生产领料出库单的库存锁定记录");
+                return result;
+            }
+
+            List<LockResult.LockItemDetail> rollbackItems = new ArrayList<>();
+            List<LockResult.LockFailureItem> failures = new ArrayList<>();
+
+            // 按批次分组，处理相同的product+batch+shelf组合
+            Map<String, List<StockLock>> batchLockMap = groupLocksByBatch(locks);
+
+            for (Map.Entry<String, List<StockLock>> entry : batchLockMap.entrySet()) {
+                List<StockLock> sameBatchLocks = entry.getValue();
+                if (CollectionUtils.isEmpty(sameBatchLocks)) {
+                    continue;
+                }
+
+                // 取第一个锁定记录获取基本信息
+                StockLock firstLock = sameBatchLocks.get(0);
+
+                try {
+                    // 计算需要回滚的总数量
+                    BigDecimal totalRollbackQuantity = calculateTotalRollbackQuantity(sameBatchLocks);
+
+                    if (totalRollbackQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                        continue;
+                    }
+
+                    // 更新所有库存表的锁定数量（解锁）
+                    boolean updateSuccess = updateAllInventoryLockedQuantity(
+                            tenantId,
+                            firstLock.getWarehouseId(),
+                            firstLock.getProductId(),
+                            firstLock.getBatchNo(),
+                            firstLock.getShelfId(),
+                            totalRollbackQuantity,
+                            false); // 解锁
+
+                    if (!updateSuccess) {
+                        throw new RuntimeException("更新库存锁定数量失败");
+                    }
+
+                    // 更新锁定记录状态为已回滚
+                    updateLocksToRollback(sameBatchLocks, userId, "生产领料出库单删除");
+
+                    // 记录回滚明细
+                    rollbackItems.add(LockResult.LockItemDetail.builder()
+                            .productId(firstLock.getProductId())
+                            .batchNo(firstLock.getBatchNo())
+                            .shelfId(firstLock.getShelfId())
+                            .planQuantity(totalRollbackQuantity)
+                            .lockedQuantity(totalRollbackQuantity)
+                            .lockId(firstLock.getId())
+                            .build());
+
+                    // 记录回滚日志
+                    createRollbackLog(firstLock, totalRollbackQuantity, userId, "生产领料出库单删除");
+
+                } catch (Exception e) {
+                    log.error("回滚生产领料出库单锁定库存失败, productId: {}, batchNo: {}",
+                            firstLock.getProductId(), firstLock.getBatchNo(), e);
+                    failures.add(LockResult.LockFailureItem.builder()
+                            .productId(firstLock.getProductId())
+                            .batchNo(firstLock.getBatchNo())
+                            .planQuantity(firstLock.getLockQuantity())
+                            .reason(e.getMessage())
+                            .build());
+                }
+            }
+
+            if (CollectionUtils.isNotEmpty(failures)) {
+                result.setSuccess(false);
+                result.setMessage("部分库存回滚失败");
+                result.setFailureItems(failures);
+            }
+
+        } catch (Exception e) {
+            log.error("回滚生产领料出库单锁定库存异常", e);
+            result.setSuccess(false);
+            result.setMessage("库存回滚异常: " + e.getMessage());
+        }
+
+        return result;
+    }
+
+    /**
+     * 根据出库单类型回滚锁定库存（通用方法）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public LockResult rollbackForOutboundDelete(Long orderId, Long tenantId, Long userId, Integer orderType) {
+        log.info("开始回滚出库单锁定库存（删除申请单）, 订单ID: {}, 租户ID: {}, 类型: {}", orderId, tenantId, orderType);
+
+        if (CkInOutboundEnums.OutBoundType.SaleOutbound.getCode().equals(orderType)) {
+            return rollbackForSaleOutboundDelete(orderId, tenantId, userId);
+        } else if (CkInOutboundEnums.OutBoundType.ProductionOutbound.getCode().equals(orderType)) {
+            return rollbackForProductionOutboundDelete(orderId, tenantId, userId);
+        } else {
+            log.warn("不支持的出库单类型: {}", orderType);
+            LockResult result = LockResult.builder().build();
+            result.setSuccess(false);
+            result.setMessage("不支持的出库单类型: " + orderType);
+            return result;
+        }
+    }
+
+    /**
+     * 按批次分组锁定记录
+     */
+    private Map<String, List<StockLock>> groupLocksByBatch(List<StockLock> locks) {
+        Map<String, List<StockLock>> batchLockMap = new HashMap<>();
+
+        for (StockLock lock : locks) {
+            String key = lock.getProductId() + "_" + lock.getBatchNo() + "_" + lock.getShelfId();
+            batchLockMap.computeIfAbsent(key, k -> new ArrayList<>()).add(lock);
+        }
+
+        return batchLockMap;
+    }
+
+    /**
+     * 计算需要回滚的总数量
+     */
+    private BigDecimal calculateTotalRollbackQuantity(List<StockLock> locks) {
+        BigDecimal totalQuantity = BigDecimal.ZERO;
+
+        for (StockLock lock : locks) {
+            // 只回滚尚未解锁的数量
+            BigDecimal availableLockQuantity = lock.getLockQuantity().subtract(lock.getUnlockQuantity());
+            if (availableLockQuantity.compareTo(BigDecimal.ZERO) > 0) {
+                totalQuantity = totalQuantity.add(availableLockQuantity);
+            }
+        }
+
+        return totalQuantity;
+    }
+
+    /**
+     * 更新锁定记录为已回滚状态
+     */
+    private void updateLocksToRollback(List<StockLock> locks, Long userId, String reason) {
+        for (StockLock lock : locks) {
+            try {
+                // 计算尚未解锁的数量
+                BigDecimal availableLockQuantity = lock.getLockQuantity().subtract(lock.getUnlockQuantity());
+
+                if (availableLockQuantity.compareTo(BigDecimal.ZERO) > 0) {
+                    // 更新解锁数量为锁定数量，表示全部解锁
+                    lock.setUnlockQuantity(lock.getLockQuantity());
+                    lock.setLockStatus(CkInOutboundEnums.InventoryLockStatus.FULLY_UNLOCKED.getCode());
+                    lock.setActualUnlockTime(new Date());
+                    lock.setModifiedBy(userId);
+                    lock.setModifiedAt(new Date());
+
+                    // 添加回滚备注
+                    String currentReason = StringUtils.isNotBlank(lock.getLockReason())
+                            ? lock.getLockReason() + "（" + reason + "）"
+                            : reason;
+                    lock.setLockReason(currentReason);
+
+                    stockLockService.updateById(lock);
+                }
+            } catch (Exception e) {
+                log.error("更新锁定记录状态失败, lockId: {}", lock.getId(), e);
+            }
+        }
+    }
+
+    /**
+     * 创建回滚日志
+     */
+    private void createRollbackLog(StockLock lock, BigDecimal rollbackQuantity, Long userId, String reason) {
+        StockLockLog log = new StockLockLog();
+        log.setId(snowflakeIdWorkerUtil.nextId());
+        log.setTenantId(lock.getTenantId());
+        log.setLockId(lock.getId());
+        log.setOperationType(3); // 回滚操作
+        log.setOperationSource("system");
+        log.setOperationReason(reason);
+
+        log.setBeforeLockQuantity(lock.getLockQuantity());
+        log.setBeforeUnlockQuantity(lock.getUnlockQuantity());
+        log.setChangeLockQuantity(BigDecimal.ZERO);
+        log.setChangeUnlockQuantity(rollbackQuantity);
+
+        log.setBeforeLockStatus(lock.getLockStatus());
+        log.setAfterLockStatus(CkInOutboundEnums.InventoryLockStatus.FULLY_UNLOCKED.getCode());
+
+        log.setRelatedOrderId(lock.getSourceId());
+        log.setRelatedOrderType(lock.getLockType());
+
+        log.setCreatedBy(userId);
+        log.setModifiedBy(userId);
+        log.setCreatedAt(new Date());
+        log.setModifiedAt(new Date());
+        log.setIsDeleted(0);
+
+        stockLockLogService.save(log);
+    }
+
+    /**
+     * 删除出库单时的清理方法（**在业务层调用**）
+     */
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
+    public Boolean cleanUpForOutboundDelete(Long orderId, Long tenantId, Long userId, Integer orderType) {
+        try {
+            // 1. 回滚库存锁定
+            LockResult rollbackResult = rollbackForOutboundDelete(orderId, tenantId, userId, orderType);
+
+            if (!rollbackResult.getSuccess()) {
+                log.warn("库存锁定回滚失败, 订单ID: {}, 原因: {}", orderId, rollbackResult.getMessage());
+                // 这里可以根据业务需求决定是否抛出异常
+                throw new ValidationException("库存锁定回滚失败: " + rollbackResult.getMessage());
+            }
+
+            // 2. 标记锁定记录为已删除
+            List<StockLock> locks = stockLockService.findBySourceId(tenantId, orderId);
+            if (CollectionUtils.isNotEmpty(locks)) {
+                for (StockLock lock : locks) {
+                    lock.setIsDeleted(1);
+                    lock.setModifiedBy(userId);
+                    lock.setModifiedAt(new Date());
+                    stockLockService.updateById(lock);
+                }
+            }
+
+            return true;
+        } catch (Exception e) {
+            log.error("出库单删除清理异常", e);
+            throw new RuntimeException("出库单删除清理失败: " + e.getMessage());
+        }
+    }
+    // -----------
     /**
      * 创建销售出库单时锁定库存
      */
@@ -75,6 +434,9 @@ public class CkInventoryLockService {
             List<LockResult.LockItemDetail> lockItems = new ArrayList<>();
             List<LockResult.LockFailureItem> failures = new ArrayList<>();
 
+            // 按产品分组，汇总需要锁定的数量（用于ck_inventory表）
+            Map<Long, BigDecimal> productTotalLockMap = new HashMap<>();
+
             // 逐个商品锁定库存
             for (int i = 0; i < items.size(); i++) {
                 OutboundCreateSaleProductReq.OrderItemInner item = items.get(i);
@@ -92,12 +454,21 @@ public class CkInventoryLockService {
                 // 对每个批次进行锁定
                 for (OutboundCreateSaleProductReq.BatchAllocationInner batchAlloc : item.getBatchAllocations()) {
                     try {
+                        // 验证四层库存表的可用性
+                        validateAllInventoryAvailable(
+                                req.getTenantId(),
+                                req.getWarehouseId(),
+                                item.getProductId(),
+                                batchAlloc.getBatchNo(),
+                                batchAlloc.getShelfId(),
+                                batchAlloc.getQuantity());
+
                         // 创建锁定记录
                         StockLock stockLock = createStockLockForSaleOutbound(
                                 req, orderId, item, batchAlloc);
 
-                        // 更新批次库存的锁定数量
-                        boolean updateSuccess = updateBatchLockedQuantity(
+                        // 更新所有库存表的锁定数量
+                        boolean updateSuccess = updateAllInventoryLockedQuantity(
                                 req.getTenantId(),
                                 req.getWarehouseId(),
                                 item.getProductId(),
@@ -107,7 +478,7 @@ public class CkInventoryLockService {
                                 true); // 锁定
 
                         if (!updateSuccess) {
-                            throw new RuntimeException("更新批次锁定数量失败");
+                            throw new RuntimeException("更新库存锁定数量失败");
                         }
 
                         // 记录锁定明细
@@ -119,6 +490,9 @@ public class CkInventoryLockService {
                                 .lockedQuantity(batchAlloc.getQuantity())
                                 .lockId(stockLock.getId())
                                 .build());
+
+                        // 累加产品总锁定数量
+                        productTotalLockMap.merge(item.getProductId(), batchAlloc.getQuantity(), BigDecimal::add);
 
                     } catch (Exception e) {
                         log.error("锁定库存失败, productId: {}, batchNo: {}",
@@ -193,8 +567,8 @@ public class CkInventoryLockService {
                 // 锁定每个BOM组件的库存
                 for (BomAllocationCreateReq bomAlloc : item.getBomAllocations()) {
                     try {
-                        // 校验库存可用性
-                        validateInventoryAvailable(
+                        // 验证四层库存表的可用性
+                        validateAllInventoryAvailable(
                                 req.getTenantId(),
                                 req.getWarehouseId(),
                                 bomAlloc.getComponentProductId(),
@@ -206,8 +580,8 @@ public class CkInventoryLockService {
                         StockLock stockLock = createStockLockForProductionOutbound(
                                 req, orderId, item, bomAlloc);
 
-                        // 更新批次库存的锁定数量
-                        boolean updateSuccess = updateBatchLockedQuantity(
+                        // 更新所有库存表的锁定数量
+                        boolean updateSuccess = updateAllInventoryLockedQuantity(
                                 req.getTenantId(),
                                 req.getWarehouseId(),
                                 bomAlloc.getComponentProductId(),
@@ -217,7 +591,7 @@ public class CkInventoryLockService {
                                 true); // 锁定
 
                         if (!updateSuccess) {
-                            throw new RuntimeException("更新批次锁定数量失败");
+                            throw new RuntimeException("更新库存锁定数量失败");
                         }
 
                         // 记录锁定明细
@@ -264,6 +638,187 @@ public class CkInventoryLockService {
         }
 
         return result;
+    }
+
+
+    /**
+     * 验证所有库存表的可用性
+     */
+    private void validateAllInventoryAvailable(Long tenantId, Long warehouseId, Long productId,
+                                               String batchNo, Long shelfId, BigDecimal requiredQuantity) {
+
+        // 1. 验证货架库存
+        InventoryShelf inventoryShelf = inventoryShelfService.getByTenantWarehouseProductShelfBatch(
+                tenantId, warehouseId, productId, shelfId, batchNo);
+        if (inventoryShelf == null) {
+            throw new RuntimeException("货架库存记录不存在");
+        }
+        BigDecimal shelfAvailable = inventoryShelf.getQuantity()
+                .subtract(inventoryShelf.getLockedQuantity());
+        if (shelfAvailable.compareTo(requiredQuantity) < 0) {
+            throw new RuntimeException(String.format("货架库存不足，可用: %s，需求: %s",
+                    shelfAvailable, requiredQuantity));
+        }
+
+        // 2. 验证批次库存
+        InventoryBatch inventoryBatch = inventoryBatchService.selectByProductBatchWarehouse(
+                tenantId, productId, batchNo, warehouseId);
+        if (inventoryBatch == null) {
+            throw new RuntimeException("批次库存记录不存在");
+        }
+        BigDecimal batchAvailable = inventoryBatch.getQuantity()
+                .subtract(inventoryBatch.getLockedQuantity());
+        if (batchAvailable.compareTo(requiredQuantity) < 0) {
+            throw new RuntimeException(String.format("批次库存不足，可用: %s，需求: %s",
+                    batchAvailable, requiredQuantity));
+        }
+
+        // 3. 验证仓库库存
+        InventoryWarehouse inventoryWarehouse = inventoryWarehouseService.getByWarehouseAndProduct(
+                warehouseId, productId, tenantId);
+        if (inventoryWarehouse == null) {
+            throw new RuntimeException("仓库库存记录不存在");
+        }
+        BigDecimal warehouseAvailable = inventoryWarehouse.getQuantity()
+                .subtract(inventoryWarehouse.getLockedQuantity());
+        if (warehouseAvailable.compareTo(requiredQuantity) < 0) {
+            throw new RuntimeException(String.format("仓库库存不足，可用: %s，需求: %s",
+                    warehouseAvailable, requiredQuantity));
+        }
+
+        // 4. 验证总库存
+        Inventory inventory = inventoryService.getByProduct(productId, tenantId);
+        if (inventory == null) {
+            throw new RuntimeException("总库存记录不存在");
+        }
+        BigDecimal totalAvailable = inventory.getQuantity()
+                .subtract(inventory.getLockedQuantity());
+        if (totalAvailable.compareTo(requiredQuantity) < 0) {
+            throw new RuntimeException(String.format("总库存不足，可用: %s，需求: %s",
+                    totalAvailable, requiredQuantity));
+        }
+    }
+
+    /**
+     * 更新所有库存表的锁定数量
+     */
+    private boolean updateAllInventoryLockedQuantity(Long tenantId, Long warehouseId, Long productId,
+                                                     String batchNo, Long shelfId, BigDecimal quantity,
+                                                     boolean isLock) {
+        try {
+            boolean allSuccess = true;
+
+            // 1. 更新货架库存表
+            InventoryShelf inventoryShelf = inventoryShelfService.getByTenantWarehouseProductShelfBatch(
+                    tenantId, warehouseId, productId, shelfId, batchNo);
+            if (inventoryShelf != null) {
+                BigDecimal newLockedQuantity = calculateNewLockedQuantity(
+                        inventoryShelf.getLockedQuantity(), quantity, isLock,false);
+                BigDecimal newInventoryQuantity = calculateNewLockedQuantity(
+                        inventoryShelf.getQuantity(), quantity, isLock,true);
+                inventoryShelf.setLockedQuantity(newLockedQuantity);
+                inventoryShelf.setQuantity(newInventoryQuantity);
+                inventoryShelf.setModifiedAt(new Date());
+                allSuccess = allSuccess && inventoryShelfService.updateById(inventoryShelf);
+            } else{
+                log.warn("货架库存记录不存在，tenantId: {}, warehouseId: {}, productId: {}, shelfId: {}, batchNo: {}",
+                        tenantId, warehouseId, productId, shelfId, batchNo);
+                throw new ValidationException("货架库存不足，无法操作！");
+            }
+
+            // 2. 更新批次库存表
+            InventoryBatch inventoryBatch = inventoryBatchService.selectByProductBatchWarehouse(
+                    tenantId, productId, batchNo, warehouseId);
+            if (inventoryBatch != null) {
+                BigDecimal newLockedQuantity = calculateNewLockedQuantity(
+                        inventoryBatch.getLockedQuantity(), quantity, isLock,false);
+                BigDecimal newInventoryQuantity = calculateNewLockedQuantity(
+                        inventoryBatch.getQuantity(), quantity, isLock,true);
+                inventoryBatch.setLockedQuantity(newLockedQuantity);
+                inventoryBatch.setQuantity(newInventoryQuantity);
+                inventoryBatch.setModifiedAt(new Date());
+                allSuccess = allSuccess && inventoryBatchService.updateById(inventoryBatch);
+            } else{
+                log.warn("批次库存记录不存在，tenantId: {}, productId: {}, batchNo: {}, warehouseId: {}",
+                        tenantId, productId, batchNo, warehouseId);
+                throw new ValidationException("批次库存不足，无法操作！");
+            }
+
+            // 3. 更新仓库库存表
+            InventoryWarehouse inventoryWarehouse = inventoryWarehouseService.getByWarehouseAndProduct(
+                    warehouseId,productId, tenantId);
+            if (inventoryWarehouse != null) {
+                BigDecimal newLockedQuantity = calculateNewLockedQuantity(
+                        inventoryWarehouse.getLockedQuantity(), quantity, isLock,false);
+                BigDecimal newInventoryQuantity = calculateNewLockedQuantity(
+                        inventoryWarehouse.getQuantity(), quantity, isLock,true);
+                inventoryWarehouse.setLockedQuantity(newLockedQuantity);
+                inventoryWarehouse.setQuantity(newInventoryQuantity);
+                inventoryWarehouse.setModifiedAt(new Date());
+                allSuccess = allSuccess && inventoryWarehouseService.updateById(inventoryWarehouse);
+            }else {
+                log.warn("仓库库存记录不存在，warehouseId: {}, productId: {}, tenantId: {}",
+                        warehouseId, productId, tenantId);
+                throw new ValidationException("仓库库存不足，无法操作！");
+            }
+
+            // 4. 更新总库存表
+            Inventory inventory = inventoryService.getByProduct(productId, tenantId);
+            if (inventory != null) {
+                BigDecimal newLockedQuantity = calculateNewLockedQuantity(
+                        inventory.getLockedQuantity(), quantity, isLock,false);
+                BigDecimal newInventoryQuantity = calculateNewLockedQuantity(
+                        inventory.getQuantity(), quantity, isLock,true);
+                inventory.setLockedQuantity(newLockedQuantity);
+                inventory.setQuantity(newInventoryQuantity);
+                inventory.setModifiedAt(new Date());
+                allSuccess = allSuccess && inventoryService.updateById(inventory);
+            } else {
+                log.warn("总库存记录不存在，productId: {}, tenantId: {}",
+                        productId, tenantId);
+                throw new ValidationException("总库存不足，无法操作！");
+            }
+
+            return allSuccess;
+
+        } catch (Exception e) {
+            log.error("更新库存锁定数量失败", e);
+            throw new RuntimeException("更新库存锁定数量失败: " + e.getMessage());
+        }
+    }
+
+
+    /**
+     * 计算新的锁定数量
+     */
+    private BigDecimal calculateNewLockedQuantity(BigDecimal currentLocked, BigDecimal changeQuantity, boolean isLock,boolean isInventoryQuantity) {
+        BigDecimal newLockedQuantity;
+        if (isLock) {
+            //锁定
+            if (isInventoryQuantity) {
+                //库存数据，锁定：减少库存数量
+                newLockedQuantity = currentLocked.subtract(changeQuantity);
+                if (newLockedQuantity.compareTo(BigDecimal.ZERO) < 0) {
+                    newLockedQuantity = BigDecimal.ZERO;
+                }
+            } else {
+                //锁定数据， 锁定：增加锁定数量
+                newLockedQuantity = currentLocked.add(changeQuantity);
+            }
+        } else {
+            // 解锁
+            if (isInventoryQuantity) {
+                //库存数据， 解锁：增加库存数量
+                newLockedQuantity = currentLocked.add(changeQuantity);
+            } else {
+                //锁定数据， 解锁：减少锁定数量
+                newLockedQuantity = currentLocked.subtract(changeQuantity);
+                if (newLockedQuantity.compareTo(BigDecimal.ZERO) < 0) {
+                    newLockedQuantity = BigDecimal.ZERO;
+                }
+            }
+        }
+        return newLockedQuantity;
     }
 
     /**
@@ -336,8 +891,8 @@ public class CkInventoryLockService {
                     // 更新锁定记录状态
                     StockLock updatedLock = updateLockForUnlock(lock, unlockQuantity, approveOkReq.getUserId());
 
-                    // 更新批次库存的锁定数量
-                    boolean updateSuccess = updateBatchLockedQuantity(
+                    // 更新所有库存表的锁定数量
+                    boolean updateSuccess = updateAllInventoryLockedQuantity(
                             lock.getTenantId(),
                             lock.getWarehouseId(),
                             lock.getProductId(),
@@ -347,7 +902,7 @@ public class CkInventoryLockService {
                             false); // 解锁
 
                     if (!updateSuccess) {
-                        throw new RuntimeException("更新批次锁定数量失败");
+                        throw new RuntimeException("更新库存锁定数量失败");
                     }
 
                     // 记录解锁操作日志
@@ -781,8 +1336,8 @@ public class CkInventoryLockService {
     private void rollbackLocks(List<LockResult.LockItemDetail> lockItems, Long tenantId, Long warehouseId) {
         for (LockResult.LockItemDetail item : lockItems) {
             try {
-                // 恢复批次库存的锁定数量
-                updateBatchLockedQuantity(
+                // 恢复所有库存表的锁定数量
+                updateAllInventoryLockedQuantity(
                         tenantId,
                         warehouseId,
                         item.getProductId(),
@@ -806,10 +1361,10 @@ public class CkInventoryLockService {
     private void restoreLocks(List<LockResult.LockItemDetail> unlockItems, Long tenantId, Long userId) {
         for (LockResult.LockItemDetail item : unlockItems) {
             try {
-                // 重新锁定库存
-                updateBatchLockedQuantity(
+                // 重新锁定所有库存表
+                updateAllInventoryLockedQuantity(
                         tenantId,
-                        null, // warehouseId需要从原锁定记录获取
+                        null, // warehouseId需要从原锁定记录获取，这里需要改进
                         item.getProductId(),
                         item.getBatchNo(),
                         item.getShelfId(),

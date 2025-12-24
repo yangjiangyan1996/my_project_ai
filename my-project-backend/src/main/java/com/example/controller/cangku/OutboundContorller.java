@@ -272,7 +272,7 @@ public class OutboundContorller {
      */
     @LogOperation(module = "出库管理", operation = "删除出库单",
             description = "删除出库单")
-    @PostMapping("/delete") // POST映射到/delete路径
+    @PostMapping("/delete")
     public RespBean<Boolean> delete(@RequestBody OutboundDeleteReq req) {
         try {
             Long userId = UserUtil.getCurrentUser().getId();

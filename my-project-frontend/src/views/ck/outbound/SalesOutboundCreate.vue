@@ -770,7 +770,7 @@
                 <span v-else class="quantity-view">
                   {{ row.quantity || 0 }}
                 </span>
-                <el-button
+                <!-- <el-button
                   v-if="!isViewMode && row.availableQuantity > 0"
                   type="text"
                   size="small"
@@ -778,7 +778,7 @@
                   class="max-btn"
                 >
                   最大
-                </el-button>
+                </el-button> -->
               </div>
             </template>
           </el-table-column>

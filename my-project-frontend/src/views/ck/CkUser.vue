@@ -227,7 +227,7 @@
                 class="log-table"
                 :row-class-name="tableRowClassName"
               >
-                <el-table-column prop="createdAt" label="操作时间" width="180" sortable="custom">
+                <el-table-column prop="createdAt" label="操作时间" width="200" sortable="custom">
                   <template #default="scope">
                     <div class="time-cell">
                       <div class="time-date">{{ formatDate(scope.row.createdAt) }}</div>
@@ -235,21 +235,21 @@
                     </div>
                   </template>
                 </el-table-column>
-                <el-table-column prop="module" label="操作模块" width="120">
+                <el-table-column prop="module" label="操作模块" width="160">
                   <template #default="scope">
                     <el-tag size="small" :type="getModuleType(scope.row.module)">
                       {{ scope.row.module }}
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column prop="operation" label="操作类型" width="120">
+                <el-table-column prop="operation" label="操作类型" width="200">
                   <template #default="scope">
                     <span class="operation-type" :class="getOperationClass(scope.row.operation)">
                       {{ scope.row.operation }}
                     </span>
                   </template>
                 </el-table-column>
-                <el-table-column prop="description" label="操作描述" min-width="200">
+                <el-table-column prop="description" label="操作描述" min-width="250">
                   <template #default="scope">
                     <div class="description-cell">
                       {{ scope.row.description }}

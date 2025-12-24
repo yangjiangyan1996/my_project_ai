@@ -138,13 +138,12 @@ public class CkOutboundFacade {
                 throw new ValidationException("生产任务保存失败");
             }
 
-            // 5. 如果是已完成状态，更新库存
-            if (req.getStatus() == 3) {
-                inventoryHolder.updateSubInventoryForApprove(outboundOrder, orderItems, req.getUserId());
+            // 6. 异步处理库存锁定
+            LockResult lockResult = inventoryLockService.lockForProductionOutbound(req, outboundOrder.getId());
+            if (!lockResult.getSuccess()) {
+                log.warn("生产任务库存锁定失败，订单ID: {}, 订单号: {}", outboundOrder.getId(), outboundOrder.getOrderNo());
             }
 
-            // 6. 异步处理库存锁定
-            executeInventoryLockAfterSuccess(req, outboundOrder, orderItems);
 
             long totalTime = System.currentTimeMillis() - startTime;
             log.info("生产领料出库单创建成功，订单ID: {}, 订单号: {}, 总耗时: {}ms",
@@ -260,13 +259,11 @@ public class CkOutboundFacade {
                 }
             }
 
-            // 5. 如果是已完成状态，更新库存
-            if (req.getStatus() == 3) {
-                inventoryHolder.updateSubInventoryForApprove(outboundOrder, orderItems, req.getUserId());
+            // 6. 库存锁定
+            LockResult lockResult = inventoryLockService.lockForSaleOutbound(req, outboundOrder.getId());
+            if (!lockResult.getSuccess()) {
+                log.warn("销售出库单库存锁定失败，订单ID: {}, 订单号: {}", outboundOrder.getId(), outboundOrder.getOrderNo());
             }
-
-            // 6. 异步处理库存锁定
-            asyncHandleSaleInventoryLock(req, outboundOrder, orderItems);
 
             long totalTime = System.currentTimeMillis() - startTime;
             log.info("销售出库单创建成功，订单ID: {}, 订单号: {}, 总耗时: {}ms",
@@ -864,28 +861,6 @@ public class CkOutboundFacade {
         return extList;
     }
 
-    /**
-     * 成功创建订单后执行库存锁定
-     */
-    private void executeInventoryLockAfterSuccess(OutboundCreateReq req, OutboundOrder outboundOrder,
-                                                  List<OutboundOrderItem> saveList) {
-        try {
-            // 执行库存锁定
-            LockResult lockResult = inventoryLockService.lockForProductionOutbound(req, outboundOrder.getId());
-
-            // 记录锁定结果
-            //recordLockResult(outboundOrder, lockResult, req.getUserId());
-
-            // 如果是已完成状态，需要解锁锁定并扣减库存
-            if (req.getStatus() == 3) {
-                handleLockForCompletedOrder(outboundOrder, req, lockResult);
-            }
-
-        } catch (Exception e) {
-            log.error("库存锁定执行异常，但不影响订单创建, 订单ID: {}", outboundOrder.getId(), e);
-            recordLockException(outboundOrder, e);
-        }
-    }
 
     /**
      * 记录锁定结果到订单
@@ -1078,51 +1053,6 @@ public class CkOutboundFacade {
         }, asyncExecutor);
     }
 
-    /**
-     * 异步处理销售出库库存锁定
-     */
-    private void asyncHandleSaleInventoryLock(OutboundCreateSaleProductReq req,
-                                              OutboundOrder outboundOrder,
-                                              List<OutboundOrderItem> orderItems) {
-        String taskKey = "sale-inventory-lock-" + outboundOrder.getId();
-
-        CompletableFuture.runAsync(() -> {
-            MDC.put("orderId", String.valueOf(outboundOrder.getId()));
-            MDC.put("orderNo", outboundOrder.getOrderNo());
-            MDC.put("task", "sale-inventory-lock");
-
-            try {
-                log.info("开始执行销售出库库存锁定任务");
-                long startTime = System.currentTimeMillis();
-
-                // 执行库存锁定
-                LockResult lockResult = inventoryLockService.lockForSaleOutbound(req, outboundOrder.getId());
-
-                // 记录锁定结果
-                //recordSaleLockResult(outboundOrder, lockResult, req.getUserId());
-
-                // 如果是已完成状态，需要立即解锁并扣减库存
-                if (req.getStatus() == 3 && lockResult != null && lockResult.getSuccess()) {
-                    handleCompletedSaleOrderLock(outboundOrder, req, lockResult);
-                }
-
-                long endTime = System.currentTimeMillis();
-                log.info("销售出库库存锁定任务完成，耗时: {}ms，锁定结果: {}",
-                        (endTime - startTime),
-                        lockResult != null ? (lockResult.getSuccess() ? "成功" : "失败") : "未执行");
-
-            } catch (Exception e) {
-                log.error("销售出库库存锁定任务执行异常", e);
-                recordSaleLockException(outboundOrder, e, req.getUserId());
-            } finally {
-                MDC.clear();
-            }
-
-        }, asyncExecutor).exceptionally(throwable -> {
-            log.error("销售出库库存锁定异步任务异常", throwable);
-            return null;
-        });
-    }
 
     /**
      * 记录销售出库锁定结果
@@ -1266,21 +1196,6 @@ public class CkOutboundFacade {
         }
     }
 
-    /**
-     * 判断是否需要处理库存重新锁定
-     */
-    private boolean shouldHandleInventoryRelock(OutboundOrder oldOrder, OutboundOrder newOrder) {
-        if (!CkInOutboundEnums.OutBoundType.SaleOutbound.getCode().equals(newOrder.getOrderType())) {
-            return false;
-        }
-
-        List<Integer> needLockStatus = Arrays.asList(
-                CkInOutboundEnums.InOutBoundStatus.WaitSubmit.getCode(),
-                CkInOutboundEnums.InOutBoundStatus.WaitAudit.getCode()
-        );
-
-        return needLockStatus.contains(newOrder.getStatus());
-    }
 
     /**
      * 使用增强服务处理重新锁定（销售出库）
@@ -1288,11 +1203,6 @@ public class CkOutboundFacade {
     private void handleSaleInventoryRelockWithService(OutboundCreateSaleProductReq req,
                                                       OutboundOrder oldOrder,
                                                       OutboundOrder newOrder) {
-        if (!shouldHandleInventoryRelock(oldOrder, newOrder)) {
-            log.info("订单{}状态不需要重新锁定库存，状态: {}", newOrder.getId(), newOrder.getStatus());
-            return;
-        }
-
         log.info("启动增强版库存重新锁定，订单ID: {}", newOrder.getId());
 
         asyncRelockForSaleOutbound(req, oldOrder, newOrder)
@@ -1964,6 +1874,7 @@ public class CkOutboundFacade {
         return result;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Boolean delete(OutboundDeleteReq req) {
         OutboundOrder p = outboundOrderService.getById(req.getId());
         if (p == null) {
@@ -1985,7 +1896,15 @@ public class CkOutboundFacade {
             throw new ValidationException("出库单明细删除失败");
         }
 
-        return productionTaskService.delectByOutBoundId(p.getId(), req.getTenantId(), req.getUserId());
+        List<ProductionTask> productionTasks = productionTaskService.selectByOutBoundId(p.getId(), req.getTenantId());
+        if (!productionTasks.isEmpty()) {
+            Boolean aBoolean = productionTaskService.delectByOutBoundId(p.getId(), req.getTenantId(), req.getUserId());
+            if (!aBoolean) {
+                throw new ValidationException("生产任务删除失败");
+            }
+        }
+
+        return inventoryLockService.cleanUpForOutboundDelete(p.getId(), req.getTenantId(), req.getUserId(), p.getOrderType());
     }
 
     public List<OutboundSaleExcelModel> getOutboundSaleExportData(Long tenantId, Long warehouseId, List<Long>  productIds) {

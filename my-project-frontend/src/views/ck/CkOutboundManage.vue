@@ -325,11 +325,11 @@
                   link
                   size="small"
                   @click="handleDelete(row)"
-                  v-if="row.status === 0 || row.status === 4"
+                  v-if="row.status === 0 || row.status === 1"
                 >
                   删除
                 </el-button>
-                <el-button
+                <!-- <el-button
                   type="info"
                   link
                   size="small"
@@ -337,7 +337,7 @@
                   v-if="row.status === 1 || row.status === 2"
                 >
                   取消
-                </el-button>
+                </el-button> -->
                 <!-- <el-button
                   type="success"
                   link

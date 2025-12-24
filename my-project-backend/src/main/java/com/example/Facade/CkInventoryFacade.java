@@ -482,7 +482,7 @@ public class CkInventoryFacade {
                 ));
 
         // 8. 获取批次库存数据 (ck_inventory_batch)
-        List<InventoryBatch> batchInventoryList = inventoryBatchService.getByProductIdsAndWarehouseIds(
+        List<InventoryBatch> batchInventoryList = inventoryBatchService.selectByProductIdsAndWarehouseIds(
                 req.getTenantId(), productIds, warehouseIds);
         Map<String, List<InventoryBatch>> productWarehouseBatchMap = batchInventoryList.stream()
                 .collect(Collectors.groupingBy(
