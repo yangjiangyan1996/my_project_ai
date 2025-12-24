@@ -884,7 +884,7 @@ const getBomTypeText = (type) => {
     2: '布料',
     10: '辅料',
     20: '五金',
-    999: '包装'
+    100: '包装'
   };
   return typeMap[type] || '未知';
 };
@@ -897,7 +897,7 @@ const getBomTypeTagType = (type) => {
     2: 'success',   // 布料 - 成功色
     10: 'warning',  // 辅料 - 警告色
     20: '',         // 五金 - 默认色
-    999: 'danger'   // 包装 - 危险色
+    100: 'danger'   // 包装 - 危险色
   };
   return typeStyleMap[type] || '';
 };
