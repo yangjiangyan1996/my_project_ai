@@ -31,15 +31,20 @@ public class CkTenantFacade {
             throw new RuntimeException("租户ID不能为空");
         }
         Tenant tenant = ckTenantService.selectById(tenantId);
+        if (tenant == null) {
+            throw new RuntimeException("租户不存在！");
+        }
         CkTenantResp r = new CkTenantResp();
         r.setId(tenant.getId());
-        r.setName(tenant.getName());
-        r.setImage(tenant.getImage());
-        r.setContactPerson(tenant.getContactPerson());
-        r.setContactPhone(tenant.getContactPhone());
-        r.setExpireAt(tenant.getExpireAt());
-        r.setStatus(tenant.getStatus());
-        r.setBossAuth(tenant.getContactId() != null && tenant.getContactId().equals(userId));
+        r.setName(tenant.getName() == null ? "" : tenant.getName());
+        r.setImage(tenant.getImage() == null ? "" : tenant.getImage());
+        r.setContactPerson(tenant.getContactPerson() == null ? "" : tenant.getContactPerson());
+        r.setContactPhone(tenant.getContactPhone() == null ? "" : tenant.getContactPhone());
+        r.setExpireAt(tenant.getExpireAt() == null ? null : tenant.getExpireAt());
+        r.setStatus(tenant.getStatus() == null ? 0 : tenant.getStatus());
+        if (tenant.getContactId()!=null) {
+            r.setBossAuth(tenant.getContactId() != null && tenant.getContactId().equals(userId));
+        }
         return r;
     }
 

@@ -18,9 +18,24 @@
         <el-form-item prop="code">
           <el-row :gutter="10" style="width: 100%">
             <el-col>
-              <el-input v-model="form.code" :maxlength="20" type="password" placeholder="请输入密码" size="large">
+              <el-input 
+                v-model="form.code" 
+                :maxlength="20" 
+                :type="showPassword ? 'text' : 'password'" 
+                placeholder="请输入密码" 
+                size="large"
+              >
                 <template #prefix>
                   <el-icon><EditPen /></el-icon>
+                </template>
+                <!-- 添加查看密码的图标 -->
+                <template #suffix>
+                  <el-icon 
+                    style="cursor: pointer; color: #666;" 
+                    @click="showPassword = !showPassword"
+                  >
+                    <component :is="showPassword ? View : Hide" />
+                  </el-icon>
                 </template>
               </el-input>
             </el-col>
@@ -31,14 +46,14 @@
         <el-form-item style="margin-top: -10px; margin-bottom: 10px">
           <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 5px">
             <el-checkbox v-model="form.remember" label="记住我" size="large" />
-            <el-link 
+            <!-- <el-link 
               type="primary" 
               :underline="false" 
               @click="router.push('/welcome/forget')" 
               style="font-size: 14px"
             >
               忘记密码？
-            </el-link>
+            </el-link> -->
           </div>
         </el-form-item>
       </el-form>
@@ -78,13 +93,14 @@
 </template>
 
 <script setup>
-import {Iphone, EditPen} from '@element-plus/icons-vue'
+import {Iphone, EditPen, View, Hide} from '@element-plus/icons-vue' // 导入View和Hide图标
 import router from "@/router";
 import {reactive, ref, onMounted} from "vue";
 import {ElMessage} from "element-plus";
 import {get, login} from '@/net'
 
 const formRef = ref()
+const showPassword = ref(false) // 控制密码是否显示
 const form = reactive({
   phone: '',
   code: '',

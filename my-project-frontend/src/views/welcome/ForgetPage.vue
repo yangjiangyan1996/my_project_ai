@@ -15,7 +15,7 @@
                 <div style="margin-top: 50px">
                     <el-form :model="form" :rules="rules" @validate="onValidate" ref="formRef">
                         <el-form-item prop="phone">
-                            <el-input v-model="form.phone" type="tel" placeholder="手机号码">
+                            <el-input v-model="form.phone" type="tel" :maxlength="11" placeholder="手机号码">
                                 <template #prefix>
                                     <el-icon><Iphone /></el-icon>
                                 </template>
