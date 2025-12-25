@@ -11,8 +11,8 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 @Data
-@TableName("ck_stock_lock")
-public class StockLock extends BaseModel {
+@TableName("ck_inventory_lock")
+public class InventoryLock extends BaseModel {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     

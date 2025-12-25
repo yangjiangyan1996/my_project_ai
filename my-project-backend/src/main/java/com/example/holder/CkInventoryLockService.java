@@ -30,10 +30,10 @@ import java.util.*;
 public class CkInventoryLockService {
 
     @Resource
-    private CkStockLockService stockLockService;
+    private com.example.service.CkInventoryLockService stockLockService;
 
     @Resource
-    private CkStockLockLogService stockLockLogService;
+    private CkInventoryLockLogService stockLockLogService;
 
     @Resource
     private CkInventoryBatchService inventoryBatchService;
@@ -68,7 +68,7 @@ public class CkInventoryLockService {
 
         try {
             // 查询销售出库单的所有锁定记录
-            List<StockLock> locks = stockLockService.findBySourceIdAndLockType(
+            List<InventoryLock> locks = stockLockService.findBySourceIdAndLockType(
                     tenantId,
                     orderId,
                     CkInOutboundEnums.InventoryLockType.SALES_OUTBOUND.getCode());
@@ -83,16 +83,16 @@ public class CkInventoryLockService {
             List<LockResult.LockFailureItem> failures = new ArrayList<>();
 
             // 按批次分组，处理相同的product+batch+shelf组合
-            Map<String, List<StockLock>> productId_batchNo_shelfId2LocksInfoMap = groupLocksByBatch(locks);
+            Map<String, List<InventoryLock>> productId_batchNo_shelfId2LocksInfoMap = groupLocksByBatch(locks);
 
-            for (Map.Entry<String, List<StockLock>> entry : productId_batchNo_shelfId2LocksInfoMap.entrySet()) {
-                List<StockLock> sameBatchLocks = entry.getValue();
+            for (Map.Entry<String, List<InventoryLock>> entry : productId_batchNo_shelfId2LocksInfoMap.entrySet()) {
+                List<InventoryLock> sameBatchLocks = entry.getValue();
                 if (CollectionUtils.isEmpty(sameBatchLocks)) {
                     continue;
                 }
 
                 // 取第一个锁定记录获取基本信息
-                StockLock firstLock = sameBatchLocks.get(0);
+                InventoryLock firstLock = sameBatchLocks.get(0);
 
                 try {
                     // 计算需要回滚的总数量
@@ -172,7 +172,7 @@ public class CkInventoryLockService {
 
         try {
             // 查询生产领料出库单的所有锁定记录
-            List<StockLock> locks = stockLockService.findBySourceIdAndLockType(
+            List<InventoryLock> locks = stockLockService.findBySourceIdAndLockType(
                     tenantId,
                     orderId,
                     CkInOutboundEnums.InventoryLockType.PRODUCTION_OUTBOUND.getCode());
@@ -187,16 +187,16 @@ public class CkInventoryLockService {
             List<LockResult.LockFailureItem> failures = new ArrayList<>();
 
             // 按批次分组，处理相同的product+batch+shelf组合
-            Map<String, List<StockLock>> batchLockMap = groupLocksByBatch(locks);
+            Map<String, List<InventoryLock>> batchLockMap = groupLocksByBatch(locks);
 
-            for (Map.Entry<String, List<StockLock>> entry : batchLockMap.entrySet()) {
-                List<StockLock> sameBatchLocks = entry.getValue();
+            for (Map.Entry<String, List<InventoryLock>> entry : batchLockMap.entrySet()) {
+                List<InventoryLock> sameBatchLocks = entry.getValue();
                 if (CollectionUtils.isEmpty(sameBatchLocks)) {
                     continue;
                 }
 
                 // 取第一个锁定记录获取基本信息
-                StockLock firstLock = sameBatchLocks.get(0);
+                InventoryLock firstLock = sameBatchLocks.get(0);
 
                 try {
                     // 计算需要回滚的总数量
@@ -286,10 +286,10 @@ public class CkInventoryLockService {
     /**
      * 按批次分组锁定记录
      */
-    private Map<String, List<StockLock>> groupLocksByBatch(List<StockLock> locks) {
-        Map<String, List<StockLock>> batchLockMap = new HashMap<>();
+    private Map<String, List<InventoryLock>> groupLocksByBatch(List<InventoryLock> locks) {
+        Map<String, List<InventoryLock>> batchLockMap = new HashMap<>();
 
-        for (StockLock lock : locks) {
+        for (InventoryLock lock : locks) {
             String key = lock.getProductId() + "_" + lock.getBatchNo() + "_" + lock.getShelfId();
             batchLockMap.computeIfAbsent(key, k -> new ArrayList<>()).add(lock);
         }
@@ -300,10 +300,10 @@ public class CkInventoryLockService {
     /**
      * 计算需要回滚的总数量
      */
-    private BigDecimal calculateTotalRollbackQuantity(List<StockLock> locks) {
+    private BigDecimal calculateTotalRollbackQuantity(List<InventoryLock> locks) {
         BigDecimal totalQuantity = BigDecimal.ZERO;
 
-        for (StockLock lock : locks) {
+        for (InventoryLock lock : locks) {
             // 只回滚尚未解锁的数量
             BigDecimal availableLockQuantity = lock.getLockQuantity().subtract(lock.getUnlockQuantity());
             if (availableLockQuantity.compareTo(BigDecimal.ZERO) > 0) {
@@ -317,8 +317,8 @@ public class CkInventoryLockService {
     /**
      * 更新锁定记录为已回滚状态
      */
-    private void updateLocksToRollback(List<StockLock> locks, Long userId, String reason) {
-        for (StockLock lock : locks) {
+    private void updateLocksToRollback(List<InventoryLock> locks, Long userId, String reason) {
+        for (InventoryLock lock : locks) {
             try {
                 // 计算尚未解锁的数量
                 BigDecimal availableLockQuantity = lock.getLockQuantity().subtract(lock.getUnlockQuantity());
@@ -348,8 +348,8 @@ public class CkInventoryLockService {
     /**
      * 创建回滚日志
      */
-    private void createRollbackLog(StockLock lock, BigDecimal rollbackQuantity, Long userId, String reason) {
-        StockLockLog log = new StockLockLog();
+    private void createRollbackLog(InventoryLock lock, BigDecimal rollbackQuantity, Long userId, String reason) {
+        InventoryLockLog log = new InventoryLockLog();
         log.setId(snowflakeIdWorkerUtil.nextId());
         log.setTenantId(lock.getTenantId());
         log.setLockId(lock.getId());
@@ -393,9 +393,9 @@ public class CkInventoryLockService {
             }
 
             // 2. 标记锁定记录为已删除
-            List<StockLock> locks = stockLockService.findBySourceId(tenantId, orderId);
+            List<InventoryLock> locks = stockLockService.findBySourceId(tenantId, orderId);
             if (CollectionUtils.isNotEmpty(locks)) {
-                for (StockLock lock : locks) {
+                for (InventoryLock lock : locks) {
                     lock.setIsDeleted(1);
                     lock.setModifiedBy(userId);
                     lock.setModifiedAt(new Date());
@@ -464,7 +464,7 @@ public class CkInventoryLockService {
                                 batchAlloc.getQuantity());
 
                         // 创建锁定记录
-                        StockLock stockLock = createStockLockForSaleOutbound(
+                        InventoryLock inventoryLock = createStockLockForSaleOutbound(
                                 req, orderId, item, batchAlloc);
 
                         // 更新所有库存表的锁定数量
@@ -488,7 +488,7 @@ public class CkInventoryLockService {
                                 .shelfId(batchAlloc.getShelfId())
                                 .planQuantity(batchAlloc.getQuantity())
                                 .lockedQuantity(batchAlloc.getQuantity())
-                                .lockId(stockLock.getId())
+                                .lockId(inventoryLock.getId())
                                 .build());
 
                         // 累加产品总锁定数量
@@ -577,7 +577,7 @@ public class CkInventoryLockService {
                                 bomAlloc.getQuantity());
 
                         // 创建锁定记录
-                        StockLock stockLock = createStockLockForProductionOutbound(
+                        InventoryLock inventoryLock = createStockLockForProductionOutbound(
                                 req, orderId, item, bomAlloc);
 
                         // 更新所有库存表的锁定数量
@@ -602,7 +602,7 @@ public class CkInventoryLockService {
                                 .shelfId(bomAlloc.getShelfId())
                                 .planQuantity(bomAlloc.getQuantity())
                                 .lockedQuantity(bomAlloc.getQuantity())
-                                .lockId(stockLock.getId())
+                                .lockId(inventoryLock.getId())
                                 .build());
 
                     } catch (Exception e) {
@@ -853,7 +853,7 @@ public class CkInventoryLockService {
             }
 
             // 根据订单类型查询对应的锁定记录
-            List<StockLock> locks;
+            List<InventoryLock> locks;
             if (CkInOutboundEnums.OutBoundType.SaleOutbound.getCode().equals(outboundOrder.getOrderType())) {
                 locks = stockLockService.findBySourceIdAndLockType(
                         approveOkReq.getTenantId(),
@@ -880,7 +880,7 @@ public class CkInventoryLockService {
             List<LockResult.LockItemDetail> unlockItems = new ArrayList<>();
 
             // 解锁每个锁定记录
-            for (StockLock lock : locks) {
+            for (InventoryLock lock : locks) {
                 try {
                     // 计算需要解锁的数量（根据订单明细实际数量）
                     BigDecimal unlockQuantity = calculateUnlockQuantity(lock, orderItems);
@@ -889,7 +889,7 @@ public class CkInventoryLockService {
                     }
 
                     // 更新锁定记录状态
-                    StockLock updatedLock = updateLockForUnlock(lock, unlockQuantity, approveOkReq.getUserId());
+                    InventoryLock updatedLock = updateLockForUnlock(lock, unlockQuantity, approveOkReq.getUserId());
 
                     // 更新所有库存表的锁定数量
                     boolean updateSuccess = updateAllInventoryLockedQuantity(
@@ -951,7 +951,7 @@ public class CkInventoryLockService {
 
         try {
             // 查询所有相关的锁定记录
-            List<StockLock> locks = stockLockService.findBySourceId(tenantId, orderId);
+            List<InventoryLock> locks = stockLockService.findBySourceId(tenantId, orderId);
             if (CollectionUtils.isEmpty(locks)) {
                 result.setSuccess(true);
                 result.setMessage("未找到库存锁定记录");
@@ -961,12 +961,12 @@ public class CkInventoryLockService {
             List<LockResult.LockItemDetail> unlockItems = new ArrayList<>();
 
             // 强制释放所有锁定
-            for (StockLock lock : locks) {
+            for (InventoryLock lock : locks) {
                 try {
                     // 如果锁定还没完全解锁，需要强制释放
                     if (!Objects.equals(lock.getLockStatus(), CkInOutboundEnums.InventoryLockStatus.FULLY_UNLOCKED.getCode())) {
                         // 更新锁定记录为强制释放
-                        StockLock updatedLock = forceReleaseLock(lock, userId);
+                        InventoryLock updatedLock = forceReleaseLock(lock, userId);
 
                         // 更新批次库存的锁定数量（完全释放）
                         boolean updateSuccess = updateBatchLockedQuantity(
@@ -1094,109 +1094,109 @@ public class CkInventoryLockService {
     /**
      * 创建销售出库锁定记录
      */
-    private StockLock createStockLockForSaleOutbound(OutboundCreateSaleProductReq req,
-                                                    Long orderId,
-                                                    OutboundCreateSaleProductReq.OrderItemInner item,
-                                                    OutboundCreateSaleProductReq.BatchAllocationInner batchAlloc) {
+    private InventoryLock createStockLockForSaleOutbound(OutboundCreateSaleProductReq req,
+                                                         Long orderId,
+                                                         OutboundCreateSaleProductReq.OrderItemInner item,
+                                                         OutboundCreateSaleProductReq.BatchAllocationInner batchAlloc) {
 
-        StockLock stockLock = new StockLock();
-        stockLock.setId(snowflakeIdWorkerUtil.nextId());
-        stockLock.setTenantId(req.getTenantId());
-        stockLock.setLockType(CkInOutboundEnums.InventoryLockType.SALES_OUTBOUND.getCode());
-        stockLock.setLockSource("order");
-        stockLock.setSourceId(orderId);
-        stockLock.setSourceNo(req.getOrderNo());
+        InventoryLock inventoryLock = new InventoryLock();
+        inventoryLock.setId(snowflakeIdWorkerUtil.nextId());
+        inventoryLock.setTenantId(req.getTenantId());
+        inventoryLock.setLockType(CkInOutboundEnums.InventoryLockType.SALES_OUTBOUND.getCode());
+        inventoryLock.setLockSource("order");
+        inventoryLock.setSourceId(orderId);
+        inventoryLock.setSourceNo(req.getOrderNo());
 
-        stockLock.setProductId(item.getProductId());
-        stockLock.setWarehouseId(req.getWarehouseId());
-        stockLock.setBatchNo(batchAlloc.getBatchNo());
-        stockLock.setShelfId(batchAlloc.getShelfId());
+        inventoryLock.setProductId(item.getProductId());
+        inventoryLock.setWarehouseId(req.getWarehouseId());
+        inventoryLock.setBatchNo(batchAlloc.getBatchNo());
+        inventoryLock.setShelfId(batchAlloc.getShelfId());
 
-        stockLock.setLockQuantity(batchAlloc.getQuantity());
-        stockLock.setUnlockQuantity(BigDecimal.ZERO);
-        stockLock.setLockStatus(CkInOutboundEnums.InventoryLockStatus.LOCKED.getCode());
-        stockLock.setLockStrategy(1); // FIFO策略
+        inventoryLock.setLockQuantity(batchAlloc.getQuantity());
+        inventoryLock.setUnlockQuantity(BigDecimal.ZERO);
+        inventoryLock.setLockStatus(CkInOutboundEnums.InventoryLockStatus.LOCKED.getCode());
+        inventoryLock.setLockStrategy(1); // FIFO策略
 
-        stockLock.setLockPurpose(CkInOutboundEnums.LockPurpose.SALES_OCCUPY.getCode());
-        stockLock.setLockDirection(CkInOutboundEnums.LockDirection.OUTBOUND_LOCK.getCode());
+        inventoryLock.setLockPurpose(CkInOutboundEnums.LockPurpose.SALES_OCCUPY.getCode());
+        inventoryLock.setLockDirection(CkInOutboundEnums.LockDirection.OUTBOUND_LOCK.getCode());
 
         // 设置过期时间（默认24小时）
-        stockLock.setExpireTime(DateUtil.offsetHour(new Date(), 24));
-        stockLock.setExpectedUnlockTime(DateUtil.parseDate(req.getExpectedDate()));
+        inventoryLock.setExpireTime(DateUtil.offsetHour(new Date(), 24));
+        inventoryLock.setExpectedUnlockTime(DateUtil.parseDate(req.getExpectedDate()));
 
-        stockLock.setPriority(5); // 中等优先级
-        stockLock.setIsPreemptable(1); // 可被抢占
+        inventoryLock.setPriority(5); // 中等优先级
+        inventoryLock.setIsPreemptable(1); // 可被抢占
 
-        stockLock.setLockReason("销售出库单锁定");
-        stockLock.setCreatedBy(req.getUserId());
-        stockLock.setModifiedBy(req.getUserId());
-        stockLock.setCreatedAt(new Date());
-        stockLock.setModifiedAt(new Date());
-        stockLock.setIsDeleted(0);
+        inventoryLock.setLockReason("销售出库单锁定");
+        inventoryLock.setCreatedBy(req.getUserId());
+        inventoryLock.setModifiedBy(req.getUserId());
+        inventoryLock.setCreatedAt(new Date());
+        inventoryLock.setModifiedAt(new Date());
+        inventoryLock.setIsDeleted(0);
 
-        stockLockService.save(stockLock);
+        stockLockService.save(inventoryLock);
 
         // 记录锁定日志
-        createLockLog(stockLock, req.getUserId(), "销售出库单创建锁定");
+        createLockLog(inventoryLock, req.getUserId(), "销售出库单创建锁定");
 
-        return stockLock;
+        return inventoryLock;
     }
 
     /**
      * 创建生产领料出库锁定记录
      */
-    private StockLock createStockLockForProductionOutbound(OutboundCreateReq req,
-                                                          Long orderId,
-                                                          OutboundCreateReq.ProductInfoInner item,
-                                                          BomAllocationCreateReq bomAlloc) {
+    private InventoryLock createStockLockForProductionOutbound(OutboundCreateReq req,
+                                                               Long orderId,
+                                                               OutboundCreateReq.ProductInfoInner item,
+                                                               BomAllocationCreateReq bomAlloc) {
 
-        StockLock stockLock = new StockLock();
-        stockLock.setId(snowflakeIdWorkerUtil.nextId());
-        stockLock.setTenantId(req.getTenantId());
-        stockLock.setLockType(CkInOutboundEnums.InventoryLockType.PRODUCTION_OUTBOUND.getCode());
-        stockLock.setLockSource("order");
-        stockLock.setSourceId(orderId);
-        stockLock.setSourceNo(req.getOrderNo());
+        InventoryLock inventoryLock = new InventoryLock();
+        inventoryLock.setId(snowflakeIdWorkerUtil.nextId());
+        inventoryLock.setTenantId(req.getTenantId());
+        inventoryLock.setLockType(CkInOutboundEnums.InventoryLockType.PRODUCTION_OUTBOUND.getCode());
+        inventoryLock.setLockSource("order");
+        inventoryLock.setSourceId(orderId);
+        inventoryLock.setSourceNo(req.getOrderNo());
 
-        stockLock.setProductId(bomAlloc.getComponentProductId());
-        stockLock.setWarehouseId(req.getWarehouseId());
-        stockLock.setBatchNo(bomAlloc.getBatchNo());
-        stockLock.setShelfId(bomAlloc.getShelfId());
+        inventoryLock.setProductId(bomAlloc.getComponentProductId());
+        inventoryLock.setWarehouseId(req.getWarehouseId());
+        inventoryLock.setBatchNo(bomAlloc.getBatchNo());
+        inventoryLock.setShelfId(bomAlloc.getShelfId());
 
-        stockLock.setLockQuantity(bomAlloc.getQuantity());
-        stockLock.setUnlockQuantity(BigDecimal.ZERO);
-        stockLock.setLockStatus(CkInOutboundEnums.InventoryLockStatus.LOCKED.getCode());
-        stockLock.setLockStrategy(1); // FIFO策略
+        inventoryLock.setLockQuantity(bomAlloc.getQuantity());
+        inventoryLock.setUnlockQuantity(BigDecimal.ZERO);
+        inventoryLock.setLockStatus(CkInOutboundEnums.InventoryLockStatus.LOCKED.getCode());
+        inventoryLock.setLockStrategy(1); // FIFO策略
 
-        stockLock.setLockPurpose(CkInOutboundEnums.LockPurpose.PRODUCTION_OCCUPY.getCode());
-        stockLock.setLockDirection(CkInOutboundEnums.LockDirection.OUTBOUND_LOCK.getCode());
+        inventoryLock.setLockPurpose(CkInOutboundEnums.LockPurpose.PRODUCTION_OCCUPY.getCode());
+        inventoryLock.setLockDirection(CkInOutboundEnums.LockDirection.OUTBOUND_LOCK.getCode());
 
         // 关联成品ID
         Map<String, Object> extData = new HashMap<>();
         extData.put("relationProductId", item.getProductId());
         extData.put("relationProductQuantity", item.getQuantity());
-        // stockLock.setExtData(JSON.toJSONString(extData)); // 如果有JSON字段
+        // inventoryLock.setExtData(JSON.toJSONString(extData)); // 如果有JSON字段
 
         // 设置过期时间（默认48小时，生产领料可能需要更长时间）
-        stockLock.setExpireTime(DateUtil.offsetHour(new Date(), 48));
-        stockLock.setExpectedUnlockTime(DateUtil.parseDate(req.getExpectedDate()));
+        inventoryLock.setExpireTime(DateUtil.offsetHour(new Date(), 48));
+        inventoryLock.setExpectedUnlockTime(DateUtil.parseDate(req.getExpectedDate()));
 
-        stockLock.setPriority(3); // 生产领料优先级较高
-        stockLock.setIsPreemptable(0); // 生产领料不可被抢占
+        inventoryLock.setPriority(3); // 生产领料优先级较高
+        inventoryLock.setIsPreemptable(0); // 生产领料不可被抢占
 
-        stockLock.setLockReason("生产领料出库单锁定");
-        stockLock.setCreatedBy(req.getUserId());
-        stockLock.setModifiedBy(req.getUserId());
-        stockLock.setCreatedAt(new Date());
-        stockLock.setModifiedAt(new Date());
-        stockLock.setIsDeleted(0);
+        inventoryLock.setLockReason("生产领料出库单锁定");
+        inventoryLock.setCreatedBy(req.getUserId());
+        inventoryLock.setModifiedBy(req.getUserId());
+        inventoryLock.setCreatedAt(new Date());
+        inventoryLock.setModifiedAt(new Date());
+        inventoryLock.setIsDeleted(0);
 
-        stockLockService.save(stockLock);
+        stockLockService.save(inventoryLock);
 
         // 记录锁定日志
-        createLockLog(stockLock, req.getUserId(), "生产领料出库单创建锁定");
+        createLockLog(inventoryLock, req.getUserId(), "生产领料出库单创建锁定");
 
-        return stockLock;
+        return inventoryLock;
     }
 
     /**
@@ -1272,7 +1272,7 @@ public class CkInventoryLockService {
     /**
      * 更新锁定记录（解锁时）
      */
-    private StockLock updateLockForUnlock(StockLock lock, BigDecimal unlockQuantity, Long userId) {
+    private InventoryLock updateLockForUnlock(InventoryLock lock, BigDecimal unlockQuantity, Long userId) {
         BigDecimal newUnlockQuantity = lock.getUnlockQuantity().add(unlockQuantity);
 
         // 判断锁定状态
@@ -1299,7 +1299,7 @@ public class CkInventoryLockService {
     /**
      * 强制释放锁定
      */
-    private StockLock forceReleaseLock(StockLock lock, Long userId) {
+    private InventoryLock forceReleaseLock(InventoryLock lock, Long userId) {
         lock.setLockStatus(CkInOutboundEnums.InventoryLockStatus.FORCE_RELEASED.getCode());
         lock.setActualUnlockTime(new Date());
         lock.setModifiedBy(userId);
@@ -1313,7 +1313,7 @@ public class CkInventoryLockService {
     /**
      * 计算需要解锁的数量
      */
-    private BigDecimal calculateUnlockQuantity(StockLock lock, List<OutboundOrderItem> orderItems) {
+    private BigDecimal calculateUnlockQuantity(InventoryLock lock, List<OutboundOrderItem> orderItems) {
         // 找出对应的订单明细
         Optional<OutboundOrderItem> matchedItem = orderItems.stream()
                 .filter(item -> item.getProductId().equals(lock.getProductId())
@@ -1372,7 +1372,7 @@ public class CkInventoryLockService {
                         true); // 锁定
 
                 // 恢复锁定记录状态
-                StockLock lock = stockLockService.getById(item.getLockId());
+                InventoryLock lock = stockLockService.getById(item.getLockId());
                 if (lock != null) {
                     lock.setLockStatus(CkInOutboundEnums.InventoryLockStatus.LOCKED.getCode());
                     lock.setUnlockQuantity(BigDecimal.ZERO);
@@ -1390,8 +1390,8 @@ public class CkInventoryLockService {
     /**
      * 创建锁定日志
      */
-    private void createLockLog(StockLock lock, Long userId, String operationReason) {
-        StockLockLog log = new StockLockLog();
+    private void createLockLog(InventoryLock lock, Long userId, String operationReason) {
+        InventoryLockLog log = new InventoryLockLog();
         log.setId(snowflakeIdWorkerUtil.nextId());
         log.setTenantId(lock.getTenantId());
         log.setLockId(lock.getId());
@@ -1422,8 +1422,8 @@ public class CkInventoryLockService {
     /**
      * 创建解锁日志
      */
-    private void createUnlockLog(StockLock lock, BigDecimal unlockQuantity, Long userId, String reason) {
-        StockLockLog log = new StockLockLog();
+    private void createUnlockLog(InventoryLock lock, BigDecimal unlockQuantity, Long userId, String reason) {
+        InventoryLockLog log = new InventoryLockLog();
         log.setId(snowflakeIdWorkerUtil.nextId());
         log.setTenantId(lock.getTenantId());
         log.setLockId(lock.getId());
@@ -1454,8 +1454,8 @@ public class CkInventoryLockService {
     /**
      * 创建强制释放日志
      */
-    private void createForceReleaseLog(StockLock lock, Long userId, String reason) {
-        StockLockLog log = new StockLockLog();
+    private void createForceReleaseLog(InventoryLock lock, Long userId, String reason) {
+        InventoryLockLog log = new InventoryLockLog();
         log.setId(snowflakeIdWorkerUtil.nextId());
         log.setTenantId(lock.getTenantId());
         log.setLockId(lock.getId());

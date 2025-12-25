@@ -14,7 +14,6 @@ import com.example.entity.cangku.vo.SaleOutBoundItemExtVO;
 import com.example.entity.dto.Account;
 import com.example.enums.CkInOutboundEnums;
 import com.example.enums.CkProductEnums;
-import com.example.holder.CkInventoryLockService;
 import com.example.holder.InventoryHolder;
 import com.example.service.*;
 import com.example.utils.ExcelUtils;
@@ -60,7 +59,7 @@ public class CkOutboundFacade {
     @Resource
     CkOutboundOrderItemService outboundOrderItemService;
     @Resource
-    CkInventoryLockService inventoryLockService;
+    com.example.holder.CkInventoryLockService inventoryLockService;
     @Autowired
     @Qualifier("inventoryLockExecutor")
     Executor asyncExecutor;
@@ -84,7 +83,7 @@ public class CkOutboundFacade {
     @Resource
     CkInventoryService inventoryService;
     @Resource
-    CkStockLockService stockLockService;
+    CkInventoryLockService stockLockService;
     @Resource
     InventoryHolder inventoryHolder;
     @Resource
@@ -944,7 +943,7 @@ public class CkOutboundFacade {
                 log.info("开始异步处理订单{}的库存重新锁定", newOrder.getId());
 
                 // 查询旧的锁定记录
-                List<StockLock> oldLocks = stockLockService.findBySourceId(
+                List<InventoryLock> oldLocks = stockLockService.findBySourceId(
                         req.getTenantId(), newOrder.getId());
 
                 if (CollectionUtils.isEmpty(oldLocks)) {
@@ -1441,7 +1440,7 @@ public class CkOutboundFacade {
                                                OutboundOrder outboundOrder) {
         log.info("处理订单{}的库存锁定", outboundOrder.getId());
 
-        List<StockLock> locks = stockLockService.findBySourceId(
+        List<InventoryLock> locks = stockLockService.findBySourceId(
                 approveOkReq.getTenantId(), approveOkReq.getId());
 
         if (CollectionUtils.isEmpty(locks)) {

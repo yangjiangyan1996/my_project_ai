@@ -9,8 +9,8 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-@TableName("ck_stock_lock_log")
-public class StockLockLog extends BaseModel {
+@TableName("ck_inventory_lock_log")
+public class InventoryLockLog extends BaseModel {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     

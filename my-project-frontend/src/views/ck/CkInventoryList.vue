@@ -89,13 +89,13 @@
           <el-form-item>
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="handleReset">重置</el-button>
-            <el-button @click="handleLowStockAlert">低库存预警</el-button>
+            <!-- <el-button @click="handleLowStockAlert">低库存预警</el-button> -->
           </el-form-item>
         </el-form>
       </div>
 
       <!-- 统计信息 -->
-      <div class="stats-section">
+      <!-- <div class="stats-section">
         <el-row :gutter="20">
           <el-col :xs="12" :sm="6" :lg="3">
             <div class="stat-item total">
@@ -142,7 +142,7 @@
             </div>
           </el-col>
         </el-row>
-      </div>
+      </div> -->
 
       <!-- 库存列表 -->
       <div class="inventory-list-section">

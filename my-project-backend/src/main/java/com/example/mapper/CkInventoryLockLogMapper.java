@@ -1,7 +1,7 @@
 package com.example.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.example.entity.cangku.dto.StockLockLog;
+import com.example.entity.cangku.dto.InventoryLockLog;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -11,5 +11,5 @@ import org.apache.ibatis.annotations.Mapper;
  * @Date 2025/12/17 23:07
  */
 @Mapper
-public interface CkStockLockLogMapper extends BaseMapper<StockLockLog> {
+public interface CkInventoryLockLogMapper extends BaseMapper<InventoryLockLog> {
 }

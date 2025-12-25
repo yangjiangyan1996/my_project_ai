@@ -86,7 +86,7 @@
       </div>
 
       <!-- 统计信息 -->
-      <div class="stats-section">
+      <!-- <div class="stats-section">
         <el-row :gutter="20">
           <el-col :xs="12" :sm="6" :lg="3">
             <div class="stat-item total">
@@ -133,7 +133,7 @@
             </div>
           </el-col>
         </el-row>
-      </div>
+      </div> -->
 
       <!-- 产品列表 -->
       <div class="product-list-section">
