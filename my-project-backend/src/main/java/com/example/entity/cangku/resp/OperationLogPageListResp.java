@@ -33,6 +33,8 @@ public class OperationLogPageListResp {
 
     private String requestParams;
 
+    private String statusMessage;     // 状态描述
+
     private Date createdAt;
 
 }

@@ -50,21 +50,29 @@
             
             <div class="tenant-info">
               <div class="company-header">
+                
                 <div class="company-logo">
-                  <el-image 
-                    v-if="tenantInfo.image"
-                    :src="tenantInfo.image" 
-                    :preview-src-list="[tenantInfo.image]"
-                    :initial-index="0"
-                    fit="cover"
-                    class="company-image"
-                  >
-                    <template #error>
+                  <div class="tenant-logo-wrapper">
+                    <el-image 
+                      v-if="tenantInfo.image"
+                      :src="tenantInfo.image" 
+                      
+                      :initial-index="0"
+                      fit="cover"
+                      class="company-image tenant-logo"
+                    >
+                      <template #error>
+                        <div class="logo-placeholder">
+                          <el-icon size="48"><OfficeBuilding /></el-icon>
+                        </div>
+                      </template>
+                    </el-image>
+                    <div v-else class="logo-placeholder">
                       <el-icon size="48"><OfficeBuilding /></el-icon>
-                    </template>
-                  </el-image>
-                  <el-icon v-else size="48"><OfficeBuilding /></el-icon>
+                    </div>
+                  </div>
                 </div>
+
                 <div class="company-details">
                   <h4 class="company-name">{{ tenantInfo.name || '未设置企业名称' }}</h4>
                   <p class="company-contact">{{ tenantInfo.contactPerson || '未设置董事长' }}</p>
@@ -100,18 +108,6 @@
                     </el-tag>
                   </div>
                 </div>
-
-
-                <!-- <div class="info-item" v-if="tenantInfo.expireAt">
-                  <div class="item-label">
-                    <el-icon><Clock /></el-icon>
-                    <span>服务到期时间</span>
-                  </div>
-                  <div class="item-value" :class="{ 'expire-soon': isExpireSoon }">
-                    {{ formatTime(tenantInfo.expireAt) }}
-                  </div>
-                </div>
-                 -->
               </div>
             </div>
           </el-card>
@@ -227,7 +223,7 @@
                 class="log-table"
                 :row-class-name="tableRowClassName"
               >
-                <el-table-column prop="createdAt" label="操作时间" width="200" sortable="custom">
+                <el-table-column prop="createdAt" label="操作时间" width="180" sortable="custom">
                   <template #default="scope">
                     <div class="time-cell">
                       <div class="time-date">{{ formatDate(scope.row.createdAt) }}</div>
@@ -235,35 +231,53 @@
                     </div>
                   </template>
                 </el-table-column>
-                <el-table-column prop="module" label="操作模块" width="160">
+                
+                <el-table-column prop="module" label="操作模块" width="140">
                   <template #default="scope">
                     <el-tag size="small" :type="getModuleType(scope.row.module)">
-                      {{ scope.row.module }}
+                      {{ scope.row.module || '-' }}
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column prop="operation" label="操作类型" width="200">
+                
+                <el-table-column prop="operation" label="操作类型" width="120">
                   <template #default="scope">
                     <span class="operation-type" :class="getOperationClass(scope.row.operation)">
-                      {{ scope.row.operation }}
+                      {{ scope.row.operation || '-' }}
                     </span>
                   </template>
                 </el-table-column>
-                <el-table-column prop="description" label="操作描述" min-width="250">
+                
+                <el-table-column prop="description" label="操作描述" min-width="180">
                   <template #default="scope">
                     <div class="description-cell">
-                      {{ scope.row.description }}
-                      <div v-if="scope.row.targetId" class="target-id">
-                        ID: {{ scope.row.targetId }}
-                      </div>
+                      {{ scope.row.description || '-' }}
                     </div>
                   </template>
                 </el-table-column>
+                
+                <el-table-column prop="statusMessage" label="状态描述" min-width="150">
+                  <template #default="scope">
+                    <div class="status-message-cell">
+                      {{ scope.row.statusMessage || '-' }}
+                    </div>
+                  </template>
+                </el-table-column>
+                
+                <el-table-column prop="targetId" label="目标ID" width="100">
+                  <template #default="scope">
+                    <span class="target-id">
+                      {{ scope.row.targetId || '-' }}
+                    </span>
+                  </template>
+                </el-table-column>
+                
                 <el-table-column prop="ipAddress" label="IP地址" width="130">
                   <template #default="scope">
                     <span class="ip-address">{{ scope.row.ipAddress || '-' }}</span>
                   </template>
                 </el-table-column>
+                
                 <el-table-column label="操作" width="80" align="center">
                   <template #default="scope">
                     <el-button 
@@ -559,16 +573,6 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <!-- <el-col :span="12" v-if="editTenantForm.expireAt">
-            <el-form-item label="到期时间">
-              <el-input 
-                :value="formatTime(editTenantForm.expireAt)"
-                disabled
-                size="large"
-                :prefix-icon="Clock"
-              />
-            </el-form-item>
-          </el-col> -->
         </el-row>
       </el-form>
       
@@ -613,6 +617,9 @@
         </el-descriptions-item>
         <el-descriptions-item label="操作描述">
           {{ currentLogDetail.description || '无' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="状态描述">
+          {{ currentLogDetail.statusMessage || '无' }}
         </el-descriptions-item>
         <el-descriptions-item label="目标ID">
           <span class="target-id-detail">{{ currentLogDetail.targetId || '无' }}</span>
@@ -1290,16 +1297,10 @@ onMounted(() => {
 }
 
 .company-logo {
-  width: 80px;
-  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
-  border-radius: 16px;
-  color: white;
   flex-shrink: 0;
-  overflow: hidden;
 }
 
 .company-image {
@@ -1539,10 +1540,15 @@ onMounted(() => {
   line-height: 1.6;
 }
 
+.status-message-cell {
+  line-height: 1.5;
+  color: #606266;
+}
+
 .target-id {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 2px;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+  color: #409EFF;
 }
 
 .ip-address {
@@ -1704,6 +1710,7 @@ onMounted(() => {
 .target-id-detail {
   font-family: 'Courier New', monospace;
   font-weight: 500;
+  color: #409EFF;
 }
 
 .ip-address-detail {
@@ -1798,5 +1805,47 @@ onMounted(() => {
     flex-direction: column;
     align-items: flex-end;
   }
+}
+
+/* 企业Logo样式 - 与用户头像保持一致 */
+.tenant-logo-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.company-logo .tenant-logo,
+.company-logo .logo-placeholder {
+  width: 80px;
+  height: 80px;
+  border: 4px solid #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.company-logo .tenant-logo:hover,
+.company-logo .logo-placeholder:hover {
+  transform: scale(1.05);
+}
+
+.company-logo .logo-placeholder {
+  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
+  color: white;
+}
+
+.company-logo .tenant-logo {
+  object-fit: cover;
+}
+
+.company-logo .logo-placeholder .el-icon {
+  transition: all 0.3s ease;
+}
+
+.company-logo .logo-placeholder:hover .el-icon {
+  transform: scale(1.1);
 }
 </style>

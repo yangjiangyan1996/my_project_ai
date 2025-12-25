@@ -1,8 +1,8 @@
 package com.example.aop.task;
 
+import com.example.annotations.LogOperation;
 import com.example.entity.cangku.dto.OperationLog;
 import com.example.filter.UserUtil;
-import com.example.annotations.LogOperation;
 import com.example.mapper.CkOperationLogMapper;
 import com.example.utils.IpUtils;
 import jakarta.annotation.Resource;
@@ -10,8 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.annotation.AfterReturning;
-import org.aspectj.lang.annotation.AfterThrowing;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -39,13 +39,39 @@ public class LogAspect {
     public void logPointCut() {
     }
 
-    // 定义切点：Controller包下的所有方法
-    @Pointcut("execution(* com.example.controller.cangku..*.*(..))")
-    public void controllerPointCut() {
+    /**
+     * 使用 @Around 环绕通知来记录方法执行时间
+     */
+    @Around("@annotation(logAnnotation)")
+    public Object aroundLog(ProceedingJoinPoint joinPoint, LogOperation logAnnotation) throws Throwable {
+        long startTime = System.currentTimeMillis();
+        Object result = null;
+        Exception exception = null;
+
+        try {
+            // 执行目标方法
+            result = joinPoint.proceed();
+            return result;
+        } catch (Exception e) {
+            exception = e;
+            throw e;
+        } finally {
+            long endTime = System.currentTimeMillis();
+            long responseTime = endTime - startTime;
+
+            // 根据是否有异常调用不同的记录方法
+            if (exception != null) {
+                saveExceptionLog(joinPoint, logAnnotation, exception, responseTime);
+            } else {
+                saveLog(joinPoint, logAnnotation, result, responseTime);
+            }
+        }
     }
 
-    @AfterReturning(pointcut = "@annotation(logAnnotation)", returning = "result")
-    public void saveLog(JoinPoint joinPoint, LogOperation logAnnotation, Object result) {
+    /**
+     * 正常执行的日志记录
+     */
+    private void saveLog(JoinPoint joinPoint, LogOperation logAnnotation, Object result, long responseTime) {
         try {
             MethodSignature signature = (MethodSignature) joinPoint.getSignature();
             Method method = signature.getMethod();
@@ -71,6 +97,9 @@ public class LogAspect {
                 operationLog.setRequestUrl(request.getRequestURI());
                 operationLog.setRequestMethod(request.getMethod());
             }
+
+            // 设置响应时间
+            operationLog.setResponseTime(responseTime);
 
             // 提取目标ID和请求参数
             extractTargetIdAndParams(operationLog, method, args);
@@ -84,7 +113,7 @@ public class LogAspect {
 
             // 保存日志
             operationLogMapper.insert(operationLog);
-            log.debug("操作日志记录成功：{}", operationLog.getDescription());
+            log.debug("操作日志记录成功：{}，耗时：{}ms", operationLog.getDescription(), responseTime);
 
         } catch (Exception e) {
             log.error("记录操作日志异常", e);
@@ -94,8 +123,7 @@ public class LogAspect {
     /**
      * 异常情况的日志记录
      */
-    @AfterThrowing(pointcut = "@annotation(logAnnotation)", throwing = "ex")
-    public void saveExceptionLog(JoinPoint joinPoint, LogOperation logAnnotation, Exception ex) {
+    private void saveExceptionLog(JoinPoint joinPoint, LogOperation logAnnotation, Exception ex, long responseTime) {
         try {
             MethodSignature signature = (MethodSignature) joinPoint.getSignature();
             Method method = signature.getMethod();
@@ -121,6 +149,9 @@ public class LogAspect {
                 operationLog.setRequestUrl(request.getRequestURI());
                 operationLog.setRequestMethod(request.getMethod());
             }
+
+            // 设置响应时间
+            operationLog.setResponseTime(responseTime);
 
             // 提取目标ID和请求参数
             extractTargetIdAndParams(operationLog, method, args);
@@ -138,7 +169,7 @@ public class LogAspect {
 
             // 保存日志
             operationLogMapper.insert(operationLog);
-            log.debug("异常操作日志记录成功：{}", operationLog.getDescription());
+            log.debug("异常操作日志记录成功：{}，耗时：{}ms", operationLog.getDescription(), responseTime);
 
         } catch (Exception e) {
             log.error("记录异常操作日志异常", e);
@@ -236,6 +267,11 @@ public class LogAspect {
         }
 
         try {
+            // 1. 尝试提取目标ID
+            Long targetId = extractTargetId(method, args);
+            if (targetId != null) {
+                operationLog.setTargetId(targetId);
+            }
 
             // 2. 转换请求参数为JSON
             String requestParams = requestParamUtil.convertParamsToJson(method, args);
@@ -246,6 +282,48 @@ public class LogAspect {
         } catch (Exception e) {
             log.warn("提取目标ID或请求参数失败", e);
         }
+    }
+
+    /**
+     * 提取目标ID的多种策略
+     */
+    private Long extractTargetId(Method method, Object[] args) {
+        // 策略1：从方法参数中提取名为"id"的参数
+        for (int i = 0; i < args.length; i++) {
+            if (args[i] instanceof Long) {
+                String paramName = getParameterName(method, i);
+                if ("id".equals(paramName) || paramName.endsWith("Id")) {
+                    return (Long) args[i];
+                }
+            }
+        }
+
+        // 策略2：从路径变量中提取（@PathVariable）
+        for (Object arg : args) {
+            if (arg instanceof Long) {
+                return (Long) arg;
+            }
+        }
+
+        // 策略3：从对象参数中提取id字段
+        for (Object arg : args) {
+            if (arg != null && !arg.getClass().isPrimitive() && !isSimpleType(arg)) {
+                try {
+                    java.lang.reflect.Field idField = arg.getClass().getDeclaredField("id");
+                    if (idField != null) {
+                        idField.setAccessible(true);
+                        Object idValue = idField.get(arg);
+                        if (idValue instanceof Long) {
+                            return (Long) idValue;
+                        }
+                    }
+                } catch (NoSuchFieldException | IllegalAccessException e) {
+                    // 继续尝试其他字段
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

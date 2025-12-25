@@ -16,6 +16,8 @@ public class OperationLog extends BaseModel {
     private Long tenantId;
     //操作用户ID
     private Long userId;
+    //目标ID
+    private Long targetId;
     //操作模块
     private String module;
     //操作类型
