@@ -357,6 +357,42 @@ const router = createRouter({
             component: () => import('@/views/ck/CkRecommendRuleManage.vue'),
             meta: { requiresAuth: false }
         },
+        {
+            path: '/index/ckStockManage/',
+            name: 'ckStockManage',
+            component: () => import('@/views/ck/stock/StockManage.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckStockFullWareHouse/',
+            name: 'ckStockFullWareHouse',
+            component: () => import('@/views/ck/stock/StockFullWareHouse.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckStockAreaWise/',
+            name: 'ckStockAreaWise',
+            component: () => import('@/views/ck/stock/StockAreaWise.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckStockCategoryWise/',
+            name: 'ckStockCategoryWise',
+            component: () => import('@/views/ck/stock/StockCategoryWise.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckStockCycleWise/',
+            name: 'ckStockCycleWise',
+            component: () => import('@/views/ck/stock/StockCycleWise.vue'),
+            meta: { requiresAuth: false }
+        },
+        {
+            path: '/index/ckStockRandomWise/',
+            name: 'ckStockRandomWise',
+            component: () => import('@/views/ck/stock/StockRandomWise.vue'),
+            meta: { requiresAuth: false }
+        },
         
     ]
 })
