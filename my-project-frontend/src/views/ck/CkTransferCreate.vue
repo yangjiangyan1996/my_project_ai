@@ -9,9 +9,9 @@
             <el-button type="primary" @click="handleSaveDraft" :loading="loading">
               保存草稿
             </el-button>
-            <el-button type="primary" @click="handleSubmit" :loading="loading">
+            <!-- <el-button type="primary" @click="handleSubmit" :loading="loading">
               提交审核
-            </el-button>
+            </el-button> -->
           </div>
         </div>
       </template>
