@@ -106,6 +106,7 @@ public class ProductController {
         }
     }
 
+
     @PostMapping("/pageList")
     public RespBean<Page<ProductPageListResp>> pageList(@RequestBody ProductListPageReq req) {
         try {
@@ -466,6 +467,7 @@ public class ProductController {
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }
+
 
 }
 

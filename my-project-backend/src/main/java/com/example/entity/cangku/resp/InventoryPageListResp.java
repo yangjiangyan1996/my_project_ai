@@ -87,7 +87,7 @@ public class InventoryPageListResp {
         private String warehouseName;
         //库存数量
         private BigDecimal quantity;
-        // 可用数量 = quantity - lockedQuantity
+        // 可用数量 = quantity - lockedQuantity TODO yang ,这里要处理总库存数量，锁定数量，可以用数量
         private BigDecimal availableQuantity;
         //锁定数量
         private BigDecimal lockedQuantity;

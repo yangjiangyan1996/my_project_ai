@@ -1,9 +1,5 @@
-package com.example.entity.cangku.dto;
+package com.example.entity.cangku.vo;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -13,15 +9,14 @@ import java.util.Date;
  * @Author YangJian
  * @Description
  * @Email 1776080295@qq.com
- * @Date 2025/12/25 11:06
+ * @Date 2025/12/26 21:54
  */
-//ck_stock_take
 @Data
-@TableName("ck_stock_take")
-public class StockTask extends BaseModel {
-    @TableId(type = IdType.AUTO)
+public class StockFullStockTakeDetailVO {
     private Long id;
     //租户ID
+    private Long tenantId;
+    //盘点单号
     private String orderNo;
     //盘点任务名称
     private String takeName;

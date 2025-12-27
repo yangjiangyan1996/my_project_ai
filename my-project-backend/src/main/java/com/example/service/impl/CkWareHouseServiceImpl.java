@@ -75,6 +75,14 @@ public class CkWareHouseServiceImpl extends ServiceImpl<CkWareHouseMapper, Wareh
     }
 
     @Override
+    public Warehouse selectByTenantIdAndWareHouseId(Long tenantId, Long wareHouseId) {
+        return baseMapper.selectOne(new QueryWrapper<Warehouse>()
+                .eq("is_deleted", 0)
+                .eq("tenant_id", tenantId)
+                .eq("id", wareHouseId));
+    }
+
+    @Override
     public List<Warehouse> selectByTenantIdAndWareHouseIds(Long tenantId, List<Long> wareHouseIds) {
         if (wareHouseIds == null || wareHouseIds.isEmpty()) {
             return new ArrayList<>();

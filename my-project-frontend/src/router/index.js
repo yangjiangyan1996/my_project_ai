@@ -393,6 +393,13 @@ const router = createRouter({
             component: () => import('@/views/ck/stock/StockRandomWise.vue'),
             meta: { requiresAuth: false }
         },
+        // 盘点操作
+        {
+            path: '/index/ckStockOperateItem/:id',
+            name: 'ckStockOperateItem',
+            component: () => import('@/views/ck/stock/StockOperateItem.vue'),
+            meta: { requiresAuth: false }
+        },
         
     ]
 })

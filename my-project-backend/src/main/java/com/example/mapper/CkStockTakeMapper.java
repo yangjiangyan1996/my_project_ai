@@ -1,7 +1,7 @@
 package com.example.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.example.entity.cangku.dto.StockTaskItem;
+import com.example.entity.cangku.dto.StockTake;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -11,5 +11,5 @@ import org.apache.ibatis.annotations.Mapper;
  * @Date 2025/12/25 11:50
  */
 @Mapper
-public interface CkStockTaskItemMapper extends BaseMapper<StockTaskItem> {
+public interface CkStockTakeMapper extends BaseMapper<StockTake> {
 }

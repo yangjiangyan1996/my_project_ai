@@ -130,27 +130,28 @@ public class CkStockTakeEnums {
             return APPROVED.getCode().equals(code);
         }
     }
-    
-    // 执行状态枚举
+
+    // stock主表 执行状态枚举
+    //0未开始,1盘点中,2待确认,3已完成,4已取消
     @Getter
-    public enum ExecuteStatus {
+    public enum TakeStatus {
         NOT_STARTED(0, "未开始"),
-        IN_PROGRESS(1, "进行中"),
-        COMPLETED(2, "已完成"),
-        SUSPENDED(3, "已暂停"),
+        IN_PROGRESS(1, "盘点中"),
+        COMPLETED(2, "待确认"),
+        SUSPENDED(3, "已完成"),
         CANCELLED(9, "已取消"),
         ;
         
         private Integer code;
         private String desc;
-        
-        ExecuteStatus(Integer code, String desc) {
+
+        TakeStatus(Integer code, String desc) {
             this.code = code;
             this.desc = desc;
         }
         
         public static String getDescByCode(Integer code) {
-            for (CkStockTakeEnums.ExecuteStatus value : CkStockTakeEnums.ExecuteStatus.values()) {
+            for (CkStockTakeEnums.TakeStatus value : CkStockTakeEnums.TakeStatus.values()) {
                 if (value.getCode().equals(code)) {
                     return value.getDesc();
                 }
@@ -164,6 +165,32 @@ public class CkStockTakeEnums {
         
         public static boolean isCompleted(Integer code) {
             return COMPLETED.getCode().equals(code);
+        }
+    }
+
+    //盘点详情表状态 状态:1-盘点中,2-已盘,3-已确认
+    @Getter
+    public enum StockItemStatus {
+        NOT_ADJUSTED(1, "盘点中"),
+        ADJUSTING(2, "已盘"),
+        ADJUSTED(3, "已确认"),
+        ;
+
+        private Integer code;
+        private String desc;
+
+        StockItemStatus(Integer code, String desc) {
+            this.code = code;
+            this.desc = desc;
+        }
+
+        public static String getDescByCode(Integer code) {
+            for (CkStockTakeEnums.StockItemStatus value : CkStockTakeEnums.StockItemStatus.values()) {
+                if (value.getCode().equals(code)) {
+                    return value.getDesc();
+                }
+            }
+            return null;
         }
     }
     
@@ -185,65 +212,6 @@ public class CkStockTakeEnums {
         
         public static String getDescByCode(Integer code) {
             for (CkStockTakeEnums.AdjustStatus value : CkStockTakeEnums.AdjustStatus.values()) {
-                if (value.getCode().equals(code)) {
-                    return value.getDesc();
-                }
-            }
-            return null;
-        }
-    }
-    
-    // 盘点明细状态枚举
-    @Getter
-    public enum CountStatus {
-        PENDING(0, "待盘点"),
-        FIRST_COUNTED(1, "已初盘"),
-        SECOND_COUNTED(2, "已复盘"),
-        CONFIRMED(3, "已确认"),
-        DIFFERENCE_PENDING(4, "差异待处理"),
-        ADJUSTED(5, "已调整"),
-        ;
-        
-        private Integer code;
-        private String desc;
-        
-        CountStatus(Integer code, String desc) {
-            this.code = code;
-            this.desc = desc;
-        }
-        
-        public static String getDescByCode(Integer code) {
-            for (CkStockTakeEnums.CountStatus value : CkStockTakeEnums.CountStatus.values()) {
-                if (value.getCode().equals(code)) {
-                    return value.getDesc();
-                }
-            }
-            return null;
-        }
-        
-        public static boolean canEdit(Integer code) {
-            return PENDING.getCode().equals(code) || FIRST_COUNTED.getCode().equals(code);
-        }
-    }
-    
-    // 库存类型枚举
-    @Getter
-    public enum InventoryType {
-        NORMAL_INVENTORY(1, "普通库存"),
-        BATCH_INVENTORY(2, "批次库存"),
-        SHELF_INVENTORY(3, "货架库存"),
-        ;
-        
-        private Integer code;
-        private String desc;
-        
-        InventoryType(Integer code, String desc) {
-            this.code = code;
-            this.desc = desc;
-        }
-        
-        public static String getDescByCode(Integer code) {
-            for (CkStockTakeEnums.InventoryType value : CkStockTakeEnums.InventoryType.values()) {
                 if (value.getCode().equals(code)) {
                     return value.getDesc();
                 }
@@ -360,60 +328,7 @@ public class CkStockTakeEnums {
         }
     }
     
-    // 审核状态枚举（盘点明细）
-    @Getter
-    public enum VerifyStatus {
-        NOT_VERIFIED(0, "未审核"),
-        VERIFIED_PASS(1, "审核通过"),
-        VERIFIED_REJECT(2, "审核驳回"),
-        ;
-        
-        private Integer code;
-        private String desc;
-        
-        VerifyStatus(Integer code, String desc) {
-            this.code = code;
-            this.desc = desc;
-        }
-        
-        public static String getDescByCode(Integer code) {
-            for (CkStockTakeEnums.VerifyStatus value : CkStockTakeEnums.VerifyStatus.values()) {
-                if (value.getCode().equals(code)) {
-                    return value.getDesc();
-                }
-            }
-            return null;
-        }
-    }
-    
-    // 任务状态枚举
-    @Getter
-    public enum TaskStatus {
-        PENDING_START(0, "待开始"),
-        IN_PROGRESS(1, "进行中"),
-        COMPLETED(2, "已完成"),
-        INTERRUPTED(3, "异常中断"),
-        CANCELLED(4, "已取消"),
-        ;
-        
-        private Integer code;
-        private String desc;
-        
-        TaskStatus(Integer code, String desc) {
-            this.code = code;
-            this.desc = desc;
-        }
-        
-        public static String getDescByCode(Integer code) {
-            for (CkStockTakeEnums.TaskStatus value : CkStockTakeEnums.TaskStatus.values()) {
-                if (value.getCode().equals(code)) {
-                    return value.getDesc();
-                }
-            }
-            return null;
-        }
-    }
-    
+
     // 触发类型枚举（策略）
     @Getter
     public enum TriggerType {
@@ -470,114 +385,8 @@ public class CkStockTakeEnums {
         }
     }
     
-    // 是否枚举
-    @Getter
-    public enum YesNoEnum {
-        NO(0, "否"),
-        YES(1, "是"),
-        ;
-        
-        private Integer code;
-        private String desc;
-        
-        YesNoEnum(Integer code, String desc) {
-            this.code = code;
-            this.desc = desc;
-        }
-        
-        public static String getDescByCode(Integer code) {
-            for (CkStockTakeEnums.YesNoEnum value : CkStockTakeEnums.YesNoEnum.values()) {
-                if (value.getCode().equals(code)) {
-                    return value.getDesc();
-                }
-            }
-            return null;
-        }
-        
-        public static boolean isYes(Integer code) {
-            return YES.getCode().equals(code);
-        }
-    }
-    
-    // 盘点结果枚举
-    @Getter
-    public enum TakeResult {
-        ACCURATE(1, "准确"),
-        DIFFERENCE(2, "有差异"),
-        NOT_COUNTED(3, "未盘点"),
-        ;
-        
-        private Integer code;
-        private String desc;
-        
-        TakeResult(Integer code, String desc) {
-            this.code = code;
-            this.desc = desc;
-        }
-        
-        public static String getDescByCode(Integer code) {
-            for (CkStockTakeEnums.TakeResult value : CkStockTakeEnums.TakeResult.values()) {
-                if (value.getCode().equals(code)) {
-                    return value.getDesc();
-                }
-            }
-            return null;
-        }
-    }
-    
-    // 优先级枚举
-    @Getter
-    public enum PriorityLevel {
-        HIGHEST(1, "最高"),
-        HIGH(2, "高"),
-        MEDIUM(3, "中"),
-        LOW(4, "低"),
-        LOWEST(5, "最低"),
-        ;
-        
-        private Integer code;
-        private String desc;
-        
-        PriorityLevel(Integer code, String desc) {
-            this.code = code;
-            this.desc = desc;
-        }
-        
-        public static String getDescByCode(Integer code) {
-            for (CkStockTakeEnums.PriorityLevel value : CkStockTakeEnums.PriorityLevel.values()) {
-                if (value.getCode().equals(code)) {
-                    return value.getDesc();
-                }
-            }
-            return null;
-        }
-    }
-    
-    // 盘点异常类型枚举
-    @Getter
-    public enum ExceptionType {
-        DEVICE_FAILURE(1, "设备故障"),
-        NETWORK_ERROR(2, "网络异常"),
-        DATA_LOSS(3, "数据丢失"),
-        PERSONNEL_ABSENCE(4, "人员缺席"),
-        OTHER_EXCEPTION(99, "其他异常"),
-        ;
-        
-        private Integer code;
-        private String desc;
-        
-        ExceptionType(Integer code, String desc) {
-            this.code = code;
-            this.desc = desc;
-        }
-        
-        public static String getDescByCode(Integer code) {
-            for (CkStockTakeEnums.ExceptionType value : CkStockTakeEnums.ExceptionType.values()) {
-                if (value.getCode().equals(code)) {
-                    return value.getDesc();
-                }
-            }
-            return null;
-        }
-    }
+
+
+
+
 }
