@@ -16,4 +16,6 @@ public interface CkShelfService extends IService<WarehouseShelf> {
     List<WarehouseShelf> listWareHouseEnable(Long tenantId, Long warehouseId);
 
     List<WarehouseShelf> selectByTenantId(Long tenantId);
+
+    List<WarehouseShelf> selectByShelfId(List<Long> ids, Long tenantId);
 }

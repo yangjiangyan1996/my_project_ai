@@ -11,4 +11,8 @@ import com.example.entity.cangku.dto.StockTakeLock;
  */
 public interface CkStockTakeLockService extends IService<StockTakeLock> {
     Boolean getStockLockExist(Long stockTakeId, Long tenantId, int lockStatus);
+
+    Boolean getLockExist(Integer takeScope, Long warehouseId, Long tenantId, int lockStatus);
+
+    Boolean releaseByStockTakeId(Long stockTakeId,Long userId,  Long tenantId);
 }

@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.StockTake;
 import com.example.entity.cangku.req.StockListPageReq;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -16,4 +18,6 @@ public interface CkStockTakeService extends IService<StockTake> {
     Page<StockTake> getStockPage(Page<StockTake> page, StockListPageReq req);
 
     StockTake selectById(Long stockTakeId, Long tenantId);
+
+    List<StockTake> selectByWarehouseId(Long warehouseId, Long tenantId);
 }

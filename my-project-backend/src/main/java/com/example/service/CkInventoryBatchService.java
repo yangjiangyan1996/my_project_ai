@@ -21,4 +21,6 @@ public interface CkInventoryBatchService extends IService<InventoryBatch> {
     List<InventoryBatch> selectByProductIdsAndWarehouseIds(Long tenantId, List<Long> productIds, List<Long> warehouseIds);
 
     InventoryBatch selectByProductBatchWarehouse(Long tenantId, Long productId, String batchNo, Long warehouseId);
+
+    List<InventoryBatch> selectByWarehouseId(Long warehouseId, Long tenantId);
 }

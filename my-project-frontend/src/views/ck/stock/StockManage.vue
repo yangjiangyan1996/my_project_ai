@@ -217,6 +217,25 @@
                 >
                   查看
                 </el-button>
+
+               <!-- 调整盘点差异按钮 todo yang 暂时放这里 -->
+      <el-button
+        type="warning"
+        size="small"
+        @click="handleAdjustDifference(row)"
+      >
+        调整差异
+      </el-button>
+      
+      <!-- 如果差异已全部处理完成 -->
+      <el-button
+        type="success"
+        size="small"
+        disabled
+      >
+        已调整完成
+      </el-button>
+
                 
                 <!-- 状态相关操作 -->
                 <template v-if="row.approvalStatus === 1">
@@ -405,37 +424,82 @@
               <div class="form-group full-width">
                 <el-form-item label="盘点范围" prop="takeScope">
                   <el-radio-group v-model="formData.takeScope">
-                    <el-radio :label="1">仓库</el-radio>
-                    <el-radio :label="2">区域</el-radio>
+                    <el-radio :label="1">全部</el-radio>
+                    <el-radio :label="2">批次</el-radio>
                     <el-radio :label="3">货架</el-radio>
-                    <el-radio :label="4">库位</el-radio>
-                    <el-radio :label="5">SKU</el-radio>
+                    <el-radio :label="4">商品</el-radio>
                   </el-radio-group>
                 </el-form-item>
               </div>
               
+
+              <!-- 新增：阈值设置 -->
+        <!-- <div class="form-group">
+          <el-form-item label="差异阈值" prop="thresholdValue">
+            <el-input-number
+              v-model="formData.thresholdValue"
+              :min="0"
+              :step="1"
+              :precision="0"
+              placeholder="请输入阈值"
+              class="form-input"
+            />
+            <div class="input-tips">当盘点差异超过此数值时提示</div>
+          </el-form-item>
+        </div>
+        
+        <div class="form-group">
+          <el-form-item label="阈值单位" prop="thresholdUnit">
+            <el-select
+              v-model="formData.thresholdUnit"
+              placeholder="请选择单位"
+              class="form-select"
+            >
+              <el-option label="个" value="个" />
+              <el-option label="件" value="件" />
+              <el-option label="箱" value="箱" />
+              <el-option label="百分比" value="%" />
+            </el-select>
+            <div class="input-tips">阈值的计量单位</div>
+          </el-form-item>
+        </div>
+        
+        <div class="form-group full-width">
+          <el-form-item label="超阈值复盘" prop="recheckFlag">
+            <el-radio-group v-model="formData.recheckFlag">
+              <el-radio :label="true">是</el-radio>
+              <el-radio :label="false">否</el-radio>
+            </el-radio-group>
+            <div class="type-tips">
+              <el-icon><InfoFilled /></el-icon>
+              <span>当差异超过阈值时，是否需要进行复盘确认</span>
+            </div>
+          </el-form-item>
+        </div> -->
               <!-- 动态范围选择 -->
-              <template v-if="formData.takeScope === 2">
+              <template v-if="formData.takeScope === 2 && formData.warehouseId">
                 <div class="form-group full-width">
-                  <el-form-item label="选择区域" prop="area">
+                  <el-form-item label="选择批次" prop="batchIds">
                     <el-select
-                      v-model="formData.area"
-                      placeholder="请选择区域"
+                      v-model="formData.batchIds"
+                      placeholder="请选择批次"
                       multiple
+                      filterable
                       class="form-select"
+                      @focus="loadBatchOptions"
                     >
                       <el-option
-                        v-for="area in areaOptions"
-                        :key="area"
-                        :label="area"
-                        :value="area"
+                        v-for="batch in batchOptions"
+                        :key="batch.id"
+                        :label="batch.name"
+                        :value="batch.id"
                       />
                     </el-select>
                   </el-form-item>
                 </div>
               </template>
               
-              <template v-if="formData.takeScope === 3">
+              <template v-if="formData.takeScope === 3 && formData.warehouseId">
                 <div class="form-group full-width">
                   <el-form-item label="选择货架" prop="shelfIds">
                     <el-select
@@ -444,11 +508,12 @@
                       multiple
                       filterable
                       class="form-select"
+                      @focus="loadShelfOptions"
                     >
                       <el-option
-                        v-for="shelf in shelfList"
+                        v-for="shelf in shelfOptions"
                         :key="shelf.id"
-                        :label="`${shelf.shelfCode} - ${shelf.shelfName}`"
+                        :label="shelf.name"
                         :value="shelf.id"
                       />
                     </el-select>
@@ -456,23 +521,21 @@
                 </div>
               </template>
               
-              <template v-if="formData.takeScope === 5">
+              <template v-if="formData.takeScope === 4 && formData.warehouseId">
                 <div class="form-group full-width">
-                  <el-form-item label="选择SKU" prop="productIds">
+                  <el-form-item label="选择商品" prop="productIds">
                     <el-select
                       v-model="formData.productIds"
-                      placeholder="请选择SKU"
+                      placeholder="请选择商品"
                       multiple
                       filterable
-                      remote
-                      :remote-method="searchProducts"
-                      :loading="productLoading"
                       class="form-select"
+                      @focus="loadProductOptions"
                     >
                       <el-option
-                        v-for="product in productList"
+                        v-for="product in productOptions"
                         :key="product.id"
-                        :label="`${product.sku} - ${product.name}`"
+                        :label="product.name"
                         :value="product.id"
                       />
                     </el-select>
@@ -841,6 +904,7 @@
                     >
                       撤销确认
                     </el-button>
+                    
                   </div>
                 </template>
               </el-table-column>
@@ -1019,8 +1083,7 @@ const previewLoading = ref(false);
 const formRef = ref();
 const isEdit = ref(false);
 const showPreview = ref(false);
-const router = useRouter(); // 添加这行
-
+const router = useRouter();
 
 // 筛选表单
 const filterForm = reactive({
@@ -1053,14 +1116,19 @@ const formData = reactive({
   warehouseId: '',
   takeType: 1,
   takeScope: 1,
-  area: [],
-  shelfIds: [],
-  productIds: [],
+  batchIds: [],  // 批次ID列表
+  shelfIds: [],  // 货架ID列表
+  productIds: [], // 商品ID列表
   remark: ''
 });
 
 // 预览数据
 const previewData = ref([]);
+
+// 选项数据
+const batchOptions = ref([]);     // 批次选项：{id, name}
+const shelfOptions = ref([]);     // 货架选项：{id, name}
+const productOptions = ref([]);   // 商品选项：{id, name}
 
 // 当前查看的盘点单
 const currentStockTake = reactive({
@@ -1090,26 +1158,19 @@ const uploadData = ref([]);
 
 // 仓库列表
 const warehouseList = ref([]);
-// 货架列表
-const shelfList = ref([]);
-// 产品列表
-const productList = ref([]);
-
 // 盘点单列表
 const stockTakeList = ref([]);
 
 // 选项数据
-const areaOptions = ['A区', 'B区', 'C区', 'D区', 'E区', 'F区'];
 const takeTypeOptions = [
   { value: 1, label: '动态盘' },
   { value: 2, label: '静态盘' }
 ];
 const takeScopeOptions = [
-  { value: 1, label: '仓库' },
-  { value: 2, label: '区域' },
+  { value: 1, label: '全部' },
+  { value: 2, label: '批次' },
   { value: 3, label: '货架' },
-  { value: 4, label: '库位' },
-  { value: 5, label: 'SKU' }
+  { value: 4, label: '商品' }
 ];
 const statusOptions = [
   { value: 1, label: '新建' },
@@ -1129,6 +1190,42 @@ const formRules = {
   ],
   takeScope: [
     { required: true, message: '请选择盘点范围', trigger: 'change' }
+  ],
+  batchIds: [
+    { 
+      validator: (rule, value, callback) => {
+        if (formData.takeScope === 2 && (!value || value.length === 0)) {
+          callback(new Error('请选择批次'));
+        } else {
+          callback();
+        }
+      },
+      trigger: 'change'
+    }
+  ],
+  shelfIds: [
+    { 
+      validator: (rule, value, callback) => {
+        if (formData.takeScope === 3 && (!value || value.length === 0)) {
+          callback(new Error('请选择货架'));
+        } else {
+          callback();
+        }
+      },
+      trigger: 'change'
+    }
+  ],
+  productIds: [
+    { 
+      validator: (rule, value, callback) => {
+        if (formData.takeScope === 4 && (!value || value.length === 0)) {
+          callback(new Error('请选择商品'));
+        } else {
+          callback();
+        }
+      },
+      trigger: 'change'
+    }
   ]
 };
 
@@ -1188,7 +1285,8 @@ const loadStockTakeList = async () => {
         totalDiff: item.totalDiff || 0,
         createdByName: item.createdByName || '',
         createdAt: item.createdAt || '',
-        modifiedAt: item.modifiedAt || ''
+        modifiedAt: item.modifiedAt || '',
+        scopeValues: item.scopeValues || null  // 添加scopeValues字段
       }));
       pagination.total = res.total || 0;
     } else {
@@ -1214,65 +1312,101 @@ const loadWarehouseList = async () => {
   }
 };
 
-const loadShelfList = async (warehouseId) => {
-  try {
-    const res = await get('/api/auth/shelf/list', { warehouseId });
-    shelfList.value = res || [];
-  } catch (error) {
-    console.error('加载货架列表失败:', error);
-    shelfList.value = [];
-  }
-};
-
-const searchProducts = async (query) => {
-  if (!query) {
-    productList.value = [];
-    return;
-  }
-  
-  productLoading.value = true;
-  try {
-    const res = await get('/api/auth/product/search', { keyword: query });
-    productList.value = res || [];
-  } catch (error) {
-    console.error('搜索产品失败:', error);
-    productList.value = [];
-  } finally {
-    productLoading.value = false;
-  }
-};
-
-const refreshPreview = async () => {
+const loadBatchOptions = async () => {
   if (!formData.warehouseId) {
     ElMessage.warning('请先选择仓库');
     return;
   }
   
-  previewLoading.value = true;
   try {
-    const params = {
-      warehouseId: formData.warehouseId,
-      takeScope: formData.takeScope
-    };
-    
-    // 根据范围传递不同参数
-    if (formData.takeScope === 2 && formData.area.length > 0) {
-      params.areas = formData.area;
-    } else if (formData.takeScope === 3 && formData.shelfIds.length > 0) {
-      params.shelfIds = formData.shelfIds;
-    } else if (formData.takeScope === 5 && formData.productIds.length > 0) {
-      params.productIds = formData.productIds;
-    }
-    
-    const res = await post('/api/auth/inventory/preview', params);
-    previewData.value = res || [];
+    const res = await get(`/api/auth/inventory/allBatchNoOfWareHouse?warehouseId=${formData.warehouseId}`);
+    // 确保返回的是数组，并且每个对象都有id和name属性
+    batchOptions.value = Array.isArray(res) ? res.map(item => ({
+      id: item.id || '',
+      name: item.name || ''
+    })) : [];
+    console.log('批次列表:', batchOptions.value);
   } catch (error) {
-    console.error('加载预览数据失败:', error);
-    ElMessage.error('加载预览数据失败');
-    previewData.value = [];
-  } finally {
-    previewLoading.value = false;
+    console.error('加载批次列表失败:', error);
+    batchOptions.value = [];
+    ElMessage.error('加载批次列表失败');
   }
+};
+
+const loadShelfOptions = async () => {
+  if (!formData.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
+  
+  try {
+    const res = await get(`/api/auth/inventory/allShelfOfWareHouse?warehouseId=${formData.warehouseId}`);
+     console.log('货架列表:', res);
+    // 确保返回的是数组，并且每个对象都有id和name属性
+    shelfOptions.value = Array.isArray(res) ? res.map(item => ({
+      id: item.id || '',
+      name: item.name || ''
+    })) : [];
+   
+  } catch (error) {
+    console.error('加载货架列表失败:', error);
+    shelfOptions.value = [];
+    ElMessage.error('加载货架列表失败');
+  }
+};
+
+const loadProductOptions = async () => {
+  if (!formData.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
+  
+  try {
+    const res = await get(`/api/auth/inventory/allProductOfWareHouse?warehouseId=${formData.warehouseId}`);
+    // 确保返回的是数组，并且每个对象都有id和name属性
+    productOptions.value = Array.isArray(res) ? res.map(item => ({
+      id: item.id || '',
+      name: item.name || ''
+    })) : [];
+    console.log('商品列表:', productOptions.value);
+  } catch (error) {
+    console.error('加载商品列表失败:', error);
+    productOptions.value = [];
+    ElMessage.error('加载商品列表失败');
+  }
+};
+
+const refreshPreview = async () => {
+  // if (!formData.warehouseId) {
+  //   ElMessage.warning('请先选择仓库');
+  //   return;
+  // }
+  
+  // previewLoading.value = true;
+  // try {
+  //   const params = {
+  //     warehouseId: formData.warehouseId,
+  //     takeScope: formData.takeScope
+  //   };
+    
+  //   // 根据范围传递不同参数
+  //   if (formData.takeScope === 2 && formData.batchIds.length > 0) {
+  //     params.batchIds = formData.batchIds;
+  //   } else if (formData.takeScope === 3 && formData.shelfIds.length > 0) {
+  //     params.shelfIds = formData.shelfIds;
+  //   } else if (formData.takeScope === 4 && formData.productIds.length > 0) {
+  //     params.productIds = formData.productIds;
+  //   }
+    
+  //   const res = await post('/api/auth/inventory/preview', params);
+  //   previewData.value = res || [];
+  // } catch (error) {
+  //   console.error('加载预览数据失败:', error);
+  //   ElMessage.error('加载预览数据失败');
+  //   previewData.value = [];
+  // } finally {
+  //   previewLoading.value = false;
+  // }
 };
 
 const loadDetailList = async (stockTakeId) => {
@@ -1376,19 +1510,63 @@ const handleCreate = () => {
   showPreview.value = false;
 };
 
-const handleEdit = (stockTake) => {
+const handleEdit = async (stockTake) => {
   isEdit.value = true;
   resetForm();
+  
+  // 先加载仓库数据
+  if (!warehouseList.value.length) {
+    await loadWarehouseList();
+  }
+  
+  // 解析scopeValues
+  let batchIds = [];
+  let shelfIds = [];
+  let productIds = [];
+  
+  if (stockTake.scopeValues) {
+    try {
+      const scopeValues = JSON.parse(stockTake.scopeValues);
+      if (stockTake.takeScope === 2 && scopeValues.batchIds) {
+        batchIds = scopeValues.batchIds;
+      } else if (stockTake.takeScope === 3 && scopeValues.shelfIds) {
+        shelfIds = scopeValues.shelfIds;
+      } else if (stockTake.takeScope === 4 && scopeValues.productIds) {
+        productIds = scopeValues.productIds;
+      }
+    } catch (e) {
+      console.error('解析范围数据失败:', e);
+    }
+  }
+  
   Object.assign(formData, {
     id: stockTake.id,
     stockTakeNo: stockTake.stockTakeNo,
     warehouseId: stockTake.warehouseId,
     takeType: stockTake.takeType,
     takeScope: stockTake.takeScope,
+    batchIds,
+    shelfIds,
+    productIds,
     remark: stockTake.remark
   });
+  
   formDialogVisible.value = true;
   showPreview.value = false;
+  
+  // 如果仓库已选择，加载对应的选项数据
+  if (stockTake.warehouseId) {
+    showPreview.value = true;
+    
+    // 根据盘点范围加载对应的选项数据
+    if (stockTake.takeScope === 2) {
+      await loadBatchOptions();
+    } else if (stockTake.takeScope === 3) {
+      await loadShelfOptions();
+    } else if (stockTake.takeScope === 4) {
+      await loadProductOptions();
+    }
+  }
 };
 
 const handleView = async (stockTake) => {
@@ -1483,6 +1661,22 @@ const handleInitialize = async (stockTake) => {
     if (error !== 'cancel') {
       ElMessage.error('初始化失败');
     }
+  }
+};
+
+const handleAdjustDifference= async (stockTake) => {
+  try {
+    // 跳转到盘点数据录入页面
+    router.push({
+      name: 'ckStockAdjustment',
+      params: {
+        id: stockTake.id,
+        stockTakeNo: stockTake.stockTakeNo
+      }
+    });
+  } catch (error) {
+    console.error('跳转页面失败:', error);
+    ElMessage.error('跳转页面失败');
   }
 };
 
@@ -1786,13 +1980,16 @@ const resetForm = () => {
     warehouseId: '',
     takeType: 1,
     takeScope: 1,
-    area: [],
+    batchIds: [],
     shelfIds: [],
     productIds: [],
     remark: ''
   });
   
   previewData.value = [];
+  batchOptions.value = [];
+  shelfOptions.value = [];
+  productOptions.value = [];
   
   if (formRef.value) {
     formRef.value.clearValidate();
@@ -1806,8 +2003,28 @@ const handleFormSubmit = async () => {
     if (valid) {
       formLoading.value = true;
       try {
+        // 准备提交数据
+        const submitData = {
+          ...formData
+        };
+        
+        // 根据盘点范围，构建scopeValues
+        let scopeValues = {};
+        if (formData.takeScope === 2 && formData.batchIds.length > 0) {
+          scopeValues = { batchIds: formData.batchIds };
+        } else if (formData.takeScope === 3 && formData.shelfIds.length > 0) {
+          scopeValues = { shelfIds: formData.shelfIds };
+        } else if (formData.takeScope === 4 && formData.productIds.length > 0) {
+          scopeValues = { productIds: formData.productIds };
+        }
+        
+        // 将scopeValues转换为JSON字符串
+        if (Object.keys(scopeValues).length > 0) {
+          submitData.scopeValues = JSON.stringify(scopeValues);
+        }
+        
         const url = isEdit.value ? '/api/auth/stock/update' : '/api/auth/stock/createStockTake';
-        const res = await post(url, formData);
+        const res = await post(url, submitData);
         
         if (res) {
           ElMessage.success(isEdit.value ? '更新成功' : '创建成功');
@@ -1826,8 +2043,17 @@ const handleFormSubmit = async () => {
 
 const handleWarehouseChange = (warehouseId) => {
   if (warehouseId) {
-    loadShelfList(warehouseId);
     showPreview.value = true;
+    // 清空选项数据
+    batchOptions.value = [];
+    shelfOptions.value = [];
+    productOptions.value = [];
+    
+    // 清空已选的范围值
+    if (formData.takeScope !== 2) formData.batchIds = [];
+    if (formData.takeScope !== 3) formData.shelfIds = [];
+    if (formData.takeScope !== 4) formData.productIds = [];
+    
     // 延迟刷新预览，等待用户选择范围
   } else {
     showPreview.value = false;
@@ -1835,8 +2061,25 @@ const handleWarehouseChange = (warehouseId) => {
   }
 };
 
-// 监听盘点范围变化，自动刷新预览
-watch(() => [formData.takeScope, formData.area, formData.shelfIds, formData.productIds], () => {
+// 监听盘点范围变化
+watch(() => formData.takeScope, (newScope) => {
+  // 当范围变化时，清空其他范围的数据
+  if (newScope !== 2) formData.batchIds = [];
+  if (newScope !== 3) formData.shelfIds = [];
+  if (newScope !== 4) formData.productIds = [];
+  
+  // 如果已选择仓库，则刷新预览
+  if (formData.warehouseId && showPreview.value) {
+    // 防抖刷新预览
+    clearTimeout(window.previewTimer);
+    window.previewTimer = setTimeout(() => {
+      refreshPreview();
+    }, 500);
+  }
+});
+
+// 监听范围选择值的变化
+watch(() => [formData.batchIds, formData.shelfIds, formData.productIds], () => {
   if (formData.warehouseId && showPreview.value) {
     // 防抖刷新预览
     clearTimeout(window.previewTimer);
@@ -1848,11 +2091,10 @@ watch(() => [formData.takeScope, formData.area, formData.shelfIds, formData.prod
 
 const getScopeLabel = (scope) => {
   const mapping = {
-    1: '仓库',
-    2: '区域',
+    1: '全部',
+    2: '批次',
     3: '货架',
-    4: '库位',
-    5: 'SKU'
+    4: '商品'
   };
   return mapping[scope] || '未知';
 };
@@ -1959,6 +2201,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 样式保持不变，与原始文件相同 */
 .stock-take-manage-container {
   padding: 20px;
   background-color: #f5f7fa;

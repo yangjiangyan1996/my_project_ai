@@ -6,12 +6,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.WarehouseShelf;
 import com.example.entity.cangku.req.ShelfListPageReq;
+import com.example.enums.CkCommonEnums;
 import com.example.mapper.CkShelfMapper;
 import com.example.service.CkShelfService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 // CkShelfServiceImpl.java
 @Service
@@ -29,6 +31,14 @@ public class CkShelfServiceImpl extends ServiceImpl<CkShelfMapper, WarehouseShel
 
         // 查询结果
         return baseMapper.selectList(queryWrapper);
+    }
+
+    @Override
+    public List<WarehouseShelf> selectByShelfId(List<Long> ids , Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<WarehouseShelf>()
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+                .eq("tenant_id", tenantId)
+                .in("id", ids));
     }
 
     @Override

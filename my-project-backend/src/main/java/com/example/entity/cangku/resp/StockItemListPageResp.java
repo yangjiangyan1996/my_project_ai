@@ -23,9 +23,13 @@ public class StockItemListPageResp {
 
     /** 产品ID */
     private Long productId;
-
-    /** 仓库ID */
-    private Long warehouseId;
+    //商品名称
+    private String productName;
+    private String sku;
+    //规格型号
+    private String spec;
+    //颜色
+    private String color;
 
     /** 批次号 */
     private String batchNo;
@@ -33,8 +37,7 @@ public class StockItemListPageResp {
     /** 货架ID */
     private Long shelfId;
 
-    /** 库位编码 */
-    private String locationCode;
+    private String shelfName;
 
     /** 系统库存数量 */
     private BigDecimal systemQuantity;
@@ -47,4 +50,7 @@ public class StockItemListPageResp {
 
     /** 状态:1-未盘,2-已盘,3-已确认 */
     private Integer status;
+
+    /** 是否有盘点任务权限 */
+    private Boolean hasStockItemTaskPermission;
 }

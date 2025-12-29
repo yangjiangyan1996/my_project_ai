@@ -27,6 +27,7 @@
             <el-menu-item index="inbound" @click="changeDisplayMode('inbound')">入库管理</el-menu-item>
             <el-menu-item index="outbound" @click="changeDisplayMode('outbound')">出库管理</el-menu-item>
             <el-menu-item index="stockTake" @click="changeDisplayMode('stockTake')">盘点管理</el-menu-item>
+            <el-menu-item index="stockTakeTaskManage" @click="changeDisplayMode('stockTakeTaskManage')">盘点任务管理</el-menu-item>
           </el-sub-menu>
           
           <!-- 基础数据 -->
@@ -409,6 +410,8 @@
     <CkUser v-if="displayMode === 'profile'" />
     <CkRecommendRuleManage v-if="displayMode === 'ckRecommendRule'" />
     <StockManage v-if="displayMode === 'stockTake'" />
+    <StockTakeTaskManage v-if="displayMode === 'stockTakeTaskManage'" />
+
     <!-- 添加快捷操作对应的组件 -->
     <CkInboundCreate v-if="displayMode === 'inbound-create'" />
     <CkOutboundCreate v-if="displayMode === 'outbound-create'" />
@@ -450,6 +453,7 @@ import CkSkuManage from '@/views/ck/CkSkuManage.vue';
 import CkCkUnitManage from '@/views/ck/CkUnitManage.vue';
 import CkRecommendRuleManage from '@/views/ck/CkRecommendRuleManage.vue';
 import StockManage from '@/views/ck/stock/StockManage.vue';
+import StockTakeTaskManage from '@/views/ck/stock/StockTakeTaskManage.vue';
 
 
 

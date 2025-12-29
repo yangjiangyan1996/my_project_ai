@@ -32,28 +32,6 @@ public class StockTakeUtils {
     }
     
     /**
-     * 计算差异等级
-     * @param differenceRate 差异率
-     * @return 差异等级代码
-     */
-    public static Integer calculateDifferenceLevel(BigDecimal differenceRate) {
-        if (differenceRate == null) {
-            return CkStockTakeEnums.DifferenceLevel.NO_DIFFERENCE.getCode();
-        }
-        
-        BigDecimal absRate = differenceRate.abs();
-        if (absRate.compareTo(new BigDecimal("0.01")) < 0) {
-            return CkStockTakeEnums.DifferenceLevel.NO_DIFFERENCE.getCode();
-        } else if (absRate.compareTo(new BigDecimal("0.05")) < 0) {
-            return CkStockTakeEnums.DifferenceLevel.MINOR_DIFFERENCE.getCode();
-        } else if (absRate.compareTo(new BigDecimal("0.20")) < 0) {
-            return CkStockTakeEnums.DifferenceLevel.NORMAL_DIFFERENCE.getCode();
-        } else {
-            return CkStockTakeEnums.DifferenceLevel.MAJOR_DIFFERENCE.getCode();
-        }
-    }
-    
-    /**
      * 检查是否需要复盘
      * @param differenceRate 差异率
      * @param toleranceRate 允许差异率

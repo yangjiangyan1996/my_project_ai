@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.InventoryShelf;
+import com.example.enums.CkCommonEnums;
 import com.example.mapper.CkInventoryShelfMapper;
 import com.example.service.CkInventoryShelfService;
 import org.apache.commons.lang3.StringUtils;
@@ -20,6 +21,45 @@ import java.util.Set;
  */
 @Service
 public class CkInventoryShelfServiceImpl extends ServiceImpl<CkInventoryShelfMapper, InventoryShelf> implements CkInventoryShelfService {
+    @Override
+    public List<InventoryShelf> selectByWarehouseIdAndBatchNos(Long tenantId, Long warehouseId, List<String> batchNos) {
+        return baseMapper.selectList(new QueryWrapper<InventoryShelf>()
+                .eq("warehouse_id", warehouseId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+                .in("batch_no", batchNos)
+        );
+    }
+
+    @Override
+    public List<InventoryShelf> selectByWarehouseIdAndShelfIds(Long tenantId, Long warehouseId, List<Long> shelfIds) {
+        return this.baseMapper.selectList(new QueryWrapper<InventoryShelf>()
+                .eq("warehouse_id", warehouseId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+                .in("shelf_id", shelfIds)
+        );
+    }
+
+    @Override
+    public List<InventoryShelf> selectByWarehouseIdAndProductIds(Long tenantId, Long warehouseId, List<Long> productIds) {
+        return this.baseMapper.selectList(new QueryWrapper<InventoryShelf>()
+                .eq("warehouse_id", warehouseId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+                .in("product_id", productIds)
+        );
+    }
+
+    @Override
+    public List<InventoryShelf> selectByWarehouseId(Long tenantId, Long warehouseId) {
+        return baseMapper.selectList(new QueryWrapper<InventoryShelf>()
+                .eq("warehouse_id", warehouseId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+        );
+    }
+
     @Override
     public InventoryShelf getByTenantWarehouseProductShelfBatch(Long tenantId, Long warehouseId, Long productId, Long shelfId, String batchNo) {
         return baseMapper.selectOne(new QueryWrapper<InventoryShelf>()

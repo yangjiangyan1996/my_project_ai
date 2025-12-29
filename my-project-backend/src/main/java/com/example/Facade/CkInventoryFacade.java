@@ -1494,4 +1494,52 @@ public class CkInventoryFacade {
         }
         return productUsedShelfResps;
     }
+
+    public List<BatchNoSimpleResp> allBatchNoOfWareHouse(Long warehouseId, Long tenantId) {
+        List<InventoryBatch> inventoryBatches = inventoryBatchService.selectByWarehouseId(warehouseId, tenantId);
+        return inventoryBatches.stream().map(v -> {
+            BatchNoSimpleResp r = new BatchNoSimpleResp();
+            r.setBatchNo(v.getBatchNo());
+            return r;
+        }).collect(Collectors.toList());
+    }
+
+    public List<ShelfSimpleResp> allShelfOfWareHouse(Long warehouseId, Long tenantId) {
+        List<InventoryShelf> inventoryShelves = inventoryShelfService.selectByWarehouseId(tenantId, warehouseId);
+        if (CollectionUtils.isEmpty(inventoryShelves)) {
+            return new ArrayList<>();
+        }
+        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(tenantId);
+        Map<Long, WarehouseShelf> warehouseShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        return inventoryShelves.stream().map(v -> {
+            ShelfSimpleResp r = new ShelfSimpleResp();
+            r.setShelfId(v.getShelfId());
+            if (warehouseShelfMap.containsKey(v.getShelfId())) {
+                r.setShelfName(warehouseShelfMap.get(v.getShelfId()).getShelfName());
+            }
+            return r;
+        }).collect(Collectors.toList());
+    }
+
+    public List<ProductSimpleListResp> allProductOfWareHouse(Long warehouseId, Long tenantId) {
+        List<InventoryWarehouse> inventoryWarehouses = inventoryWarehouseService.selectByWarehourseId(warehouseId, tenantId);
+        if (CollectionUtils.isEmpty(inventoryWarehouses)) {
+            return new ArrayList<>();
+        }
+
+        List<Long> productIds = inventoryWarehouses.stream().map(v -> v.getProductId()).distinct().collect(Collectors.toList());
+        List<Product> products = productService.selectByIds(tenantId, productIds);
+        Map<Long, Product> productMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
+        return inventoryWarehouses.stream().map(v -> {
+            ProductSimpleListResp r = new ProductSimpleListResp();
+            r.setId(v.getProductId());
+            if (productMap.containsKey(v.getProductId())) {
+                r.setName(productMap.get(v.getProductId()).getName());
+                r.setSpec(productMap.get(v.getProductId()).getSpec());
+                r.setColor(productMap.get(v.getProductId()).getColor());
+                r.setSku(productMap.get(v.getProductId()).getSku());
+            }
+            return r;
+        }).collect(Collectors.toList());
+    }
 }

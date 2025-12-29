@@ -400,6 +400,20 @@ const router = createRouter({
             component: () => import('@/views/ck/stock/StockOperateItem.vue'),
             meta: { requiresAuth: false }
         },
+        // 盘点任务管理
+        {
+            path: '/index/ckStockTakeTaskManage/',
+            name: 'ckStockTakeTaskManage',
+            component: () => import('@/views/ck/stock/StockTakeTaskManage.vue'),
+            meta: { requiresAuth: false }
+        },
+        // 盘点调整
+        {
+            path: '/index/ckStockAdjustment/:id',
+            name: 'ckStockAdjustment',
+            component: () => import('@/views/ck/stock/StockAdjustment.vue'),
+            meta: { requiresAuth: false }
+        },
         
     ]
 })

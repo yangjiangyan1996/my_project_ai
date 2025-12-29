@@ -23,7 +23,7 @@ public class StockTakeLock extends BaseModel {
     /** 盘点单ID */
     private Long stockTakeId;
     
-    /** 锁定范围:1-仓库,2-区域,3-货架,4-库位,5-SKU */
+    /** 锁定范围:1: '全部', 2: '批次',  3: '货架', 4: '商品' */
     private Integer lockScope;
     
     /** 仓库ID */

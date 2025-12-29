@@ -11,6 +11,8 @@ import com.example.service.CkStockTakeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -20,6 +22,14 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class CkStockTakeServiceImpl extends ServiceImpl<CkStockTakeMapper, StockTake> implements CkStockTakeService {
+
+    @Override
+    public List<StockTake> selectByWarehouseId(Long warehouseId, Long tenantId) {
+        return this.baseMapper.selectList(new QueryWrapper<StockTake>()
+                .eq("warehouse_id", warehouseId)
+                .eq("tenant_id", tenantId)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode()));
+    }
 
     @Override
     public StockTake selectById(Long stockTakeId, Long tenantId) {

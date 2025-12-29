@@ -51,6 +51,24 @@ public class StockTakeItem extends BaseModel {
     /** 差异数量 */
     private BigDecimal diffQuantity;
 
-    /** 状态:1-未盘,2-已盘,3-已确认 */
+    /** 状态:1-待盘点,2-已初盘,3-已复盘,4-已确认*/
     private Integer status;
+
+    //快照数量
+    private BigDecimal snapshotQuantity;
+    //版本号
+    private Integer version;
+    //调整状态:0-未调整,1-调整中,2-已调整
+    private Integer adjustStatus;
+    //初盘数量
+    private BigDecimal firstCountQuantity;
+    //复盘数量
+    private BigDecimal secondCountQuantity;
+    //三盘数量
+    private BigDecimal thirdCountQuantity;
+    //盘点次数
+    private Integer countTimes;
+    //盘点方式:1-人工,2-PDA,3-RFID
+    private Integer countType;
+
 }

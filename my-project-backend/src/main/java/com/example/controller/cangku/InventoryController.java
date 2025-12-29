@@ -1,5 +1,6 @@
 package com.example.controller.cangku;
 
+import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CkInventoryFacade;
@@ -16,7 +17,9 @@ import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @Author YangJian
@@ -259,4 +262,83 @@ public class InventoryController {
         }
     }
 
+
+
+    //当我选择商品的时候，调用/api/auth/inventory/allProductOfWareHouse
+    @GetMapping("/allProductOfWareHouse")
+    public RespBean<List<ObjectResp>> allProductOfWareHouse(@RequestParam("warehouseId") Long warehouseId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<ProductSimpleListResp> result = inventoryFacade.allProductOfWareHouse(warehouseId, user.getTenantId());
+            if (CollUtil.isNotEmpty( result)) {
+                List<ObjectResp> collect = result.stream().map(v -> {
+                    ObjectResp objectResp = new ObjectResp();
+                    objectResp.setId(v.getId() + "");
+                    objectResp.setName(v.getName());
+                    return objectResp;
+                }).collect(Collectors.toList());
+                return RespBean.success(collect);
+            } else {
+                return RespBean.success(new ArrayList<>());
+            }
+        } catch (ValidationException e) {
+            log.error("InventoryController#allProductOfWareHouse,req:{}",JSON.toJSONString(warehouseId), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#allProductOfWareHouse,req:{}", JSON.toJSONString(warehouseId), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    //当我选择货架的时候，调用/api/auth/inventory/allShelfOfWareHouse?warehouseId=选择的仓库ID获取下啦数据，然后下啦数据可以多选;
+    @GetMapping("/allShelfOfWareHouse")
+    public RespBean<List<ObjectResp>> allShelfOfWareHouse(@RequestParam("warehouseId") Long warehouseId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<ShelfSimpleResp> result = inventoryFacade.allShelfOfWareHouse(warehouseId, user.getTenantId());
+            if (CollUtil.isNotEmpty( result)) {
+                List<ObjectResp> collect = result.stream().map(v -> {
+                    ObjectResp objectResp = new ObjectResp();
+                    objectResp.setId(v.getShelfId() + "");
+                    objectResp.setName(v.getShelfName());
+                    return objectResp;
+                }).collect(Collectors.toList());
+                return RespBean.success(collect);
+            } else {
+                return RespBean.success(new ArrayList<>());
+            }
+        } catch (ValidationException e) {
+            log.error("InventoryController#allShelfOfWareHouse,req:{}",JSON.toJSONString(warehouseId), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#allShelfOfWareHouse,req:{}", JSON.toJSONString(warehouseId), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    //api/auth/inventory/allBatchNoOfWareHouse?warehouseId=选择的仓库ID获取下啦数据，然后下啦数据可以多选
+    @GetMapping("/allBatchNoOfWareHouse")
+    public RespBean<List<ObjectResp>> allBatchNoOfWareHouse(@RequestParam("warehouseId") Long warehouseId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            List<BatchNoSimpleResp> result = inventoryFacade.allBatchNoOfWareHouse(warehouseId, user.getTenantId());
+            if (CollUtil.isNotEmpty( result)) {
+                List<ObjectResp> collect = result.stream().map(v -> {
+                    ObjectResp objectResp = new ObjectResp();
+                    objectResp.setId(v.getBatchNo());
+                    objectResp.setName(v.getBatchNo());
+                    return objectResp;
+                }).collect(Collectors.toList());
+                return RespBean.success(collect);
+            } else {
+                return RespBean.success(new ArrayList<>());
+            }
+        } catch (ValidationException e) {
+            log.error("InventoryController#allBatchNoOfWareHouse,req:{}",JSON.toJSONString(warehouseId), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("InventoryController#allBatchNoOfWareHouse,req:{}", JSON.toJSONString(warehouseId), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
 }
