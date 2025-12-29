@@ -5,23 +5,28 @@
       <div class="header-left">
         <h1 class="page-title">
           <el-icon><Edit /></el-icon>
-          盘点差异调整处理
+          {{ pageTitle }}
         </h1>
         <el-breadcrumb separator="/">
-          <el-breadcrumb-item to="/stock/take-list">盘点管理</el-breadcrumb-item>
-          <el-breadcrumb-item>盘点差异调整</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ stockTakeInfo.stockTakeNo || '' }}</el-breadcrumb-item>
+          <el-breadcrumb-item to="/stock/take-list">库存管理</el-breadcrumb-item>
+          <el-breadcrumb-item v-if="createType === 'manual'">调整单管理</el-breadcrumb-item>
+          <el-breadcrumb-item v-else>盘点管理</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ createType === 'stock_take' ? '盘点差异调整' : '手动创建调整单' }}</el-breadcrumb-item>
+          <el-breadcrumb-item v-if="createType === 'stock_take' && stockTakeInfo.stockTakeNo">
+            {{ stockTakeInfo.stockTakeNo }}
+          </el-breadcrumb-item>
         </el-breadcrumb>
       </div>
       <div class="header-actions">
-        <el-button type="info" @click="goBackToList">
+        <el-button type="info" @click="goBack">
           <el-icon><Back /></el-icon>
-          返回列表
+          {{ createType === 'stock_take' ? '返回列表' : '返回管理' }}
         </el-button>
         <el-button 
           type="primary" 
           @click="exportAdjustmentReport"
           :loading="exporting"
+          v-if="createType === 'stock_take' && currentAdjustment?.id"
         >
           <el-icon><Download /></el-icon>
           导出调整报告
@@ -29,8 +34,8 @@
       </div>
     </div>
 
-    <!-- 盘点单概览 -->
-    <el-card shadow="never" class="overview-card">
+    <!-- 盘点单概览（仅当基于盘点单创建时显示） -->
+    <el-card shadow="never" class="overview-card" v-if="createType === 'stock_take' && stockTakeInfo.stockTakeNo">
       <template #header>
         <div class="card-header">
           <span class="card-title">盘点单概览</span>
@@ -95,8 +100,8 @@
       </div>
     </el-card>
 
-    <!-- 差异处理统计卡片 -->
-    <div class="stats-cards">
+    <!-- 差异处理统计卡片（仅当基于盘点单创建时显示） -->
+    <div class="stats-cards" v-if="createType === 'stock_take'">
       <el-row :gutter="20">
         <el-col :span="6">
           <el-card shadow="hover" class="stat-card">
@@ -156,8 +161,15 @@
     <!-- 处理步骤指引 -->
     <div class="process-steps">
       <el-steps :active="currentStep" finish-status="success" align-center>
-        <el-step title="查看差异" description="确认盘点产生的差异项"></el-step>
-        <el-step title="创建调整单" description="为差异项创建库存调整单"></el-step>
+        <el-step 
+          v-if="createType === 'stock_take'" 
+          title="查看差异" 
+          description="确认盘点产生的差异项"
+        ></el-step>
+        <el-step 
+          title="创建调整单" 
+          :description="createType === 'stock_take' ? '为差异项创建库存调整单' : '手动创建库存调整单'"
+        ></el-step>
         <el-step title="审核调整" description="等待调整单审核通过"></el-step>
         <el-step title="执行调整" description="完成库存实际调整"></el-step>
         <el-step title="调整完成" description="所有差异处理完成"></el-step>
@@ -167,8 +179,8 @@
     <!-- 主要操作区域 -->
     <div class="main-operation">
       <el-row :gutter="20">
-        <!-- 左侧：差异项列表 -->
-        <el-col :span="16">
+        <!-- 左侧：差异项列表（仅当基于盘点单创建时显示） -->
+        <el-col :span="16" v-if="createType === 'stock_take'">
           <el-card shadow="never" class="diff-list-card">
             <template #header>
               <div class="card-header">
@@ -271,108 +283,108 @@
                 </template>
               </el-table-column>
               
-              <el-table-column label="系统库存" width="120" align="right">
-                <template #default="{ row }">
-                  <span class="system-quantity">
-                    {{ formatNumber(row.system_quantity) }}
-                  </span>
-                </template>
-              </el-table-column>
-              
-              <el-table-column label="实盘库存" width="120" align="right">
-                <template #default="{ row }">
-                  <span class="counted-quantity">
-                    {{ formatNumber(row.counted_quantity) }}
-                  </span>
-                </template>
-              </el-table-column>
-              
-              <el-table-column label="差异数量" width="120" align="right">
-                <template #default="{ row }">
-                  <span :class="getDiffQuantityClass(row.diff_quantity)">
-                    {{ row.diff_quantity > 0 ? '+' : '' }}{{ formatNumber(row.diff_quantity) }}
-                  </span>
-                </template>
-              </el-table-column>
-              
-              <el-table-column label="调整类型" width="100" align="center">
-                <template #default="{ row }">
-                  <el-tag 
-                    :type="row.diff_quantity > 0 ? 'success' : 'danger'"
-                    size="small"
-                  >
-                    {{ row.diff_quantity > 0 ? '盘盈' : '盘亏' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              
-              <el-table-column label="关联调整单" width="180">
-                <template #default="{ row }">
-                  <div v-if="row.adjustment_no" class="adjustment-link">
-                    <el-tooltip :content="`点击查看调整单详情`">
-                      <el-link 
-                        type="primary" 
-                        :underline="false"
-                        @click="viewAdjustmentDetail(row.adjustment_id)"
-                      >
-                        {{ formatAdjustmentNo(row.adjustment_no) }}
-                      </el-link>
-                    </el-tooltip>
-                    <div class="adjustment-status">
-                      <el-tag 
-                        v-if="row.adjust_status === 1" 
-                        type="warning" 
-                        size="mini"
-                      >
-                        审核中
-                      </el-tag>
-                      <el-tag 
-                        v-else-if="row.adjust_status === 2" 
-                        type="success" 
-                        size="mini"
-                      >
-                        已调整
-                      </el-tag>
-                    </div>
+             <el-table-column label="系统库存" width="120" align="right">
+              <template #default="{ row }">
+                <span class="system-quantity">
+                  {{ formatNumber(row.system_quantity) }}
+                </span>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="实盘库存" width="120" align="right">
+              <template #default="{ row }">
+                <span class="counted-quantity">
+                  {{ formatNumber(row.counted_quantity) }}
+                </span>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="差异数量" width="120" align="right">
+              <template #default="{ row }">
+                <span :class="getDiffQuantityClass(row.diff_quantity)">
+                  {{ row.diff_quantity > 0 ? '+' : '' }}{{ formatNumber(row.diff_quantity) }}
+                </span>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="调整类型" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag 
+                  :type="row.diff_quantity > 0 ? 'success' : 'danger'"
+                  size="small"
+                >
+                  {{ row.diff_quantity > 0 ? '盘盈' : '盘亏' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="关联调整单" width="180">
+              <template #default="{ row }">
+                <div v-if="row.adjustment_no" class="adjustment-link">
+                  <el-tooltip :content="`点击查看调整单详情`">
+                    <el-link 
+                      type="primary" 
+                      :underline="false"
+                      @click="viewAdjustmentDetail(row.adjustment_id)"
+                    >
+                      {{ formatAdjustmentNo(row.adjustment_no) }}
+                    </el-link>
+                  </el-tooltip>
+                  <div class="adjustment-status">
+                    <el-tag 
+                      v-if="row.adjust_status === 1" 
+                      type="warning" 
+                      size="mini"
+                    >
+                      审核中
+                    </el-tag>
+                    <el-tag 
+                      v-else-if="row.adjust_status === 2" 
+                      type="success" 
+                      size="mini"
+                    >
+                      已调整
+                    </el-tag>
                   </div>
-                  <span v-else class="no-adjustment">--</span>
-                </template>
-              </el-table-column>
-              
-              <el-table-column label="操作" width="150" fixed="right" align="center">
-                <template #default="{ row }">
-                  <div class="item-actions">
-                    <template v-if="row.adjust_status === 0">
-                      <el-button 
-                        type="primary" 
-                        size="small"
-                        @click="handleCreateSingleAdjustment(row)"
-                      >
-                        单独创建调整单
-                      </el-button>
-                    </template>
-                    <template v-else-if="row.adjust_status === 1">
-                      <el-button 
-                        type="text" 
-                        size="small"
-                        @click="viewAdjustmentDetail(row.adjustment_id)"
-                      >
-                        查看调整单
-                      </el-button>
-                    </template>
-                    <template v-else>
-                      <el-button 
-                        type="text" 
-                        size="small"
-                        disabled
-                      >
-                        <el-icon><Check /></el-icon>
-                        已处理
-                      </el-button>
-                    </template>
-                  </div>
-                </template>
-              </el-table-column>
+                </div>
+                <span v-else class="no-adjustment">--</span>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="操作" width="150" fixed="right" align="center">
+              <template #default="{ row }">
+                <div class="item-actions">
+                  <template v-if="row.adjust_status === 0">
+                    <el-button 
+                      type="primary" 
+                      size="small"
+                      @click="handleCreateSingleAdjustment(row)"
+                    >
+                      单独创建调整单
+                    </el-button>
+                  </template>
+                  <template v-else-if="row.adjust_status === 1">
+                    <el-button 
+                      type="text" 
+                      size="small"
+                      @click="viewAdjustmentDetail(row.adjustment_id)"
+                    >
+                      查看调整单
+                    </el-button>
+                  </template>
+                  <template v-else>
+                    <el-button 
+                      type="text" 
+                      size="small"
+                      disabled
+                    >
+                      <el-icon><Check /></el-icon>
+                      已处理
+                    </el-button>
+                  </template>
+                </div>
+              </template>
+            </el-table-column>
             </el-table>
 
             <!-- 分页 -->
@@ -390,10 +402,386 @@
           </el-card>
         </el-col>
 
+        <!-- 左侧：手动创建调整单表单（仅当手动创建时显示） -->
+        <el-col :span="16" v-else>
+          <el-card shadow="never" class="manual-create-card">
+            <template #header>
+              <div class="card-header">
+                <span class="card-title">手动创建调整单</span>
+              </div>
+            </template>
+
+            <div class="manual-create-form">
+              <el-form 
+                :model="manualAdjustmentForm" 
+                ref="manualAdjustmentFormRef"
+                label-width="120px"
+                size="medium"
+              >
+                <!-- 仓库选择 -->
+                <el-form-item label="选择仓库" required prop="warehouseId">
+                  <el-select
+                    v-model="manualAdjustmentForm.warehouseId"
+                    placeholder="请选择仓库"
+                    style="width: 100%"
+                    @change="handleWarehouseChange"
+                  >
+                    <el-option
+                      v-for="warehouse in warehouseList"
+                      :key="warehouse.id"
+                      :label="warehouse.name"
+                      :value="warehouse.id"
+                    />
+                  </el-select>
+                </el-form-item>
+                
+                <!-- 调整单类型 -->
+                <el-form-item label="调整单类型" required prop="adjustType">
+                  <el-select
+                    v-model="manualAdjustmentForm.adjustType"
+                    placeholder="请选择调整单类型"
+                    style="width: 100%"
+                    @change="handleAdjustTypeChange"
+                  >
+                    <el-option :label="getAdjustTypeLabel(1)" :value="1" />
+                    <el-option :label="getAdjustTypeLabel(2)" :value="2" />
+                    <el-option :label="getAdjustTypeLabel(3)" :value="3" />
+                    <el-option :label="getAdjustTypeLabel(4)" :value="4" />
+                    <el-option :label="getAdjustTypeLabel(5)" :value="5" />
+                    <el-option :label="getAdjustTypeLabel(6)" :value="6" />
+                  </el-select>
+                </el-form-item>
+                
+                <!-- 盘点单选择（仅当调整类型为盘点调整时显示） -->
+                <el-form-item 
+                  label="选择盘点单" 
+                  prop="stockTakeId"
+                  v-if="manualAdjustmentForm.adjustType === 1"
+                >
+                  <el-select
+                    v-model="manualAdjustmentForm.stockTakeId"
+                    placeholder="请选择已完成盘点任务"
+                    style="width: 100%"
+                    @change="handleStockTakeSelect"
+                    :loading="loadingStockTakeList"
+                    clearable
+                  >
+                    <el-option
+                      v-for="stockTake in completedStockTakeList"
+                      :key="stockTake.id"
+                      :label="`${stockTake.stockTakeNo} - ${stockTake.warehouseName}`"
+                      :value="stockTake.id"
+                    >
+                      <div class="stock-take-option">
+                        <div class="option-no">{{ stockTake.stockTakeNo }}</div>
+                        <div class="option-info">
+                          <span class="warehouse">{{ stockTake.warehouseName }}</span>
+                          <span class="time">{{ formatDateTime(stockTake.actualEndTime) }}</span>
+                        </div>
+                      </div>
+                    </el-option>
+                  </el-select>
+                </el-form-item>
+                
+                <!-- 调整原因 -->
+                <el-form-item label="调整原因" required prop="adjustReason">
+                  <el-select
+                    v-model="manualAdjustmentForm.adjustReason"
+                    placeholder="请选择调整原因"
+                    style="width: 100%"
+                  >
+                    <el-option label="盘点差异" value="stock_take_diff" />
+                    <el-option label="商品自然损耗" value="natural_loss" />
+                    <el-option label="商品破损报废" value="damage_scrap" />
+                    <el-option label="系统数据错误" value="system_error" />
+                    <el-option label="操作失误" value="operation_mistake" />
+                    <el-option label="其他原因" value="other" />
+                  </el-select>
+                </el-form-item>
+                
+                <!-- 是否紧急 -->
+                <el-form-item label="是否紧急" prop="isUrgent">
+                  <el-switch
+                    v-model="manualAdjustmentForm.isUrgent"
+                    active-text="紧急"
+                    inactive-text="普通"
+                  />
+                </el-form-item>
+                
+                <!-- 影响成本 -->
+                <el-form-item label="影响成本" prop="isAffectCost">
+                  <el-switch
+                    v-model="manualAdjustmentForm.isAffectCost"
+                    active-text="是"
+                    inactive-text="否"
+                  />
+                </el-form-item>
+                
+                <!-- 期望完成时间 -->
+                <el-form-item label="期望完成时间" required prop="expectedCompleteTime">
+                  <el-date-picker
+                    v-model="manualAdjustmentForm.expectedCompleteTime"
+                    type="datetime"
+                    placeholder="选择期望完成时间"
+                    style="width: 100%"
+                    format="YYYY-MM-DD HH:mm"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                    :disabled-date="disabledPastDate"
+                  />
+                </el-form-item>
+                
+                <!-- 审核人 -->
+                <el-form-item label="审核人" prop="reviewerId">
+                  <el-select
+                    v-model="manualAdjustmentForm.reviewerId"
+                    placeholder="请选择审核人（可选）"
+                    filterable
+                    clearable
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="user in reviewerList"
+                      :key="user.id"
+                      :label="`${user.name} (${user.department})`"
+                      :value="user.id"
+                    />
+                  </el-select>
+                </el-form-item>
+                
+                <!-- 调整说明 -->
+                <el-form-item label="调整说明" prop="remark">
+                  <el-input
+                    v-model="manualAdjustmentForm.remark"
+                    type="textarea"
+                    :rows="4"
+                    placeholder="请输入调整说明"
+                    maxlength="500"
+                    show-word-limit
+                  />
+                </el-form-item>
+              </el-form>
+            </div>
+          </el-card>
+
+          <!-- 调整明细列表 -->
+          <el-card shadow="never" class="manual-items-card" style="margin-top: 20px;">
+            <template #header>
+              <div class="card-header">
+                <span class="card-title">调整明细</span>
+                <div class="header-actions">
+                  <el-button 
+                    v-if="manualAdjustmentForm.adjustType !== 1"
+                    type="primary" 
+                    size="small"
+                    @click="openManualProductDialog"
+                    :disabled="!manualAdjustmentForm.warehouseId"
+                  >
+                    <el-icon><Plus /></el-icon>
+                    添加商品
+                  </el-button>
+                  <el-button 
+                    v-if="manualAdjustmentForm.adjustType === 1"
+                    type="success" 
+                    size="small"
+                    @click="loadStockTakeItems"
+                    :disabled="!manualAdjustmentForm.stockTakeId"
+                    :loading="loadingStockTakeItems"
+                  >
+                    <el-icon><Refresh /></el-icon>
+                    加载盘点明细
+                  </el-button>
+                </div>
+              </div>
+            </template>
+
+            <div v-if="manualAdjustmentItems.length === 0" class="no-items">
+              <el-empty :description="manualAdjustmentForm.adjustType === 1 ? '请选择盘点单并加载明细' : '请添加调整商品明细'">
+                <el-button 
+                  v-if="manualAdjustmentForm.adjustType !== 1"
+                  type="primary" 
+                  @click="openManualProductDialog"
+                  :disabled="!manualAdjustmentForm.warehouseId"
+                >
+                  添加商品
+                </el-button>
+                <el-button 
+                  v-if="manualAdjustmentForm.adjustType === 1"
+                  type="success" 
+                  @click="loadStockTakeItems"
+                  :disabled="!manualAdjustmentForm.stockTakeId"
+                  :loading="loadingStockTakeItems"
+                >
+                  加载盘点明细
+                </el-button>
+              </el-empty>
+            </div>
+
+            <div v-else class="manual-items-list">
+              <el-table
+                :data="manualAdjustmentItems"
+                border
+                stripe
+                size="small"
+                class="manual-items-table"
+              >
+                <el-table-column type="index" label="序号" width="60" align="center" />
+                <el-table-column label="商品信息" min-width="250">
+                  <template #default="{ row }">
+                    <div class="product-info">
+                      <div class="product-sku">{{ row.skuCode }}</div>
+                      <div class="product-name">{{ row.productName }}</div>
+                      <div v-if="row.specification" class="product-spec">
+                        {{ row.specification }}
+                      </div>
+                      <div v-if="row.color" class="product-color">
+                        颜色: {{ row.color }}
+                      </div>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="批次号" width="120">
+                  <template #default="{ row }">
+                    <div v-if="row.batchNo">{{ row.batchNo }}</div>
+                    <span v-else class="no-batch">--</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="货架" width="120">
+                  <template #default="{ row }">
+                    <div v-if="row.shelfName">{{ row.shelfName }}</div>
+                    <span v-else class="no-shelf">--</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="系统库存" width="120" align="right">
+                  <template #default="{ row }">
+                    <span class="before-quantity">{{ formatNumber(row.beforeQuantity) }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="实盘数量" width="120" align="right">
+                  <template #default="{ row }">
+                    <span class="counted-quantity">{{ formatNumber(row.countedQuantity) }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="差异数量" width="120" align="right">
+                  <template #default="{ row }">
+                    <span :class="getDiffQuantityClass(row.diffQuantity)">
+                      {{ row.diffQuantity > 0 ? '+' : '' }}{{ formatNumber(row.diffQuantity) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="调整数量" width="150" align="center" v-if="manualAdjustmentForm.adjustType !== 1">
+                  <template #default="{ row }">
+                    <div class="adjust-quantity-cell">
+                      <el-input-number
+                        v-model="row.adjustQuantity"
+                        :min="-999999"
+                        :precision="4"
+                        size="small"
+                        controls-position="right"
+                        style="width: 120px"
+                        @change="handleManualAdjustQuantityChange(row)"
+                      />
+                      <div class="quantity-tips">
+                        <span v-if="row.adjustQuantity > 0" class="positive">增加</span>
+                        <span v-if="row.adjustQuantity < 0" class="negative">减少</span>
+                        <span v-if="row.adjustQuantity === 0" class="zero">不变</span>
+                      </div>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="调整数量" width="150" align="center" v-else>
+                  <template #default="{ row }">
+                    <span :class="getDiffQuantityClass(row.diffQuantity)">
+                      {{ row.diffQuantity > 0 ? '+' : '' }}{{ formatNumber(row.diffQuantity) }}
+                    </span>
+                    <div class="quantity-tips">
+                      <span v-if="row.diffQuantity > 0" class="positive">盘盈</span>
+                      <span v-if="row.diffQuantity < 0" class="negative">盘亏</span>
+                      <span v-if="row.diffQuantity === 0" class="zero">无差异</span>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="调整后数量" width="120" align="right">
+                  <template #default="{ row }">
+                    <span :class="getAfterQuantityClass(row.afterQuantity)">
+                      {{ formatNumber(row.afterQuantity) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="单位成本" width="120" align="right" v-if="manualAdjustmentForm.isAffectCost">
+                  <template #default="{ row }">
+                    <el-input-number
+                      v-model="row.unitCost"
+                      :min="0"
+                      :precision="2"
+                      size="small"
+                      controls-position="right"
+                      style="width: 100px"
+                      @change="handleManualCostChange(row)"
+                    />
+                  </template>
+                </el-table-column>
+                <el-table-column label="调整原因" width="150">
+                  <template #default="{ row }">
+                    <el-input
+                      v-model="row.itemReason"
+                      placeholder="明细原因"
+                      size="small"
+                    />
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="80" align="center" fixed="right" v-if="manualAdjustmentForm.adjustType !== 1">
+                  <template #default="{ row }">
+                    <el-button
+                      type="danger"
+                      link
+                      size="small"
+                      @click="removeManualItem(row)"
+                    >
+                      删除
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+
+              <!-- 统计信息 -->
+              <div class="items-statistics">
+                <div class="stat-item">
+                  <span class="stat-label">商品总数：</span>
+                  <span class="stat-value">{{ manualAdjustmentItems.length }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">差异项数：</span>
+                  <span class="stat-value">{{ totalManualDiffItems }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">盘盈项数：</span>
+                  <span class="stat-value positive">{{ totalManualGainItems }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">盘亏项数：</span>
+                  <span class="stat-value negative">{{ totalManualLossItems }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">调整总量：</span>
+                  <span :class="getQuantityClass(totalManualAdjustQuantity)">
+                    {{ formatNumber(totalManualAdjustQuantity) }}
+                  </span>
+                </div>
+                <div class="stat-item" v-if="manualAdjustmentForm.isAffectCost">
+                  <span class="stat-label">调整金额：</span>
+                  <span :class="getAmountClass(totalManualAdjustAmount)">
+                    ¥{{ formatCurrency(totalManualAdjustAmount) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+
         <!-- 右侧：调整单操作面板 -->
         <el-col :span="8">
-          <!-- 快速创建调整单 -->
-          <el-card shadow="never" class="adjustment-create-card">
+          <!-- 创建调整单面板（基于盘点单） -->
+          <el-card shadow="never" class="adjustment-create-card" v-if="createType === 'stock_take'">
             <template #header>
               <div class="card-header">
                 <span class="card-title">创建调整单</span>
@@ -500,6 +888,51 @@
             </div>
           </el-card>
 
+          <!-- 创建调整单面板（手动创建） -->
+          <el-card shadow="never" class="adjustment-create-card" v-else>
+            <template #header>
+              <div class="card-header">
+                <span class="card-title">创建调整单</span>
+                <el-tag v-if="manualAdjustmentItems.length > 0" type="primary">
+                  已选 {{ manualAdjustmentItems.length }} 项
+                </el-tag>
+              </div>
+            </template>
+
+            <div class="create-form">
+              <el-form 
+                :model="manualAdjustmentForm" 
+                ref="manualAdjustmentFormRef"
+                label-width="100px"
+                size="small"
+              >
+                <el-form-item>
+                  <el-button 
+                    type="primary" 
+                    @click="handleCreateManualAdjustment"
+                    :loading="creatingManualAdjustment"
+                    :disabled="manualAdjustmentItems.length === 0"
+                    style="width: 100%"
+                  >
+                    <el-icon><DocumentAdd /></el-icon>
+                    创建库存调整单
+                  </el-button>
+                </el-form-item>
+                
+                <div class="form-tips">
+                  <el-alert type="info" :closable="false">
+                    <p>请确保：</p>
+                    <p v-if="manualAdjustmentForm.adjustType === 1">1. 已选择仓库和盘点单</p>
+                    <p v-else>1. 已选择仓库</p>
+                    <p v-if="manualAdjustmentForm.adjustType === 1">2. 已加载盘点明细</p>
+                    <p v-else>2. 已添加调整商品明细</p>
+                    <p>3. 调整数量已正确填写</p>
+                  </el-alert>
+                </div>
+              </el-form>
+            </div>
+          </el-card>
+
           <!-- 调整单历史 -->
           <el-card shadow="never" class="adjustment-history-card" style="margin-top: 20px;">
             <template #header>
@@ -558,6 +991,120 @@
       </el-row>
     </div>
 
+    <!-- 商品选择对话框（手动创建时使用，仅当非盘点调整时） -->
+    <el-dialog
+      v-model="manualProductDialogVisible"
+      title="选择商品"
+      width="1000px"
+      top="5vh"
+      :close-on-click-modal="false"
+    >
+      <div class="product-select-dialog">
+        <!-- 商品筛选 -->
+        <div class="product-filter">
+          <el-form :model="manualProductFilter" inline>
+            <el-form-item>
+              <el-input
+                v-model="manualProductFilter.keyword"
+                placeholder="搜索商品名称、SKU、编码"
+                clearable
+                style="width: 300px"
+                @keyup.enter="loadManualProductList"
+              >
+                <template #append>
+                  <el-button @click="loadManualProductList">
+                    <el-icon><Search /></el-icon>
+                  </el-button>
+                </template>
+              </el-input>
+            </el-form-item>
+          </el-form>
+        </div>
+        
+        <!-- 商品列表 -->
+        <div class="product-list-container">
+          <el-table
+            ref="manualProductTableRef"
+            :data="manualProductList"
+            v-loading="manualProductLoading"
+            @selection-change="handleManualProductSelectionChange"
+            empty-text="暂无商品数据"
+            border
+            stripe
+            height="400"
+          >
+            <el-table-column type="selection" width="55" />
+            <el-table-column label="商品编码" width="120">
+              <template #default="{ row }">
+                {{ row.productCode }}
+              </template>
+            </el-table-column>
+            <el-table-column label="SKU编码" width="120">
+              <template #default="{ row }">
+                {{ row.skuCode }}
+              </template>
+            </el-table-column>
+            <el-table-column label="商品名称" width="200">
+              <template #default="{ row }">
+                {{ row.productName }}
+              </template>
+            </el-table-column>
+            <el-table-column label="规格" width="150">
+              <template #default="{ row }">
+                {{ row.specification }}
+              </template>
+            </el-table-column>
+            <el-table-column label="单位" width="80" align="center">
+              <template #default="{ row }">
+                {{ row.unit }}
+              </template>
+            </el-table-column>
+            <el-table-column label="当前库存" width="100" align="right">
+              <template #default="{ row }">
+                {{ formatNumber(row.currentQuantity) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="货架" width="120">
+              <template #default="{ row }">
+                {{ row.shelfName || '--' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="库位" width="120">
+              <template #default="{ row }">
+                {{ row.locationCode || '--' }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        
+        <!-- 分页 -->
+        <div class="product-pagination">
+          <el-pagination
+            v-model:current-page="manualProductPagination.current"
+            v-model:page-size="manualProductPagination.size"
+            :total="manualProductPagination.total"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            @size-change="handleManualProductSizeChange"
+            @current-change="handleManualProductCurrentChange"
+          />
+        </div>
+      </div>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="manualProductDialogVisible = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="handleConfirmManualProducts"
+            :disabled="selectedManualProducts.length === 0"
+          >
+            确认选择（{{ selectedManualProducts.length }}个商品）
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 调整单详情对话框 -->
     <el-dialog
       v-model="detailDialogVisible"
@@ -577,7 +1124,7 @@
                 {{ getAdjustTypeLabel(currentAdjustment.adjust_type) }}
               </el-tag>
             </el-descriptions-item>
-            <el-descriptions-item label="盘点单号">
+            <el-descriptions-item label="盘点单号" v-if="currentAdjustment.stock_take_no">
               {{ currentAdjustment.stock_take_no }}
             </el-descriptions-item>
             <el-descriptions-item label="仓库">
@@ -629,17 +1176,17 @@
                 <span v-else>--</span>
               </template>
             </el-table-column>
-            <el-table-column label="系统库存" prop="system_quantity" width="100" align="right" />
-            <el-table-column label="实盘库存" prop="counted_quantity" width="100" align="right" />
-            <el-table-column label="差异数量" width="100" align="right">
+            <el-table-column label="调整前数量" prop="before_quantity" width="100" align="right" />
+            <el-table-column label="调整数量" width="100" align="right">
               <template #default="{ row }">
-                <span :class="row.diff_quantity > 0 ? 'diff-positive' : 'diff-negative'">
-                  {{ row.diff_quantity > 0 ? '+' : '' }}{{ row.diff_quantity }}
+                <span :class="row.adjust_quantity > 0 ? 'adjust-positive' : 'adjust-negative'">
+                  {{ row.adjust_quantity > 0 ? '+' : '' }}{{ row.adjust_quantity }}
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="成本单价" prop="cost_price" width="100" align="right">
-              <template #default="{ row }">¥{{ formatCurrency(row.cost_price) }}</template>
+            <el-table-column label="调整后数量" prop="after_quantity" width="100" align="right" />
+            <el-table-column label="成本单价" prop="unit_cost" width="100" align="right">
+              <template #default="{ row }">¥{{ formatCurrency(row.unit_cost) }}</template>
             </el-table-column>
             <el-table-column label="调整金额" width="120" align="right">
               <template #default="{ row }">
@@ -650,8 +1197,8 @@
             </el-table-column>
             <el-table-column label="状态" width="100" align="center">
               <template #default="{ row }">
-                <el-tag :type="getItemStatusTagType(row.adjust_status)" size="small">
-                  {{ getItemStatusLabel(row.adjust_status) }}
+                <el-tag :type="getItemStatusTagType(row.item_status)" size="small">
+                  {{ getItemStatusLabel(row.item_status) }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -740,7 +1287,7 @@
       </div>
     </el-dialog>
 
-    <!-- 批量处理确认对话框 -->
+    <!-- 批量处理确认对话框（仅当基于盘点单创建时显示） -->
     <el-dialog
       v-model="batchConfirmDialogVisible"
       title="批量创建调整单确认"
@@ -816,21 +1363,30 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   Edit, Back, Download, TrendCharts, Check, Clock, Document,
-  DocumentAdd, Refresh, Warning, Box, Close, VideoPlay, Printer
+  DocumentAdd, Refresh, Warning, Box, Close, VideoPlay, Printer,
+  Plus, Search
 } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
 const router = useRouter();
 const route = useRoute();
 
+// 创建类型：'stock_take'（基于盘点单）或 'manual'（手动创建）
+const createType = ref('stock_take');
+// 页面标题
+const pageTitle = computed(() => {
+  return createType.value === 'stock_take' ? '盘点差异调整处理' : '手动创建调整单';
+});
+
 // 状态定义
 const loadingDiffItems = ref(false);
 const creatingAdjustment = ref(false);
+const creatingManualAdjustment = ref(false);
 const creatingBatchAdjustment = ref(false);
 const exporting = ref(false);
 const detailDialogVisible = ref(false);
@@ -838,8 +1394,12 @@ const batchConfirmDialogVisible = ref(false);
 const reviewing = ref(false);
 const executing = ref(false);
 const reapplying = ref(false);
+const manualProductDialogVisible = ref(false);
+const manualProductLoading = ref(false);
+const loadingStockTakeList = ref(false);
+const loadingStockTakeItems = ref(false);
 
-// 盘点单信息
+// 盘点单信息（仅当基于盘点单创建时使用）
 const stockTakeInfo = reactive({
   id: '',
   stockTakeNo: '',
@@ -854,7 +1414,7 @@ const stockTakeInfo = reactive({
   diffItems: 0
 });
 
-// 差异项数据
+// 差异项数据（仅当基于盘点单创建时使用）
 const diffItems = ref([]);
 const selectedDiffItems = ref([]);
 const diffFilterStatus = ref('pending');
@@ -866,7 +1426,7 @@ const pagination = reactive({
   total: 0
 });
 
-// 调整单表单
+// 调整单表单（基于盘点单）
 const adjustmentForm = reactive({
   adjust_type: 3, // 1: 盘盈, 2: 盘亏, 3: 混合
   adjust_reason: 'stock_take_diff',
@@ -875,9 +1435,40 @@ const adjustmentForm = reactive({
   remark: ''
 });
 
+// 调整单表单（手动创建）
+const manualAdjustmentForm = reactive({
+  warehouseId: '',
+  warehouseName: '',
+  adjustType: 3, // 1: 盘点调整, 2: 报损调整, 3: 报溢调整, 4: 成本调整, 5: 库存转移, 6: 其他调整
+  adjustReason: 'other',
+  stockTakeId: null, // 新增：盘点单ID
+  stockTakeNo: '', // 新增：盘点单号
+  isUrgent: false,
+  isAffectCost: false,
+  expectedCompleteTime: null,
+  reviewerId: null,
+  remark: ''
+});
+
 const batchAdjustmentForm = reactive({
   adjust_reason: 'stock_take_diff',
   remark: '批量处理所有剩余差异项'
+});
+
+// 调整明细（手动创建）
+const manualAdjustmentItems = ref([]);
+
+// 商品选择相关（手动创建）
+const manualProductList = ref([]);
+const selectedManualProducts = ref([]);
+const manualProductFilter = reactive({
+  keyword: '',
+  warehouseId: ''
+});
+const manualProductPagination = reactive({
+  current: 1,
+  size: 10,
+  total: 0
 });
 
 // 调整单历史
@@ -886,12 +1477,20 @@ const activeOrderId = ref(null);
 const currentAdjustment = ref(null);
 const adjustmentDetailItems = ref([]);
 
+// 仓库列表
+const warehouseList = ref([]);
+// 已完成盘点单列表
+const completedStockTakeList = ref([]);
+// 货架选项
+const shelfOptions = ref([]);
 // 审核人列表
 const reviewerList = ref([]);
 
 // 表单引用
 const adjustmentFormRef = ref();
+const manualAdjustmentFormRef = ref();
 const batchAdjustmentFormRef = ref();
+const manualProductTableRef = ref();
 
 // 计算属性
 const totalDiffItems = computed(() => {
@@ -950,11 +1549,78 @@ const getTotalDiffClass = computed(() => {
   return totalDiffQuantity.value >= 0 ? 'positive' : 'negative';
 });
 
+// 手动创建的计算属性
+const totalManualAdjustQuantity = computed(() => {
+  if (manualAdjustmentForm.adjustType === 1) {
+    // 盘点调整：使用差异数量
+    return manualAdjustmentItems.value.reduce((sum, item) => sum + Math.abs(item.diffQuantity || 0), 0);
+  } else {
+    // 其他调整：使用调整数量
+    return manualAdjustmentItems.value.reduce((sum, item) => sum + Math.abs(item.adjustQuantity || 0), 0);
+  }
+});
+
+const totalManualIncreaseQuantity = computed(() => {
+  if (manualAdjustmentForm.adjustType === 1) {
+    return manualAdjustmentItems.value.reduce((sum, item) => {
+      return item.diffQuantity > 0 ? sum + item.diffQuantity : sum;
+    }, 0);
+  } else {
+    return manualAdjustmentItems.value.reduce((sum, item) => {
+      return item.adjustQuantity > 0 ? sum + item.adjustQuantity : sum;
+    }, 0);
+  }
+});
+
+const totalManualDecreaseQuantity = computed(() => {
+  if (manualAdjustmentForm.adjustType === 1) {
+    return manualAdjustmentItems.value.reduce((sum, item) => {
+      return item.diffQuantity < 0 ? sum + Math.abs(item.diffQuantity) : sum;
+    }, 0);
+  } else {
+    return manualAdjustmentItems.value.reduce((sum, item) => {
+      return item.adjustQuantity < 0 ? sum + Math.abs(item.adjustQuantity) : sum;
+    }, 0);
+  }
+});
+
+const totalManualAdjustAmount = computed(() => {
+  if (manualAdjustmentForm.adjustType === 1) {
+    return manualAdjustmentItems.value.reduce((sum, item) => {
+      return sum + Math.abs((item.diffQuantity || 0) * (item.unitCost || 0));
+    }, 0);
+  } else {
+    return manualAdjustmentItems.value.reduce((sum, item) => sum + (item.adjustAmount || 0), 0);
+  }
+});
+
+const totalManualDiffItems = computed(() => {
+  return manualAdjustmentItems.value.filter(item => item.diffQuantity !== 0).length;
+});
+
+const totalManualGainItems = computed(() => {
+  return manualAdjustmentItems.value.filter(item => item.diffQuantity > 0).length;
+});
+
+const totalManualLossItems = computed(() => {
+  return manualAdjustmentItems.value.filter(item => item.diffQuantity < 0).length;
+});
+
 const currentStep = computed(() => {
-  if (pendingItems.value === 0 && processedItems.value > 0) return 5;
-  if (processingItems.value > 0) return 3;
-  if (selectedDiffItems.value.length > 0) return 2;
-  return 1;
+  if (createType.value === 'manual') {
+    // 手动创建：创建调整单 -> 审核调整 -> 执行调整 -> 调整完成
+    if (currentAdjustment.value?.adjust_status === 5) return 5;
+    if (currentAdjustment.value?.adjust_status === 4) return 4;
+    if (currentAdjustment.value?.adjust_status === 2) return 3;
+    if (currentAdjustment.value?.adjust_status === 1) return 2;
+    return 1;
+  } else {
+    // 基于盘点单创建
+    if (pendingItems.value === 0 && processedItems.value > 0) return 5;
+    if (processingItems.value > 0) return 3;
+    if (selectedDiffItems.value.length > 0) return 2;
+    return 1;
+  }
 });
 
 const protectionStatus = computed(() => {
@@ -1008,13 +1674,63 @@ const getDetailTotalAmountClass = computed(() => {
 });
 
 // 方法定义
-const getStockTakeId = () => {
-  return route.params.id;
+// 初始化页面参数
+const initPage = async () => {
+  const params = route.params;
+  const query = route.query;
+  
+  // 判断创建类型
+  if (query.createType === 'manual') {
+    createType.value = 'manual';
+    
+    // 手动创建：加载仓库列表、货架列表、审核人列表
+    await Promise.all([
+      loadWarehouseList(),
+      loadReviewerList()
+    ]);
+    
+    // 如果有仓库ID参数，设置仓库
+    if (query.warehouseId) {
+      manualAdjustmentForm.warehouseId = query.warehouseId;
+      const warehouse = warehouseList.value.find(w => w.id === query.warehouseId);
+      if (warehouse) {
+        manualAdjustmentForm.warehouseName = warehouse.name;
+        loadShelfOptions(query.warehouseId);
+      }
+    }
+    
+  } else if (query.stockTakeId) {
+    createType.value = 'stock_take';
+    
+    // 基于盘点单创建：加载盘点单信息、差异项、调整单历史等
+    await Promise.all([
+      loadStockTakeInfo(query.stockTakeId),
+      loadDiffItems(query.stockTakeId),
+      loadAdjustmentOrders(query.stockTakeId),
+      loadReviewerList(),
+      loadWarehouseList()
+    ]);
+    
+  } else {
+    // 默认返回列表页
+    ElMessage.error('缺少必要参数');
+    goBack();
+  }
 };
 
-// 加载数据
-const loadStockTakeInfo = async () => {
-  const stockTakeId = getStockTakeId();
+// 加载仓库列表
+const loadWarehouseList = async () => {
+  try {
+    const res = await get('/api/auth/warehouse/list');
+    warehouseList.value = res || [];
+  } catch (error) {
+    console.error('加载仓库列表失败:', error);
+    warehouseList.value = [];
+  }
+};
+
+// 加载盘点单信息
+const loadStockTakeInfo = async (stockTakeId) => {
   if (!stockTakeId) return;
   
   try {
@@ -1040,9 +1756,9 @@ const loadStockTakeInfo = async () => {
   }
 };
 
-const loadDiffItems = async () => {
+// 加载差异项
+const loadDiffItems = async (stockTakeId) => {
   loadingDiffItems.value = true;
-  const stockTakeId = getStockTakeId();
   
   try {
     const params = {
@@ -1083,8 +1799,9 @@ const loadDiffItems = async () => {
   }
 };
 
-const loadAdjustmentOrders = async () => {
-  const stockTakeId = getStockTakeId();
+// 加载调整单历史
+const loadAdjustmentOrders = async (stockTakeId) => {
+  if (!stockTakeId) return;
   
   try {
     const res = await get(`/api/auth/stock/adjustmentOrders?stockTakeId=${stockTakeId}`);
@@ -1096,6 +1813,20 @@ const loadAdjustmentOrders = async () => {
   }
 };
 
+// 加载货架选项
+const loadShelfOptions = async (warehouseId) => {
+  if (!warehouseId) return;
+  
+  try {
+    const res = await get(`/api/auth/inventory/allShelfOfWareHouse?warehouseId=${warehouseId}`);
+    shelfOptions.value = res || [];
+  } catch (error) {
+    console.error('加载货架列表失败:', error);
+    shelfOptions.value = [];
+  }
+};
+
+// 加载审核人列表
 const loadReviewerList = async () => {
   try {
     const res = await get('/api/auth/user/getReviewers');
@@ -1108,6 +1839,157 @@ const loadReviewerList = async () => {
     }
   } catch (error) {
     console.error('加载审核人列表失败:', error);
+  }
+};
+
+// 加载已完成盘点单列表
+const loadCompletedStockTakeList = async () => {
+  if (!manualAdjustmentForm.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
+  
+  loadingStockTakeList.value = true;
+  try {
+    const res = await get(`/api/auth/stock/completedStockTakeList?warehouseId=${manualAdjustmentForm.warehouseId}`);
+    if (res && Array.isArray(res)) {
+      completedStockTakeList.value = res.map(item => ({
+        id: item.id,
+        stockTakeNo: item.stockTakeNo,
+        warehouseName: item.warehouseName,
+        takeType: item.takeType,
+        takeTypeName: item.takeTypeName,
+        actualEndTime: item.actualEndTime,
+        totalItems: item.totalItems,
+        countedItems: item.countedItems,
+        diffItems: item.diffItems
+      }));
+    } else {
+      completedStockTakeList.value = [];
+    }
+  } catch (error) {
+    console.error('加载已完成盘点单列表失败:', error);
+    ElMessage.error('加载已完成盘点单列表失败');
+    completedStockTakeList.value = [];
+  } finally {
+    loadingStockTakeList.value = false;
+  }
+};
+
+// 加载盘点单明细
+const loadStockTakeItems = async () => {
+  if (!manualAdjustmentForm.stockTakeId) {
+    ElMessage.warning('请先选择盘点单');
+    return;
+  }
+  
+  loadingStockTakeItems.value = true;
+  try {
+    const params = {
+      stockTakeId: manualAdjustmentForm.stockTakeId,
+      userId: null, // 根据实际情况传递
+      tenantId: null // 根据实际情况传递
+    };
+    
+    const res = await post('/api/auth/stock/itemList', params);
+    if (res && Array.isArray(res)) {
+      // 清空现有明细
+      manualAdjustmentItems.value = [];
+      
+      // 转换数据格式
+      res.forEach(item => {
+        // 只添加有差异的项
+        if (item.diffQuantity !== 0 && item.hasStockItemTaskPermission) {
+          manualAdjustmentItems.value.push({
+            stockTakeItemId: item.stockTakeItemId,
+            productId: item.productId,
+            skuCode: item.sku,
+            productName: item.productName,
+            specification: item.spec,
+            color: item.color,
+            batchNo: item.batchNo,
+            shelfId: item.shelfId,
+            shelfName: item.shelfName,
+            beforeQuantity: item.systemQuantity || 0,
+            countedQuantity: item.countedQuantity || 0,
+            diffQuantity: item.diffQuantity || 0,
+            adjustQuantity: item.diffQuantity || 0, // 盘点调整时，调整数量等于差异数量
+            afterQuantity: item.countedQuantity || 0,
+            unitCost: 0,
+            adjustAmount: 0,
+            itemReason: '',
+            sourceItemId: item.stockTakeItemId
+          });
+        }
+      });
+      
+      if (manualAdjustmentItems.value.length === 0) {
+        ElMessage.info('该盘点单没有差异项或您没有权限操作');
+      } else {
+        ElMessage.success(`已加载 ${manualAdjustmentItems.value.length} 个差异项`);
+      }
+    } else {
+      ElMessage.warning('该盘点单没有明细数据');
+      manualAdjustmentItems.value = [];
+    }
+  } catch (error) {
+    console.error('加载盘点单明细失败:', error);
+    ElMessage.error('加载盘点单明细失败');
+    manualAdjustmentItems.value = [];
+  } finally {
+    loadingStockTakeItems.value = false;
+  }
+};
+
+// 加载商品列表（手动创建时使用，仅当非盘点调整时）
+const loadManualProductList = async () => {
+  if (!manualAdjustmentForm.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
+  
+  manualProductLoading.value = true;
+  try {
+    const params = {
+      page: manualProductPagination.current,
+      size: manualProductPagination.size,
+      warehouseId: manualAdjustmentForm.warehouseId,
+      keyword: manualProductFilter.keyword
+    };
+    
+    const res = await get('/api/auth/inventory/listOfWarehouse?warehouseId=' + manualAdjustmentForm.warehouseId);
+    if (res ) {
+      manualProductList.value = res.map(item => ({
+        id: item.productId || '',
+        productCode: item.sku || '', // 使用sku作为商品编码
+        skuCode: item.sku || '',
+        productName: item.productName || '',
+        specification: item.spec || '', // 后端字段是spec
+        unit: item.unitName || '',
+        currentQuantity: item.availableQuantity || 0, // 使用可用库存
+        totalQuantity: item.quantity || 0,
+        lockedQuantity: item.lockedQuantity || 0,
+        shelfId: '', // 这个接口没有返回货架信息，可能需要其他接口
+        shelfName: '',
+        locationCode: '',
+        unitCost: item.price || 0,
+        categoryName: item.categoryName || '',
+        outUnitName: item.outUnitName || '',
+        outUnitPerNum: item.outUnitPerNum || 0,
+        color: item.color || '',
+        priceUnitUsd: item.priceUnitUsd || 0
+      }));
+      manualProductPagination.total = res.total || 0;
+    } else {
+      manualProductList.value = [];
+      manualProductPagination.total = 0;
+    }
+  } catch (error) {
+    console.error('加载商品列表失败:', error);
+    ElMessage.error('加载商品列表失败');
+    manualProductList.value = [];
+  } finally {
+    manualProductLoading.value = false;
   }
 };
 
@@ -1127,7 +2009,7 @@ const loadAdjustmentDetail = async (adjustmentId) => {
   }
 };
 
-// 差异项选择相关
+// 差异项选择相关（基于盘点单创建）
 const handleDiffSelectionChange = (selection) => {
   selectedDiffItems.value = selection;
   
@@ -1164,7 +2046,178 @@ const clearSelection = () => {
   selectedDiffItems.value = [];
 };
 
-// 创建调整单
+// 仓库变更处理（手动创建）
+const handleWarehouseChange = (warehouseId) => {
+  const warehouse = warehouseList.value.find(w => w.id === warehouseId);
+  if (warehouse) {
+    manualAdjustmentForm.warehouseName = warehouse.name;
+    loadShelfOptions(warehouseId);
+    
+    // 清空已选商品
+    manualAdjustmentItems.value = [];
+    
+    // 清空盘点单选择
+    manualAdjustmentForm.stockTakeId = null;
+    manualAdjustmentForm.stockTakeNo = '';
+    completedStockTakeList.value = [];
+    
+    // 如果是盘点调整类型，加载已完成盘点单列表
+    if (manualAdjustmentForm.adjustType === 1) {
+      loadCompletedStockTakeList();
+    }
+  }
+};
+
+// 调整类型变更处理
+const handleAdjustTypeChange = (type) => {
+  // 清空调整明细
+  manualAdjustmentItems.value = [];
+  
+  if (type === 1) {
+    // 盘点调整：显示盘点单选择，隐藏商品选择
+    if (manualAdjustmentForm.warehouseId) {
+      loadCompletedStockTakeList();
+    }
+  }
+};
+
+// 盘点单选择处理
+const handleStockTakeSelect = (stockTakeId) => {
+  if (stockTakeId) {
+    const stockTake = completedStockTakeList.value.find(item => item.id === stockTakeId);
+    if (stockTake) {
+      manualAdjustmentForm.stockTakeNo = stockTake.stockTakeNo;
+      manualAdjustmentForm.stockTakeId = stockTakeId;
+      
+      // 自动填充调整原因为盘点差异
+      manualAdjustmentForm.adjustReason = 'stock_take_diff';
+    }
+  } else {
+    manualAdjustmentForm.stockTakeNo = '';
+    manualAdjustmentForm.stockTakeId = null;
+    manualAdjustmentItems.value = [];
+  }
+};
+
+// 打开商品选择对话框（手动创建，仅当非盘点调整时）
+const openManualProductDialog = () => {
+  if (!manualAdjustmentForm.warehouseId) {
+    ElMessage.warning('请先选择仓库');
+    return;
+  }
+  
+  // 清空已选商品
+  selectedManualProducts.value = [];
+  
+  // 重置商品筛选
+  manualProductFilter.keyword = '';
+  manualProductPagination.current = 1;
+  
+  // 加载商品列表
+  loadManualProductList();
+  
+  // 显示商品选择对话框
+  manualProductDialogVisible.value = true;
+};
+
+// 商品选择变更处理（手动创建）
+const handleManualProductSelectionChange = (selection) => {
+  selectedManualProducts.value = selection;
+};
+
+// 确认选择商品（手动创建）
+const handleConfirmManualProducts = () => {
+  // 将选中的商品添加到调整明细中
+  selectedManualProducts.value.forEach(product => {
+    // 检查是否已存在
+    const exists = manualAdjustmentItems.value.some(item => item.productId === product.id);
+    if (!exists) {
+      manualAdjustmentItems.value.push({
+        productId: product.id,
+        productCode: product.productCode,
+        skuCode: product.skuCode,
+        productName: product.productName,
+        specification: product.specification,
+        unit: product.unit,
+        batchNo: '',
+        shelfId: product.shelfId || '',
+        shelfCode: product.shelfName || '',
+        beforeQuantity: product.currentQuantity || 0,
+        countedQuantity: 0,
+        diffQuantity: 0,
+        adjustQuantity: 0,
+        afterQuantity: product.currentQuantity || 0,
+        unitCost: product.unitCost || 0,
+        adjustAmount: 0,
+        itemReason: '',
+        sourceItemId: null
+      });
+    }
+  });
+  
+  manualProductDialogVisible.value = false;
+  selectedManualProducts.value = [];
+};
+
+// 删除调整明细项（手动创建）
+const removeManualItem = (item) => {
+  const index = manualAdjustmentItems.value.indexOf(item);
+  if (index > -1) {
+    manualAdjustmentItems.value.splice(index, 1);
+  }
+};
+
+// 批次号变更处理（手动创建）
+const handleManualBatchNoChange = (item) => {
+  // 这里可以添加批次验证逻辑
+  console.log('批次号变更:', item.batchNo);
+};
+
+// 货架变更处理（手动创建）
+const handleManualShelfChange = (item) => {
+  const shelf = shelfOptions.value.find(s => s.id === item.shelfId);
+  if (shelf) {
+    item.shelfCode = shelf.code || shelf.name;
+  } else {
+    item.shelfCode = '';
+  }
+};
+
+// 调整数量变更处理（手动创建）
+const handleManualAdjustQuantityChange = (item) => {
+  // 计算调整后数量
+  item.afterQuantity = (item.beforeQuantity || 0) + (item.adjustQuantity || 0);
+  
+  // 计算差异数量（对于非盘点调整，差异数量等于调整数量）
+  item.diffQuantity = item.adjustQuantity || 0;
+  
+  // 计算调整金额
+  item.adjustAmount = Math.abs((item.adjustQuantity || 0) * (item.unitCost || 0));
+};
+
+// 成本变更处理（手动创建）
+const handleManualCostChange = (item) => {
+  // 计算调整金额
+  if (manualAdjustmentForm.adjustType === 1) {
+    item.adjustAmount = Math.abs((item.diffQuantity || 0) * (item.unitCost || 0));
+  } else {
+    item.adjustAmount = Math.abs((item.adjustQuantity || 0) * (item.unitCost || 0));
+  }
+};
+
+// 商品分页处理（手动创建）
+const handleManualProductSizeChange = (size) => {
+  manualProductPagination.size = size;
+  manualProductPagination.current = 1;
+  loadManualProductList();
+};
+
+const handleManualProductCurrentChange = (page) => {
+  manualProductPagination.current = page;
+  loadManualProductList();
+};
+
+// 创建调整单（基于盘点单）
 const handleCreateAdjustment = async () => {
   if (selectedDiffItems.value.length === 0) {
     ElMessage.warning('请先选择要调整的差异项');
@@ -1226,9 +2279,9 @@ const handleCreateAdjustment = async () => {
       
       // 刷新数据
       await Promise.all([
-        loadDiffItems(),
-        loadAdjustmentOrders(),
-        loadStockTakeInfo()
+        loadDiffItems(stockTakeInfo.id),
+        loadAdjustmentOrders(stockTakeInfo.id),
+        loadStockTakeInfo(stockTakeInfo.id)
       ]);
       
       // 显示调整单详情
@@ -1246,6 +2299,105 @@ const handleCreateAdjustment = async () => {
   }
 };
 
+// 创建调整单（手动创建）
+const handleCreateManualAdjustment = async () => {
+  if (manualAdjustmentItems.length === 0) {
+    ElMessage.warning('请至少添加一条调整明细');
+    return;
+  }
+  
+  if (!manualAdjustmentForm.warehouseId) {
+    ElMessage.warning('请选择仓库');
+    return;
+  }
+  
+  if (!manualAdjustmentForm.adjustReason) {
+    ElMessage.warning('请选择调整原因');
+    return;
+  }
+  
+  if (!manualAdjustmentForm.expectedCompleteTime) {
+    ElMessage.warning('请选择期望完成时间');
+    return;
+  }
+  
+  // 如果是盘点调整，需要检查是否选择了盘点单
+  if (manualAdjustmentForm.adjustType === 1 && !manualAdjustmentForm.stockTakeId) {
+    ElMessage.warning('请选择盘点单');
+    return;
+  }
+  
+  creatingManualAdjustment.value = true;
+  
+  try {
+    const adjustmentData = {
+      warehouse_id: manualAdjustmentForm.warehouseId,
+      warehouse_name: manualAdjustmentForm.warehouseName,
+      adjust_type: manualAdjustmentForm.adjustType,
+      adjust_reason: manualAdjustmentForm.adjustReason,
+      stock_take_id: manualAdjustmentForm.stockTakeId, // 新增：传递盘点单ID
+      stock_take_no: manualAdjustmentForm.stockTakeNo, // 新增：传递盘点单号
+      is_urgent: manualAdjustmentForm.isUrgent,
+      is_affect_cost: manualAdjustmentForm.isAffectCost,
+      expected_complete_time: manualAdjustmentForm.expectedCompleteTime,
+      reviewer_id: manualAdjustmentForm.reviewerId,
+      remark: manualAdjustmentForm.remark,
+      items: manualAdjustmentItems.value.map(item => ({
+        product_id: item.productId,
+        sku_code: item.skuCode,
+        product_name: item.productName,
+        specification: item.specification,
+        color: item.color,
+        batch_no: item.batchNo || null,
+        shelf_id: item.shelfId || null,
+        location_code: item.shelfCode || null,
+        before_quantity: item.beforeQuantity,
+        counted_quantity: item.countedQuantity || 0,
+        diff_quantity: item.diffQuantity,
+        adjust_quantity: manualAdjustmentForm.adjustType === 1 ? item.diffQuantity : item.adjustQuantity,
+        after_quantity: item.afterQuantity,
+        unit_cost: item.unitCost || 0,
+        adjust_amount: item.adjustAmount || 0,
+        item_reason: item.itemReason || manualAdjustmentForm.adjustReason,
+        source_item_id: item.sourceItemId || null // 新增：传递源明细ID（盘点明细ID）
+      }))
+    };
+    
+    const res = await post('/api/auth/adjust/createManual', adjustmentData);
+    if (res && res.code === 200) {
+      ElMessage.success('调整单创建成功');
+      
+      // 重置表单
+      if (manualAdjustmentFormRef.value) {
+        manualAdjustmentFormRef.value.resetFields();
+      }
+      
+      // 清空调整明细
+      manualAdjustmentItems.value = [];
+      
+      // 刷新调整单历史
+      if (createType.value === 'stock_take') {
+        await loadAdjustmentOrders(stockTakeInfo.id);
+      } else {
+        // 手动创建：重新加载页面
+        await initPage();
+      }
+      
+      // 显示调整单详情
+      if (res.data && res.data.id) {
+        await loadAdjustmentDetail(res.data.id);
+      }
+    } else {
+      ElMessage.error(res.message || '创建调整单失败');
+    }
+  } catch (error) {
+    console.error('创建调整单失败:', error);
+    ElMessage.error('创建调整单失败');
+  } finally {
+    creatingManualAdjustment.value = false;
+  }
+};
+
 const handleCreateSingleAdjustment = async (row) => {
   selectedDiffItems.value = [row];
   await handleCreateAdjustment();
@@ -1259,7 +2411,7 @@ const handleCreateAdjustmentForSelected = async () => {
   await handleCreateAdjustment();
 };
 
-// 批量处理所有剩余项
+// 批量处理所有剩余项（基于盘点单创建）
 const handleBatchProcessAll = () => {
   if (availableDiffItems.value.length === 0) {
     ElMessage.warning('没有可处理的差异项');
@@ -1293,9 +2445,9 @@ const handleConfirmBatchProcess = async () => {
       
       // 刷新数据
       await Promise.all([
-        loadDiffItems(),
-        loadAdjustmentOrders(),
-        loadStockTakeInfo()
+        loadDiffItems(stockTakeInfo.id),
+        loadAdjustmentOrders(stockTakeInfo.id),
+        loadStockTakeInfo(stockTakeInfo.id)
       ]);
       
       // 显示调整单详情
@@ -1421,34 +2573,42 @@ const handlePrintAdjustment = () => {
 
 // 刷新数据
 const refreshAllData = async () => {
-  await Promise.all([
-    loadStockTakeInfo(),
-    loadDiffItems(),
-    loadAdjustmentOrders()
-  ]);
+  if (createType.value === 'stock_take' && stockTakeInfo.id) {
+    await Promise.all([
+      loadStockTakeInfo(stockTakeInfo.id),
+      loadDiffItems(stockTakeInfo.id),
+      loadAdjustmentOrders(stockTakeInfo.id)
+    ]);
+  }
 };
 
 const refreshAdjustmentOrders = async () => {
-  await loadAdjustmentOrders();
+  if (createType.value === 'stock_take' && stockTakeInfo.id) {
+    await loadAdjustmentOrders(stockTakeInfo.id);
+  }
 };
 
 // 分页处理
 const handleSizeChange = (size) => {
   pagination.size = size;
   pagination.current = 1;
-  loadDiffItems();
+  if (stockTakeInfo.id) {
+    loadDiffItems(stockTakeInfo.id);
+  }
 };
 
 const handleCurrentChange = (page) => {
   pagination.current = page;
-  loadDiffItems();
+  if (stockTakeInfo.id) {
+    loadDiffItems(stockTakeInfo.id);
+  }
 };
 
 // 导出功能
 const exportAdjustmentReport = async () => {
   exporting.value = true;
   try {
-    const stockTakeId = getStockTakeId();
+    const stockTakeId = stockTakeInfo.id;
     const res = await post(
       '/api/auth/stock/exportAdjustmentReport',
       { stockTakeId },
@@ -1475,9 +2635,13 @@ const exportAdjustmentReport = async () => {
   }
 };
 
-// 返回列表
-const goBackToList = () => {
-  router.push('/stock/take-list');
+// 返回
+const goBack = () => {
+  if (createType.value === 'stock_take') {
+    router.push('/stock/take-list');
+  } else {
+    router.push('/stock/adjust-manage');
+  }
 };
 
 // 工具方法
@@ -1579,18 +2743,24 @@ const getOrderStatusLabel = (status) => {
 
 const getAdjustTypeTagType = (type) => {
   const mapping = {
-    1: 'success', // 盘盈
-    2: 'danger',  // 盘亏
-    3: 'warning'  // 混合
+    1: 'primary',   // 盘点调整
+    2: 'danger',    // 报损调整
+    3: 'success',   // 报溢调整
+    4: 'warning',   // 成本调整
+    5: 'info',      // 库存转移
+    6: ''           // 其他调整
   };
   return mapping[type] || 'info';
 };
 
 const getAdjustTypeLabel = (type) => {
   const mapping = {
-    1: '盘盈调整',
-    2: '盘亏调整',
-    3: '混合调整'
+    1: '盘点调整',
+    2: '报损调整',
+    3: '报溢调整',
+    4: '成本调整',
+    5: '库存转移',
+    6: '其他调整'
   };
   return mapping[type] || '未知';
 };
@@ -1611,32 +2781,55 @@ const getItemStatusLabel = (status) => {
   return mapping[status] || '未知';
 };
 
+const getQuantityClass = (quantity) => {
+  if (quantity > 0) return 'quantity-positive';
+  if (quantity < 0) return 'quantity-negative';
+  return 'quantity-zero';
+};
+
+const getAmountClass = (amount) => {
+  if (amount > 0) return 'amount-positive';
+  if (amount < 0) return 'amount-negative';
+  return 'amount-zero';
+};
+
+const getAfterQuantityClass = (quantity) => {
+  if (quantity > 0) return 'after-positive';
+  return 'after-zero';
+};
+
 const disabledPastDate = (time) => {
   return time.getTime() < Date.now() - 24 * 60 * 60 * 1000; // 禁用24小时前的时间
 };
 
 // 初始化
 onMounted(() => {
-  const stockTakeId = getStockTakeId();
-  if (!stockTakeId) {
-    ElMessage.error('未找到盘点单ID');
-    router.push('/stock/take-list');
-    return;
-  }
-  
-  // 加载所有数据
-  Promise.all([
-    loadStockTakeInfo(),
-    loadDiffItems(),
-    loadAdjustmentOrders(),
-    loadReviewerList()
-  ]);
+  initPage();
 });
 
-// 监听筛选状态变化
+// 监听筛选状态变化（基于盘点单创建）
 watch(diffFilterStatus, () => {
   pagination.current = 1;
-  loadDiffItems();
+  if (stockTakeInfo.id) {
+    loadDiffItems(stockTakeInfo.id);
+  }
+});
+
+// 监听仓库变化（手动创建）
+watch(() => manualAdjustmentForm.warehouseId, (newVal) => {
+  if (newVal && manualAdjustmentForm.adjustType === 1) {
+    loadCompletedStockTakeList();
+  }
+});
+
+// 监听调整类型变化（手动创建）
+watch(() => manualAdjustmentForm.adjustType, (newVal) => {
+  // 清空调整明细
+  manualAdjustmentItems.value = [];
+  
+  if (newVal === 1 && manualAdjustmentForm.warehouseId) {
+    loadCompletedStockTakeList();
+  }
 });
 </script>
 
@@ -1868,6 +3061,12 @@ watch(diffFilterStatus, () => {
   color: #909399;
 }
 
+.product-color {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
 .location-info {
   display: flex;
   flex-direction: column;
@@ -1928,6 +3127,142 @@ watch(diffFilterStatus, () => {
   border-top: 1px solid #ebeef5;
   display: flex;
   justify-content: center;
+}
+
+/* 手动创建调整单表单 */
+.manual-create-card {
+  margin-bottom: 20px;
+}
+
+.manual-create-form {
+  padding: 20px;
+}
+
+.manual-items-card {
+  margin-bottom: 20px;
+}
+
+.no-items {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.manual-items-table {
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.quantity-positive, .after-positive {
+  color: #67C23A;
+  font-weight: bold;
+}
+
+.quantity-negative {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
+.quantity-zero, .after-zero {
+  color: #909399;
+}
+
+.adjust-positive {
+  color: #409EFF;
+  font-weight: bold;
+}
+
+.adjust-negative {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
+.adjust-zero {
+  color: #909399;
+}
+
+.amount-positive {
+  color: #67C23A;
+  font-weight: bold;
+}
+
+.amount-negative {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
+.amount-zero {
+  color: #909399;
+}
+
+.no-batch, .no-shelf {
+  color: #999;
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* 调整明细统计 */
+.items-statistics {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #ebeef5;
+  margin-top: 15px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.stat-value.positive {
+  color: #67C23A;
+}
+
+.stat-value.negative {
+  color: #F56C6C;
+}
+
+/* 盘点单选项样式 */
+.stock-take-option {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.option-no {
+  font-weight: bold;
+  color: #409EFF;
+  margin-bottom: 2px;
+}
+
+.option-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+}
+
+.option-info .warehouse {
+  color: #67C23A;
+}
+
+.option-info .time {
+  color: #999;
 }
 
 /* 调整单操作面板 */
@@ -2006,6 +3341,26 @@ watch(diffFilterStatus, () => {
 .no-history {
   padding: 30px 0;
   text-align: center;
+}
+
+/* 商品选择对话框 */
+.product-select-dialog {
+  padding: 10px;
+}
+
+.product-filter {
+  margin-bottom: 16px;
+}
+
+.product-list-container {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.product-pagination {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* 调整单详情对话框内容 */
@@ -2153,6 +3508,12 @@ watch(diffFilterStatus, () => {
   .batch-buttons {
     width: 100%;
     justify-content: flex-end;
+  }
+  
+  .items-statistics {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
 </style>

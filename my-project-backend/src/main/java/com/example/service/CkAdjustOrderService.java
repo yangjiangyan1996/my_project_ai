@@ -1,7 +1,9 @@
 package com.example.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.AdjustOrder;
+import com.example.entity.cangku.req.AdjustListPageReq;
 
 /**
  * @Author YangJian
@@ -10,4 +12,5 @@ import com.example.entity.cangku.dto.AdjustOrder;
  * @Date 2025/12/29 15:21
  */
 public interface CkAdjustOrderService extends IService<AdjustOrder> {
+    Page<AdjustOrder> getStockPage(Page<AdjustOrder> page, AdjustListPageReq req);
 }

@@ -39,12 +39,6 @@ public class InventoryListResp {
     //sku
     private String sku;
 
-    //单价（人民币）
-//    private BigDecimal priceRmb;
-//
-//    //总价（人民币）
-//    private BigDecimal totalPriceRmb;
-
     //分类名称
     private String categoryName;
 

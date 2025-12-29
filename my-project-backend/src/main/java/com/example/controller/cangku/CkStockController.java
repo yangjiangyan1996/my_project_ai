@@ -255,7 +255,7 @@ public class CkStockController {
     }
 
     @GetMapping("/completedStockTakeList")
-    public RespBean<List<StockListPageResp>> completedStockTakeList(@RequestParam("warehouseId") Long warehouseId) {
+    public RespBean<List<StockListPageResp>> completedStockTakeList(@RequestParam(value = "warehouseId", required = false) Long warehouseId) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
             Long tenantId = UserUtil.getCurrentUser().getTenantId();

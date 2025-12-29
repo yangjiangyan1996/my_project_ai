@@ -260,7 +260,7 @@ public class ProductController {
         }
     }
 
-    //没有地方用
+    //返回商品（不含层级）
     @GetMapping("/finishedProductListEnable")
     public RespBean<List<ProductPageListResp>> finishedProductListEnable() {
         try {

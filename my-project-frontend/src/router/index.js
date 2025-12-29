@@ -407,13 +407,23 @@ const router = createRouter({
             component: () => import('@/views/ck/stock/StockTakeTaskManage.vue'),
             meta: { requiresAuth: false }
         },
-        // 盘点调整
+        // 调整详情
+        // 路由配置示例
         {
-            path: '/index/ckStockAdjustment/:id',
+            path: '/index/ckStockAdjustment/:id?',
             name: 'ckStockAdjustment',
             component: () => import('@/views/ck/stock/StockAdjustment.vue'),
+            props: (route) => ({
+                id: route.params.id,
+                createType: route.query.createType,
+                warehouseId: route.query.warehouseId,
+                warehouseName: route.query.warehouseName,
+                viewMode: route.query.viewMode,
+                editMode: route.query.editMode,
+                stockTakeId: route.query.stockTakeId
+            }),
             meta: { requiresAuth: false }
-        },
+        }
         
     ]
 })

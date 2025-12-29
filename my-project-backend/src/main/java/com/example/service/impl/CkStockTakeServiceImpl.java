@@ -26,7 +26,7 @@ public class CkStockTakeServiceImpl extends ServiceImpl<CkStockTakeMapper, Stock
     @Override
     public List<StockTake> selectByWarehouseId(Long warehouseId, Long tenantId) {
         return this.baseMapper.selectList(new QueryWrapper<StockTake>()
-                .eq("warehouse_id", warehouseId)
+                .eq(warehouseId != null, "warehouse_id", warehouseId)
                 .eq("tenant_id", tenantId)
                 .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode()));
     }

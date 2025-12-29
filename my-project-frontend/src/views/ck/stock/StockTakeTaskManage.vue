@@ -7,7 +7,7 @@
           <div class="header-actions">
             <el-button 
               type="primary" 
-              @click="handleCreate"
+              @click="handleCreateNew"
               :disabled="!selectedWarehouseId"
             >
               <el-icon><Plus /></el-icon>
@@ -221,7 +221,7 @@
                   查看
                 </el-button>
 
-                <!-- 待提交状态：可编辑、提交、删除 -->
+                <!-- 待提交状态：可编辑 -->
                 <template v-if="row.adjustStatus === 1">
                   <el-button
                     type="warning"
@@ -320,759 +320,12 @@
         </el-empty>
       </div>
     </el-card>
-
-    <!-- 创建/编辑调整单对话框 -->
-    <el-dialog
-      v-model="formDialogVisible"
-      :title="formTitle"
-      width="900px"
-      top="5vh"
-      class="adjust-order-form-dialog"
-    >
-      <div class="adjust-order-form-container">
-        <el-form
-          ref="formRef"
-          :model="formData"
-          :rules="formRules"
-          label-width="120px"
-          class="compact-form"
-        >
-          <!-- 基本信息 -->
-          <el-card class="form-card" shadow="never">
-            <template #header>
-              <div class="card-header">
-                <span class="card-title">基本信息</span>
-              </div>
-            </template>
-            
-            <div class="form-grid">
-              <div class="form-group">
-                <el-form-item label="调整单号" prop="adjustNo">
-                  <el-input
-                    v-model="formData.adjustNo"
-                    placeholder="系统自动生成"
-                    disabled
-                    class="form-input"
-                  />
-                </el-form-item>
-              </div>
-              
-              <div class="form-group">
-                <el-form-item label="仓库" prop="warehouseId">
-                  <el-select
-                    v-model="formData.warehouseId"
-                    placeholder="请选择仓库"
-                    class="form-select"
-                    disabled
-                  >
-                    <el-option
-                      v-for="warehouse in warehouseList"
-                      :key="warehouse.id"
-                      :label="warehouse.name"
-                      :value="warehouse.id"
-                    />
-                  </el-select>
-                </el-form-item>
-              </div>
-              
-              <div class="form-group">
-                <el-form-item label="调整类型" prop="adjustType">
-                  <el-select
-                    v-model="formData.adjustType"
-                    placeholder="请选择调整类型"
-                    class="form-select"
-                  >
-                    <el-option
-                      v-for="type in adjustTypeOptions"
-                      :key="type.value"
-                      :label="type.label"
-                      :value="type.value"
-                    />
-                  </el-select>
-                </el-form-item>
-              </div>
-              
-              <div class="form-group">
-                <el-form-item label="来源类型" prop="sourceType">
-                  <el-select
-                    v-model="formData.sourceType"
-                    placeholder="请选择来源类型"
-                    class="form-select"
-                    @change="handleSourceTypeChange"
-                  >
-                    <el-option
-                      v-for="source in sourceTypeOptions"
-                      :key="source.value"
-                      :label="source.label"
-                      :value="source.value"
-                    />
-                  </el-select>
-                </el-form-item>
-              </div>
-              
-              <!-- 来源单据选择 -->
-              <template v-if="formData.sourceType === 1">
-                <div class="form-group full-width">
-                  <el-form-item label="选择盘点单" prop="sourceId">
-                    <el-select
-                      v-model="formData.sourceId"
-                      placeholder="请选择盘点单"
-                      filterable
-                      class="form-select"
-                      @change="handleStockTakeSelect"
-                    >
-                      <el-option
-                        v-for="stockTake in stockTakeOptions"
-                        :key="stockTake.id"
-                        :label="`${stockTake.stockTakeNo}（${stockTake.warehouseName}）`"
-                        :value="stockTake.id"
-                      />
-                    </el-select>
-                  </el-form-item>
-                </div>
-              </template>
-              
-              <div class="form-group full-width">
-                <el-form-item label="调整原因" prop="adjustReason">
-                  <el-input
-                    v-model="formData.adjustReason"
-                    type="textarea"
-                    :rows="3"
-                    placeholder="请输入调整原因"
-                    maxlength="200"
-                    show-word-limit
-                    resize="none"
-                    class="reason-textarea"
-                  />
-                </el-form-item>
-              </div>
-              
-              <div class="form-group">
-                <el-form-item label="是否紧急" prop="isUrgent">
-                  <el-switch
-                    v-model="formData.isUrgent"
-                    active-text="紧急"
-                    inactive-text="普通"
-                  />
-                </el-form-item>
-              </div>
-              
-              <div class="form-group">
-                <el-form-item label="影响成本" prop="isAffectCost">
-                  <el-switch
-                    v-model="formData.isAffectCost"
-                    active-text="是"
-                    inactive-text="否"
-                  />
-                </el-form-item>
-              </div>
-              
-              <div class="form-group full-width">
-                <el-form-item label="备注" prop="remark">
-                  <el-input
-                    v-model="formData.remark"
-                    type="textarea"
-                    :rows="2"
-                    placeholder="请输入备注信息"
-                    maxlength="500"
-                    show-word-limit
-                    resize="none"
-                    class="remark-textarea"
-                  />
-                </el-form-item>
-              </div>
-            </div>
-          </el-card>
-
-          <!-- 调整明细 -->
-          <el-card class="form-card" shadow="never" v-if="showAdjustItems">
-            <template #header>
-              <div class="card-header">
-                <span class="card-title">调整明细</span>
-                <div class="header-actions">
-                  <el-button
-                    type="primary"
-                    link
-                    size="small"
-                    @click="handleAddItem"
-                  >
-                    <el-icon><Plus /></el-icon>
-                    添加商品
-                  </el-button>
-                </div>
-              </div>
-            </template>
-            
-            <div class="adjust-items-container">
-              <div v-if="adjustItems.length === 0" class="no-items-tip">
-                <el-empty description="暂无调整明细">
-                  <template #image>
-                    <el-icon><Box /></el-icon>
-                  </template>
-                  <el-button type="primary" @click="handleAddItem">添加商品</el-button>
-                </el-empty>
-              </div>
-              
-              <div v-else class="adjust-items-list">
-                <el-table
-                  :data="adjustItems"
-                  border
-                  class="adjust-items-table"
-                  size="small"
-                >
-                  <el-table-column type="index" label="序号" width="60" align="center" />
-                  <el-table-column label="商品信息" width="250">
-                    <template #default="{ row }">
-                      <div class="product-info">
-                        <div class="product-name">{{ row.productName || '--' }}</div>
-                        <div class="product-sku">{{ row.skuCode || '--' }}</div>
-                        <div class="product-spec">{{ row.specification || '--' }}</div>
-                      </div>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="批次号" width="120">
-                    <template #default="{ row }">
-                      <el-input
-                        v-model="row.batchNo"
-                        placeholder="批次号"
-                        size="small"
-                        @change="handleBatchNoChange(row)"
-                      />
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="货架" width="120">
-                    <template #default="{ row }">
-                      <el-select
-                        v-model="row.shelfId"
-                        placeholder="选择货架"
-                        size="small"
-                        clearable
-                        @change="handleShelfChange(row)"
-                      >
-                        <el-option
-                          v-for="shelf in shelfOptions"
-                          :key="shelf.id"
-                          :label="shelf.name"
-                          :value="shelf.id"
-                        />
-                      </el-select>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="调整前数量" width="120" align="right">
-                    <template #default="{ row }">
-                      <span class="before-quantity">{{ formatNumber(row.beforeQuantity) }}</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="调整数量" width="150" align="center">
-                    <template #default="{ row }">
-                      <div class="adjust-quantity-cell">
-                        <el-input-number
-                          v-model="row.adjustQuantity"
-                          :min="-999999"
-                          :precision="4"
-                          size="small"
-                          controls-position="right"
-                          style="width: 120px"
-                          @change="handleAdjustQuantityChange(row)"
-                        />
-                        <div class="quantity-tips">
-                          <span v-if="row.adjustQuantity > 0" class="positive">增加</span>
-                          <span v-if="row.adjustQuantity < 0" class="negative">减少</span>
-                          <span v-if="row.adjustQuantity === 0" class="zero">不变</span>
-                        </div>
-                      </div>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="调整后数量" width="120" align="right">
-                    <template #default="{ row }">
-                      <span :class="getAfterQuantityClass(row.afterQuantity)">
-                        {{ formatNumber(row.afterQuantity) }}
-                      </span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="单位成本" width="120" align="right">
-                    <template #default="{ row }">
-                      <el-input-number
-                        v-model="row.unitCost"
-                        :min="0"
-                        :precision="2"
-                        size="small"
-                        controls-position="right"
-                        style="width: 100px"
-                        @change="handleCostChange(row)"
-                      />
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="调整原因" width="150">
-                    <template #default="{ row }">
-                      <el-input
-                        v-model="row.itemReason"
-                        placeholder="明细原因"
-                        size="small"
-                      />
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="操作" width="80" align="center" fixed="right">
-                    <template #default="{ row }">
-                      <el-button
-                        type="danger"
-                        link
-                        size="small"
-                        @click="handleRemoveItem(row)"
-                      >
-                        删除
-                      </el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-                
-                <!-- 统计信息 -->
-                <div class="items-statistics">
-                  <div class="stat-item">
-                    <span class="stat-label">商品总数：</span>
-                    <span class="stat-value">{{ adjustItems.length }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">调整总量：</span>
-                    <span :class="getQuantityClass(totalAdjustQuantity)">
-                      {{ formatNumber(totalAdjustQuantity) }}
-                    </span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">增加数量：</span>
-                    <span class="stat-value positive">{{ formatNumber(totalIncreaseQuantity) }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">减少数量：</span>
-                    <span class="stat-value negative">{{ formatNumber(totalDecreaseQuantity) }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">调整金额：</span>
-                    <span :class="getAmountClass(totalAdjustAmount)">
-                      ¥{{ formatCurrency(totalAdjustAmount) }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </el-card>
-          
-          <!-- 选择商品对话框 -->
-          <el-dialog
-            v-model="productDialogVisible"
-            title="选择商品"
-            width="800px"
-            top="10vh"
-            append-to-body
-          >
-            <div class="product-select-dialog">
-              <!-- 商品筛选 -->
-              <div class="product-filter">
-                <el-input
-                  v-model="productFilter.keyword"
-                  placeholder="搜索商品名称、SKU、编码"
-                  clearable
-                  style="width: 300px"
-                  @keyup.enter="loadProductList"
-                >
-                  <template #append>
-                    <el-button @click="loadProductList">
-                      <el-icon><Search /></el-icon>
-                    </el-button>
-                  </template>
-                </el-input>
-              </div>
-              
-              <!-- 商品列表 -->
-              <div class="product-list-container">
-                <el-table
-                  ref="productTableRef"
-                  :data="productList"
-                  v-loading="productLoading"
-                  empty-text="暂无商品数据"
-                  @selection-change="handleProductSelectionChange"
-                  class="product-select-table"
-                >
-                  <el-table-column type="selection" width="55" />
-                  <el-table-column label="商品编码" width="120">
-                    <template #default="{ row }">
-                      {{ row.productCode }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="SKU编码" width="120">
-                    <template #default="{ row }">
-                      {{ row.skuCode }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="商品名称" width="200">
-                    <template #default="{ row }">
-                      {{ row.productName }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="规格" width="150">
-                    <template #default="{ row }">
-                      {{ row.specification }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="单位" width="80" align="center">
-                    <template #default="{ row }">
-                      {{ row.unit }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="当前库存" width="100" align="right">
-                    <template #default="{ row }">
-                      {{ formatNumber(row.currentQuantity) }}
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </div>
-              
-              <div class="product-pagination">
-                <el-pagination
-                  v-model:current-page="productPagination.current"
-                  v-model:page-size="productPagination.size"
-                  :total="productPagination.total"
-                  :page-sizes="[10, 20, 50]"
-                  layout="total, sizes, prev, pager, next"
-                  @size-change="handleProductSizeChange"
-                  @current-change="handleProductCurrentChange"
-                />
-              </div>
-            </div>
-            
-            <template #footer>
-              <div class="dialog-footer">
-                <el-button @click="productDialogVisible = false">取消</el-button>
-                <el-button 
-                  type="primary" 
-                  @click="handleConfirmProducts"
-                  :disabled="selectedProducts.length === 0"
-                >
-                  确认选择（{{ selectedProducts.length }}个商品）
-                </el-button>
-              </div>
-            </template>
-          </el-dialog>
-        </el-form>
-      </div>
-      
-      <template #footer>
-        <div class="form-dialog-footer">
-          <el-button @click="formDialogVisible = false" class="cancel-btn">取消</el-button>
-          <el-button 
-            type="primary" 
-            @click="handleFormSubmit" 
-            :loading="formLoading"
-            class="submit-btn"
-            :disabled="adjustItems.length === 0"
-          >
-            保存调整单
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
-
-    <!-- 查看调整单详情对话框 -->
-    <el-dialog
-      v-model="viewDialogVisible"
-      :title="`调整单详情 - ${currentAdjustOrder.adjustNo}`"
-      width="1000px"
-      top="5vh"
-      class="adjust-order-view-dialog"
-    >
-      <div class="adjust-order-view-container" v-loading="viewLoading">
-        <!-- 基本信息卡片 -->
-        <el-card class="basic-info-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">基本信息</span>
-              <div class="header-status">
-                <el-tag 
-                  :type="getStatusTagType(currentAdjustOrder.adjustStatus)" 
-                  size="large"
-                >
-                  {{ getStatusLabel(currentAdjustOrder.adjustStatus) }}
-                </el-tag>
-                <el-tag 
-                  :type="getAdjustTypeTagType(currentAdjustOrder.adjustType)" 
-                  size="large"
-                >
-                  {{ getAdjustTypeLabel(currentAdjustOrder.adjustType) }}
-                </el-tag>
-                <el-tag 
-                  v-if="currentAdjustOrder.isUrgent"
-                  type="danger"
-                  size="large"
-                >
-                  紧急
-                </el-tag>
-              </div>
-            </div>
-          </template>
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">调整单号</span>
-              <span class="info-value highlight">{{ currentAdjustOrder.adjustNo }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">仓库</span>
-              <span class="info-value">{{ currentAdjustOrder.warehouseName }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">调整类型</span>
-              <span class="info-value">{{ getAdjustTypeLabel(currentAdjustOrder.adjustType) }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">来源类型</span>
-              <span class="info-value">{{ getSourceTypeLabel(currentAdjustOrder.sourceType) }}</span>
-            </div>
-            <div class="info-item" v-if="currentAdjustOrder.sourceNo">
-              <span class="info-label">来源单号</span>
-              <span class="info-value">{{ currentAdjustOrder.sourceNo }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">调整状态</span>
-              <span class="info-value">{{ getStatusLabel(currentAdjustOrder.adjustStatus) }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">调整原因</span>
-              <span class="info-value">{{ currentAdjustOrder.adjustReason }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">创建人</span>
-              <span class="info-value">{{ currentAdjustOrder.createdByName }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">创建时间</span>
-              <span class="info-value">{{ formatDateTime(currentAdjustOrder.createdAt) }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">修改时间</span>
-              <span class="info-value">{{ formatDateTime(currentAdjustOrder.modifiedAt) }}</span>
-            </div>
-            <div class="info-item" v-if="currentAdjustOrder.approverName">
-              <span class="info-label">审批人</span>
-              <span class="info-value">{{ currentAdjustOrder.approverName }}</span>
-            </div>
-            <div class="info-item" v-if="currentAdjustOrder.approveTime">
-              <span class="info-label">审批时间</span>
-              <span class="info-value">{{ formatDateTime(currentAdjustOrder.approveTime) }}</span>
-            </div>
-            <div class="info-item" v-if="currentAdjustOrder.executeByName">
-              <span class="info-label">执行人</span>
-              <span class="info-value">{{ currentAdjustOrder.executeByName }}</span>
-            </div>
-            <div class="info-item" v-if="currentAdjustOrder.actualExecuteTime">
-              <span class="info-label">执行时间</span>
-              <span class="info-value">{{ formatDateTime(currentAdjustOrder.actualExecuteTime) }}</span>
-            </div>
-            <div class="info-item full-width">
-              <span class="info-label">备注</span>
-              <span class="info-value">{{ currentAdjustOrder.remark || '无' }}</span>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 统计信息卡片 -->
-        <el-card class="stats-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">调整统计</span>
-            </div>
-          </template>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-icon primary">
-                <el-icon><Document /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ currentAdjustOrder.totalItems || 0 }}</div>
-                <div class="stat-label">调整商品数</div>
-              </div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-icon" :class="getQuantityClass(currentAdjustOrder.totalQuantity)">
-                <el-icon><TrendCharts /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ formatNumber(currentAdjustOrder.totalQuantity) }}</div>
-                <div class="stat-label">调整总量</div>
-              </div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-icon success">
-                <el-icon><Top /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ formatNumber(currentAdjustOrder.increaseQuantity || 0) }}</div>
-                <div class="stat-label">增加数量</div>
-              </div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-icon warning">
-                <el-icon><Bottom /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ formatNumber(currentAdjustOrder.decreaseQuantity || 0) }}</div>
-                <div class="stat-label">减少数量</div>
-              </div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-icon" :class="getAmountClass(currentAdjustOrder.totalAmount)">
-                <el-icon><Money /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">¥{{ formatCurrency(currentAdjustOrder.totalAmount || 0) }}</div>
-                <div class="stat-label">调整金额</div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 调整明细表格 -->
-        <el-card class="detail-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">调整明细</span>
-              <div class="header-actions">
-                <el-button
-                  v-if="currentAdjustOrder.adjustStatus === 3"
-                  type="primary"
-                  size="small"
-                  @click="handleExecute(currentAdjustOrder)"
-                >
-                  执行调整
-                </el-button>
-                <el-button
-                  type="success"
-                  size="small"
-                  @click="handleExportAdjustData"
-                >
-                  导出明细
-                </el-button>
-              </div>
-            </div>
-          </template>
-          
-          <div class="detail-table-container">
-            <el-table
-              :data="adjustDetailList"
-              v-loading="detailLoading"
-              empty-text="暂无调整明细"
-              class="detail-table"
-              height="400"
-            >
-              <el-table-column type="index" label="序号" width="60" align="center" />
-              <el-table-column label="SKU" width="120">
-                <template #default="{ row }">
-                  {{ row.skuCode || '--' }}
-                </template>
-              </el-table-column>
-              <el-table-column label="商品名称" width="150">
-                <template #default="{ row }">
-                  {{ row.productName || '--' }}
-                </template>
-              </el-table-column>
-              <el-table-column label="批次号" width="100">
-                <template #default="{ row }">
-                  {{ row.batchNo || '--' }}
-                </template>
-              </el-table-column>
-              <el-table-column label="货架" width="100">
-                <template #default="{ row }">
-                  {{ row.shelfCode || '--' }}
-                </template>
-              </el-table-column>
-              <el-table-column label="调整前数量" width="100" align="right">
-                <template #default="{ row }">
-                  {{ formatNumber(row.beforeQuantity) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="调整数量" width="120" align="center">
-                <template #default="{ row }">
-                  <span :class="getAdjustQuantityClass(row.adjustQuantity)">
-                    {{ formatNumber(row.adjustQuantity) }}
-                  </span>
-                </template>
-              </el-table-column>
-              <el-table-column label="调整后数量" width="100" align="right">
-                <template #default="{ row }">
-                  <span :class="getAfterQuantityClass(row.afterQuantity)">
-                    {{ formatNumber(row.afterQuantity) }}
-                  </span>
-                </template>
-              </el-table-column>
-              <el-table-column label="单位成本" width="100" align="right">
-                <template #default="{ row }">
-                  {{ formatCurrency(row.unitCost) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="调整金额" width="100" align="right">
-                <template #default="{ row }">
-                  <span :class="getAmountClass(row.adjustAmount)">
-                    ¥{{ formatCurrency(row.adjustAmount) }}
-                  </span>
-                </template>
-              </el-table-column>
-              <el-table-column label="调整原因" width="150">
-                <template #default="{ row }">
-                  {{ row.adjustReason || '--' }}
-                </template>
-              </el-table-column>
-              <el-table-column label="明细状态" width="100" align="center">
-                <template #default="{ row }">
-                  <el-tag
-                    :type="getItemStatusTagType(row.status)"
-                    size="small"
-                  >
-                    {{ getItemStatusLabel(row.status) }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-            </el-table>
-            
-            <div class="detail-pagination">
-              <el-pagination
-                v-model:current-page="detailPagination.current"
-                v-model:page-size="detailPagination.size"
-                :total="detailPagination.total"
-                :page-sizes="[20, 50, 100]"
-                layout="total, sizes, prev, pager, next"
-                @size-change="handleDetailSizeChange"
-                @current-change="handleDetailCurrentChange"
-              />
-            </div>
-          </div>
-        </el-card>
-      </div>
-      
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="viewDialogVisible = false">关闭</el-button>
-          <!-- 根据状态显示不同操作按钮 -->
-          <template v-if="currentAdjustOrder.adjustStatus === 1">
-            <el-button type="warning" @click="handleEdit(currentAdjustOrder)">编辑</el-button>
-            <el-button type="success" @click="handleSubmit(currentAdjustOrder)">提交审核</el-button>
-            <el-button type="danger" @click="handleDelete(currentAdjustOrder)">删除</el-button>
-          </template>
-          <template v-if="currentAdjustOrder.adjustStatus === 2">
-            <el-button type="success" @click="handleApprove(currentAdjustOrder)">审核通过</el-button>
-            <el-button type="danger" @click="handleReject(currentAdjustOrder)">审核拒绝</el-button>
-          </template>
-          <template v-if="currentAdjustOrder.adjustStatus === 3">
-            <el-button type="primary" @click="handleExecute(currentAdjustOrder)">执行调整</el-button>
-          </template>
-          <template v-if="currentAdjustOrder.adjustStatus === 5">
-            <el-button type="info" disabled>已执行</el-button>
-          </template>
-        </div>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { 
   Plus, 
@@ -1080,28 +333,12 @@ import {
   Document,
   Edit,
   SetUp,
-  Search,
-  Box,
-  TrendCharts,
-  Top,
-  Bottom,
-  Money,
   OfficeBuilding
 } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
+const router = useRouter();
 const loading = ref(false);
-const formLoading = ref(false);
-const formDialogVisible = ref(false);
-const viewDialogVisible = ref(false);
-const productDialogVisible = ref(false);
-const viewLoading = ref(false);
-const detailLoading = ref(false);
-const productLoading = ref(false);
-const formRef = ref();
-const productTableRef = ref();
-const isEdit = ref(false);
-const showAdjustItems = ref(false);
 
 // 仓库选择表单
 const warehouseForm = reactive({
@@ -1123,45 +360,6 @@ const pagination = reactive({
   size: 10,
   total: 0
 });
-
-// 明细分页信息
-const detailPagination = reactive({
-  current: 1,
-  size: 20,
-  total: 0
-});
-
-// 商品选择分页
-const productPagination = reactive({
-  current: 1,
-  size: 10,
-  total: 0
-});
-
-// 商品筛选条件
-const productFilter = reactive({
-  keyword: '',
-  warehouseId: ''
-});
-
-// 表单数据
-const formData = reactive({
-  id: '',
-  adjustNo: '',
-  warehouseId: '',
-  warehouseName: '',
-  adjustType: 1,
-  sourceType: 1,
-  sourceId: '',
-  sourceNo: '',
-  adjustReason: '',
-  isUrgent: false,
-  isAffectCost: false,
-  remark: ''
-});
-
-// 调整明细数据
-const adjustItems = ref([]);
 
 // 当前查看的调整单
 const currentAdjustOrder = reactive({
@@ -1193,21 +391,10 @@ const currentAdjustOrder = reactive({
   actualExecuteTime: ''
 });
 
-// 调整明细列表
-const adjustDetailList = ref([]);
-
 // 仓库列表
 const warehouseList = ref([]);
 // 调整单列表
 const adjustOrderList = ref([]);
-// 盘点单选项
-const stockTakeOptions = ref([]);
-// 商品列表
-const productList = ref([]);
-// 货架选项
-const shelfOptions = ref([]);
-// 已选商品
-const selectedProducts = ref([]);
 
 // 选项数据
 const adjustTypeOptions = [
@@ -1235,64 +422,11 @@ const adjustStatusOptions = [
   { value: 6, label: '已取消' }
 ];
 
-// 表单验证规则
-const formRules = {
-  warehouseId: [
-    { required: true, message: '请选择仓库', trigger: 'change' }
-  ],
-  adjustType: [
-    { required: true, message: '请选择调整类型', trigger: 'change' }
-  ],
-  sourceType: [
-    { required: true, message: '请选择来源类型', trigger: 'change' }
-  ],
-  adjustReason: [
-    { required: true, message: '请输入调整原因', trigger: 'blur' },
-    { min: 2, max: 200, message: '长度在2到200个字符', trigger: 'blur' }
-  ],
-  sourceId: [
-    { 
-      validator: (rule, value, callback) => {
-        if (formData.sourceType === 1 && !value) {
-          callback(new Error('请选择盘点单'));
-        } else {
-          callback();
-        }
-      },
-      trigger: 'change'
-    }
-  ]
-};
-
 // 计算属性
-const formTitle = computed(() => {
-  return isEdit.value ? '编辑调整单' : '新建调整单';
-});
-
 const selectedWarehouseId = computed(() => warehouseForm.warehouseId);
 const selectedWarehouseName = computed(() => {
   const warehouse = warehouseList.value.find(w => w.id === warehouseForm.warehouseId);
   return warehouse ? warehouse.name : '';
-});
-
-const totalAdjustQuantity = computed(() => {
-  return adjustItems.value.reduce((sum, item) => sum + Math.abs(item.adjustQuantity || 0), 0);
-});
-
-const totalIncreaseQuantity = computed(() => {
-  return adjustItems.value.reduce((sum, item) => {
-    return item.adjustQuantity > 0 ? sum + item.adjustQuantity : sum;
-  }, 0);
-});
-
-const totalDecreaseQuantity = computed(() => {
-  return adjustItems.value.reduce((sum, item) => {
-    return item.adjustQuantity < 0 ? sum + Math.abs(item.adjustQuantity) : sum;
-  }, 0);
-});
-
-const totalAdjustAmount = computed(() => {
-  return adjustItems.value.reduce((sum, item) => sum + (item.adjustAmount || 0), 0);
 });
 
 // 方法
@@ -1362,112 +496,6 @@ const loadAdjustOrderList = async () => {
   }
 };
 
-const loadStockTakeOptions = async () => {
-  if (!selectedWarehouseId.value) return;
-  
-  try {
-    const res = await get(`/api/auth/stock/completedStockTakeList?warehouseId=${selectedWarehouseId.value}`);
-    stockTakeOptions.value = res || [];
-  } catch (error) {
-    console.error('加载盘点单列表失败:', error);
-    stockTakeOptions.value = [];
-    ElMessage.error('加载盘点单列表失败');
-  }
-};
-
-const loadProductList = async () => {
-  if (!selectedWarehouseId.value) {
-    ElMessage.warning('请先选择仓库');
-    return;
-  }
-  
-  productLoading.value = true;
-  try {
-    const params = {
-      page: productPagination.current,
-      size: productPagination.size,
-      warehouseId: selectedWarehouseId.value,
-      keyword: productFilter.keyword
-    };
-    
-    const res = await post('/api/auth/product/listByWarehouse', params);
-    if (res && res.records) {
-      productList.value = res.records.map(item => ({
-        id: item.id || '',
-        productCode: item.productCode || '',
-        skuCode: item.skuCode || '',
-        productName: item.productName || '',
-        specification: item.specification || '',
-        unit: item.unit || '',
-        currentQuantity: item.currentQuantity || 0
-      }));
-      productPagination.total = res.total || 0;
-    } else {
-      productList.value = [];
-      productPagination.total = 0;
-    }
-  } catch (error) {
-    console.error('加载商品列表失败:', error);
-    ElMessage.error('加载商品列表失败');
-    productList.value = [];
-  } finally {
-    productLoading.value = false;
-  }
-};
-
-const loadShelfOptions = async () => {
-  if (!selectedWarehouseId.value) return;
-  
-  try {
-    const res = await get(`/api/auth/inventory/allShelfOfWareHouse?warehouseId=${selectedWarehouseId.value}`);
-    shelfOptions.value = res || [];
-  } catch (error) {
-    console.error('加载货架列表失败:', error);
-    shelfOptions.value = [];
-  }
-};
-
-const loadAdjustDetailList = async (adjustOrderId) => {
-  detailLoading.value = true;
-  try {
-    const params = {
-      adjustOrderId,
-      page: detailPagination.current,
-      size: detailPagination.size
-    };
-    
-    const res = await post('/api/auth/adjust/itemPageList', params);
-    if (res && res.records) {
-      adjustDetailList.value = res.records.map(item => ({
-        id: item.id || '',
-        productId: item.productId || '',
-        skuCode: item.skuCode || '',
-        productName: item.productName || '',
-        batchNo: item.batchNo || '',
-        shelfId: item.shelfId || '',
-        shelfCode: item.shelfCode || '',
-        beforeQuantity: item.beforeQuantity || 0,
-        adjustQuantity: item.adjustQuantity || 0,
-        afterQuantity: item.afterQuantity || 0,
-        unitCost: item.unitCost || 0,
-        adjustAmount: item.adjustAmount || 0,
-        adjustReason: item.adjustReason || '',
-        status: item.status || 1
-      }));
-      detailPagination.total = res.total || 0;
-    } else {
-      adjustDetailList.value = [];
-      detailPagination.total = 0;
-    }
-  } catch (error) {
-    console.error('加载调整明细失败:', error);
-    ElMessage.error('加载调整明细失败');
-    adjustDetailList.value = [];
-  } finally {
-    detailLoading.value = false;
-  }
-};
-
 const handleWarehouseSelect = () => {
   // 重置筛选条件
   Object.assign(filterForm, {
@@ -1484,8 +512,6 @@ const handleWarehouseSelect = () => {
   // 加载调整单列表
   if (selectedWarehouseId.value) {
     loadAdjustOrderList();
-    loadStockTakeOptions();
-    loadShelfOptions();
   } else {
     adjustOrderList.value = [];
   }
@@ -1519,100 +545,61 @@ const handleCurrentChange = (page) => {
   loadAdjustOrderList();
 };
 
-const handleDetailSizeChange = (size) => {
-  detailPagination.size = size;
-  detailPagination.current = 1;
-  loadAdjustDetailList(currentAdjustOrder.id);
-};
-
-const handleDetailCurrentChange = (page) => {
-  detailPagination.current = page;
-  loadAdjustDetailList(currentAdjustOrder.id);
-};
-
-const handleProductSizeChange = (size) => {
-  productPagination.size = size;
-  productPagination.current = 1;
-  loadProductList();
-};
-
-const handleProductCurrentChange = (page) => {
-  productPagination.current = page;
-  loadProductList();
-};
-
-const handleCreate = () => {
-  isEdit.value = false;
-  resetForm();
-  
-  // 设置当前选择的仓库
-  formData.warehouseId = selectedWarehouseId.value;
-  formData.warehouseName = selectedWarehouseName.value;
-  
-  formDialogVisible.value = true;
-  showAdjustItems.value = true;
-  
-  // 加载盘点单选项
-  loadStockTakeOptions();
-};
-
-const handleEdit = async (adjustOrder) => {
-  isEdit.value = true;
-  resetForm();
-  
-  // 加载数据
-  try {
-    const res = await get(`/api/auth/adjust/detail?id=${adjustOrder.id}`);
-    if (res) {
-      Object.assign(formData, {
-        id: res.id || '',
-        adjustNo: res.adjustNo || '',
-        warehouseId: res.warehouseId || '',
-        warehouseName: res.warehouseName || '',
-        adjustType: res.adjustType || 1,
-        sourceType: res.sourceType || 1,
-        sourceId: res.sourceId || '',
-        sourceNo: res.sourceNo || '',
-        adjustReason: res.adjustReason || '',
-        isUrgent: res.isUrgent || false,
-        isAffectCost: res.isAffectCost || false,
-        remark: res.remark || ''
-      });
-      
-      // 加载调整明细
-      const detailRes = await post('/api/auth/adjust/itemList', { adjustOrderId: adjustOrder.id });
-      adjustItems.value = detailRes || [];
-      
-      formDialogVisible.value = true;
-      showAdjustItems.value = true;
-    }
-  } catch (error) {
-    console.error('加载调整单详情失败:', error);
-    ElMessage.error('加载调整单详情失败');
+// 新建调整单 - 跳转到调整单创建页面
+const handleCreateNew = () => {
+  if (!selectedWarehouseId.value) {
+    ElMessage.warning('请先选择仓库');
+    return;
   }
+  
+  // 跳转到调整单创建页面
+  router.push({
+    path: '/index/ckStockAdjustment/create',
+    query: {
+      createType: 'manual',
+      warehouseId: selectedWarehouseId.value,
+      warehouseName: selectedWarehouseName.value
+    }
+  });
 };
 
+// 查看调整单详情 - 跳转到调整单详情页面
 const handleView = async (adjustOrder) => {
   try {
-    viewLoading.value = true;
-    Object.assign(currentAdjustOrder, adjustOrder);
-    
-    // 重置分页
-    detailPagination.current = 1;
-    detailPagination.size = 20;
-    
-    // 加载明细
-    await loadAdjustDetailList(adjustOrder.id);
-    
-    viewDialogVisible.value = true;
+    // 跳转到调整单详情页面
+    router.push({
+      path: `/index/ckStockAdjustment/${adjustOrder.id}`,
+      query: {
+        viewMode: 'detail',
+        warehouseId: adjustOrder.warehouseId,
+        warehouseName: adjustOrder.warehouseName
+      }
+    });
   } catch (error) {
-    console.error('加载调整单详情失败:', error);
-    ElMessage.error('加载调整单详情失败');
-  } finally {
-    viewLoading.value = false;
+    console.error('跳转失败:', error);
+    ElMessage.error('跳转失败');
   }
 };
 
+// 编辑调整单 - 跳转到调整单编辑页面
+const handleEdit = async (adjustOrder) => {
+  try {
+    // 跳转到调整单编辑页面
+    router.push({
+      path: `/index/ckStockAdjustment/${adjustOrder.id}`,
+      query: {
+        editMode: 'true',
+        warehouseId: adjustOrder.warehouseId,
+        warehouseName: adjustOrder.warehouseName
+      }
+    });
+  } catch (error) {
+    console.error('跳转失败:', error);
+    ElMessage.error('跳转失败');
+  }
+};
+
+// 提交审核
 const handleSubmit = async (adjustOrder) => {
   try {
     await ElMessageBox.confirm(
@@ -1625,9 +612,6 @@ const handleSubmit = async (adjustOrder) => {
     if (res) {
       ElMessage.success('提交成功');
       refreshList();
-      if (viewDialogVisible.value) {
-        viewDialogVisible.value = false;
-      }
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -1636,6 +620,7 @@ const handleSubmit = async (adjustOrder) => {
   }
 };
 
+// 审核通过
 const handleApprove = async (adjustOrder) => {
   try {
     await ElMessageBox.confirm(
@@ -1648,9 +633,6 @@ const handleApprove = async (adjustOrder) => {
     if (res) {
       ElMessage.success('审核通过成功');
       refreshList();
-      if (viewDialogVisible.value) {
-        viewDialogVisible.value = false;
-      }
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -1659,6 +641,7 @@ const handleApprove = async (adjustOrder) => {
   }
 };
 
+// 审核拒绝
 const handleReject = async (adjustOrder) => {
   try {
     await ElMessageBox.prompt('请输入拒绝原因', '审核拒绝', {
@@ -1681,9 +664,6 @@ const handleReject = async (adjustOrder) => {
       if (res) {
         ElMessage.success('审核拒绝成功');
         refreshList();
-        if (viewDialogVisible.value) {
-          viewDialogVisible.value = false;
-        }
       }
     }).catch(() => {
       // 用户取消
@@ -1695,6 +675,7 @@ const handleReject = async (adjustOrder) => {
   }
 };
 
+// 执行调整
 const handleExecute = async (adjustOrder) => {
   try {
     await ElMessageBox.confirm(
@@ -1707,9 +688,6 @@ const handleExecute = async (adjustOrder) => {
     if (res) {
       ElMessage.success('执行调整成功');
       refreshList();
-      if (viewDialogVisible.value) {
-        viewDialogVisible.value = false;
-      }
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -1718,6 +696,24 @@ const handleExecute = async (adjustOrder) => {
   }
 };
 
+// 查看执行结果
+const handleViewResult = async (adjustOrder) => {
+  try {
+    // 跳转到调整单执行结果页面
+    router.push({
+      path: `/index/ckStockAdjustment/${adjustOrder.id}`,
+      query: {
+        viewMode: 'result',
+        resultView: 'true'
+      }
+    });
+  } catch (error) {
+    console.error('跳转失败:', error);
+    ElMessage.error('跳转失败');
+  }
+};
+
+// 删除调整单
 const handleDelete = async (adjustOrder) => {
   try {
     await ElMessageBox.confirm(
@@ -1730,9 +726,6 @@ const handleDelete = async (adjustOrder) => {
     if (res) {
       ElMessage.success('删除成功');
       refreshList();
-      if (viewDialogVisible.value) {
-        viewDialogVisible.value = false;
-      }
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -1741,251 +734,9 @@ const handleDelete = async (adjustOrder) => {
   }
 };
 
-const handleSourceTypeChange = (sourceType) => {
-  if (sourceType === 1) {
-    // 来源为盘点单时，需要选择盘点单
-    formData.sourceId = '';
-    formData.sourceNo = '';
-    showAdjustItems.value = false;
-    
-    // 如果是新建状态，清空调整明细
-    if (!isEdit.value) {
-      adjustItems.value = [];
-    }
-  } else {
-    // 其他来源类型
-    formData.sourceId = '';
-    formData.sourceNo = '';
-    showAdjustItems.value = true;
-  }
-};
-
-const handleStockTakeSelect = async (stockTakeId) => {
-  if (!stockTakeId) {
-    adjustItems.value = [];
-    showAdjustItems.value = false;
-    return;
-  }
-  
-  try {
-   // 获取盘点单差异项
-      const diffRes = await post('/api/auth/stock/itemList', { stockTakeId });
-      if (diffRes && diffRes.length > 0) {
-        // 将盘点差异转换为调整明细
-        adjustItems.value = diffRes.map(item => ({
-          productId: item.productId,
-          productCode: item.productCode,
-          skuCode: item.skuCode,
-          productName: item.productName,
-          specification: item.specification,
-          unit: item.unit,
-          batchNo: item.batchNo,
-          shelfId: item.shelfId,
-          shelfCode: item.shelfCode,
-          beforeQuantity: item.systemQuantity || 0,
-          adjustQuantity: item.diffQuantity || 0,
-          afterQuantity: (item.systemQuantity || 0) + (item.diffQuantity || 0),
-          unitCost: item.unitCost || 0,
-          adjustAmount: Math.abs((item.diffQuantity || 0) * (item.unitCost || 0)),
-          itemReason: `盘点差异调整 - ${item.diffQuantity > 0 ? '盘盈' : '盘亏'}`,
-          sourceItemId: item.id
-        }));
-        
-        showAdjustItems.value = true;
-        
-      }
-  } catch (error) {
-    console.error('加载盘点单详情失败:', error);
-    ElMessage.error('加载盘点单详情失败');
-    adjustItems.value = [];
-    showAdjustItems.value = false;
-  }
-};
-
-const handleAddItem = () => {
-  // 清空已选商品
-  selectedProducts.value = [];
-  
-  // 重置商品筛选
-  productFilter.keyword = '';
-  productPagination.current = 1;
-  
-  // 加载商品列表
-  loadProductList();
-  
-  // 显示商品选择对话框
-  productDialogVisible.value = true;
-};
-
-const handleProductSelectionChange = (selection) => {
-  selectedProducts.value = selection;
-};
-
-const handleConfirmProducts = () => {
-  // 将选中的商品添加到调整明细中
-  selectedProducts.value.forEach(product => {
-    // 检查是否已存在
-    const exists = adjustItems.value.some(item => item.productId === product.id);
-    if (!exists) {
-      adjustItems.value.push({
-        productId: product.id,
-        productCode: product.productCode,
-        skuCode: product.skuCode,
-        productName: product.productName,
-        specification: product.specification,
-        unit: product.unit,
-        batchNo: '',
-        shelfId: '',
-        shelfCode: '',
-        beforeQuantity: product.currentQuantity || 0,
-        adjustQuantity: 0,
-        afterQuantity: product.currentQuantity || 0,
-        unitCost: 0,
-        adjustAmount: 0,
-        itemReason: '',
-        sourceItemId: null
-      });
-    }
-  });
-  
-  productDialogVisible.value = false;
-  selectedProducts.value = [];
-};
-
-const handleRemoveItem = (item) => {
-  const index = adjustItems.value.indexOf(item);
-  if (index > -1) {
-    adjustItems.value.splice(index, 1);
-  }
-};
-
-const handleBatchNoChange = (item) => {
-  // 这里可以添加批次验证逻辑
-  console.log('批次号变更:', item.batchNo);
-};
-
-const handleShelfChange = (item) => {
-  const shelf = shelfOptions.value.find(s => s.id === item.shelfId);
-  if (shelf) {
-    item.shelfCode = shelf.code || shelf.name;
-  } else {
-    item.shelfCode = '';
-  }
-};
-
-const handleAdjustQuantityChange = (item) => {
-  // 计算调整后数量
-  item.afterQuantity = (item.beforeQuantity || 0) + (item.adjustQuantity || 0);
-  
-  // 计算调整金额
-  item.adjustAmount = Math.abs((item.adjustQuantity || 0) * (item.unitCost || 0));
-};
-
-const handleCostChange = (item) => {
-  // 计算调整金额
-  item.adjustAmount = Math.abs((item.adjustQuantity || 0) * (item.unitCost || 0));
-};
-
-const handleFormSubmit = async () => {
-  if (!formRef.value) return;
-  
-  await formRef.value.validate(async (valid) => {
-    if (valid) {
-      // 验证调整明细
-      if (adjustItems.value.length === 0) {
-        ElMessage.warning('请至少添加一条调整明细');
-        return;
-      }
-      
-      formLoading.value = true;
-      try {
-        // 准备提交数据
-        const submitData = {
-          ...formData,
-          items: adjustItems.value.map(item => ({
-            productId: item.productId,
-            productCode: item.productCode,
-            skuCode: item.skuCode,
-            productName: item.productName,
-            specification: item.specification,
-            unit: item.unit,
-            batchNo: item.batchNo || null,
-            shelfId: item.shelfId || null,
-            shelfCode: item.shelfCode || null,
-            beforeQuantity: item.beforeQuantity,
-            adjustQuantity: item.adjustQuantity,
-            afterQuantity: item.afterQuantity,
-            unitCost: item.unitCost || 0,
-            adjustAmount: item.adjustAmount || 0,
-            itemReason: item.itemReason || formData.adjustReason,
-            sourceItemId: item.sourceItemId || null
-          }))
-        };
-        
-        const url = isEdit.value ? '/api/auth/adjust/update' : '/api/auth/adjust/create';
-        const res = await post(url, submitData);
-        
-        if (res) {
-          ElMessage.success(isEdit.value ? '更新成功' : '创建成功');
-          formDialogVisible.value = false;
-          refreshList();
-        }
-      } catch (error) {
-        console.error('提交失败:', error);
-        ElMessage.error('提交失败: ' + (error.message || '未知错误'));
-      } finally {
-        formLoading.value = false;
-      }
-    }
-  });
-};
-
-const handleExportAdjustData = async () => {
-  try {
-    const res = await post('/api/auth/adjust/export', { 
-      adjustOrderId: currentAdjustOrder.id 
-    }, { responseType: 'blob' });
-    
-    const url = window.URL.createObjectURL(new Blob([res]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `${currentAdjustOrder.adjustNo}_调整明细.xlsx`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } catch (error) {
-    console.error('导出失败:', error);
-    ElMessage.error('导出失败');
-  }
-};
-
 const refreshList = () => {
   if (selectedWarehouseId.value) {
     loadAdjustOrderList();
-  }
-};
-
-const resetForm = () => {
-  Object.assign(formData, {
-    id: '',
-    adjustNo: '',
-    warehouseId: '',
-    warehouseName: '',
-    adjustType: 1,
-    sourceType: 1,
-    sourceId: '',
-    sourceNo: '',
-    adjustReason: '',
-    isUrgent: false,
-    isAffectCost: false,
-    remark: ''
-  });
-  
-  adjustItems.value = [];
-  showAdjustItems.value = false;
-  
-  if (formRef.value) {
-    formRef.value.clearValidate();
   }
 };
 
@@ -2048,39 +799,10 @@ const getStatusTagType = (status) => {
   return mapping[status] || 'info';
 };
 
-const getItemStatusLabel = (status) => {
-  const mapping = {
-    1: '待执行',
-    2: '已执行',
-    3: '已取消'
-  };
-  return mapping[status] || '未知';
-};
-
-const getItemStatusTagType = (status) => {
-  const mapping = {
-    1: 'warning',
-    2: 'success',
-    3: 'danger'
-  };
-  return mapping[status] || 'info';
-};
-
 const getQuantityClass = (quantity) => {
   if (quantity > 0) return 'quantity-positive';
   if (quantity < 0) return 'quantity-negative';
   return 'quantity-zero';
-};
-
-const getAdjustQuantityClass = (quantity) => {
-  if (quantity > 0) return 'adjust-positive';
-  if (quantity < 0) return 'adjust-negative';
-  return 'adjust-zero';
-};
-
-const getAfterQuantityClass = (quantity) => {
-  if (quantity > 0) return 'after-positive';
-  return 'after-zero';
 };
 
 const getAmountClass = (amount) => {
@@ -2259,438 +981,7 @@ onMounted(() => {
   margin-top: 10px;
 }
 
-/* 表单对话框样式 */
-.adjust-order-form-dialog :deep(.el-dialog__header) {
-  border-bottom: 1px solid #ebeef5;
-  padding-bottom: 15px;
-}
-
-.adjust-order-form-container {
-  padding: 0;
-}
-
-.form-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
-}
-
-.form-card:last-child {
-  margin-bottom: 0;
-}
-
-.form-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.form-card .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.form-card .card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.compact-form {
-  padding: 0;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  padding: 20px;
-}
-
-.form-group {
-  margin-bottom: 0;
-}
-
-.form-group.full-width {
-  grid-column: 1 / -1;
-}
-
-.form-group :deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #606266;
-}
-
-.form-input, .form-select {
-  width: 100%;
-}
-
-.reason-textarea, .remark-textarea {
-  width: 100%;
-}
-
-/* 调整明细样式 */
-.adjust-items-container {
-  padding: 0 20px 20px;
-}
-
-.no-items-tip {
-  padding: 40px 0;
-  text-align: center;
-}
-
-.adjust-items-table {
-  width: 100%;
-  margin-bottom: 16px;
-}
-
-.product-info {
-  line-height: 1.4;
-}
-
-.product-name {
-  font-weight: 500;
-  color: #303133;
-  margin-bottom: 4px;
-}
-
-.product-sku {
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 2px;
-}
-
-.product-spec {
-  font-size: 12px;
-  color: #606266;
-}
-
-.adjust-quantity-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.quantity-tips {
-  font-size: 12px;
-}
-
-.quantity-tips .positive {
-  color: #67C23A;
-}
-
-.quantity-tips .negative {
-  color: #F56C6C;
-}
-
-.quantity-tips .zero {
-  color: #909399;
-}
-
-.before-quantity {
-  color: #606266;
-}
-
-/* 统计信息 */
-.items-statistics {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #ebeef5;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #606266;
-}
-
-.stat-value {
-  font-size: 16px;
-  font-weight: bold;
-  color: #303133;
-}
-
-.stat-value.positive {
-  color: #67C23A;
-}
-
-.stat-value.negative {
-  color: #F56C6C;
-}
-
-/* 商品选择对话框 */
-.product-select-dialog {
-  padding: 10px;
-}
-
-.product-filter {
-  margin-bottom: 16px;
-}
-
-.product-list-container {
-  max-height: 400px;
-  overflow-y: auto;
-  margin-bottom: 16px;
-}
-
-.product-select-table {
-  width: 100%;
-}
-
-.product-pagination {
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* 查看对话框样式 */
-.adjust-order-view-dialog :deep(.el-dialog__header) {
-  border-bottom: 1px solid #ebeef5;
-  padding-bottom: 15px;
-}
-
-.adjust-order-view-container {
-  padding: 0;
-}
-
-/* 基本信息卡片 */
-.basic-info-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-}
-
-.basic-info-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 8px 8px 0 0;
-}
-
-.basic-info-card .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.basic-info-card .card-title {
-  color: white;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.header-status {
-  display: flex;
-  gap: 8px;
-}
-
-.basic-info-card :deep(.el-tag) {
-  font-weight: bold;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
-  padding: 20px;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border-left: 4px solid #409EFF;
-}
-
-.info-item.full-width {
-  grid-column: 1 / -1;
-}
-
-.info-label {
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 4px;
-}
-
-.info-value {
-  font-size: 14px;
-  color: #303133;
-  font-weight: 500;
-}
-
-.info-value.highlight {
-  color: #409EFF;
-  font-weight: bold;
-}
-
-/* 统计卡片 */
-.stats-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-}
-
-.stats-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
-  padding: 20px;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  transition: all 0.3s;
-}
-
-.stat-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  margin-right: 16px;
-}
-
-.stat-icon.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.stat-icon.success {
-  background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
-}
-
-.stat-icon.warning {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.stat-icon.quantity-positive {
-  background: linear-gradient(135deg, #67C23A 0%, #85ce61 100%);
-}
-
-.stat-icon.quantity-negative {
-  background: linear-gradient(135deg, #F56C6C 0%, #f78989 100%);
-}
-
-.stat-icon.amount-positive {
-  background: linear-gradient(135deg, #67C23A 0%, #85ce61 100%);
-}
-
-.stat-icon.amount-negative {
-  background: linear-gradient(135deg, #F56C6C 0%, #f78989 100%);
-}
-
-.stat-icon .el-icon {
-  font-size: 24px;
-  color: white;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #909399;
-}
-
-/* 明细卡片 */
-.detail-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-}
-
-.detail-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.detail-card .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.detail-table-container {
-  padding: 0 20px 20px;
-}
-
-.detail-table {
-  width: 100%;
-  margin-bottom: 16px;
-}
-
-.detail-pagination {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-/* 对话框底部 */
-.form-dialog-footer,
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding-top: 20px;
-  border-top: 1px solid #ebeef5;
-}
-
-.cancel-btn {
-  min-width: 100px;
-}
-
-.submit-btn {
-  min-width: 100px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-}
-
-.submit-btn:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a3f9b 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
 /* 响应式设计 */
-@media (max-width: 1200px) {
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
 @media (max-width: 768px) {
   .adjust-order-manage-container {
     padding: 10px;
@@ -2716,33 +1007,6 @@ onMounted(() => {
     flex-direction: column;
     gap: 4px;
   }
-  
-  .adjust-order-view-dialog,
-  .adjust-order-form-dialog {
-    width: 95% !important;
-  }
-  
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .items-statistics {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .cancel-btn, .submit-btn {
-    min-width: 80px;
-  }
 }
 
 /* 动画效果 */
@@ -2752,35 +1016,5 @@ onMounted(() => {
 
 .adjust-order-table :deep(.el-table__row:hover) {
   background-color: #f5f7fa;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.adjust-order-view-container {
-  animation: fadeIn 0.3s ease;
-}
-
-.form-card {
-  animation: slideUp 0.3s ease;
 }
 </style>
