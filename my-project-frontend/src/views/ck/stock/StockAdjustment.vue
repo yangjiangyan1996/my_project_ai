@@ -1826,21 +1826,38 @@ const loadShelfOptions = async (warehouseId) => {
   }
 };
 
-// 加载审核人列表
-const loadReviewerList = async () => {
+// 如果需要支持搜索的审核人选择，可以添加这个方法
+const searchReviewers = async (query) => {
   try {
-    const res = await get('/api/auth/user/getReviewers');
+    const res = await post('/api/auth/user/searchUser', {
+      keyword: query,
+      page: 1,
+      size: 20
+    });
     if (res) {
       reviewerList.value = res.map(user => ({
         id: user.id,
-        name: user.name || user.username,
-        department: user.department || '未分配部门'
+        name: user.username || user.name,
+        username: user.username,
+        department: user.department || '未分配部门',
+        avatarUrl: user.avatarUrl || '/default-avatar.png'
       }));
     }
   } catch (error) {
-    console.error('加载审核人列表失败:', error);
+    console.error('搜索审核人失败:', error);
   }
 };
+
+// 然后在模板中的审核人选择器添加远程搜索功能
+// <el-select
+//   v-model="adjustmentForm.reviewer_id"
+//   placeholder="请选择审核人（可选）"
+//   filterable
+//   remote
+//   :remote-method="searchReviewers"
+//   clearable
+//   style="width: 100%"
+// >
 
 // 加载已完成盘点单列表
 const loadCompletedStockTakeList = async () => {

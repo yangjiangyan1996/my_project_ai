@@ -206,9 +206,10 @@
               <span>{{ formatDateTime(row.createdAt) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="350" fixed="right" align="center">
+          <el-table-column label="操作" width="450" fixed="right" align="center">
             <template #default="{ row }">
               <div class="action-buttons">
+                <!-- 基础操作 -->
                 <el-button
                   type="primary"
                   link
@@ -217,122 +218,119 @@
                 >
                   查看
                 </el-button>
-
-               <!-- 调整盘点差异按钮 todo yang 暂时放这里 -->
-      <el-button
-        type="warning"
-        size="small"
-        @click="handleAdjustDifference(row)"
-      >
-        调整差异
-      </el-button>
-      
-      <!-- 如果差异已全部处理完成 -->
-      <el-button
-        type="success"
-        size="small"
-        disabled
-      >
-        已调整完成
-      </el-button>
-
                 
-                <!-- 状态相关操作 -->
-                <template v-if="row.approvalStatus === 1">
-                  <el-button
-                    type="warning"
-                    link
-                    size="small"
-                    @click="handleEdit(row)"
-                  >
-                    编辑
-                  </el-button>
-                  <el-button
-                    type="success"
-                    link
-                    size="small"
-                    @click="handleSubmit(row)"
-                  >
-                    提交审批
-                  </el-button>
-                  <el-button
-                    type="info"
-                    link
-                    size="small"
-                    @click="handleApprove(row)"
-                  >
-                    审批通过
-                  </el-button>
-                  <el-button
-                    type="danger"
-                    link
-                    size="small"
-                    @click="handleCancel(row)"
-                  >
-                    删除
-                  </el-button>
-                </template>
+                <!-- 差异调整 -->
+                <el-button
+                  type="warning"
+                  link
+                  size="small"
+                  @click="handleAdjustDifference(row)"
+                >
+                  调整差异
+                </el-button>
                 
-                <template v-if="row.approvalStatus === 2">
-                  <!-- <el-button
-                    type="primary"
-                    link
-                    size="small"
-                    @click="handleInitialize(row)"
-                  >
-                    初始化盘点
-                  </el-button> -->
-                  <!-- <el-button
-                    type="danger"
-                    link
-                    size="small"
-                    @click="handleCancel(row)"
-                  >
-                    取消
-                  </el-button> -->
-                </template>
+                <el-button
+                  type="success"
+                  link
+                  size="small"
+                  disabled
+                >
+                  已调整完成
+                </el-button>
                 
-                <template v-if="row.approvalStatus === 2">
-                   <el-button
-                    type="primary"
-                    link
-                    size="small"
-                    @click="handleEnterData(row)"
-                  >
-                    录入数据
-                  </el-button>
-                  <el-button
-                    type="success"
-                    link
-                    size="small"
-                    @click="handleComplete(row)"
-                  >
-                    完成盘点
-                  </el-button>
-                 
-                </template>
+                <!-- 编辑相关 -->
+                <el-button
+                  type="warning"
+                  link
+                  size="small"
+                  @click="handleEdit(row)"
+                >
+                  编辑
+                </el-button>
                 
-                <template >
-                  <el-button
-                    type="warning"
-                    link
-                    size="small"
-                    @click="handleReview(row)"
-                  >
-                    提交复核
-                  </el-button>
-                </template>
+                <el-button
+                  type="success"
+                  link
+                  size="small"
+                  @click="handleSubmit(row)"
+                >
+                  提交审批
+                </el-button>
                 
-                <template >
-                  <el-button
-                    type="success"
-                    link
-                    size="small"
-                    @click="handleConfirm(row)"
-                  >
-                    审核确认
-                  </el-button>
-                </template>
+                <el-button
+                  type="info"
+                  link
+                  size="small"
+                  @click="handleApprove(row)"
+                >
+                  审批通过
+                </el-button>
+                
+                <el-button
+                  type="danger"
+                  link
+                  size="small"
+                  @click="handleCancel(row)"
+                >
+                  删除
+                </el-button>
+                
+                <!-- 盘点相关 -->
+                <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="handleInitialize(row)"
+                >
+                  初始化盘点
+                </el-button>
+                
+                <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="handleEnterData(row)"
+                >
+                  录入数据
+                </el-button>
+                
+                <el-button
+                  type="success"
+                  link
+                  size="small"
+                  @click="handleComplete(row)"
+                >
+                  完成盘点
+                </el-button>
+                
+                <!-- 复核确认 -->
+                <el-button
+                  type="warning"
+                  link
+                  size="small"
+                  @click="handleReview(row)"
+                >
+                  提交复核
+                </el-button>
+                
+                <el-button
+                  type="success"
+                  link
+                  size="small"
+                  @click="handleConfirm(row)"
+                >
+                  审核确认
+                </el-button>
+                
+                <!-- 取消操作 -->
+                <el-button
+                  type="danger"
+                  link
+                  size="small"
+                  @click="handleCancel(row)"
+                >
+                  取消
+                </el-button>
               </div>
             </template>
           </el-table-column>
