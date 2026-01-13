@@ -1543,6 +1543,7 @@ const loadOutboundDetail = async (id) => {
                       batchWithAllocations.shelfList.push({
                         shelfId: shelf.shelfId,
                         shelfName: shelf.shelfName || `货架${shelf.shelfId}`,
+                        shelivesName: shelf.shelivesName || `区域${shelf.shelivesId}`,
                         quantity: parseFloat(shelf.availableQuantity) || 0,
                         allocatedQuantity: allocation ? parseFloat(allocation.allocatedQuantity) : 0
                       });
@@ -1555,6 +1556,7 @@ const loadOutboundDetail = async (id) => {
                           batchNo: batch.batchNo,
                           shelfId: shelf.shelfId,
                           shelfName: shelf.shelfName || `货架${shelf.shelfId}`,
+                          shelivesName: shelf.shelivesName || `区域${shelf.shelivesId}`,
                           quantity: parseFloat(allocation.allocatedQuantity) || 0
                         });
                       }

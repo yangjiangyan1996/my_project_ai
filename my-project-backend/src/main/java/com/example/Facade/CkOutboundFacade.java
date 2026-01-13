@@ -79,6 +79,8 @@ public class CkOutboundFacade {
     @Resource
     CkProductService productService;
     @Resource
+    CkShelivesService shelivesService;
+    @Resource
     CkShelfZoneService shelfService;
     @Resource
     CkInventoryService inventoryService;
@@ -2217,6 +2219,11 @@ public class CkOutboundFacade {
             shelfId2ShelfMap = shelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
         }
 
+        List<Long> shelivesIds = shelves.stream().map(v -> v.getParentId()).distinct().collect(Collectors.toList());
+        List<Shelives> shelivesList = shelivesService.selectByIds(tenantId, shelivesIds);
+        Map<Long, Shelives> shelfId2ShelivesInfoMap = shelivesList.stream().collect(Collectors.toMap(Shelives::getId, v -> v));
+
+
         //生产任务信息
         List<ProductionTask> productionTasks = productionTaskService.selectByOutBoundId(orderId, tenantId);
         Map<Long, ProductionTask> productId2TaskMap = new HashMap<>();
@@ -2267,11 +2274,11 @@ public class CkOutboundFacade {
                 productItem.setQuantity(productId2TaskMap.getOrDefault(parentProductId, new ProductionTask()).getMaterialQuantity());
 
                 // 构建BOM组件信息
-                List<OutBoundDetailOfProductionResp.BomComponent> bomComponents = buildBomComponents(parentProductId, tenantId, outboundOrder.getWarehouseId(), unitCode2UnitMap, shelfId2ShelfMap);
+                List<OutBoundDetailOfProductionResp.BomComponent> bomComponents = buildBomComponents(parentProductId, tenantId, outboundOrder.getWarehouseId(), unitCode2UnitMap, shelfId2ShelfMap, shelfId2ShelivesInfoMap );
                 productItem.setBomComponents(bomComponents);
 
                 // 构建原料分配信息
-                List<OutBoundDetailOfProductionResp.MaterialAllocation> materialAllocations = buildMaterialAllocations(outItemList, shelfId2ShelfMap);
+                List<OutBoundDetailOfProductionResp.MaterialAllocation> materialAllocations = buildMaterialAllocations(outItemList, shelfId2ShelfMap, shelfId2ShelivesInfoMap );
                 productItem.setMaterialAllocations(materialAllocations);
 
                 productItems.add(productItem);
@@ -2287,7 +2294,8 @@ public class CkOutboundFacade {
      */
     private List<OutBoundDetailOfProductionResp.BomComponent> buildBomComponents(Long productId, Long tenantId, Long warehouseId,
                                                                                  Map<String, Unit> unitCode2UnitMap,
-                                                                                 Map<Long, ShelfZone> shelfId2ShelfMap) {
+                                                                                 Map<Long, ShelfZone> shelfId2ShelfMap,
+                                                                                 Map<Long, Shelives> shelfId2ShelivesInfoMap) {
         List<OutBoundDetailOfProductionResp.BomComponent> bomComponents = new ArrayList<>();
 
         try {
@@ -2334,7 +2342,7 @@ public class CkOutboundFacade {
 
                 // 获取组件的库存批次信息
                 List<OutBoundDetailOfProductionResp.StockBatch> availableBatches = getStockBatchesForComponent(
-                        componentProductId, warehouseId, tenantId, shelfId2ShelfMap);
+                        componentProductId, warehouseId, tenantId, shelfId2ShelfMap, shelfId2ShelivesInfoMap);
                 bomComponent.setAvailableBatches(availableBatches);
 
                 List<OutBoundDetailOfProductionResp.UsageDetail> collect = productBomDetails.stream().map(z -> {
@@ -2363,7 +2371,7 @@ public class CkOutboundFacade {
     /**
      * 获取组件的库存批次信息
      */
-    private List<OutBoundDetailOfProductionResp.StockBatch> getStockBatchesForComponent(Long componentProductId, Long warehouseId, Long tenantId, Map<Long, ShelfZone> shelfId2ShelfMap) {
+    private List<OutBoundDetailOfProductionResp.StockBatch> getStockBatchesForComponent(Long componentProductId, Long warehouseId, Long tenantId, Map<Long, ShelfZone> shelfId2ShelfMap, Map<Long, Shelives> shelfId2ShelivesInfoMap) {
         List<OutBoundDetailOfProductionResp.StockBatch> stockBatches = new ArrayList<>();
 
         try {
@@ -2393,7 +2401,13 @@ public class CkOutboundFacade {
                         .map(inventoryBatch -> {
                             OutBoundDetailOfProductionResp.StockShelf shelf = new OutBoundDetailOfProductionResp.StockShelf();
                             shelf.setShelfId(inventoryBatch.getShelfId());
-                            shelf.setShelfName(shelfId2ShelfMap.getOrDefault(inventoryBatch.getShelfId(), new ShelfZone()).getShelfName());
+
+                            ShelfZone shelfZone = shelfId2ShelfMap.getOrDefault(inventoryBatch.getShelfId(), new ShelfZone());
+                            shelf.setShelfName(shelfZone.getShelfName());
+
+                            Shelives shelives = shelfId2ShelivesInfoMap.getOrDefault(shelfZone.getParentId(), new Shelives());
+                            shelf.setShelivesId(shelives.getId());
+                            shelf.setShelivesName(shelives.getShelfName());
                             shelf.setAvailableQuantity(inventoryBatch.getQuantity());
                             return shelf;
                         })
@@ -2412,7 +2426,9 @@ public class CkOutboundFacade {
     /**
      * 构建原料分配信息
      */
-    private List<OutBoundDetailOfProductionResp.MaterialAllocation> buildMaterialAllocations(List<OutboundOrderItem> outItemList, Map<Long, ShelfZone> shelfId2ShelfMap) {
+    private List<OutBoundDetailOfProductionResp.MaterialAllocation> buildMaterialAllocations(List<OutboundOrderItem> outItemList,
+                                                                                             Map<Long, ShelfZone> shelfId2ShelfMap,
+                                                                                             Map<Long, Shelives> shelfId2ShelivesInfoMap ) {
         return outItemList.stream()
                 .filter(item -> item.getBatchNo() != null) // 过滤出有批次分配的数据
                 .map(item -> {
@@ -2420,7 +2436,13 @@ public class CkOutboundFacade {
                     allocation.setComponentProductId(item.getProductId()); // 注意：这里需要根据实际情况调整
                     allocation.setBatchNo(item.getBatchNo());
                     allocation.setShelfId(item.getShelfLocationId());
-                    allocation.setShelfName(shelfId2ShelfMap.getOrDefault(item.getShelfLocationId(), new ShelfZone()).getShelfName());
+                    ShelfZone shelfZone = shelfId2ShelfMap.getOrDefault(item.getShelfLocationId(), new ShelfZone());
+                    allocation.setShelfName(shelfZone.getShelfName());
+
+                    Shelives shelives = shelfId2ShelivesInfoMap.getOrDefault(shelfZone.getParentId(), new Shelives());
+                    allocation.setShelivesId(shelives.getId());
+                    allocation.setShelivesName(shelives.getShelfName());
+
                     allocation.setAllocatedQuantity(item.getQuantity());
                     return allocation;
                 })

@@ -86,6 +86,8 @@ public class OutBoundDetailOfProductionResp {
     public static class StockShelf {
         private Long shelfId;
         private String shelfName;
+        private Long shelivesId;
+        private String shelivesName;
         private BigDecimal availableQuantity;
     }
 
@@ -96,6 +98,9 @@ public class OutBoundDetailOfProductionResp {
         private String batchNo;
         private Long shelfId;
         private String shelfName;
+        private Long shelivesId;
+        private String shelivesName;
+
         private BigDecimal allocatedQuantity;
     }
 
