@@ -45,6 +45,7 @@ public class ProjectController {
     @GetMapping("/getEvaluateList")
     public RespBean<List<ProjectEvaluateListResp>> getEvaluateList(@RequestParam("projectId") Long projectId) {
         try {
+            
             UserInfo user = UserUtil.getCurrentUser();
             List<ProjectEvaluateListResp> result = projectFacade.getEvaluateList(projectId, user.getId());
             return RespBean.success(result);

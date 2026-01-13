@@ -1182,7 +1182,7 @@ const handleShelfLocationChange = (index) => {
 
 const getShelfLocationLabel = (location) => {
   if (!location) return '';
-  return `${location.shelfName} (${location.shelfCode})`;
+  return `${location.shelfName} (${location.sheliveName})`;
 };
 
 const getShelfName = (shelfLocationId) => {

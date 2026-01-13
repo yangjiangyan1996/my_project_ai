@@ -45,7 +45,7 @@ public class CkInboundFacade {
     @Resource
     CkProductService productService;
     @Resource
-    CkShelfService shelfService;
+    CkShelfZoneService shelfService;
     @Resource
     CkWareHouseService warehouseService;
     @Resource
@@ -544,10 +544,10 @@ public class CkInboundFacade {
             supplierId2SupplierMap = suppliers.stream().collect(Collectors.toMap(Supplier::getId, v -> v));
         }
 
-        Map<Long, WarehouseShelf> shelfId2ShelfMap = new HashMap<>();
-        List<WarehouseShelf> shelves = shelfService.selectByTenantId(tenantId);
+        Map<Long, ShelfZone> shelfId2ShelfMap = new HashMap<>();
+        List<ShelfZone> shelves = shelfService.selectByTenantId(tenantId);
         if (!CollectionUtils.isEmpty(shelves)) {
-            shelfId2ShelfMap = shelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+            shelfId2ShelfMap = shelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
         }
 
 
@@ -568,7 +568,7 @@ public class CkInboundFacade {
         resp.setModifiedAt(inboundOrder.getModifiedAt());
         Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
         Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
-        Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
+        Map<Long, ShelfZone> finalShelfId2ShelfMap = shelfId2ShelfMap;
         Map<Long, List<InboundOrderItem>> productId2InboundItemListMap = items.stream().collect(Collectors.groupingBy(v -> v.getProductId()));
 
         List<InboundDetailResp.InboundDetailCreateReq> innerList = new ArrayList<>();
@@ -582,7 +582,7 @@ public class CkInboundFacade {
                 InboundDetailResp.ShelfDetailCreateReq shelfDetail = new InboundDetailResp.ShelfDetailCreateReq();
                 shelfDetail.setShelfLocationId(item.getShelfLocationId());
                 shelfDetail.setQuantity(item.getActualQuantity());
-                shelfDetail.setShelfLocationName(finalShelfId2ShelfMap.getOrDefault(item.getShelfLocationId(), new WarehouseShelf()).getShelfName());
+                shelfDetail.setShelfLocationName(finalShelfId2ShelfMap.getOrDefault(item.getShelfLocationId(), new ShelfZone()).getShelfName());
                 shelfAllocations.add(shelfDetail);
 
                 priceTotal = priceTotal.add(item.getPriceTotal());
@@ -1057,15 +1057,15 @@ public class CkInboundFacade {
                 .distinct()                  // 去重
                 .collect(Collectors.toMap(Unit::getUnitCode, v -> v));
 
-        Map<Long, WarehouseShelf> shelfId2ShelfMap = new HashMap<>();
-        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(tenantId);
+        Map<Long, ShelfZone> shelfId2ShelfMap = new HashMap<>();
+        List<ShelfZone> warehouseShelves = shelfService.selectByTenantId(tenantId);
         if (!CollectionUtils.isEmpty(warehouseShelves)) {
-            shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+            shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
         }
 
 
         Map<Long, Product> finalProductId2ProductMap = productId2ProductMap;
-        Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
+        Map<Long, ShelfZone> finalShelfId2ShelfMap = shelfId2ShelfMap;
 
         List<InboundProductInDetailResp.InboundItemDetail> items = new ArrayList<>();
         //根据货物ID_关联领料单ID来分组
@@ -1097,10 +1097,10 @@ public class CkInboundFacade {
             List<InboundProductInDetailResp.ShelfAllocationDetail> shelfAllocations = inboundOrderItems.stream().map(ioi -> {
                 InboundProductInDetailResp.ShelfAllocationDetail shelfAllocationDetail = new InboundProductInDetailResp.ShelfAllocationDetail();
                 shelfAllocationDetail.setShelfLocationId(ioi.getShelfLocationId());
-                shelfAllocationDetail.setShelfLocationName(finalShelfId2ShelfMap.getOrDefault(ioi.getShelfLocationId(), new WarehouseShelf()).getShelfName());
+                shelfAllocationDetail.setShelfLocationName(finalShelfId2ShelfMap.getOrDefault(ioi.getShelfLocationId(), new ShelfZone()).getShelfName());
                 shelfAllocationDetail.setQuantity(ioi.getActualQuantity());
-                shelfAllocationDetail.setShelfCode(finalShelfId2ShelfMap.getOrDefault(ioi.getShelfLocationId(), new WarehouseShelf()).getShelfCode());
-                shelfAllocationDetail.setShelfName(finalShelfId2ShelfMap.getOrDefault(ioi.getShelfLocationId(), new WarehouseShelf()).getShelfName());
+                shelfAllocationDetail.setShelfCode(finalShelfId2ShelfMap.getOrDefault(ioi.getShelfLocationId(), new ShelfZone()).getShelfCode());
+                shelfAllocationDetail.setShelfName(finalShelfId2ShelfMap.getOrDefault(ioi.getShelfLocationId(), new ShelfZone()).getShelfName());
                 return shelfAllocationDetail;
             }).collect(Collectors.toList());
             rd.setShelfAllocations(shelfAllocations);

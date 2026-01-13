@@ -62,7 +62,7 @@ public class CKProductFacade {
     @Resource
     CkOutboundOrderItemService outboundOrderItemService;
     @Resource
-    CkShelfService shelfService;
+    CkShelfZoneService shelfService;
     @Resource
     CkProductBomService productBomService;
     @Resource
@@ -586,10 +586,10 @@ public class CKProductFacade {
             warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
         }
 
-        Map<Long, WarehouseShelf> shelfId2ShelfMap = new HashMap<>();
-        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(user.getTenantId());
+        Map<Long, ShelfZone> shelfId2ShelfMap = new HashMap<>();
+        List<ShelfZone> warehouseShelves = shelfService.selectByTenantId(user.getTenantId());
         if (!CollectionUtils.isEmpty(warehouseShelves)) {
-            shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+            shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
         }
 
 //        List<ProductImage> productImages = productImageService.selectByProductIds(user.getTenantId(), Lists.newArrayList(productId2ProductMap.keySet()));
@@ -604,7 +604,7 @@ public class CKProductFacade {
         Map<Long, List<InventoryWarehouse>> finalProductId2InventoryWarehouseMap = productId2InventoryWarehouseMap;
         Map<Long, Warehouse> finalWarehouseId2WarehouseMap = warehouseId2WarehouseMap;
         Map<Long, List<InventoryShelf>> finalProductId2InventoryShelfMap = productId2InventoryShelfMap;
-        Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
+        Map<Long, ShelfZone> finalShelfId2ShelfMap = shelfId2ShelfMap;
 //        Map<Long, Map<Integer, List<ProductImage>>> finalProductId2ProductImageType2ImageMap = productId2ProductImageType2ImageMap;
         return list.stream().map(v -> {
             ProductPageListResp p = new ProductPageListResp();
@@ -661,7 +661,7 @@ public class CKProductFacade {
                                         .map(inventoryShelf -> {
                                             ProductShelfQuantityResp psqr = new ProductShelfQuantityResp();
                                             psqr.setShelfId(inventoryShelf.getShelfId());
-                                            psqr.setShelfName(finalShelfId2ShelfMap.getOrDefault(inventoryShelf.getShelfId(), new WarehouseShelf()).getShelfName());
+                                            psqr.setShelfName(finalShelfId2ShelfMap.getOrDefault(inventoryShelf.getShelfId(), new ShelfZone()).getShelfName());
                                             psqr.setShelfQuantity(inventoryShelf.getQuantity());
                                             psqr.setShelfAvailableQuantity(inventoryShelf.getQuantity().subtract(inventoryShelf.getLockedQuantity()));
                                             return psqr;
@@ -708,7 +708,7 @@ public class CKProductFacade {
                                     .map(inventoryShelf -> {
                                         ProductShelfQuantityResp psqr = new ProductShelfQuantityResp();
                                         psqr.setShelfId(inventoryShelf.getShelfId());
-                                        psqr.setShelfName(finalShelfId2ShelfMap.getOrDefault(inventoryShelf.getShelfId(), new WarehouseShelf()).getShelfName());
+                                        psqr.setShelfName(finalShelfId2ShelfMap.getOrDefault(inventoryShelf.getShelfId(), new ShelfZone()).getShelfName());
                                         psqr.setShelfQuantity(inventoryShelf.getQuantity());
                                         psqr.setShelfAvailableQuantity(inventoryShelf.getQuantity().subtract(inventoryShelf.getLockedQuantity()));
                                         return psqr;
@@ -769,10 +769,10 @@ public class CKProductFacade {
             warehouseId2WarehouseMap = warehouses.stream().collect(Collectors.toMap(Warehouse::getId, v -> v));
         }
 
-        Map<Long, WarehouseShelf> shelfId2ShelfMap = new HashMap<>();
-        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(user.getTenantId());
+        Map<Long, ShelfZone> shelfId2ShelfMap = new HashMap<>();
+        List<ShelfZone> warehouseShelves = shelfService.selectByTenantId(user.getTenantId());
         if (!CollectionUtils.isEmpty(warehouseShelves)) {
-            shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+            shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
         }
 
         Map<String, Unit> finalUnitCode2UnitMap = unitCode2UnitMap;
@@ -781,7 +781,7 @@ public class CKProductFacade {
         Map<Long, List<InventoryWarehouse>> finalProductId2InventoryWarehouseMap = productId2InventoryWarehouseMap;
         Map<Long, Warehouse> finalWarehouseId2WarehouseMap = warehouseId2WarehouseMap;
         Map<Long, List<InventoryShelf>> finalProductId2InventoryShelfMap = productId2InventoryShelfMap;
-        Map<Long, WarehouseShelf> finalShelfId2ShelfMap = shelfId2ShelfMap;
+        Map<Long, ShelfZone> finalShelfId2ShelfMap = shelfId2ShelfMap;
         return list.stream().map(v -> {
             ProductListNoPackageResp p = new ProductListNoPackageResp();
             BeanUtils.copyProperties(v, p);
@@ -1115,7 +1115,7 @@ public class CKProductFacade {
                 ));
 
         List<Product> newProducts = new ArrayList<>();
-        List<WarehouseShelf> newShelves = new ArrayList<>();
+        List<ShelfZone> newShelves = new ArrayList<>();
 
         for (ProductImportDto importDto : productImportList) {
             if (StringUtils.isBlank(importDto.getName())) {
@@ -1148,7 +1148,7 @@ public class CKProductFacade {
             productService.saveBatch(distinctProducts);
         }
         if (!newShelves.isEmpty()) {
-            List<WarehouseShelf> distinctShelves = newShelves.stream()
+            List<ShelfZone> distinctShelves = newShelves.stream()
                     .collect(Collectors.toMap(
                             s -> s.getShelfName() + "_" + s.getWarehouseId(),
                             s -> s,
@@ -1194,14 +1194,14 @@ public class CKProductFacade {
     /**
      * 为商品创建货架
      */
-    private void createShelvesForProduct(Long tenantId, Long userId, ProductImportDto importDto, InitDataHolder initData, List<WarehouseShelf> newShelves) {
+    private void createShelvesForProduct(Long tenantId, Long userId, ProductImportDto importDto, InitDataHolder initData, List<ShelfZone> newShelves) {
         String shelfName = StringUtils.isNotBlank(importDto.getShelfName()) ? importDto.getShelfName() : "默认货架";
 
         // 收集所有相关的仓库ID
         Set<Long> warehouseIds = collectWarehouseIds(importDto, initData);
 
         for (Long warehouseId : warehouseIds) {
-            WarehouseShelf shelf = new WarehouseShelf();
+            ShelfZone shelf = new ShelfZone();
             shelf.setTenantId(tenantId);
             shelf.setShelfName(shelfName);
             shelf.setShelfCode(OrderNumberGenerator.generateShelfCode());
@@ -1261,8 +1261,8 @@ public class CKProductFacade {
                         v -> v
                 ));
 
-        List<WarehouseShelf> allShelves = shelfService.selectByTenantId(tenantId);
-        Map<String, WarehouseShelf> shelfMap = allShelves.stream()
+        List<ShelfZone> allShelves = shelfService.selectByTenantId(tenantId);
+        Map<String, ShelfZone> shelfMap = allShelves.stream()
                 .collect(Collectors.toMap(
                         v -> v.getShelfName() + "_" + v.getWarehouseId(),
                         v -> v
@@ -1295,7 +1295,7 @@ public class CKProductFacade {
      * 处理入库操作
      */
     private void processInboundOperations(Long tenantId, Long userId, ProductImportDto importDto, InitDataHolder initData,
-                                          Product product, Map<String, WarehouseShelf> shelfMap, String batchNo) {
+                                          Product product, Map<String, ShelfZone> shelfMap, String batchNo) {
         processInboundOperation(tenantId, userId, importDto, initData, product, shelfMap, batchNo,
                 importDto.getInStockInfo1(), initData.warehouseInfo.getInStockInfo1());
         processInboundOperation(tenantId, userId, importDto, initData, product, shelfMap, batchNo,
@@ -1310,7 +1310,7 @@ public class CKProductFacade {
      * 处理单个入库操作
      */
     private void processInboundOperation(Long tenantId, Long userId, ProductImportDto importDto, InitDataHolder initData,
-                                         Product product, Map<String, WarehouseShelf> shelfMap, String batchNo,
+                                         Product product, Map<String, ShelfZone> shelfMap, String batchNo,
                                          String quantityStr, String warehouseName) {
         if (StringUtils.isBlank(quantityStr) || StringUtils.isBlank(warehouseName)) {
             return;
@@ -1347,7 +1347,7 @@ public class CKProductFacade {
      * 处理出库操作
      */
     private void processOutboundOperations(Long tenantId, Long userId, ProductImportDto importDto, InitDataHolder initData,
-                                           Product product, Map<String, WarehouseShelf> shelfMap, String batchNo) {
+                                           Product product, Map<String, ShelfZone> shelfMap, String batchNo) {
         processOutboundOperation(tenantId, userId, importDto, initData, product, shelfMap, batchNo,
                 importDto.getOutStockInfo1(), initData.warehouseInfo.getOutStockInfo1());
         processOutboundOperation(tenantId, userId, importDto, initData, product, shelfMap, batchNo,
@@ -1368,7 +1368,7 @@ public class CKProductFacade {
      * 处理单个出库操作
      */
     private void processOutboundOperation(Long tenantId, Long userId, ProductImportDto importDto, InitDataHolder initData,
-                                          Product product, Map<String, WarehouseShelf> shelfMap, String batchNo,
+                                          Product product, Map<String, ShelfZone> shelfMap, String batchNo,
                                           String quantityStr, String warehouseName) {
         if (StringUtils.isBlank(quantityStr) || StringUtils.isBlank(warehouseName)) {
             return;
@@ -1675,10 +1675,10 @@ public class CKProductFacade {
         return item;
     }
 
-    private Long getShelfLocationId(String shelfName, Long warehouseId, Map<String, WarehouseShelf> shelfMap) {
+    private Long getShelfLocationId(String shelfName, Long warehouseId, Map<String, ShelfZone> shelfMap) {
         if (StringUtils.isNotBlank(shelfName)) {
             String shelfKey = shelfName + "_" + warehouseId;
-            WarehouseShelf shelf = shelfMap.get(shelfKey);
+            ShelfZone shelf = shelfMap.get(shelfKey);
             return shelf != null ? shelf.getId() : null;
         }
         return null;
