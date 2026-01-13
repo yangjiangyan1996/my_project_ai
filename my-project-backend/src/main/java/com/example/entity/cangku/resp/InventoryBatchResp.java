@@ -24,5 +24,7 @@ public class InventoryBatchResp {
         Long shelfId;
         String shelfName;
         BigDecimal quantity;
+        Long shelivesId;
+        String shelivesName;
     }
 }

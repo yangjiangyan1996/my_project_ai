@@ -110,7 +110,7 @@ public class CkShelfFacade {
             BeanUtils.copyProperties(v, shelfZone);
             shelfZone.setParentId(save.getId());
             shelfZone.setShelfCode(v.getZoneCode());
-            shelfZone.setStatus(v.getStatus());
+            shelfZone.setStatus(save.getStatus());
             shelfZone.setShelfName(v.getZoneName());
             shelfZone.setWarehouseId(save.getWarehouseId());
             shelfZone.setCapacity(v.getCapacity());
@@ -163,7 +163,7 @@ public class CkShelfFacade {
                 ShelfZone shelfZone = new ShelfZone();
                 BeanUtils.copyProperties(shelfDTO, shelfZone);
                 shelfZone.setParentId(updateShelf.getId());
-                shelfZone.setStatus(shelfDTO.getStatus());
+                shelfZone.setStatus(updateShelf.getStatus());
                 shelfZone.setShelfCode(shelfDTO.getZoneCode());
                 shelfZone.setShelfName(shelfDTO.getZoneName());
                 shelfZone.setWarehouseId(updateShelf.getWarehouseId());
@@ -184,7 +184,7 @@ public class CkShelfFacade {
                 ShelfZone updateShelfZone = new ShelfZone();
                 updateShelfZone.setId(existingZone.getId());
                 updateShelfZone.setParentId(existingShelf.getId());
-                updateShelfZone.setStatus(shelfDTO.getStatus());
+                updateShelfZone.setStatus(updateShelf.getStatus());
                 updateShelfZone.setShelfCode(shelfDTO.getZoneCode());
                 updateShelfZone.setShelfName(shelfDTO.getZoneName());
                 updateShelfZone.setWarehouseId(existingZone.getWarehouseId());
@@ -314,7 +314,7 @@ public class CkShelfFacade {
         for (ShelfZone sz : wh) {
             ShelfZone save = new ShelfZone();
             save.setId(sz.getId());
-            save.setStatus(req.getStatus());
+            save.setStatus(saveShelives.getStatus());
             save.setModifiedAt(new Date());
             save.setModifiedBy(req.getUserId());
             batchUpdateList.add(save);

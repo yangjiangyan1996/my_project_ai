@@ -1,9 +1,7 @@
 package com.example.service;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.ShelfZone;
-import com.example.entity.cangku.req.ShelfListPageReq;
 
 import java.util.List;
 import java.util.Set;
@@ -12,7 +10,7 @@ import java.util.Set;
 public interface CkShelfZoneService extends IService<ShelfZone> {
     List<ShelfZone> selectByCodeOrName(String shelfCode, String shelfName, Long tenantId);
 
-    Page<ShelfZone> getPage(Page<ShelfZone> page, ShelfListPageReq req);
+//    Page<ShelfZone> getPage(Page<ShelfZone> page, ShelfListPageReq req);
 
     List<ShelfZone> listWareHouseEnable(Long tenantId, Long warehouseId);
 

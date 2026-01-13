@@ -50,6 +50,7 @@
               placeholder="全部仓库"
               clearable
               class="responsive-select"
+              style="min-width: 120px;"
             >
               <el-option
                 v-for="warehouse in warehouseList"
@@ -65,6 +66,7 @@
               placeholder="全部类型"
               clearable
               class="responsive-select"
+              style="min-width: 120px;"
             >
               <el-option
                 v-for="type in shelfTypeOptions"
@@ -80,6 +82,7 @@
               placeholder="全部状态"
               clearable
               class="responsive-select"
+              style="min-width: 120px;"
             >
               <el-option
                 v-for="item in statusOptions"
@@ -468,7 +471,7 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="80" align="center">
+          <!-- <el-table-column label="状态1" width="80" align="center">
             <template #default="{ row }">
               <el-switch
                 v-model="row.status"
@@ -478,7 +481,7 @@
                 :disabled="isViewMode"
               />
             </template>
-          </el-table-column>
+          </el-table-column> -->
           <!-- <el-table-column label="排序1" width="80">
             <template #default="{ row }">
               <el-input-number
@@ -502,11 +505,11 @@
               </el-button>
             </template>
           </el-table-column>
-          <el-table-column label="备注" min-width="120" v-if="isViewMode">
+          <!-- <el-table-column label="备注1" min-width="120" v-if="isViewMode">
             <template #default="{ row }">
               <span class="zone-remark">{{ row.remark || '--' }}</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
         </el-table>
       </div>
 

@@ -11,10 +11,10 @@ import lombok.Data;
  */
 @Data
 public class ShelfListPageReq extends PageReq {
-    private String area;
     private String shelfCode;
     private String shelfName;
     private Integer status;
+    private Integer shelfType;
     private Long warehouseId;
 
     Long userId;

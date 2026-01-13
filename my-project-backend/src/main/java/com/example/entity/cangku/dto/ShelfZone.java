@@ -12,15 +12,14 @@ import java.math.BigDecimal;
 @Data
 @TableName("ck_shelf_zone")
 public class ShelfZone extends BaseModel {
-    @TableId(type = IdType.AUTO)
-//    private Long id;
+    //    private Long id;
 //    //租户ID
 //    private Long tenantId;
 //    //货架编码
     private String shelfCode;
-//    //货架名称
+    //    //货架名称
     private String shelfName;
-//    //仓库ID
+    //    //仓库ID
 //    private Long warehouseId;
 //    //区域（A区、B区等）
 //    private String area;
@@ -61,9 +60,10 @@ public class ShelfZone extends BaseModel {
 //  `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否被删除，0:正常;1:被删除;',
 //  `parent_id` bigint DEFAULT NULL COMMENT '父货架ID，如果为NULL表示自身就是货架',
 //  `zone_level` tinyint DEFAULT '1' COMMENT '区域层级：1-货架，2-子区域',
+    @TableId(type = IdType.AUTO)
     private Long id;
     private Long tenantId;
-//    private String zoneCode;
+    //    private String zoneCode;
 //    private String zoneName;
     private Long warehouseId;
     private String area;

@@ -51,6 +51,8 @@ public class CkInventoryFacade {
     @Resource
     CkWareHouseService wareHouseService;
     @Resource
+    CkShelivesService shelivesService;
+    @Resource
     CkShelfZoneService shelfService;
     @Resource
     CkInventoryShelfService inventoryShelfService;
@@ -408,6 +410,10 @@ public class CkInventoryFacade {
         List<ShelfZone> warehouseShelves = shelfService.selectByTenantId(tenantId);
         Map<Long, ShelfZone> shelfId2InfoMap = warehouseShelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
 
+        List<Long> shelivesIds = warehouseShelves.stream().map(v -> v.getParentId()).distinct().collect(Collectors.toList());
+        List<Shelives> shelivesList = shelivesService.selectByIds(tenantId, shelivesIds);
+        Map<Long, Shelives> shelfId2ShelfMap = shelivesList.stream().collect(Collectors.toMap(Shelives::getId, v -> v));
+
         return inventoryBatches.stream().map(c -> {
             InventoryBatchResp resp = new InventoryBatchResp();
             resp.setQuantity(c.getQuantity());
@@ -416,7 +422,14 @@ public class CkInventoryFacade {
             resp.setShelfList(batchNo2InventoryShelfMap.getOrDefault(c.getBatchNo(), Collections.emptyList()).stream().map(s -> {
                 InventoryBatchResp.ShelfInfo shelfInfo = new InventoryBatchResp.ShelfInfo();
                 shelfInfo.setShelfId(s.getShelfId());
-                shelfInfo.setShelfName(shelfId2InfoMap.getOrDefault(s.getShelfId(), new ShelfZone()).getShelfName());
+
+                ShelfZone shelfZone = shelfId2InfoMap.getOrDefault(s.getShelfId(), new ShelfZone());
+                shelfInfo.setShelfName(shelfZone.getShelfName());
+
+                Shelives shelives = shelfId2ShelfMap.getOrDefault(shelfZone.getParentId(), new Shelives());
+                shelfInfo.setShelivesId(shelives.getId());
+                shelfInfo.setShelivesName(shelives.getShelfName());
+
                 shelfInfo.setQuantity(s.getQuantity());
                 return shelfInfo;
             }).collect(Collectors.toList()));

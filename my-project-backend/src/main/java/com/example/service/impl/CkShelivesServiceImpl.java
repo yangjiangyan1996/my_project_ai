@@ -7,6 +7,7 @@ import com.example.entity.cangku.dto.Shelives;
 import com.example.entity.cangku.req.ShelfListPageReq;
 import com.example.mapper.CkShelivesMapper;
 import com.example.service.CkShelivesService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -46,6 +47,9 @@ public class CkShelivesServiceImpl extends ServiceImpl<CkShelivesMapper, Shelive
                 new QueryWrapper<Shelives>()
                         .eq(req.getStatus()!= null ,"status", req.getStatus())
                         .eq(req.getWarehouseId()!= null ,"warehouse_id", req.getWarehouseId())
+                        .eq(req.getShelfType()!= null ,"shelf_type", req.getShelfType())
+                        .eq(StringUtils.isNotBlank(req.getShelfCode()),"shelf_code", req.getShelfCode())
+                        .eq(StringUtils.isNotBlank(req.getShelfName()),"shelf_name", req.getShelfName())
                         .eq( "tenant_id", req.getTenantId())
                         .eq("is_deleted",0)
                         .orderByAsc("sort_order")
