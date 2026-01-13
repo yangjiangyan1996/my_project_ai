@@ -7,17 +7,19 @@
           <div class="header-actions">
             <el-button 
               type="primary" 
-              @click="handleCreate"
+              @click="handleCreateShelf"
+              class="responsive-btn"
             >
               <el-icon><Plus /></el-icon>
-              新建货架
+              <span class="btn-text">新建货架</span>
             </el-button>
             <el-button 
               @click="refreshList"
               :loading="loading"
+              class="responsive-btn"
             >
               <el-icon><Refresh /></el-icon>
-              刷新
+              <span class="btn-text">刷新</span>
             </el-button>
           </div>
         </div>
@@ -25,13 +27,13 @@
 
       <!-- 筛选条件 -->
       <div class="filter-section">
-        <el-form :model="filterForm" inline>
+        <el-form :model="filterForm" inline class="responsive-form">
           <el-form-item label="货架编码">
             <el-input
               v-model="filterForm.shelfCode"
               placeholder="请输入货架编码"
               clearable
-              style="width: 200px"
+              class="responsive-input"
             />
           </el-form-item>
           <el-form-item label="货架名称">
@@ -39,7 +41,7 @@
               v-model="filterForm.shelfName"
               placeholder="请输入货架名称"
               clearable
-              style="width: 200px"
+              class="responsive-input"
             />
           </el-form-item>
           <el-form-item label="仓库">
@@ -47,7 +49,8 @@
               v-model="filterForm.warehouseId"
               placeholder="全部仓库"
               clearable
-              style="width: 150px"
+              class="responsive-select"
+              style="min-width: 120px;"
             >
               <el-option
                 v-for="warehouse in warehouseList"
@@ -57,18 +60,19 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="区域">
+          <el-form-item label="类型">
             <el-select
-              v-model="filterForm.area"
-              placeholder="全部区域"
+              v-model="filterForm.shelfType"
+              placeholder="全部类型"
               clearable
-              style="width: 120px"
+              class="responsive-select"
+              style="min-width: 120px;"
             >
               <el-option
-                v-for="area in areaOptions"
-                :key="area"
-                :label="area"
-                :value="area"
+                v-for="type in shelfTypeOptions"
+                :key="type.value"
+                :label="type.label"
+                :value="type.value"
               />
             </el-select>
           </el-form-item>
@@ -77,7 +81,8 @@
               v-model="filterForm.status"
               placeholder="全部状态"
               clearable
-              style="width: 120px"
+              class="responsive-select"
+              style="min-width: 120px;"
             >
               <el-option
                 v-for="item in statusOptions"
@@ -87,9 +92,9 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="handleSearch">查询</el-button>
-            <el-button @click="handleReset">重置</el-button>
+          <el-form-item class="form-buttons">
+            <el-button type="primary" @click="handleSearch" class="responsive-btn">查询</el-button>
+            <el-button @click="handleReset" class="responsive-btn">重置</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -100,114 +105,113 @@
           :data="shelfList"
           v-loading="loading"
           empty-text="暂无货架数据"
-          class="shelf-table"
+          class="shelf-table responsive-table"
           row-key="id"
         >
           <el-table-column type="index" label="序号" width="60" align="center" />
-          <el-table-column label="货架编码" width="150" fixed="left">
+          <el-table-column label="货架编码" min-width="120" fixed="left">
             <template #default="{ row }">
               <span class="shelf-code">{{ row.shelfCode }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="货架名称" width="200">
+          <el-table-column label="货架名称" min-width="120">
             <template #default="{ row }">
               <span>{{ row.shelfName }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="仓库" width="150">
+          <el-table-column label="仓库" min-width="100">
             <template #default="{ row }">
               <span>{{ row.warehouseName }}</span>
             </template>
           </el-table-column>
-          <!-- <el-table-column label="位置信息" width="200">
+          <el-table-column label="货架类型" min-width="90">
             <template #default="{ row }">
-              <div class="location-info">
-                <div v-if="row.area" class="location-item">
-                  <span class="label">区域:</span>
-                  <span class="value">{{ row.area }}</span>
-                </div>
-                <div v-if="row.rowN" class="location-item">
-                  <span class="label">排:</span>
-                  <span class="value">{{ row.rowN }}</span>
-                </div>
-                <div v-if="row.columnN" class="location-item">
-                  <span class="label">列:</span>
-                  <span class="value">{{ row.columnN }}</span>
-                </div>
-                <div v-if="row.layer" class="location-item">
-                  <span class="label">层:</span>
-                  <span class="value">{{ row.layer }}</span>
-                </div>
-              </div>
-            </template>
-          </el-table-column> -->
-          <el-table-column label="容量" width="150" align="center">
-            <template #default="{ row }">
-              <span v-if="row.capacity">
-                {{ row.capacity }} {{ row.capacityUnit || '' }}
-              </span>
-              <span v-else class="no-data">--</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="使用率" width="100" align="center">
-            <template #default="{ row }">
-              <el-progress 
-                :percentage="row.utilizationRate || 0" 
-                :show-text="false"
-                :color="getUtilizationColor(row.utilizationRate)"
-              />
-              <span class="utilization-text">{{ row.utilizationRate || 0 }}%</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="产品数量" width="200" align="center">
-            <template #default="{ row }">
-              <span>{{ row.productCount || 0 }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="状态" width="100" align="center">
-            <template #default="{ row }">
-              <el-tag 
-                :type="row.status === 1 ? 'success' : 'danger'" 
+              <el-tag
+                :type="getShelfTypeTagType(row.shelfType)"
                 size="small"
+                class="responsive-tag"
               >
-                {{ row.status === 1 ? '启用' : '禁用' }}
+                {{ getShelfTypeLabel(row.shelfType) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="排序" width="100" align="center">
+          <el-table-column label="区域数量" width="90" align="center">
+            <template #default="{ row }">
+              <el-tooltip
+                :content="`查看${row.shelfName}的区域`"
+                placement="top"
+              >
+                <el-button
+                  type="primary"
+                  link
+                  @click="handleViewZones(row)"
+                  class="zone-count-btn"
+                >
+                  {{ row.zoneCount || 0 }}
+                </el-button>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag
+              :type="row.status === 1 ? 'danger' : 'success'"
+              size="small"
+              class="responsive-tag"
+            >
+              {{ row.status === 1 ? '禁用' : '启用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+          <el-table-column label="排序" width="80" align="center">
             <template #default="{ row }">
               <span>{{ row.sortOrder || 0 }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="250" fixed="right" align="center">
+          <el-table-column label="操作" min-width="280" fixed="right" align="center">
             <template #default="{ row }">
               <div class="action-buttons">
+                <!-- 新增查看按钮 -->
+                <el-button
+                  type="info"
+                  link
+                  size="small"
+                  @click="handleViewShelf(row)"
+                  class="action-btn view-btn"
+                >
+                  <el-icon><View /></el-icon>
+                  <span class="btn-text">查看</span>
+                </el-button>
                 <el-button
                   type="primary"
                   link
                   size="small"
-                  @click="handleView(row)"
+                  @click="handleEditShelf(row)"
+                  class="action-btn edit-btn"
                 >
-                  查看
+                  <el-icon><Edit /></el-icon>
+                  <span class="btn-text">编辑</span>
                 </el-button>
-                <el-button
+                <!-- <el-button
                   type="warning"
                   link
                   size="small"
-                  @click="handleEdit(row)"
+                  @click="handleManageZones(row)"
+                  class="action-btn manage-btn"
                 >
-                  编辑
-                </el-button>
+                  <el-icon><Setting /></el-icon>
+                  <span class="btn-text">管理区域</span>
+                </el-button> -->
                 <el-button
-                  :type="row.status === 1 ? 'danger' : 'success'"
+                  :type="row.status === 0 ? 'danger' : 'success'"
                   link
                   size="small"
-                  @click="handleToggleStatus(row)"
+                  @click="handleToggleShelfStatus(row)"
+                  class="action-btn status-btn"
                 >
-                  {{ row.status === 1 ? '禁用' : '启用' }}
-                </el-button>
-                <el-button type="danger" link @click="handleDelete(row)">
-                  删除
+                  <el-icon v-if="row.status === 0"><Close /></el-icon>
+                  <el-icon v-else><Check /></el-icon>
+                  <span class="btn-text">{{ row.status === 0 ? '禁用' : '启用' }}</span>
                 </el-button>
               </div>
             </template>
@@ -224,430 +228,387 @@
             layout="total, sizes, prev, pager, next, jumper"
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
+            class="responsive-pagination"
           />
         </div>
       </div>
     </el-card>
 
-    <!-- 货架编辑/创建对话框 -->
+    <!-- 货架表单对话框（包含区域管理） -->
     <el-dialog
-      v-model="formDialogVisible"
-      :title="formTitle"
-      width="800px"
-      top="5vh"
-      class="shelf-form-dialog"
+      v-model="shelfFormDialogVisible"
+      :title="shelfFormTitle"
+      width="900px"
+      top="3vh"
+      @close="handleFormDialogClose"
+      class="responsive-dialog"
     >
-      <div class="shelf-form-container">
-        <!-- 基本信息卡片 -->
-        <el-card class="form-card basic-info-form" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">基本信息</span>
-              <el-tag 
-                v-if="isEdit"
-                :type="formData.status === 1 ? 'success' : 'danger'" 
-                size="large"
+      <!-- 货架基本信息 -->
+      <el-form
+        ref="shelfFormRef"
+        :model="shelfFormData"
+        :rules="shelfFormRules"
+        label-width="100px"
+        class="shelf-base-form responsive-form"
+      >
+        <el-row :gutter="20" class="form-row">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="货架编码" prop="shelfCode">
+              <el-input
+                v-model="shelfFormData.shelfCode"
+                placeholder="请输入货架编码"
+                maxlength="50"
+                class="responsive-input"
+                :disabled="isViewMode"
+                :readonly="isViewMode"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="货架名称" prop="shelfName">
+              <el-input
+                v-model="shelfFormData.shelfName"
+                placeholder="请输入货架名称"
+                maxlength="100"
+                class="responsive-input"
+                :disabled="isViewMode"
+                :readonly="isViewMode"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20" class="form-row">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="所属仓库" prop="warehouseId">
+              <el-select
+                v-model="shelfFormData.warehouseId"
+                placeholder="请选择仓库"
+                class="responsive-select"
+                :disabled="isViewMode"
               >
-                {{ formData.status === 1 ? '启用' : '禁用' }}
-              </el-tag>
-            </div>
-          </template>
-          
-          <el-form
-            ref="formRef"
-            :model="formData"
-            :rules="formRules"
-            label-width="100px"
-            class="compact-form"
+                <el-option
+                  v-for="warehouse in warehouseList"
+                  :key="warehouse.id"
+                  :label="warehouse.name"
+                  :value="warehouse.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="货架类型" prop="shelfType">
+              <el-select
+                v-model="shelfFormData.shelfType"
+                placeholder="请选择货架类型"
+                class="responsive-select"
+                :disabled="isViewMode"
+              >
+                <el-option
+                  v-for="type in shelfTypeOptions"
+                  :key="type.value"
+                  :label="type.label"
+                  :value="type.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20" class="form-row">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="排序" prop="sortOrder">
+              <el-input-number
+                v-model="shelfFormData.sortOrder"
+                placeholder="请输入排序"
+                :min="0"
+                class="responsive-input-number"
+                :disabled="isViewMode"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="状态" prop="status">
+              <el-radio-group v-model="shelfFormData.status" class="responsive-radio" :disabled="isViewMode">
+                <el-radio :label="0">启用</el-radio>
+                <el-radio :label="1">禁用</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="备注" prop="remark">
+          <el-input
+            v-model="shelfFormData.remark"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入备注"
+            maxlength="500"
+            show-word-limit
+            class="responsive-textarea"
+            :disabled="isViewMode"
+            :readonly="isViewMode"
+          />
+        </el-form-item>
+      </el-form>
+
+      <!-- 货架区域管理 -->
+      <div class="zone-management-section">
+        <div class="section-header">
+          <h4>货架区域管理</h4>
+          <el-button
+            type="primary"
+            size="small"
+            @click="handleAddZone"
+            class="responsive-btn"
+            :disabled="isViewMode"
           >
-            <div class="form-grid">
-              <div class="form-group">
-                <el-form-item label="货架编码" prop="shelfCode">
-                  <el-input
-                    v-model="formData.shelfCode"
-                    placeholder="请输入货架编码"
-                    maxlength="50"
-                    class="form-input"
-                  />
-                </el-form-item>
-              </div>
-              
-              <div class="form-group">
-                <el-form-item label="货架名称" prop="shelfName">
-                  <el-input
-                    v-model="formData.shelfName"
-                    placeholder="请输入货架名称"
-                    maxlength="100"
-                    class="form-input"
-                  />
-                </el-form-item>
-              </div>
-              
-              <div class="form-group">
-                <el-form-item label="所属仓库" prop="warehouseId">
-                  <el-select
-                    v-model="formData.warehouseId"
-                    placeholder="请选择仓库"
-                    class="form-select"
-                  >
-                    <el-option
-                      v-for="warehouse in warehouseList"
-                      :key="warehouse.id"
-                      :label="warehouse.name"
-                      :value="warehouse.id"
-                    />
-                  </el-select>
-                </el-form-item>
-              </div>
-              
-              <div class="form-group">
-                <el-form-item label="区域" prop="area">
-                  <el-select
-                    v-model="formData.area"
-                    placeholder="请选择区域"
-                    class="form-select"
-                  >
-                    <el-option
-                      v-for="area in areaOptions"
-                      :key="area"
-                      :label="area"
-                      :value="area"
-                    />
-                  </el-select>
-                </el-form-item>
-              </div>
-              
-              <div class="form-group">
-                <el-form-item label="容量" prop="capacity">
-                  <div class="capacity-input-group">
-                    <el-input-number
-                      v-model="formData.capacity"
-                      placeholder="请输入容量"
-                      :min="0"
-                      :precision="2"
-                      class="capacity-input"
-                    />
-                    <el-select
-                      v-model="formData.capacityUnit"
-                      placeholder="单位"
-                      class="capacity-unit"
-                    >
-                      <el-option label="个" value="个" />
-                      <el-option label="箱" value="箱" />
-                      <el-option label="千克" value="千克" />
-                      <el-option label="立方米" value="立方米" />
-                    </el-select>
-                  </div>
-                </el-form-item>
-              </div>
-              
-              <div class="form-group">
-                <el-form-item label="排序" prop="sortOrder">
-                  <el-input-number
-                    v-model="formData.sortOrder"
-                    placeholder="请输入排序"
-                    :min="0"
-                    class="form-input"
-                  />
-                </el-form-item>
-              </div>
-            </div>
-          </el-form>
-        </el-card>
+            <el-icon><Plus /></el-icon>
+            <span class="btn-text">添加区域</span>
+          </el-button>
+        </div>
 
-        <!-- 位置信息卡片 -->
-        <el-card class="form-card location-form" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">位置信息</span>
-            </div>
-          </template>
-          
-          <div class="location-form-grid">
-            <el-form :model="formData" label-width="80px">
-              <el-form-item label="排" prop="rowN" class="location-form-item">
+        <el-table
+          :data="zoneList"
+          empty-text="暂无区域数据"
+          class="zone-table responsive-table"
+          size="small"
+        >
+          <el-table-column type="index" label="序号" width="60" align="center" />
+          <el-table-column label="区域编码" min-width="120">
+            <template #default="{ row, $index }">
+              <el-input
+                v-model="row.zoneCode"
+                placeholder="区域编码"
+                size="small"
+                @blur="validateZoneCode($index)"
+                class="zone-input"
+                :disabled="isViewMode"
+                :readonly="isViewMode"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="区域名称" min-width="120">
+            <template #default="{ row }">
+              <el-input
+                v-model="row.zoneName"
+                placeholder="区域名称"
+                size="small"
+                class="zone-input"
+                :disabled="isViewMode"
+                :readonly="isViewMode"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="位置信息" min-width="180">
+            <template #default="{ row }">
+              <div class="location-inputs">
+                <el-select
+                  v-model="row.area"
+                  placeholder="区域"
+                  size="small"
+                  class="location-select"
+                  :disabled="isViewMode"
+                >
+                  <el-option
+                    v-for="area in areaOptions"
+                    :key="area"
+                    :label="area"
+                    :value="area"
+                  />
+                </el-select>
                 <el-input
-                  v-model="formData.rowN"
-                  placeholder="请输入排号"
-                  maxlength="20"
+                  v-model="row.rowN"
+                  placeholder="排"
+                  size="small"
                   class="location-input"
+                  :disabled="isViewMode"
+                  :readonly="isViewMode"
                 />
-              </el-form-item>
-              
-              <el-form-item label="列" prop="columnN" class="location-form-item">
                 <el-input
-                  v-model="formData.columnN"
-                  placeholder="请输入列号"
-                  maxlength="20"
+                  v-model="row.columnN"
+                  placeholder="列"
+                  size="small"
                   class="location-input"
+                  :disabled="isViewMode"
+                  :readonly="isViewMode"
                 />
-              </el-form-item>
-              
-              <el-form-item label="层" prop="layer" class="location-form-item">
                 <el-input
-                  v-model="formData.layer"
-                  placeholder="请输入层号"
-                  maxlength="20"
+                  v-model="row.layer"
+                  placeholder="层"
+                  size="small"
                   class="location-input"
+                  :disabled="isViewMode"
+                  :readonly="isViewMode"
                 />
-              </el-form-item>
-            </el-form>
-          </div>
-          
-          <div class="location-preview">
-            <div class="preview-label">位置预览：</div>
-            <div class="preview-value">
-              <el-tag type="info" size="large">
-                {{ generateLocationPreview(formData) }}
-              </el-tag>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 状态与备注卡片 -->
-        <el-card class="form-card status-form" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">状态与备注</span>
-            </div>
-          </template>
-          
-          <div class="status-form-content">
-            <el-form :model="formData" label-width="100px">
-              <el-form-item label="状态" prop="status" class="status-item">
-                <el-radio-group v-model="formData.status" class="status-radio-group">
-                  <el-radio :label="1" class="status-radio">
-                    <span class="status-label">启用</span>
-                  </el-radio>
-                  <el-radio :label="0" class="status-radio">
-                    <span class="status-label">禁用</span>
-                  </el-radio>
-                </el-radio-group>
-              </el-form-item>
-              
-              <el-form-item label="备注" prop="remark" class="remark-item">
-                <el-input
-                  v-model="formData.remark"
-                  type="textarea"
-                  :rows="3"
-                  placeholder="请输入备注信息"
-                  maxlength="500"
-                  show-word-limit
-                  resize="none"
-                  class="remark-textarea"
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="容量" min-width="120">
+            <template #default="{ row }">
+              <div class="capacity-inputs">
+                <el-input-number
+                  v-model="row.capacity"
+                  placeholder="容量"
+                  :min="0"
+                  :precision="2"
+                  size="small"
+                  class="capacity-input"
+                  :disabled="isViewMode"
                 />
-              </el-form-item>
-            </el-form>
-          </div>
-        </el-card>
+                <el-select
+                  v-model="row.capacityUnit"
+                  placeholder="单位"
+                  size="small"
+                  class="capacity-select"
+                  :disabled="isViewMode"
+                >
+                  <el-option label="个" value="个" />
+                  <el-option label="箱" value="箱" />
+                  <el-option label="千克" value="千克" />
+                  <el-option label="立方米" value="立方米" />
+                </el-select>
+              </div>
+            </template>
+          </el-table-column>
+          <!-- <el-table-column label="状态1" width="80" align="center">
+            <template #default="{ row }">
+              <el-switch
+                v-model="row.status"
+                :active-value=1
+                :inactive-value=0
+                size="small"
+                :disabled="isViewMode"
+              />
+            </template>
+          </el-table-column> -->
+          <!-- <el-table-column label="排序1" width="80">
+            <template #default="{ row }">
+              <el-input-number
+                v-model="row.sortOrder"
+                :min="0"
+                size="small"
+                class="sort-input"
+                :disabled="isViewMode"
+              />
+            </template>
+          </el-table-column> -->
+          <el-table-column label="操作" width="100" align="center" v-if="!isViewMode">
+            <template #default="{ $index }">
+              <el-button
+                type="danger"
+                link
+                size="small"
+                @click="handleRemoveZone($index)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+          <!-- <el-table-column label="备注1" min-width="120" v-if="isViewMode">
+            <template #default="{ row }">
+              <span class="zone-remark">{{ row.remark || '--' }}</span>
+            </template>
+          </el-table-column> -->
+        </el-table>
       </div>
-      
+
       <template #footer>
-        <div class="form-dialog-footer">
-          <el-button @click="formDialogVisible = false" class="cancel-btn">取消</el-button>
-          <el-button 
-            type="primary" 
-            @click="handleSubmit" 
-            :loading="formLoading"
-            class="submit-btn"
+        <div class="dialog-footer">
+          <el-button @click="shelfFormDialogVisible = false" class="responsive-btn">关闭</el-button>
+          <el-button
+            v-if="!isViewMode"
+            type="primary"
+            @click="handleShelfSubmit"
+            :loading="shelfFormLoading"
+            class="responsive-btn"
           >
-            确定
+            保存
           </el-button>
         </div>
       </template>
     </el-dialog>
 
-    <!-- 查看货架详情对话框 -->
+    <!-- 查看货架详情对话框（复用货架表单对话框） -->
+    <!-- 这个对话框现在通过 isViewMode 变量控制为查看模式 -->
+
+    <!-- 查看区域详情对话框（单独的，只显示区域） -->
     <el-dialog
-      v-model="viewDialogVisible"
-      title="货架详情"
+      v-model="zoneViewDialogVisible"
+      title="货架区域详情"
       width="800px"
       top="5vh"
-      class="shelf-view-dialog"
+      class="responsive-dialog"
     >
-      <div class="shelf-view-container" v-loading="viewLoading">
-        <!-- 基本信息卡片 -->
-        <el-card class="basic-info-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">基本信息</span>
-              <el-tag 
-                :type="currentShelf.status === 1 ? 'success' : 'danger'" 
-                size="large"
-              >
-                {{ currentShelf.status === 1 ? '启用' : '禁用' }}
-              </el-tag>
+      <el-table
+        :data="currentZones"
+        empty-text="暂无区域数据"
+        class="zone-view-table responsive-table"
+      >
+        <el-table-column type="index" label="序号" width="60" align="center" />
+        <el-table-column label="区域编码" min-width="100">
+          <template #default="{ row }">
+            <span class="zone-code">{{ row.zoneCode }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="区域名称" min-width="100">
+          <template #default="{ row }">
+            {{ row.zoneName }}
+          </template>
+        </el-table-column>
+        <el-table-column label="位置信息" min-width="150">
+          <template #default="{ row }">
+            <div class="location-info">
+              <div v-if="row.area" class="location-item">
+                <span class="label">区域:</span>
+                <span class="value">{{ row.area }}</span>
+              </div>
+              <div v-if="row.rowN" class="location-item">
+                <span class="label">排:</span>
+                <span class="value">{{ row.rowN }}</span>
+              </div>
+              <div v-if="row.columnN" class="location-item">
+                <span class="label">列:</span>
+                <span class="value">{{ row.columnN }}</span>
+              </div>
+              <div v-if="row.layer" class="location-item">
+                <span class="label">层:</span>
+                <span class="value">{{ row.layer }}</span>
+              </div>
             </div>
           </template>
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">货架编码</span>
-              <span class="info-value highlight">{{ currentShelf.shelfCode }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">货架名称</span>
-              <span class="info-value">{{ currentShelf.shelfName }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">所属仓库</span>
-              <span class="info-value">{{ currentShelf.warehouseName }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">区域位置</span>
-              <span class="info-value">
-                {{ formatLocation(currentShelf) }}
-              </span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">容量</span>
-              <span class="info-value">{{ currentShelf.capacity }} {{ currentShelf.capacityUnit }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">排序</span>
-              <span class="info-value">{{ currentShelf.sortOrder }}</span>
-            </div>
-            <div class="info-item full-width">
-              <span class="info-label">备注</span>
-              <span class="info-value">{{ currentShelf.remark || '无' }}</span>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 使用情况卡片 -->
-        <el-card class="usage-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">使用情况</span>
-            </div>
+        </el-table-column>
+        <el-table-column label="容量" width="100" align="center">
+          <template #default="{ row }">
+            <span v-if="row.capacity">
+              {{ row.capacity }} {{ row.capacityUnit || '' }}
+            </span>
+            <span v-else class="no-data">--</span>
           </template>
-          <div class="usage-content">
-            <!-- 容量进度条 -->
-            <div class="capacity-progress">
-              <div class="progress-header">
-                <span class="progress-title">容量使用率</span>
-                <span class="progress-value">{{ currentShelf.utilizationRate || 0 }}%</span>
-              </div>
-              <el-progress 
-                :percentage="currentShelf.utilizationRate || 0" 
-                :stroke-width="16"
-                :color="getUtilizationColor(currentShelf.utilizationRate)"
-                :show-text="false"
-              />
-              <div class="capacity-details">
-                <div class="detail-item">
-                  <span class="detail-label">总容量</span>
-                  <span class="detail-value">{{ currentShelf.capacity }} {{ currentShelf.capacityUnit }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">已使用</span>
-                  <span class="detail-value">{{ currentShelf.productCount || 0 }} {{ currentShelf.capacityUnit }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">可用容量</span>
-                  <span class="detail-value success">{{ currentShelf.availableCapacity || currentShelf.capacity }} {{ currentShelf.capacityUnit }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 使用情况图表 -->
-            <div class="usage-chart">
-              <div class="chart-container">
-                <div class="chart-bar" :style="{ width: `${currentShelf.utilizationRate || 0}%` }"></div>
-              </div>
-              <div class="chart-legend">
-                <div class="legend-item">
-                  <span class="legend-color used"></span>
-                  <span class="legend-text">已使用 ({{ currentShelf.utilizationRate || 0 }}%)</span>
-                </div>
-                <div class="legend-item">
-                  <span class="legend-color available"></span>
-                  <span class="legend-text">可用 ({{ 100 - (currentShelf.utilizationRate || 0) }}%)</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 关键指标 -->
-            <div class="key-metrics">
-              <div class="metric-card">
-                <div class="metric-icon">
-                  <el-icon><Box /></el-icon>
-                </div>
-                <div class="metric-content">
-                  <div class="metric-value">{{ currentShelf.productCount || 0 }}</div>
-                  <div class="metric-label">产品种类</div>
-                </div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-icon warning">
-                  <el-icon><TrendCharts /></el-icon>
-                </div>
-                <div class="metric-content">
-                  <div class="metric-value">{{ currentShelf.utilizationRate || 0 }}%</div>
-                  <div class="metric-label">使用率</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 位置信息卡片 -->
-        <el-card class="location-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">位置信息</span>
-            </div>
+        </el-table-column>
+        <el-table-column label="状态" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag
+              :type="row.status === 1 ? 'success' : 'danger'"
+              size="small"
+            >
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
           </template>
-          <div class="location-details">
-            <div class="location-grid">
-              <div class="location-item">
-                <div class="location-icon">
-                  <el-icon><Location /></el-icon>
-                </div>
-                <div class="location-content">
-                  <div class="location-title">区域</div>
-                  <div class="location-value">{{ currentShelf.area || '未设置' }}</div>
-                </div>
-              </div>
-              <div class="location-item">
-                <div class="location-icon">
-                  <el-icon><Grid /></el-icon>
-                </div>
-                <div class="location-content">
-                  <div class="location-title">排</div>
-                  <div class="location-value">{{ currentShelf.rowN || '--' }}</div>
-                </div>
-              </div>
-              <div class="location-item">
-                <div class="location-icon">
-                  <el-icon><Menu /></el-icon>
-                </div>
-                <div class="location-content">
-                  <div class="location-title">列</div>
-                  <div class="location-value">{{ currentShelf.columnN || '--' }}</div>
-                </div>
-              </div>
-              <div class="location-item">
-                <div class="location-icon">
-                  <el-icon><Histogram /></el-icon>
-                </div>
-                <div class="location-content">
-                  <div class="location-title">层</div>
-                  <div class="location-value">{{ currentShelf.layer || '--' }}</div>
-                </div>
-              </div>
-            </div>
-            <div class="location-code">
-              <span class="code-label">完整位置编码：</span>
-              <span class="code-value">{{ generateLocationCode(currentShelf) }}</span>
-            </div>
-          </div>
-        </el-card>
-      </div>
+        </el-table-column>
+        <el-table-column label="排序" width="80" align="center">
+          <template #default="{ row }">
+            {{ row.sortOrder || 0 }}
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="120">
+          <template #default="{ row }">
+            <span class="zone-remark">{{ row.remark || '--' }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
       <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="viewDialogVisible = false">关闭</el-button>
-          <el-button type="primary" @click="handleViewEdit">编辑货架</el-button>
-        </div>
+        <el-button @click="zoneViewDialogVisible = false" class="responsive-btn">关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -656,32 +617,23 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { 
-  Plus, 
-  Refresh, 
-  Box, 
-  Location, 
-  Grid, 
-  Menu, 
-  Histogram,
-  TrendCharts 
-} from '@element-plus/icons-vue';
+import { Plus, Refresh, View, Edit, Setting, Close, Check } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 
 const loading = ref(false);
-const formLoading = ref(false);
-const formDialogVisible = ref(false);
-const viewDialogVisible = ref(false);
-const viewLoading = ref(false);
-const formRef = ref();
-const isEdit = ref(false);
+const shelfFormLoading = ref(false);
+const shelfFormDialogVisible = ref(false);
+const isViewMode = ref(false); // 新增：用于区分查看模式和编辑模式
+const zoneViewDialogVisible = ref(false);
+const shelfFormRef = ref();
+const isShelfEdit = ref(false);
 
 // 筛选表单
 const filterForm = reactive({
   shelfCode: '',
   shelfName: '',
   warehouseId: '',
-  area: '',
+  shelfType: '',
   status: ''
 });
 
@@ -692,46 +644,26 @@ const pagination = reactive({
   total: 0
 });
 
-// 表单数据
-const formData = reactive({
+// 货架表单数据
+const shelfFormData = reactive({
   id: '',
   shelfCode: '',
   shelfName: '',
   warehouseId: '',
-  area: '',
-  rowN: '',
-  columnN: '',
-  layer: '',
-  capacity: null,
-  capacityUnit: '',
+  shelfType: 0,
   sortOrder: 0,
   status: 1,
   remark: ''
 });
 
-// 当前查看的货架
-const currentShelf = reactive({
-  id: '',
-  shelfCode: '',
-  shelfName: '',
-  warehouseId: '',
-  warehouseName: '',
-  area: '',
-  rowN: '',
-  columnN: '',
-  layer: '',
-  capacity: 0,
-  availableCapacity: 0,
-  capacityUnit: '',
-  status: 0,
-  sortOrder: 0,
-  remark: '',
-  utilizationRate: 0,
-  productCount: 0
-});
+// 货架区域列表（用于表单中的区域管理）
+const zoneList = ref([]);
+
+// 当前查看的区域列表（用于单独的查看区域对话框）
+const currentZones = ref([]);
 
 // 表单验证规则
-const formRules = {
+const shelfFormRules = {
   shelfCode: [
     { required: true, message: '请输入货架编码', trigger: 'blur' }
   ],
@@ -754,9 +686,17 @@ const statusOptions = [
   { value: 0, label: '禁用' }
 ];
 
+const shelfTypeOptions = [
+  { value: 0, label: '普通货架' },
+  { value: 1, label: '自动化货架' },
+  { value: 2, label: '流利式货架' },
+  { value: 3, label: '阁楼式货架' }
+];
+
 // 计算属性
-const formTitle = computed(() => {
-  return isEdit.value ? '编辑货架' : '新建货架';
+const shelfFormTitle = computed(() => {
+  if (isViewMode.value) return '查看货架详情';
+  return isShelfEdit.value ? '编辑货架' : '新建货架';
 });
 
 // 方法
@@ -777,15 +717,8 @@ const loadShelfList = async () => {
         shelfName: shelf.shelfName || '',
         warehouseId: shelf.warehouseId || '',
         warehouseName: shelf.warehouseName || '',
-        area: shelf.area || '',
-        rowN: shelf.rowN || '',
-        columnN: shelf.columnN || '',
-        layer: shelf.layer || '',
-        capacity: shelf.capacity || 0,
-        availableCapacity: shelf.availableCapacity || shelf.capacity || 0,
-        capacityUnit: shelf.capacityUnit || '',
-        utilizationRate: shelf.utilizationRate || 0,
-        productCount: shelf.productCount || 0,
+        shelfType: shelf.shelfType || 0,
+        zoneCount: shelf.zoneCount || 0,
         sortOrder: shelf.sortOrder || 0,
         status: shelf.status || 0,
         remark: shelf.remark || ''
@@ -814,6 +747,54 @@ const loadWarehouseList = async () => {
   }
 };
 
+const loadShelfZones = async (shelfId) => {
+  try {
+    const res = await get(`/api/auth/shelf/shelfZoneList?parentId=${shelfId}`);
+    return res || [];
+  } catch (error) {
+    console.error('加载货架区域失败:', error);
+    return [];
+  }
+};
+
+// 新增：查看货架详情（包含区域）
+const handleViewShelf = async (shelf) => {
+  isViewMode.value = true;
+  isShelfEdit.value = false;
+  resetShelfForm();
+
+  // 加载货架基本信息
+  Object.assign(shelfFormData, {
+    id: shelf.id,
+    shelfCode: shelf.shelfCode,
+    shelfName: shelf.shelfName,
+    warehouseId: shelf.warehouseId,
+    shelfType: shelf.shelfType,
+    sortOrder: shelf.sortOrder,
+    status: shelf.status,
+    remark: shelf.remark
+  });
+
+  // 加载货架区域
+  const zones = await loadShelfZones(shelf.id);
+  zoneList.value = zones.map(zone => ({
+    id: zone.id || '',
+    zoneCode: zone.zoneCode || '',
+    zoneName: zone.zoneName || '',
+    area: zone.area || '',
+    rowN: zone.rowN || '',
+    columnN: zone.columnN || '',
+    layer: zone.layer || '',
+    capacity: zone.capacity || null,
+    capacityUnit: zone.capacityUnit || '',
+    sortOrder: zone.sortOrder || 0,
+    status: zone.status || 1, // 保持原值：1为启用，0为禁用
+    remark: zone.remark || ''
+  }));
+
+  shelfFormDialogVisible.value = true;
+};
+
 const refreshList = () => {
   pagination.current = 1;
   loadShelfList();
@@ -829,7 +810,7 @@ const handleReset = () => {
     shelfCode: '',
     shelfName: '',
     warehouseId: '',
-    area: '',
+    shelfType: '',
     status: ''
   });
   pagination.current = 1;
@@ -847,71 +828,77 @@ const handleCurrentChange = (page) => {
   loadShelfList();
 };
 
-const handleCreate = () => {
-  isEdit.value = false;
-  resetForm();
-  formDialogVisible.value = true;
+const handleCreateShelf = () => {
+  isViewMode.value = false;
+  isShelfEdit.value = false;
+  resetShelfForm();
+  // 初始化一个默认区域
+  zoneList.value = [createDefaultZone()];
+  shelfFormDialogVisible.value = true;
 };
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要删除货架"${row.shelfName}"吗？`,
-      '删除确认',
-      {
-        type: 'warning'
-      }
-    );
-    
-    await post('/api/auth/shelf/delete', { id: row.id });
-    ElMessage.success('删除成功');
-    loadShelfList();
-  } catch (error) {
-    // 用户取消删除
-  }
-};
+const handleEditShelf = async (shelf) => {
+  isViewMode.value = false;
+  isShelfEdit.value = true;
+  resetShelfForm();
 
-const handleEdit = (shelf) => {
-  isEdit.value = true;
-  resetForm();
-  Object.assign(formData, {
+  // 加载货架基本信息
+  Object.assign(shelfFormData, {
     id: shelf.id,
     shelfCode: shelf.shelfCode,
     shelfName: shelf.shelfName,
     warehouseId: shelf.warehouseId,
-    area: shelf.area,
-    rowN: shelf.rowN,
-    columnN: shelf.columnN,
-    layer: shelf.layer,
-    capacity: shelf.capacity,
-    capacityUnit: shelf.capacityUnit,
+    shelfType: shelf.shelfType,
     sortOrder: shelf.sortOrder,
     status: shelf.status,
     remark: shelf.remark
   });
-  formDialogVisible.value = true;
+
+  // 加载货架区域
+  const zones = await loadShelfZones(shelf.id);
+  zoneList.value = zones.map(zone => ({
+    id: zone.id || '',
+    zoneCode: zone.zoneCode || '',
+    zoneName: zone.zoneName || '',
+    area: zone.area || '',
+    rowN: zone.rowN || '',
+    columnN: zone.columnN || '',
+    layer: zone.layer || '',
+    capacity: zone.capacity || null,
+    capacityUnit: zone.capacityUnit || '',
+    sortOrder: zone.sortOrder || 0,
+    status: zone.status || 1, // 保持原值：1为启用，0为禁用
+    remark: zone.remark || ''
+  }));
+
+  shelfFormDialogVisible.value = true;
 };
 
-const handleView = async (shelf) => {
-  try {
-    viewLoading.value = true;
-    // 使用列表中的完整数据
-    Object.assign(currentShelf, shelf);
-    viewDialogVisible.value = true;
-  } catch (error) {
-    console.error('加载货架详情失败:', error);
-    ElMessage.error('加载货架详情失败');
-  } finally {
-    viewLoading.value = false;
-  }
+const handleViewZones = async (shelf) => {
+  const zones = await loadShelfZones(shelf.id);
+  currentZones.value = zones.map(zone => ({
+    id: zone.id || '',
+    zoneCode: zone.zoneCode || '',
+    zoneName: zone.zoneName || '',
+    area: zone.area || '',
+    rowN: zone.rowN || '',
+    columnN: zone.columnN || '',
+    layer: zone.layer || '',
+    capacity: zone.capacity || null,
+    capacityUnit: zone.capacityUnit || '',
+    sortOrder: zone.sortOrder || 0,
+    status: zone.status || 0, // 修正：保持原值，1为启用，0为禁用
+    remark: zone.remark || ''
+  }));
+  zoneViewDialogVisible.value = true;
 };
 
-const handleViewEdit = () => {
-  viewDialogVisible.value = false;
-  handleEdit(currentShelf);
+const handleManageZones = async (shelf) => {
+  // 管理区域 - 打开编辑对话框
+  await handleEditShelf(shelf);
 };
 
-const handleToggleStatus = async (shelf) => {
+const handleToggleShelfStatus = async (shelf) => {
   try {
     const newStatus = shelf.status === 1 ? 0 : 1;
     const statusText = newStatus === 1 ? '启用' : '禁用';
@@ -928,8 +915,9 @@ const handleToggleStatus = async (shelf) => {
     });
     
     if (res) {
-      ElMessage.success(`${statusText}成功`);
-      refreshList();
+      ElMessage.success(`成功`);
+      // 修复1：操作完成后刷新列表
+      await loadShelfList();
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -938,58 +926,142 @@ const handleToggleStatus = async (shelf) => {
   }
 };
 
-const resetForm = () => {
-  Object.assign(formData, {
+const createDefaultZone = () => {
+  return {
     id: '',
-    shelfCode: '',
-    shelfName: '',
-    warehouseId: '',
+    zoneCode: '',
+    zoneName: '',
     area: '',
     rowN: '',
     columnN: '',
     layer: '',
     capacity: null,
-    capacityUnit: '',
+    capacityUnit: '个',
+    sortOrder: 0,
+    status: 1, // 默认启用
+    remark: ''
+  };
+};
+
+const handleAddZone = () => {
+  zoneList.value.push(createDefaultZone());
+};
+
+const handleRemoveZone = (index) => {
+  if (zoneList.value.length > 1) {
+    zoneList.value.splice(index, 1);
+  } else {
+    ElMessage.warning('至少需要保留一个区域');
+  }
+};
+
+const validateZoneCode = (index) => {
+  const zoneCode = zoneList.value[index].zoneCode;
+  if (!zoneCode) return;
+
+  // 检查是否有重复的区域编码
+  const duplicates = zoneList.value.filter((zone, i) =>
+    i !== index && zone.zoneCode === zoneCode
+  );
+
+  if (duplicates.length > 0) {
+    ElMessage.warning('区域编码不能重复');
+    zoneList.value[index].zoneCode = '';
+  }
+};
+
+const resetShelfForm = () => {
+  Object.assign(shelfFormData, {
+    id: '',
+    shelfCode: '',
+    shelfName: '',
+    warehouseId: '',
+    shelfType: 0,
     sortOrder: 0,
     status: 1,
     remark: ''
   });
-  if (formRef.value) {
-    formRef.value.clearValidate();
+  zoneList.value = [];
+  if (shelfFormRef.value) {
+    shelfFormRef.value.clearValidate();
   }
 };
 
-const handleSubmit = async () => {
-  if (!formRef.value) return;
+const handleFormDialogClose = () => {
+  // 清空区域列表
+  zoneList.value = [];
+  // 重置查看模式
+  isViewMode.value = false;
+};
+
+const handleShelfSubmit = async () => {
+  if (!shelfFormRef.value) return;
   
-  await formRef.value.validate(async (valid) => {
+  await shelfFormRef.value.validate(async (valid) => {
     if (valid) {
-      formLoading.value = true;
+      // 验证区域数据
+      let hasError = false;
+      for (let i = 0; i < zoneList.value.length; i++) {
+        const zone = zoneList.value[i];
+        if (!zone.zoneCode) {
+          ElMessage.warning(`第${i + 1}个区域编码不能为空`);
+          hasError = true;
+          break;
+        }
+        if (!zone.zoneName) {
+          ElMessage.warning(`第${i + 1}个区域名称不能为空`);
+          hasError = true;
+          break;
+        }
+      }
+
+      if (hasError) return;
+
+      // 检查区域编码重复
+      const zoneCodes = zoneList.value.map(zone => zone.zoneCode);
+      const uniqueZoneCodes = new Set(zoneCodes);
+      if (zoneCodes.length !== uniqueZoneCodes.size) {
+        ElMessage.warning('区域编码不能重复');
+        return;
+      }
+
+      shelfFormLoading.value = true;
       try {
-        const url = isEdit.value ? '/api/auth/shelf/update' : '/api/auth/shelf/create';
-        const res = await post(url, formData);
+        const requestData = {
+          shelf: shelfFormData,
+          zones: zoneList.value
+        };
+
+        const url = isShelfEdit.value ? '/api/auth/shelf/updateWithZones' : '/api/auth/shelf/createWithZones';
+        const res = await post(url, requestData);
         
         if (res) {
-          ElMessage.success(isEdit.value ? '更新成功' : '创建成功');
-          formDialogVisible.value = false;
-          refreshList();
+          ElMessage.success(isShelfEdit.value ? '更新成功' : '创建成功');
+          shelfFormDialogVisible.value = false;
+          // 修复1：保存成功后刷新列表
+          await loadShelfList();
         }
       } catch (error) {
         console.error('提交失败:', error);
       } finally {
-        formLoading.value = false;
+        shelfFormLoading.value = false;
       }
     }
   });
 };
 
-const getUtilizationColor = (percentage) => {
-  if (percentage < 70) {
-    return '#67C23A';
-  } else if (percentage < 90) {
-    return '#E6A23C';
-  } else {
-    return '#F56C6C';
+const getShelfTypeLabel = (type) => {
+  const option = shelfTypeOptions.find(opt => opt.value === type);
+  return option ? option.label : '未知';
+};
+
+const getShelfTypeTagType = (type) => {
+  switch (type) {
+    case 0: return ''; // 普通
+    case 1: return 'success'; // 自动化
+    case 2: return 'warning'; // 流利式
+    case 3: return 'info'; // 阁楼式
+    default: return '';
   }
 };
 
@@ -1031,27 +1103,33 @@ onMounted(() => {
   padding: 20px;
   background-color: #f5f7fa;
   min-height: calc(100vh - 60px);
+  box-sizing: border-box;
 }
 
 .manage-card {
   border-radius: 8px;
+  overflow: hidden;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .card-title {
   font-size: 18px;
   font-weight: bold;
   color: #303133;
+  line-height: 1;
 }
 
 .header-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .filter-section {
@@ -1065,12 +1143,73 @@ onMounted(() => {
 
 .shelf-table {
   width: 100%;
+  overflow-x: auto;
 }
 
 .shelf-code {
   font-family: 'Courier New', monospace;
   font-weight: bold;
   color: #409EFF;
+}
+
+.zone-management-section {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.section-header h4 {
+  margin: 0;
+  color: #303133;
+  font-size: 16px;
+}
+
+.zone-table {
+  width: 100%;
+  background-color: white;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.location-inputs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.capacity-inputs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.zone-view-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.zone-code {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  color: #67C23A;
+}
+
+.zone-remark {
+  color: #909399;
+  font-size: 12px;
+  font-style: italic;
 }
 
 .location-info {
@@ -1094,17 +1233,29 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.utilization-text {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 4px;
-  display: block;
-}
-
 .action-buttons {
   display: flex;
   gap: 8px;
   justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  min-width: 60px;
+}
+
+.view-btn { color: #909399; }
+.edit-btn { color: #409EFF; }
+.manage-btn { color: #E6A23C; }
+.status-btn { color: #F56C6C; }
+
+.zone-count-btn {
+  padding: 0;
+  min-height: auto;
+}
+
+.btn-text {
+  margin-left: 4px;
 }
 
 .pagination-section {
@@ -1120,587 +1271,67 @@ onMounted(() => {
   font-style: italic;
 }
 
-/* 查看对话框样式 */
-.shelf-view-dialog :deep(.el-dialog__header) {
-  border-bottom: 1px solid #ebeef5;
-  padding-bottom: 15px;
-}
-
-.shelf-view-container {
-  padding: 0;
-}
-
-/* 基本信息卡片 */
-.basic-info-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-}
-
-.basic-info-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 8px 8px 0 0;
-}
-
-.basic-info-card .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.basic-info-card .card-title {
-  color: white;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.basic-info-card :deep(.el-tag) {
-  font-weight: bold;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
-  padding: 20px;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border-left: 4px solid #409EFF;
-}
-
-.info-item.full-width {
-  grid-column: 1 / -1;
-}
-
-.info-label {
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 4px;
-}
-
-.info-value {
-  font-size: 14px;
-  color: #303133;
-  font-weight: 500;
-}
-
-.info-value.highlight {
-  color: #409EFF;
-  font-weight: bold;
-}
-
-/* 使用情况卡片 */
-.usage-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-}
-
-.usage-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.usage-content {
-  padding: 20px;
-}
-
-.capacity-progress {
-  margin-bottom: 30px;
-}
-
-.progress-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.progress-title {
-  font-size: 14px;
-  color: #303133;
-  font-weight: 500;
-}
-
-.progress-value {
-  font-size: 18px;
-  font-weight: bold;
-  color: #409EFF;
-}
-
-.capacity-details {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.detail-item {
-  text-align: center;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-}
-
-.detail-label {
-  display: block;
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 4px;
-}
-
-.detail-value {
-  display: block;
-  font-size: 16px;
-  font-weight: bold;
-  color: #303133;
-}
-
-.detail-value.success {
-  color: #67C23A;
-}
-
-.usage-chart {
-  margin: 30px 0;
-}
-
-.chart-container {
-  height: 24px;
-  background: #f0f2f5;
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-}
-
-.chart-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #409EFF, #67C23A);
-  border-radius: 12px;
-  transition: width 1s ease;
-}
-
-.chart-legend {
-  display: flex;
-  justify-content: center;
-  gap: 24px;
-  margin-top: 12px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-}
-
-.legend-color.used {
-  background: linear-gradient(90deg, #409EFF, #67C23A);
-}
-
-.legend-color.available {
-  background: #f0f2f5;
-}
-
-.legend-text {
-  font-size: 12px;
-  color: #606266;
-}
-
-.key-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-top: 24px;
-}
-
-.metric-card {
-  display: flex;
-  align-items: center;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  transition: all 0.3s;
-}
-
-.metric-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.metric-icon {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  margin-right: 16px;
-}
-
-.metric-icon.warning {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.metric-icon .el-icon {
-  font-size: 24px;
-  color: white;
-}
-
-.metric-content {
-  flex: 1;
-}
-
-.metric-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 4px;
-}
-
-.metric-label {
-  font-size: 12px;
-  color: #909399;
-}
-
-/* 位置信息卡片 */
-.location-card {
-  border-radius: 8px;
-}
-
-.location-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.location-details {
-  padding: 20px;
-}
-
-.location-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.location-item {
-  display: flex;
-  align-items: center;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  transition: all 0.3s;
-}
-
-.location-item:hover {
-  background: #e6f7ff;
-  border-color: #91d5ff;
-}
-
-.location-icon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #e6f7ff;
-  border-radius: 50%;
-  margin-right: 12px;
-}
-
-.location-icon .el-icon {
-  font-size: 20px;
-  color: #409EFF;
-}
-
-.location-content {
-  flex: 1;
-}
-
-.location-title {
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 4px;
-}
-
-.location-value {
-  font-size: 16px;
-  font-weight: bold;
-  color: #303133;
-}
-
-.location-code {
-  padding: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 8px;
-  text-align: center;
-}
-
-.code-label {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 14px;
-}
-
-.code-value {
-  color: white;
-  font-size: 18px;
-  font-weight: bold;
-  font-family: 'Courier New', monospace;
-}
-
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  padding-top: 20px;
-  border-top: 1px solid #ebeef5;
+  gap: 10px;
 }
 
-/* 编辑对话框样式 */
-.shelf-form-dialog :deep(.el-dialog__header) {
-  border-bottom: 1px solid #ebeef5;
-  padding-bottom: 15px;
+/* 查看模式样式 */
+:deep(.view-mode .el-input .el-input__wrapper) {
+  background-color: #f5f7fa;
+  border-color: transparent;
 }
 
-.shelf-form-container {
-  padding: 0;
+:deep(.view-mode .el-input.is-disabled .el-input__wrapper) {
+  background-color: #f5f7fa;
 }
 
-.form-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
+:deep(.view-mode .el-select .el-input .el-input__wrapper) {
+  background-color: #f5f7fa;
 }
 
-.form-card:last-child {
-  margin-bottom: 0;
+:deep(.view-mode .el-input-number .el-input__wrapper) {
+  background-color: #f5f7fa;
 }
 
-.form-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #ebeef5;
+:deep(.view-mode .el-radio-group) {
+  pointer-events: none;
 }
 
-.form-card .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.form-card .card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-/* 基本信息表单 */
-.basic-info-form :deep(.el-card__header) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.basic-info-form .card-title {
-  color: white;
-}
-
-.basic-info-form :deep(.el-tag) {
-  font-weight: bold;
-  color: white;
-  border: none;
-}
-
-.compact-form {
-  padding: 20px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-}
-
-.form-group {
-  margin-bottom: 0;
-}
-
-.form-group :deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #606266;
-}
-
-.form-input, .form-select {
-  width: 100%;
-}
-
-.capacity-input-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.capacity-input {
-  flex: 1;
-}
-
-.capacity-unit {
-  width: 100px;
-}
-
-/* 位置信息表单 */
-.location-form :deep(.el-card__header) {
-  background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
-}
-
-.location-form .card-title {
-  color: white;
-}
-
-.location-form-grid {
-  padding: 20px;
-}
-
-.location-form-item {
-  margin-bottom: 16px;
-}
-
-.location-form-item :deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #606266;
-}
-
-.location-input {
-  width: 100%;
-}
-
-.location-preview {
-  display: flex;
-  align-items: center;
-  padding: 16px 20px;
-  background: #f8f9fa;
-  border-top: 1px solid #ebeef5;
-  margin-top: 10px;
-}
-
-.preview-label {
-  font-size: 14px;
-  color: #606266;
-  margin-right: 12px;
-  font-weight: 500;
-}
-
-.preview-value :deep(.el-tag) {
-  font-size: 16px;
-  font-weight: bold;
-  padding: 8px 16px;
-  border-radius: 6px;
-  background: #f0f2f5;
-  border-color: #dcdfe6;
-}
-
-/* 状态与备注表单 */
-.status-form :deep(.el-card__header) {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.status-form .card-title {
-  color: white;
-}
-
-.status-form-content {
-  padding: 20px;
-}
-
-.status-item {
-  margin-bottom: 20px;
-}
-
-.status-item :deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #606266;
-}
-
-.status-radio-group {
-  display: flex;
-  gap: 20px;
-}
-
-.status-radio {
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: 1px solid #dcdfe6;
-  transition: all 0.3s;
-}
-
-.status-radio:hover {
-  border-color: #409EFF;
-  background: #f0f7ff;
-}
-
-:deep(.el-radio__input.is-checked + .el-radio__label .status-label) {
-  color: #409EFF;
-  font-weight: 500;
-}
-
-.remark-item {
-  margin-bottom: 0;
-}
-
-.remark-item :deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #606266;
-}
-
-.remark-textarea :deep(.el-textarea__inner) {
-  resize: none;
-  border-radius: 6px;
-  border: 1px solid #dcdfe6;
-  transition: border-color 0.3s;
-}
-
-.remark-textarea :deep(.el-textarea__inner:focus) {
-  border-color: #409EFF;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
-}
-
-/* 对话框底部 */
-.form-dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding-top: 20px;
-  border-top: 1px solid #ebeef5;
-}
-
-.cancel-btn {
-  min-width: 100px;
-}
-
-.submit-btn {
-  min-width: 100px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-}
-
-.submit-btn:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a3f9b 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+:deep(.view-mode .el-switch.is-disabled) {
+  opacity: 1;
 }
 
 /* 响应式设计 */
+@media (max-width: 1200px) {
+  .manage-card {
+    margin: 0 -10px;
+  }
+}
+
+@media (max-width: 992px) {
+  .responsive-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .responsive-form .el-form-item {
+    margin-bottom: 0;
+    width: 100%;
+  }
+
+  .form-row {
+    margin: 0 !important;
+  }
+
+  .form-row .el-col {
+    width: 100%;
+    margin-bottom: 12px;
+  }
+}
+
 @media (max-width: 768px) {
   .shelf-manage-container {
     padding: 10px;
@@ -1708,64 +1339,135 @@ onMounted(() => {
   
   .card-header {
     flex-direction: column;
-    gap: 12px;
     align-items: flex-start;
+    gap: 12px;
   }
   
   .header-actions {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: flex-start;
   }
   
-  .filter-section .el-form-item {
-    margin-bottom: 12px;
+  .responsive-btn .btn-text {
+    display: inline;
   }
   
   .action-buttons {
-    flex-direction: column;
+    flex-direction: row;
     gap: 4px;
   }
-  
-  .shelf-view-dialog,
-  .shelf-form-dialog {
-    width: 95% !important;
+
+  .action-btn .btn-text {
+    display: none;
   }
-  
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .capacity-details {
-    grid-template-columns: 1fr;
-  }
-  
-  .location-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .key-metrics {
-    grid-template-columns: 1fr;
-  }
-  
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .capacity-input-group {
+
+  .location-inputs,
+  .capacity-inputs {
     flex-direction: column;
+    gap: 5px;
   }
-  
-  .capacity-unit {
+
+  .location-input,
+  .location-select,
+  .capacity-input,
+  .capacity-select {
+    width: 100% !important;
+  }
+
+  .responsive-dialog {
+    width: 95% !important;
+    margin: 2vh auto;
+  }
+
+  .responsive-table {
+    font-size: 12px;
+  }
+
+  .responsive-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  .responsive-pagination {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .card-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .header-actions {
+    justify-content: space-between;
     width: 100%;
   }
-  
-  .status-radio-group {
-    flex-direction: column;
-    gap: 8px;
+
+  .header-actions .el-button {
+    flex: 1;
+    min-width: 0;
   }
-  
-  .cancel-btn, .submit-btn {
-    min-width: 80px;
+
+  .filter-section .el-form-item {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .form-buttons {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+  }
+
+  .form-buttons .el-button {
+    flex: 1;
+  }
+
+  .responsive-input,
+  .responsive-select {
+    width: 100% !important;
+  }
+
+  .responsive-input-number {
+    width: 100% !important;
+  }
+
+  .responsive-radio {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .responsive-textarea {
+    width: 100%;
+  }
+
+  .action-buttons {
+    justify-content: space-around;
+  }
+
+  .action-btn {
+    min-width: 40px;
+  }
+}
+
+/* 小屏幕设备 */
+@media (max-width: 375px) {
+  .btn-text {
+    display: none;
+  }
+
+  .header-actions .el-button span:not(.btn-text) {
+    display: none;
+  }
+
+  .action-buttons {
+    justify-content: center;
+  }
+
+  .action-btn {
+    padding: 4px;
   }
 }
 
@@ -1778,37 +1480,46 @@ onMounted(() => {
   background-color: #f5f7fa;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+/* 滚动条优化 */
+.responsive-table :deep(.el-table__body-wrapper) {
+  overflow-x: auto;
+}
+
+.responsive-table :deep(.el-table__header-wrapper) {
+  overflow-x: hidden;
+}
+
+/* 确保表格在小屏幕上可以滚动 */
+@media (max-width: 768px) {
+  .responsive-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .responsive-table :deep(table) {
+    min-width: 600px;
   }
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+/* 对话框响应式 */
+:deep(.el-dialog) {
+  max-width: 95vw;
+}
+
+@media (max-width: 768px) {
+  :deep(.el-dialog) {
+    width: 95% !important;
+    margin: 2vh auto;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  :deep(.el-dialog__body) {
+    padding: 10px 15px;
   }
-}
 
-.shelf-view-container {
-  animation: fadeIn 0.3s ease;
-}
-
-.form-card {
-  animation: slideUp 0.3s ease;
-}
-
-.location-preview {
-  animation: fadeIn 0.5s ease;
+  :deep(.el-dialog__footer) {
+    padding: 10px 15px;
+  }
 }
 </style>

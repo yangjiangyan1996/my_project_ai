@@ -27,14 +27,14 @@
             >
               保存草稿
             </el-button>
-            <el-button 
+            <!-- <el-button 
               type="primary" 
               @click="handleSubmit" 
               :loading="loading"
               v-if="!isEditMode || (isEditMode && (formData.status === 0 || formData.status === 4))"
             >
               {{ isEditMode ? '更新提交' : '提交审核' }}
-            </el-button>
+            </el-button> -->
           </div>
         </div>
       </template>
@@ -369,7 +369,8 @@
                             :key="shelf.shelfId" 
                             class="shelf-item">
                           <div class="shelf-info">
-                            <span>货架 {{ shelf.shelfName }}</span>
+                            <span>货架: {{ shelf.shelivesName }}</span>
+                            <span>区域: {{ shelf.shelfName }}</span>
                             <span class="real-time-info">
                               货架实时可用: {{ getRealTimeAvailableInfo(item.productId, row.componentProductId, batch.batchNo, shelf.shelfId) }}
                             </span>
@@ -1842,7 +1843,8 @@ const loadBatchInfoForComponent = async (componentProductId) => {
         createdAtOfBatch: batch.createdAt || new Date(),
         shelfList: (batch.shelfList || []).map(shelf => ({
           shelfId: shelf.shelfId,
-          shelfName: shelf.shelfName || `货架${shelf.shelfId}`,
+          shelfName: shelf.shelfName || `区域${shelf.shelfId}`,
+          shelivesName: shelf.shelivesName || `货架${shelf.shelivesId}`,
           quantity: parseFloat(shelf.quantity) || 0
         }))
       }));

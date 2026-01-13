@@ -6,32 +6,28 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.example.entity.dto.BaseModel;
 import lombok.Data;
 
-//仓库货架表
+/**
+ * @Author YangJian
+ * @Description
+ * @Email 1776080295@qq.com
+ * @Date 2026/1/2 22:15
+ */
+//ck_shelves
 @Data
-@TableName("ck_warehouse_shelf")
-public class WarehouseShelf extends BaseModel {
+@TableName("ck_shelves")
+public class Shelives extends BaseModel {
     @TableId(type = IdType.AUTO)
     private Long id;
     //租户ID
     private Long tenantId;
+    //仓库ID
+    private Long warehouseId;
     //货架编码
     private String shelfCode;
     //货架名称
     private String shelfName;
-    //仓库ID
-    private Long warehouseId;
-    //区域（A区、B区等）
-    private String area;
-    //排
-    private String rowN;
-    //列
-    private String columnN;
-    //层
-    private String layer;
-    //容量
-    private double capacity;
-    //容量单位
-    private String capacityUnit;
+    //货架类型（0:普通货架,1:自动化货架等）
+    private Integer shelfType;
     //状态：0-禁用，1-启用
     private Integer status;
     //排序

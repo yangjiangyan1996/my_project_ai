@@ -4,13 +4,14 @@ import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.Facade.CkCommentFacade;
 import com.example.Facade.CkShelfFacade;
+import com.example.annotations.LogOperation;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.ShelfPageListResp;
 import com.example.entity.cangku.resp.ShelfProductUsedAllResp;
+import com.example.entity.cangku.resp.ShelfZoneResp;
 import com.example.filter.UserUtil;
-import com.example.annotations.LogOperation;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,24 @@ public class ShelfController {
         }
     }
 
+
+    @GetMapping("/shelfZoneList")
+    public RespBean<List<ShelfZoneResp>> pageList(@RequestParam("parentId") Long parentId) {
+        try {
+            UserInfo user = UserUtil.getCurrentUser();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            List<ShelfZoneResp> result = shelfFacade.shelfZoneList(tenantId, parentId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("WarehouseController#pageList,req:{}", e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("WarehouseController#pageList,req:{}", e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     @GetMapping("/listEnable")
     public RespBean<List<ShelfPageListResp>> listEnable(@RequestParam("warehouseId") Long warehouseId) {
         try {
@@ -69,6 +88,7 @@ public class ShelfController {
         }
     }
 
+    //TODO yang delete
     @LogOperation(module = "货架管理", operation = "创建货架", description = "创建货架")
     @PostMapping("/create")
     public RespBean<Boolean> create(@RequestBody ShelfCreateReq req) {
@@ -85,6 +105,46 @@ public class ShelfController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("ShelfController#create,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @LogOperation(module = "货架管理", operation = "创建货架", description = "创建货架")
+    @PostMapping("/createWithZones")
+    public RespBean<Boolean> createWithZones(@RequestBody ShelviesCreateWithZoneReq req) {
+        try {
+            Long userId  = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+            Boolean result = shelfFacade.createWithZones(req);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("ShelfController#createWithZones,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ShelfController#createWithZones,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    @LogOperation(module = "货架管理", operation = "创建货架", description = "创建货架")
+    @PostMapping("/updateWithZones")
+    public RespBean<Boolean> updateWithZones(@RequestBody ShelviesCreateWithZoneReq req) {
+        try {
+            Long userId  = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+
+            req.setUserId(userId);
+            req.setTenantId(tenantId);
+            Boolean result = shelfFacade.updateWithZones(req);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("ShelfController#updateWithZones,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("ShelfController#updateWithZones,req:{}", JSON.toJSONString(req), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

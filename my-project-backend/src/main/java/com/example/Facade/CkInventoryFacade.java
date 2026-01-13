@@ -51,7 +51,9 @@ public class CkInventoryFacade {
     @Resource
     CkWareHouseService wareHouseService;
     @Resource
-    CkShelfService shelfService;
+    CkShelivesService shelivesService;
+    @Resource
+    CkShelfZoneService shelfService;
     @Resource
     CkInventoryShelfService inventoryShelfService;
     @Resource
@@ -125,9 +127,9 @@ public class CkInventoryFacade {
         Map<Long, Warehouse> warehouseMap = warehouseList.stream()
                 .collect(Collectors.toMap(Warehouse::getId, v -> v));
 
-        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(req.getTenantId());
-        Map<Long, WarehouseShelf> shelfId2ShelfMap = warehouseShelves.stream()
-                .collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        List<ShelfZone> warehouseShelves = shelfService.selectByTenantId(req.getTenantId());
+        Map<Long, ShelfZone> shelfId2ShelfMap = warehouseShelves.stream()
+                .collect(Collectors.toMap(ShelfZone::getId, v -> v));
 
         // 获取相关的产品信息
 
@@ -253,7 +255,7 @@ public class CkInventoryFacade {
                     for (Long shelfId : shelfId2QuantityMap.keySet()) {
                         InventoryPageListResp.ShelfInventory w = new InventoryPageListResp.ShelfInventory();
                         w.setShelfId(shelfId);
-                        w.setShelfName(shelfId2ShelfMap.getOrDefault(shelfId, new WarehouseShelf()).getShelfName());
+                        w.setShelfName(shelfId2ShelfMap.getOrDefault(shelfId, new ShelfZone()).getShelfName());
                         w.setQuantity(shelfId2QuantityMap.get(shelfId));
                         shelfInventoryList.add(w);
                     }
@@ -405,8 +407,12 @@ public class CkInventoryFacade {
 
         Map<String, List<InventoryShelf>> batchNo2InventoryShelfMap = inventoryShelfList.stream().collect(Collectors.groupingBy(InventoryShelf::getBatchNo));
 
-        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(tenantId);
-        Map<Long, WarehouseShelf> shelfId2InfoMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        List<ShelfZone> warehouseShelves = shelfService.selectByTenantId(tenantId);
+        Map<Long, ShelfZone> shelfId2InfoMap = warehouseShelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
+
+        List<Long> shelivesIds = warehouseShelves.stream().map(v -> v.getParentId()).distinct().collect(Collectors.toList());
+        List<Shelives> shelivesList = shelivesService.selectByIds(tenantId, shelivesIds);
+        Map<Long, Shelives> shelfId2ShelfMap = shelivesList.stream().collect(Collectors.toMap(Shelives::getId, v -> v));
 
         return inventoryBatches.stream().map(c -> {
             InventoryBatchResp resp = new InventoryBatchResp();
@@ -416,7 +422,14 @@ public class CkInventoryFacade {
             resp.setShelfList(batchNo2InventoryShelfMap.getOrDefault(c.getBatchNo(), Collections.emptyList()).stream().map(s -> {
                 InventoryBatchResp.ShelfInfo shelfInfo = new InventoryBatchResp.ShelfInfo();
                 shelfInfo.setShelfId(s.getShelfId());
-                shelfInfo.setShelfName(shelfId2InfoMap.getOrDefault(s.getShelfId(), new WarehouseShelf()).getShelfName());
+
+                ShelfZone shelfZone = shelfId2InfoMap.getOrDefault(s.getShelfId(), new ShelfZone());
+                shelfInfo.setShelfName(shelfZone.getShelfName());
+
+                Shelives shelives = shelfId2ShelfMap.getOrDefault(shelfZone.getParentId(), new Shelives());
+                shelfInfo.setShelivesId(shelives.getId());
+                shelfInfo.setShelivesName(shelives.getShelfName());
+
                 shelfInfo.setQuantity(s.getQuantity());
                 return shelfInfo;
             }).collect(Collectors.toList()));
@@ -831,9 +844,9 @@ public class CkInventoryFacade {
 //            log.info("未找到原料商品ID");
 //            return new ArrayList<>();
 //        }
-//        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(request.getTenantId());
-//        Map<Long, WarehouseShelf> shelfId2ShelfMap = warehouseShelves.stream()
-//                .collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+//        List<ShelfZone> warehouseShelves = shelfService.selectByTenantId(request.getTenantId());
+//        Map<Long, ShelfZone> shelfId2ShelfMap = warehouseShelves.stream()
+//                .collect(Collectors.toMap(ShelfZone::getId, v -> v));
 //
 //
 //        // 2. 获取批次货架的实际库存

@@ -28,14 +28,14 @@
             >
               保存草稿
             </el-button>
-            <el-button 
+            <!-- <el-button 
               type="primary" 
               @click="handleSubmit" 
               :loading="loading"
               v-if="!isEditMode || (isEditMode && (formData.status === 0 || formData.status === 4))"
             >
               {{ isEditMode ? '更新提交' : '提交审核' }}
-            </el-button>
+            </el-button> -->
           </div>
         </div>
       </template>
@@ -1182,7 +1182,7 @@ const handleShelfLocationChange = (index) => {
 
 const getShelfLocationLabel = (location) => {
   if (!location) return '';
-  return `${location.shelfName} (${location.shelfCode})`;
+  return `${location.shelfName} (${location.sheliveName})`;
 };
 
 const getShelfName = (shelfLocationId) => {
