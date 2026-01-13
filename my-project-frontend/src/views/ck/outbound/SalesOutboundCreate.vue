@@ -859,7 +859,10 @@
                     <div class="batch-detail">
                       <div v-for="allocation in row.batchAllocations" :key="`${allocation.batchNo}-${allocation.shelfId}`" class="batch-detail-item">
                         <span class="batch-no">{{ allocation.batchNo }}</span>
-                        <span class="shelf-name">{{ allocation.shelfName }}</span>
+                        <span class="shelf-name">
+                          {{ allocation.shelivesName || '默认货架' }}
+                          <span v-if="allocation.shelfName"> / {{ allocation.shelfName }}</span>
+                        </span>
                         <span class="batch-quantity">{{ allocation.quantity }}个</span>
                       </div>
                     </div>
@@ -1196,6 +1199,8 @@
               <span :class="row.quantity < 1 ? 'text-disabled' : ''">{{ row.quantity }}</span>
             </template>
           </el-table-column>
+          
+          
           <el-table-column label="货架分配" min-width="400">
             <template #default="{ row, $index: batchIndex }">
               <div class="shelf-allocation-container">
@@ -1207,7 +1212,20 @@
                     :class="{ 'shelf-disabled': shelf.quantity < 1 }"
                   >
                     <div class="shelf-info">
-                      <span class="shelf-name">货架 {{ shelf.shelfName }}</span>
+                      <!-- 添加条件判断，只有有值才显示 -->
+                        
+                      <span
+                        v-if="shelf.shelivesName || shelf.shelfName"
+                        class="shelf-name"
+                      >
+                        <span v-if="shelf.shelivesName">货架:{{ shelf.shelivesName }}</span>
+                        <span v-if="shelf.shelfName">
+                          区域:{{ shelf.shelfName }}
+                        </span>
+                      </span>
+                      <!-- 如果没有货架信息，显示默认值 -->
+                      <span v-else class="shelf-name">默认货架</span>
+
                       <span class="shelf-quantity" :class="shelf.quantity < 1 ? 'text-disabled' : ''">
                         可用: {{ shelf.quantity }}
                       </span>
@@ -1232,6 +1250,7 @@
               </div>
             </template>
           </el-table-column>
+
           <el-table-column label="批次分配总数" width="120" align="center">
             <template #default="{ row }">
               <span :class="getBatchAllocationClass(row)">{{ getBatchAllocatedTotal(row) }}</span>
@@ -3824,6 +3843,7 @@ const confirmBatchAllocation = () => {
             batchNo: batch.batchNo,
             shelfId: shelf.shelfId,
             shelfName: shelf.shelfName,
+            shelivesName: shelf.shelivesName, // 添加 shelivesName
             quantity: shelf.allocated,
             price: row.price || 0
           });
@@ -6577,5 +6597,39 @@ watch(
 
 .remark-cell:active {
   transform: translateY(1px);
+}
+
+/* 在已有的样式基础上添加或修改 */
+.shelf-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* 增加间距 */
+  flex: 6;
+  min-width: 0;
+}
+
+.shelf-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 4px; /* 添加间距 */
+  flex-wrap: wrap; /* 允许换行 */
+}
+
+/* 如果需要更紧凑的显示，可以使用这个版本 */
+.shelf-name-compact {
+  font-size: 12px;
+  color: #606266;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.shelf-name-compact span:not(:last-child)::after {
+  content: "·";
+  margin: 0 2px;
+  color: #c0c4cc;
 }
 </style>

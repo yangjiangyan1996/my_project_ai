@@ -8,6 +8,7 @@ import com.example.annotations.LogOperation;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.entity.cangku.req.*;
+import com.example.entity.cangku.resp.ShelfEnalbedListResp;
 import com.example.entity.cangku.resp.ShelfPageListResp;
 import com.example.entity.cangku.resp.ShelfProductUsedAllResp;
 import com.example.entity.cangku.resp.ShelfZoneResp;
@@ -74,10 +75,10 @@ public class ShelfController {
     }
 
     @GetMapping("/listEnable")
-    public RespBean<List<ShelfPageListResp>> listEnable(@RequestParam("warehouseId") Long warehouseId) {
+    public RespBean<List<ShelfEnalbedListResp>> listEnable(@RequestParam("warehouseId") Long warehouseId) {
         try {
             UserInfo user = UserUtil.getCurrentUser();
-            List<ShelfPageListResp> result = shelfFacade.listEnable(user.getTenantId(), warehouseId);
+            List<ShelfEnalbedListResp> result = shelfFacade.listEnable(user.getTenantId(), warehouseId);
             return RespBean.success(result);
         } catch (ValidationException e) {
             log.error("ShelfController#listEnable,req:{}",warehouseId, e);

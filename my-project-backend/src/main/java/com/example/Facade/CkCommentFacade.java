@@ -2,10 +2,7 @@ package com.example.Facade;
 
 import com.example.entity.cangku.req.InboundProductUsedShelfReq;
 import com.example.entity.cangku.req.ShelfProductUsedAllReq;
-import com.example.entity.cangku.resp.InboundProductUsedShelfResp;
-import com.example.entity.cangku.resp.ProductUsedShelfResp;
-import com.example.entity.cangku.resp.ShelfPageListResp;
-import com.example.entity.cangku.resp.ShelfProductUsedAllResp;
+import com.example.entity.cangku.resp.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import lombok.AllArgsConstructor;
@@ -33,7 +30,7 @@ public class CkCommentFacade {
     public List<InboundProductUsedShelfResp> allocateIShelfnventoryQuantity(InboundProductUsedShelfReq req) {
         List<Long> productIds = req.getList().stream().map(v -> v.getProductId()).collect(Collectors.toList());
         List<ProductUsedShelfResp> commonlyUsedShelvesForGoods = inventoryFacade.getCommonlyUsedShelvesForGoods(productIds, req.getTenantId());
-        List<ShelfPageListResp> shelfList = shelfFacade.listEnable(req.getTenantId(), req.getWarehouseId());
+        List<ShelfEnalbedListResp> shelfList = shelfFacade.listEnable(req.getTenantId(), req.getWarehouseId());
 
         //商品ID对应的需要分配的数量
         Map<Long, BigDecimal> productId2QuantityMap = req.getList().stream().collect(Collectors.toMap(v -> v.getProductId(), v -> v.getQuantity()));
@@ -75,7 +72,7 @@ public class CkCommentFacade {
             // 2. 分配其他货架（排除常用货架）
             if (remainQty.compareTo(BigDecimal.ZERO) > 0) {
 
-                for (ShelfPageListResp shelf : shelfList) {
+                for (ShelfEnalbedListResp shelf : shelfList) {
                     if (remainQty.compareTo(BigDecimal.ZERO) <= 0) break;
 
                     Long shelfId = shelf.getId();

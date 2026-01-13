@@ -908,7 +908,7 @@ public class CkInboundFacade {
         }
 
         // 按生产任务ID分组，汇总入库数量
-        Map<Long, InboundOrderItem> taskId2InboundItemMap = itemsWithProductionTask.stream().collect(Collectors.toMap(v -> v.getProductionTaskId(), v -> v));
+        Map<Long, List<InboundOrderItem>> taskId2InboundItemMap = itemsWithProductionTask.stream().collect(Collectors.groupingBy(v -> v.getProductionTaskId()));
 
         // 批量查询生产任务'
         List<Long> productionTaskIds = itemsWithProductionTask.stream().map(v -> v.getProductionTaskId()).distinct().collect(Collectors.toList());
@@ -936,8 +936,9 @@ public class CkInboundFacade {
         List<String> updateLogs = new ArrayList<>();
 
         for (ProductionTask task : productionTasks) {
-            InboundOrderItem inboundOrderItem = taskId2InboundItemMap.get(task.getId());
-            BigDecimal inboundQuantity = inboundOrderItem.getActualQuantity();
+            List<InboundOrderItem> inboundOrderItemList = taskId2InboundItemMap.get(task.getId());
+            //对inboundOrderItemList的ActualQuantity求和
+            BigDecimal inboundQuantity = inboundOrderItemList.stream().map(v->v.getActualQuantity()).reduce(BigDecimal::add).orElse(BigDecimal.ZERO);
             if (inboundQuantity == null || inboundQuantity.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }

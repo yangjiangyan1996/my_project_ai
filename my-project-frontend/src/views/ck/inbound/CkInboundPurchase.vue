@@ -1182,7 +1182,9 @@ const handleShelfLocationChange = (index) => {
 
 const getShelfLocationLabel = (location) => {
   if (!location) return '';
-  return `${location.shelfName} (${location.sheliveName})`;
+  const shelfName = location.shelfName || '';
+  const sheliveName = location.sheliveName || '';
+  return "区域：" + `${shelfName} (货架：${sheliveName})`;
 };
 
 const getShelfName = (shelfLocationId) => {
@@ -1217,6 +1219,7 @@ const openShelfAllocationDialog = (index) => {
       id: shelfId,
       shelfName: location ? location.shelfName : '未知货架',
       shelfCode: location ? location.shelfCode : '',
+      sheliveName: location ? location.sheliveName : '',
       allocatedQuantity: existingAllocation ? parseInt(existingAllocation.quantity) : 0
     };
   });

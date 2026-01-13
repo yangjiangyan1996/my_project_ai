@@ -296,6 +296,7 @@
             <el-table-column label="货架位置" width="180">
               <template #default="{ row, $index }">
                 <el-select
+                  ref="shelfSelectRefs"
                   v-model="row.shelfLocationIds"
                   placeholder="选择位置"
                   style="width: 100%"
@@ -304,6 +305,8 @@
                   collapse-tags
                   collapse-tags-tooltip
                   :max-collapse-tags="1"
+                  :disabled="!formData.warehouseId"
+                  @click="handleShelfLocationSelectClick"
                 >
                   <el-option
                     v-for="location in shelfLocationList"
@@ -312,28 +315,49 @@
                     :value="location.id"
                   />
                 </el-select>
+                <div v-if="!formData.warehouseId" class="shelf-select-hint">
+                  <span class="hint-text">请先选择入库仓库</span>
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="货架分配" width="180" align="center">
               <template #default="{ row, $index }">
-                <div v-if="row.shelfAllocations && row.shelfAllocations.length > 0" class="shelf-allocation-summary">
-                  <div 
-                    v-for="allocation in row.shelfAllocations" 
-                    :key="allocation.shelfLocationId"
-                    class="allocation-item"
-                  >
-                    <el-tooltip
-                      :content="`${getShelfName(allocation.shelfLocationId)}: ${allocation.quantity}`"
-                      placement="top"
+                <div class="shelf-allocation-wrapper">
+                  <div v-if="row.shelfAllocations && row.shelfAllocations.length > 0" class="shelf-allocation-summary">
+                    <div 
+                      v-for="allocation in row.shelfAllocations" 
+                      :key="allocation.shelfLocationId"
+                      class="allocation-item"
                     >
-                      <span class="allocation-text">
-                        {{ getShelfName(allocation.shelfLocationId) }}: {{ allocation.quantity }}
-                      </span>
-                    </el-tooltip>
+                      <el-tooltip
+                        :content="`${getShelfName(allocation.shelfLocationId)}: ${allocation.quantity}`"
+                        placement="top"
+                      >
+                        <span class="allocation-text">
+                          {{ getShelfName(allocation.shelfLocationId) }}: {{ allocation.quantity }}
+                        </span>
+                      </el-tooltip>
+                    </div>
                   </div>
-                </div>
-                <div v-else class="allocation-empty">
-                  <span class="empty-text">未分配</span>
+                  <div v-else class="allocation-empty">
+                    <span class="empty-text">未分配</span>
+                  </div>
+                  <el-button 
+                    type="primary" 
+                    link 
+                    @click="openShelfAllocationDialog(row, $index)"
+                    :disabled="!row.productId || !row.actualQuantity || !row.shelfLocationIds || row.shelfLocationIds.length === 0"
+                    class="manual-allocate-btn"
+                  >
+                    手动分配
+                  </el-button>
+                  <el-tooltip 
+                    v-if="!row.shelfLocationIds || row.shelfLocationIds.length === 0" 
+                    content="请先在货架位置中选择货架" 
+                    placement="top"
+                  >
+                    <div class="tooltip-placeholder"></div>
+                  </el-tooltip>
                 </div>
               </template>
             </el-table-column>
@@ -383,12 +407,102 @@
         </div>
       </div>
     </el-card>
-  </div>
 
+    <!-- 货架手动分配对话框 -->
+    <el-dialog
+      v-model="shelfAllocationDialog.visible"
+      :title="`货架数量分配 - ${shelfAllocationDialog.productName}`"
+      width="600px"
+      destroy-on-close
+    >
+      <div class="shelf-allocation-dialog-content">
+        <div class="allocation-info">
+          <div class="info-item">
+            <span class="label">产品名称：</span>
+            <span class="value">{{ shelfAllocationDialog.productName }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">SKU：</span>
+            <span class="value">{{ shelfAllocationDialog.sku }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">总入库数量：</span>
+            <span class="value">{{ shelfAllocationDialog.totalQuantity }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">已分配数量：</span>
+            <span class="value" :class="shelfAllocationDialog.allocatedQuantity >= shelfAllocationDialog.totalQuantity ? 'success' : 'warning'">
+              {{ shelfAllocationDialog.allocatedQuantity }}
+            </span>
+          </div>
+          <div class="info-item">
+            <span class="label">剩余数量：</span>
+            <span class="value">{{ shelfAllocationDialog.remainingQuantity }}</span>
+          </div>
+        </div>
+
+        <el-divider>货架分配（仅显示已选货架）</el-divider>
+        
+        <div v-if="shelfAllocationDialog.shelves.length === 0" class="no-selected-shelves">
+          <el-empty description="没有已选货架，请先在表格中选择货架位置" />
+        </div>
+        
+        <div class="shelf-allocation-list" v-else>
+          <div 
+            v-for="(shelf, index) in shelfAllocationDialog.shelves" 
+            :key="shelf.id"
+            class="shelf-allocation-item"
+          >
+            <div class="shelf-info">
+              <span class="shelf-name">{{ getShelfLocationLabel(shelf) }}</span>
+              <span class="shelf-status" v-if="shelf.availableCapacity !== undefined && shelf.availableCapacity !== null">
+                (可用容量: {{ shelf.availableCapacity }})
+              </span>
+            </div>
+            <div class="allocation-control">
+              <el-input-number
+                v-model="shelf.allocatedQuantity"
+                :min="0"
+                :max="getMaxShelfAllocation(index)"
+                :precision="0"
+                controls-position="right"
+                size="small"
+                placeholder="分配数量"
+                style="width: 120px"
+                @change="(value) => handleShelfAllocationChange(value, index)"
+              />
+              <el-button
+                type="danger"
+                link
+                size="small"
+                @click="clearShelfAllocation(index)"
+                :disabled="!shelf.allocatedQuantity || shelf.allocatedQuantity === 0"
+                class="clear-btn"
+              >
+                清空
+              </el-button>
+            </div>
+          </div>
+        </div>
+
+        <div class="allocation-actions">
+          <el-button @click="autoAllocateShelves" :disabled="shelfAllocationDialog.remainingQuantity <= 0 || shelfAllocationDialog.shelves.length === 0">
+            自动分配
+          </el-button>
+          <el-button type="primary" @click="confirmShelfAllocation" :disabled="shelfAllocationDialog.shelves.length === 0">
+            确认分配
+          </el-button>
+          <el-button @click="shelfAllocationDialog.visible = false">
+            取消
+          </el-button>
+        </div>
+      </div>
+    </el-dialog>
+  </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Delete, CircleCheck, ArrowLeft } from '@element-plus/icons-vue';
@@ -429,6 +543,19 @@ const formData = reactive({
 const warehouseList = ref([]);
 const productList = ref([]);
 const shelfLocationList = ref([]);
+
+// 货架分配对话框数据
+const shelfAllocationDialog = reactive({
+  visible: false,
+  rowIndex: -1,
+  productId: null,
+  productName: '',
+  sku: '',
+  totalQuantity: 0,
+  allocatedQuantity: 0,
+  remainingQuantity: 0,
+  shelves: [] // 格式: [{id, shelfName, shelfCode, allocatedQuantity, availableCapacity?}]
+});
 
 // 计算属性
 const totalActualQuantity = computed(() => {
@@ -652,7 +779,230 @@ const processAutoAllocationResult = (allocationResults, validItems) => {
   });
 };
 
-// ==================== 自动分配相关方法结束 ====================
+// ==================== 货架手动分配相关方法 ====================
+
+// 点击货架位置选择器时的处理
+const handleShelfLocationSelectClick = () => {
+  if (!formData.warehouseId) {
+    ElMessage.warning('请先选择入库仓库');
+    // 通过阻止事件冒泡来阻止下拉框展开
+    return false;
+  }
+  return true;
+};
+
+// 打开货架手动分配对话框
+const openShelfAllocationDialog = async (row, index) => {
+  if (!formData.warehouseId) {
+    ElMessage.warning('请先选择入库仓库');
+    return;
+  }
+  
+  if (!row.productId || !row.actualQuantity) {
+    ElMessage.warning('请先选择产品并输入入库数量');
+    return;
+  }
+  
+  if (!row.shelfLocationIds || row.shelfLocationIds.length === 0) {
+    ElMessage.warning('请先在货架位置中选择货架');
+    return;
+  }
+  
+  // 设置对话框数据
+  shelfAllocationDialog.rowIndex = index;
+  shelfAllocationDialog.productId = row.productId;
+  shelfAllocationDialog.productName = row.productName || '未命名产品';
+  shelfAllocationDialog.sku = row.sku || '';
+  shelfAllocationDialog.totalQuantity = parseInt(row.actualQuantity) || 1;
+  
+  // 只筛选出当前行已选中的货架
+  const selectedShelfIds = row.shelfLocationIds || [];
+  const selectedShelves = shelfLocationList.value.filter(location => 
+    selectedShelfIds.includes(location.id)
+  );
+  
+  // 初始化货架列表 - 只显示已选中的货架
+  shelfAllocationDialog.shelves = selectedShelves.map(location => {
+    // 查找是否已有分配数量
+    const existingAllocation = row.shelfAllocations?.find(
+      alloc => alloc.shelfLocationId === location.id
+    );
+    
+    return {
+      id: location.id,
+      shelfName: location.shelfName,
+      shelfCode: location.shelfCode,
+      allocatedQuantity: existingAllocation ? parseInt(existingAllocation.quantity) : 0,
+      availableCapacity: location.availableCapacity || 0 // 如果有可用容量信息
+    };
+  });
+  
+  // 计算已分配和剩余数量
+  calculateAllocationSummary();
+  
+  // 显示对话框
+  shelfAllocationDialog.visible = true;
+};
+
+// 计算分配汇总信息
+const calculateAllocationSummary = () => {
+  const allocated = shelfAllocationDialog.shelves.reduce(
+    (sum, shelf) => sum + (parseInt(shelf.allocatedQuantity) || 0), 0
+  );
+  shelfAllocationDialog.allocatedQuantity = allocated;
+  shelfAllocationDialog.remainingQuantity = Math.max(
+    0, 
+    shelfAllocationDialog.totalQuantity - allocated
+  );
+};
+
+// 获取货架最大可分配数量 - 修复版
+const getMaxShelfAllocation = (index) => {
+  const shelf = shelfAllocationDialog.shelves[index];
+  if (!shelf) return 0;
+  
+  // 获取当前货架已分配的数量
+  const currentAllocation = parseInt(shelf.allocatedQuantity) || 0;
+  
+  // 计算剩余可分配的总数量（包括当前货架已分配的数量）
+  const remainingTotal = shelfAllocationDialog.remainingQuantity + currentAllocation;
+  
+  // 如果有容量限制，计算基于容量的最大值
+  if (shelf.availableCapacity !== undefined && shelf.availableCapacity !== null) {
+    const maxByCapacity = currentAllocation + parseInt(shelf.availableCapacity);
+    // 返回两者中的较小值
+    return Math.min(maxByCapacity, remainingTotal);
+  }
+  
+  // 没有容量限制，返回剩余可分配的总数量
+  return remainingTotal;
+};
+
+// 处理货架分配数量变化 - 修复版
+const handleShelfAllocationChange = (value, index) => {
+  // 确保输入的是有效数字
+  const newValue = parseInt(value) || 0;
+  const shelf = shelfAllocationDialog.shelves[index];
+  
+  if (!shelf) return;
+  
+  // 获取最大可分配数量
+  const maxAllocation = getMaxShelfAllocation(index);
+  
+  // 确保新值不超过最大值
+  const finalValue = Math.min(newValue, maxAllocation);
+  
+  // 更新分配数量
+  shelf.allocatedQuantity = finalValue;
+  
+  // 重新计算汇总
+  calculateAllocationSummary();
+};
+
+// 清空货架分配
+const clearShelfAllocation = (index) => {
+  shelfAllocationDialog.shelves[index].allocatedQuantity = 0;
+  calculateAllocationSummary();
+};
+
+// 自动分配货架 - 修复版
+const autoAllocateShelves = () => {
+  const totalToAllocate = shelfAllocationDialog.remainingQuantity;
+  if (totalToAllocate <= 0) {
+    ElMessage.warning('剩余数量为0，无需分配');
+    return;
+  }
+  
+  // 找到可分配的货架（有剩余容量的货架）
+  const availableShelves = shelfAllocationDialog.shelves.filter(shelf => {
+    const shelfIndex = shelfAllocationDialog.shelves.indexOf(shelf);
+    const maxAllocation = getMaxShelfAllocation(shelfIndex);
+    const currentAllocation = parseInt(shelf.allocatedQuantity) || 0;
+    return maxAllocation > currentAllocation;
+  });
+  
+  if (availableShelves.length === 0) {
+    ElMessage.warning('没有可用的货架进行分配，请检查货架容量限制');
+    return;
+  }
+  
+  // 简单平均分配
+  const avgAllocation = Math.floor(totalToAllocate / availableShelves.length);
+  let remaining = totalToAllocate;
+  
+  // 分配平均数量
+  availableShelves.forEach(shelf => {
+    const shelfIndex = shelfAllocationDialog.shelves.indexOf(shelf);
+    const currentAllocation = parseInt(shelf.allocatedQuantity) || 0;
+    const maxAllocation = getMaxShelfAllocation(shelfIndex);
+    const availableCapacity = maxAllocation - currentAllocation;
+    
+    if (remaining <= 0) return;
+    
+    const toAllocate = Math.min(avgAllocation, availableCapacity, remaining);
+    if (toAllocate > 0) {
+      shelf.allocatedQuantity = currentAllocation + toAllocate;
+      remaining -= toAllocate;
+    }
+  });
+  
+  // 如果有剩余，逐个货架分配直到分配完
+  if (remaining > 0) {
+    for (let i = 0; i < availableShelves.length && remaining > 0; i++) {
+      const shelf = availableShelves[i];
+      const shelfIndex = shelfAllocationDialog.shelves.indexOf(shelf);
+      const currentAllocation = parseInt(shelf.allocatedQuantity) || 0;
+      const maxAllocation = getMaxShelfAllocation(shelfIndex);
+      const availableCapacity = maxAllocation - currentAllocation;
+      
+      if (availableCapacity > 0) {
+        const toAllocate = Math.min(1, availableCapacity, remaining);
+        shelf.allocatedQuantity = currentAllocation + toAllocate;
+        remaining -= toAllocate;
+      }
+    }
+  }
+  
+  calculateAllocationSummary();
+  ElMessage.success(`自动分配完成，分配了 ${totalToAllocate - remaining} 个`);
+};
+
+// 确认货架分配
+const confirmShelfAllocation = () => {
+  const allocatedTotal = shelfAllocationDialog.allocatedQuantity;
+  const requiredTotal = shelfAllocationDialog.totalQuantity;
+  
+  if (allocatedTotal !== requiredTotal) {
+    ElMessage.warning(`分配数量(${allocatedTotal})与入库数量(${requiredTotal})不一致，请重新分配`);
+    return;
+  }
+  
+  const rowIndex = shelfAllocationDialog.rowIndex;
+  if (rowIndex < 0 || rowIndex >= formData.items.length) {
+    ElMessage.error('数据索引错误');
+    return;
+  }
+  
+  const row = formData.items[rowIndex];
+  
+  // 更新货架分配明细
+  row.shelfAllocations = shelfAllocationDialog.shelves
+    .filter(shelf => shelf.allocatedQuantity > 0)
+    .map(shelf => ({
+      shelfLocationId: shelf.id,
+      quantity: shelf.allocatedQuantity
+    }));
+  
+  // 注意：这里不更新shelfLocationIds，因为用户可能已经在对话框外面修改了货架选择
+  // 我们只更新分配数量，不更改货架选择
+  
+  // 关闭对话框
+  shelfAllocationDialog.visible = false;
+  
+  ElMessage.success('货架分配已保存');
+};
+
+// ==================== 货架手动分配相关方法结束 ====================
 
 // 数据来源变更处理
 const handleDataSourceChange = (value) => {
@@ -777,7 +1127,6 @@ const removeImportedPickingOrder = (orderId) => {
   }
 };
 
-
 // 批量更新批次号的方法
 const handleBatchUpdateBatchNo = () => {
   if (formData.items.length === 0) {
@@ -810,7 +1159,6 @@ const handleBatchUpdateBatchNo = () => {
     // 用户取消
   });
 };
-
 
 // 根据领料数据推导产成品（简化逻辑）
 const deriveFinishedProducts = (pickingItems) => {
@@ -866,21 +1214,6 @@ const generateBatchNo = () => {
   }
   
   return batchNo;
-};
-
-// 生成默认批次号并应用到所有产品
-const generateDefaultBatchNo = () => {
-  const defaultBatchNo = generateBatchNo();
-  
-  // 将默认批次号应用到所有已有商品行
-  formData.items.forEach((item, index) => {
-    if (item.productId && (!item.batchNo || item.batchNo.trim() === '')) {
-      item.batchNo = defaultBatchNo;
-      validateBatchNo(defaultBatchNo, index);
-    }
-  });
-  
-  return defaultBatchNo;
 };
 
 // 获取货架名称
@@ -1317,6 +1650,140 @@ watch(
   min-height: calc(100vh - 60px);
 }
 
+/* 货架手动分配相关样式 */
+.shelf-allocation-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.manual-allocate-btn {
+  margin-top: 4px;
+}
+
+.tooltip-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: not-allowed;
+}
+
+/* 货架位置选择器提示 */
+.shelf-select-hint {
+  margin-top: 4px;
+}
+
+.hint-text {
+  font-size: 12px;
+  color: #e6a23c;
+}
+
+/* 货架分配对话框样式 */
+.shelf-allocation-dialog-content {
+  padding: 10px;
+}
+
+.allocation-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-item .label {
+  font-weight: bold;
+  color: #606266;
+}
+
+.info-item .value {
+  color: #303133;
+}
+
+.info-item .value.success {
+  color: #67C23A;
+}
+
+.info-item .value.warning {
+  color: #E6A23C;
+}
+
+.no-selected-shelves {
+  text-align: center;
+  padding: 20px;
+  margin: 20px 0;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px dashed #dcdfe6;
+}
+
+.shelf-allocation-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+.shelf-allocation-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  background-color: #fafafa;
+}
+
+.shelf-allocation-item:hover {
+  background-color: #f0f7ff;
+  border-color: #409eff;
+}
+
+.shelf-info {
+  flex: 1;
+}
+
+.shelf-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.shelf-status {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 8px;
+}
+
+.allocation-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clear-btn {
+  margin-left: 8px;
+}
+
+.allocation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
   .back-header {
@@ -1331,6 +1798,22 @@ watch(
   .back-btn i {
     font-size: 16px;
     margin-right: 4px;
+  }
+  
+  .allocation-info {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .shelf-allocation-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .allocation-control {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
@@ -1350,6 +1833,7 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 100%;
 }
 
 .allocation-item {

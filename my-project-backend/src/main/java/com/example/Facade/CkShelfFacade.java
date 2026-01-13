@@ -7,6 +7,7 @@ import com.example.entity.cangku.dto.ShelfZone;
 import com.example.entity.cangku.dto.Shelives;
 import com.example.entity.cangku.dto.Warehouse;
 import com.example.entity.cangku.req.*;
+import com.example.entity.cangku.resp.ShelfEnalbedListResp;
 import com.example.entity.cangku.resp.ShelfPageListResp;
 import com.example.entity.cangku.resp.ShelfZoneResp;
 import com.example.service.CkInventoryShelfService;
@@ -332,7 +333,7 @@ public class CkShelfFacade {
         return shelfService.updateBatchById(batchUpdateList);
     }
 
-    public List<ShelfPageListResp> listEnable(Long tenantId, Long warehouseId) {
+    public List<ShelfEnalbedListResp> listEnable(Long tenantId, Long warehouseId) {
         List<ShelfZone> list = shelfService.listWareHouseEnable(tenantId,warehouseId);
         if (list.isEmpty()) {
             return new ArrayList<>();
@@ -347,7 +348,7 @@ public class CkShelfFacade {
         Map<Long, String> parentId2NameMap = parentShelves.stream().collect(Collectors.toMap(Shelives::getId, v -> v.getShelfName()));
 
         return list.stream().map(v -> {
-            ShelfPageListResp p = new ShelfPageListResp();
+            ShelfEnalbedListResp p = new ShelfEnalbedListResp();
             BeanUtils.copyProperties(v, p);
             if (shelfId2AcailableCapacityMap.containsKey(v.getId())) {
                 BigDecimal usedCapacity = shelfId2AcailableCapacityMap.getOrDefault(v.getId(), BigDecimal.ZERO);
