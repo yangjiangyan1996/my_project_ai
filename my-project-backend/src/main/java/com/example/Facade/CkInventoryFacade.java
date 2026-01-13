@@ -1522,8 +1522,8 @@ public class CkInventoryFacade {
         if (CollectionUtils.isEmpty(inventoryShelves)) {
             return new ArrayList<>();
         }
-        List<WarehouseShelf> warehouseShelves = shelfService.selectByTenantId(tenantId);
-        Map<Long, WarehouseShelf> warehouseShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        List<ShelfZone> warehouseShelves = shelfService.selectByTenantId(tenantId);
+        Map<Long, ShelfZone> warehouseShelfMap = warehouseShelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
         return inventoryShelves.stream().map(v -> {
             ShelfSimpleResp r = new ShelfSimpleResp();
             r.setShelfId(v.getShelfId());

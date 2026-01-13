@@ -6,11 +6,7 @@ import com.example.entity.cangku.dto.InventoryShelf;
 import com.example.entity.cangku.dto.ShelfZone;
 import com.example.entity.cangku.dto.Shelives;
 import com.example.entity.cangku.dto.Warehouse;
-import com.example.entity.cangku.req.ShelfCreateReq;
-import com.example.entity.cangku.req.ShelfDeleteReq;
-import com.example.entity.cangku.req.ShelfListPageReq;
-import com.example.entity.cangku.req.ShelfUpdateStatusReq;
-import com.example.entity.cangku.req.ShelviesCreateWithZoneReq;
+import com.example.entity.cangku.req.*;
 import com.example.entity.cangku.resp.ShelfPageListResp;
 import com.example.entity.cangku.resp.ShelfZoneResp;
 import com.example.service.CkInventoryShelfService;
@@ -26,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -250,10 +245,11 @@ public class CkShelfFacade {
             BeanUtils.copyProperties(v, p);
             BigDecimal utilizationRate = BigDecimal.valueOf(0);
             if (shelfUsedCapacity != null && shelfUsedCapacity.get(v.getId()) != null) {
-                BigDecimal quantityOfUsed = shelfUsedCapacity.get(v.getId());
-                utilizationRate = quantityOfUsed.divide(BigDecimal.valueOf(v.getCapacity()), 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
-                p.setUtilizationQuantity(quantityOfUsed);
-                p.setProductCount(quantityOfUsed);
+                //TODO yang 页面的使用率
+//                BigDecimal quantityOfUsed = shelfUsedCapacity.get(v.getId());
+//                utilizationRate = quantityOfUsed.divide(BigDecimal.valueOf(v.get()), 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+//                p.setUtilizationQuantity(quantityOfUsed);
+//                p.setProductCount(quantityOfUsed);
             }
 
             p.setUtilizationRate(utilizationRate);
@@ -373,24 +369,31 @@ public class CkShelfFacade {
 
     @Transactional(rollbackFor = Exception.class)
     public Boolean delete(ShelfDeleteReq req) {
-        WarehouseShelf p = shelfService.getById(req.getId());
+        Shelives p = shelivesService.getById(req.getId());
         if (p == null) {
             throw new ValidationException("货架不存在");
         }
 
-        Map<Long, BigDecimal> shelfUsedCapacity = getShelfUsedCapacity(req.getTenantId(), Collections.singletonList(req.getId()));
-        if (shelfUsedCapacity != null
-                && shelfUsedCapacity.get(req.getId()) != null
-                && shelfUsedCapacity.get(req.getId()).compareTo(BigDecimal.ZERO) > 0) {
-            throw new ValidationException("货架有商品存在");
+        List<ShelfZone> shelfZones = shelfService.selectByParentId(req.getTenantId(), req.getId());
+        if (!shelfZones.isEmpty()) {
+            List<Long> shelfIds = shelfZones.stream().map(v -> v.getId()).distinct().collect(Collectors.toList());
+            Map<Long, BigDecimal> shelfUsedCapacity = getShelfUsedCapacity(req.getTenantId(), shelfIds);
+            if (shelfUsedCapacity != null
+                    && shelfUsedCapacity.get(req.getId()) != null
+                    && shelfUsedCapacity.get(req.getId()).compareTo(BigDecimal.ZERO) > 0) {
+                throw new ValidationException("货架有商品存在");
+            }
         }
 
-        WarehouseShelf save = new WarehouseShelf();
+
+
+
+        ShelfUpdateStatusReq save = new ShelfUpdateStatusReq();
         save.setId(req.getId());
-        save.setIsDeleted(1);
-        save.setModifiedAt(new Date());
-        save.setModifiedBy(req.getUserId());
-        return shelfService.updateById(save);
+        save.setTenantId(req.getTenantId());
+        save.setUserId(req.getUserId());
+        save.setStatus(1);
+        return this.updateStatus(save);
     }
     public List<ShelfZoneResp> shelfZoneList(Long tenantId, Long parentId) {
         List<ShelfZone> shelfZones = shelfService.selectByParentId(tenantId, parentId);

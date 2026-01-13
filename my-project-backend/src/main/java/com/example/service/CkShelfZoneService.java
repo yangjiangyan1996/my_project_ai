@@ -21,4 +21,6 @@ public interface CkShelfZoneService extends IService<ShelfZone> {
     List<ShelfZone> selectByParentId(Long tenantId, Long parentId);
 
     boolean updateDeletedByIds(Set<Long> deletedList, Long tenantId, Long userId);
+
+    List<ShelfZone> selectByIds(List<Long> ids, Long tenantId);
 }

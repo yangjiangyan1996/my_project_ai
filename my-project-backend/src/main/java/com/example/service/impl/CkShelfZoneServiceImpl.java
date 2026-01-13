@@ -32,6 +32,13 @@ public class CkShelfZoneServiceImpl extends ServiceImpl<CkShelfMapper, ShelfZone
     }
 
     @Override
+    public List<ShelfZone> selectByIds(List<Long> ids, Long tenantId) {
+        return baseMapper.selectList(new QueryWrapper<ShelfZone>().eq("is_deleted", 0)
+                .eq("tenant_id", tenantId)
+                .in("id", ids));
+    }
+
+    @Override
     public boolean updateDeletedByIds(Set<Long> deletedList, Long tenantId, Long userId) {
         ShelfZone shelfZone = new ShelfZone();
         shelfZone.setIsDeleted(1);

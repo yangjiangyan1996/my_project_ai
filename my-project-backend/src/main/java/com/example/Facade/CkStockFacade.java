@@ -33,7 +33,7 @@ public class CkStockFacade {
     @Resource
     CkProductService productService;
     @Resource
-    CkShelfService shelfService;
+    CkShelfZoneService shelfService;
     @Resource
     CkInventoryShelfService inventoryShelfService;
     @Resource
@@ -574,8 +574,8 @@ public class CkStockFacade {
         Map<Long, Product> productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
 
         List<Long> shelfIds = list.getRecords().stream().map(StockTakeItem::getShelfId).distinct().collect(Collectors.toList());
-        List<WarehouseShelf> warehouseShelves = shelfService.selectByShelfId(shelfIds, req.getTenantId());
-        Map<Long, WarehouseShelf> shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        List<ShelfZone> warehouseShelves = shelfService.selectByIds(shelfIds, req.getTenantId());
+        Map<Long, ShelfZone> shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
 
         List<StockItemListPageResp> collect = list.getRecords().stream().map(v -> {
             StockItemListPageResp p = new StockItemListPageResp();
@@ -598,7 +598,7 @@ public class CkStockFacade {
             }
 
             if (shelfId2ShelfMap.containsKey(v.getShelfId())) {
-                WarehouseShelf warehouseShelf = shelfId2ShelfMap.get(v.getShelfId());
+                ShelfZone warehouseShelf = shelfId2ShelfMap.get(v.getShelfId());
                 p.setShelfName(warehouseShelf.getShelfName());
             }
             return p;
@@ -634,8 +634,8 @@ public class CkStockFacade {
         Map<Long, Product> productId2ProductMap = products.stream().collect(Collectors.toMap(Product::getId, v -> v));
 
         List<Long> shelfIds = list.stream().map(StockTakeItem::getShelfId).distinct().collect(Collectors.toList());
-        List<WarehouseShelf> warehouseShelves = shelfService.selectByShelfId(shelfIds, req.getTenantId());
-        Map<Long, WarehouseShelf> shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+        List<ShelfZone> warehouseShelves = shelfService.selectByIds(shelfIds, req.getTenantId());
+        Map<Long, ShelfZone> shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
 
         return  list.stream().map(v -> {
             StockItemListPageResp p = new StockItemListPageResp();
@@ -658,7 +658,7 @@ public class CkStockFacade {
             }
 
             if (shelfId2ShelfMap.containsKey(v.getShelfId())) {
-                WarehouseShelf warehouseShelf = shelfId2ShelfMap.get(v.getShelfId());
+                ShelfZone warehouseShelf = shelfId2ShelfMap.get(v.getShelfId());
                 p.setShelfName(warehouseShelf.getShelfName());
             }
             return p;
@@ -708,15 +708,15 @@ public class CkStockFacade {
                 break;
             case SHELF:
                 Map<Long, List<StockTakeSnapshot>> shelfId2SnapListMap = stockTakeSnapshots.stream().collect(Collectors.groupingBy(StockTakeSnapshot::getShelfId));
-                List<WarehouseShelf> warehouseShelves = shelfService.selectByShelfId(Lists.newArrayList(shelfId2SnapListMap.keySet()), tenantId);
-                Map<Long, WarehouseShelf> shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(WarehouseShelf::getId, v -> v));
+                List<ShelfZone> warehouseShelves = shelfService.selectByIds(Lists.newArrayList(shelfId2SnapListMap.keySet()), tenantId);
+                Map<Long, ShelfZone> shelfId2ShelfMap = warehouseShelves.stream().collect(Collectors.toMap(ShelfZone::getId, v -> v));
                 for (Long shelfId : shelfId2SnapListMap.keySet()) {
                     StockSnapResp r = new StockSnapResp();
                     List<StockTakeSnapshot> stsList = shelfId2SnapListMap.getOrDefault(shelfId, null);
                     //计算list中 BigDecimal snapshotQuantity 的总和
                     BigDecimal sum = stsList.stream().map(StockTakeSnapshot::getSnapshotQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
                     r.setId(shelfId + "");
-                    r.setName(shelfId2ShelfMap.getOrDefault(shelfId, new WarehouseShelf()).getShelfName());
+                    r.setName(shelfId2ShelfMap.getOrDefault(shelfId, new ShelfZone()).getShelfName());
                     r.setQuantity(sum);
                     list.add(r);
                 }
