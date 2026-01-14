@@ -3,11 +3,15 @@ package com.example.Facade;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.AdjustOrder;
 import com.example.entity.cangku.dto.AdjustOrderItem;
+import com.example.entity.cangku.req.AdjustApproveOkReq;
 import com.example.entity.cangku.req.AdjustListPageReq;
 import com.example.entity.cangku.req.AdjustRequest;
+import com.example.entity.cangku.req.AdjustSubmitApproveReq;
 import com.example.entity.cangku.resp.AdjustOrderResp;
+import com.example.enums.CkAdjustEnums;
 import com.example.service.CkAdjustOrderItemService;
 import com.example.service.CkAdjustOrderService;
+import com.example.utils.DateUtils;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
 import org.springframework.beans.BeanUtils;
@@ -80,8 +84,7 @@ public class CkAdjustOrderFacade {
         order.setRemark(req.getRemark());
 
         // 设置状态信息
-        order.setAdjustStatus(1); // 待提交
-        order.setApprovalStatus(0); // 无需审批（根据业务逻辑调整）
+        order.setAdjustStatus(CkAdjustEnums.AdjustOrderStatus.WaitSubmit.getCode()); // 待提交
 
         // 设置统计信息
         order.setTotalItems(req.getItems().size());
@@ -90,7 +93,10 @@ public class CkAdjustOrderFacade {
         order.setTotalAmount(totalAmount);
 
         // 设置时间信息
-        order.setExpectExecuteTime(req.getExpectExecuteTime());
+        order.setExpectExecuteTime(DateUtils.str2Date(req.getExpectExecuteTime()));
+
+        //设置审核信息
+        order.setApproverId(req.getApprovalUserId());
 
         // 设置基础信息
         order.setTenantId(req.getTenantId());
@@ -121,7 +127,7 @@ public class CkAdjustOrderFacade {
             item.setProductName(itemReq.getProductName());
             item.setProductCode(itemReq.getProductCode());
             item.setSkuCode(itemReq.getSkuCode());
-            item.setSpecification(itemReq.getSpecification());
+            item.setSpecification(itemReq.getSpec());
             item.setUnit(itemReq.getUnit());
 
             // 库存信息
@@ -248,4 +254,50 @@ public class CkAdjustOrderFacade {
         result.setRecords(collect);
         return result;
     }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean submitApprove(AdjustSubmitApproveReq req) {
+        AdjustOrder adjustOrder = adjustOrderService.selectById(req.getId(), req.getTenantId());
+        if (adjustOrder == null) {
+            throw new ValidationException("调整单不存在");
+        }
+        if (!CkAdjustEnums.AdjustOrderStatus.WaitSubmit.getCode().equals(adjustOrder.getAdjustStatus())) {
+            throw new ValidationException("调整单状态错误");
+        }
+        adjustOrder.setAdjustStatus(CkAdjustEnums.AdjustOrderStatus.WaitAudit.getCode());
+        adjustOrder.setModifiedBy(req.getUserId());
+        adjustOrder.setModifiedAt(new Date());
+        boolean updated = adjustOrderService.updateStatusById(adjustOrder.getId(), adjustOrder.getTenantId(), CkAdjustEnums.AdjustOrderStatus.WaitAudit.getCode());
+        if (!updated) {
+            throw new ValidationException("请求审核调整单失败");
+        }
+        return true;
+    }
+
+
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean approveOk(AdjustApproveOkReq req) {
+        AdjustOrder adjustOrder = adjustOrderService.selectById(req.getId(), req.getTenantId());
+        if (adjustOrder == null) {
+            throw new ValidationException("调整单不存在");
+        }
+        if (!CkAdjustEnums.AdjustOrderStatus.WaitAudit.getCode().equals(adjustOrder.getAdjustStatus())) {
+            throw new ValidationException("调整单状态错误");
+        }
+        if (!(CkAdjustEnums.AdjustOrderStatus.AuditPass.getCode().equals(req.getApproveStatus())|| CkAdjustEnums.AdjustOrderStatus.Reject.getCode().equals(req.getApproveStatus()))){
+            throw new ValidationException("提交状态错误");
+        }
+        adjustOrder.setApproveTime(new Date());
+        adjustOrder.setApproveRemark(req.getApproveRemark());
+        adjustOrder.setAdjustStatus(CkAdjustEnums.AdjustOrderStatus.AuditPass.getCode());
+        adjustOrder.setModifiedBy(req.getUserId());
+        adjustOrder.setModifiedAt(new Date());
+        boolean updated = adjustOrderService.updateStatusAndRemarkById(adjustOrder.getId(), adjustOrder.getTenantId(), CkAdjustEnums.AdjustOrderStatus.AuditPass.getCode(), req.getApproveRemark());
+        if (!updated) {
+            throw new ValidationException("审核调整单失败");
+        }
+        return true;
+    }
+
+
 }

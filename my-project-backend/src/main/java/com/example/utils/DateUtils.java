@@ -32,4 +32,15 @@ public class DateUtils {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return sdf.format(time);
     }
+
+    //字符串转换Date的方法
+    public static Date str2Date(String time) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        try {
+            return sdf.parse(time);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

@@ -249,25 +249,30 @@
                   </el-button>
                 </template>
 
-                <!-- 待审核状态：可审核通过/拒绝 -->
-                <template v-if="row.adjustStatus === 2">
-                  <el-button
-                    type="success"
-                    link
-                    size="small"
-                    @click="handleApprove(row)"
-                  >
-                    审核通过
-                  </el-button>
-                  <el-button
-                    type="danger"
-                    link
-                    size="small"
-                    @click="handleReject(row)"
-                  >
-                    审核拒绝
-                  </el-button>
-                </template>
+                <!-- 待审核状态：可审核 -->
+              <template v-if="row.adjustStatus === 1">
+                <!-- 新增审核按钮 -->
+                <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="openAuditDialog(row)"
+                >
+                  审核
+                </el-button>
+              </template>
+
+              <!-- 审核通过状态：可执行 -->
+              <template v-if="row.adjustStatus === 3">
+                <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="handleExecute(row)"
+                >
+                  执行调整
+                </el-button>
+              </template>
 
                 <!-- 审核通过状态：可执行 -->
                 <template v-if="row.adjustStatus === 3">
@@ -292,6 +297,20 @@
                     执行结果
                   </el-button>
                 </template>
+
+                <!-- 已执行状态：可查看执行结果 -->
+              <template v-if="row.adjustStatus === 5">
+                <el-button
+                  type="info"
+                  link
+                  size="small"
+                  @click="handleViewResult(row)"
+                >
+                  执行结果
+                </el-button>
+              </template>
+
+
               </div>
             </template>
           </el-table-column>
@@ -321,6 +340,74 @@
       </div>
     </el-card>
   </div>
+
+  <!-- 审核对话框 -->
+    <el-dialog
+      v-model="auditDialogVisible"
+      :title="`审核调整单 - ${currentAuditOrder?.adjustNo || ''}`"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <div class="audit-dialog-content">
+        <el-form 
+          :model="auditForm" 
+          ref="auditFormRef"
+          label-width="100px"
+          size="medium"
+        >
+          <el-form-item label="审核状态" required prop="approveStatus">
+            <el-radio-group v-model="auditForm.approveStatus">
+              <el-radio :label="2">审核通过</el-radio>
+              <el-radio :label="4">审核拒绝</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          
+          <el-form-item 
+            label="审核备注" 
+            required 
+            prop="approveRemark"
+            v-if="auditForm.approveStatus === 4"
+          >
+            <el-input
+              v-model="auditForm.approveRemark"
+              type="textarea"
+              :rows="4"
+              placeholder="请输入拒绝原因"
+              maxlength="500"
+              show-word-limit
+            />
+          </el-form-item>
+          
+          <el-form-item 
+            label="审核备注" 
+            prop="approveRemark"
+            v-else
+          >
+            <el-input
+              v-model="auditForm.approveRemark"
+              type="textarea"
+              :rows="4"
+              placeholder="请输入审核备注（可选）"
+              maxlength="500"
+              show-word-limit
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="auditDialogVisible = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="handleConfirmAudit"
+            :loading="auditing"
+          >
+            确认审核
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
 </template>
 
 <script setup>
@@ -339,6 +426,18 @@ import { post, get } from '@/net';
 
 const router = useRouter();
 const loading = ref(false);
+const auditing = ref(false); // 审核加载状态
+const auditDialogVisible = ref(false); // 审核对话框显示状态
+const auditFormRef = ref(); // 审核表单引用
+
+// 审核表单
+const auditForm = reactive({
+  approveStatus: 2, // 2=审核通过, 4=审核拒绝
+  approveRemark: ''
+});
+
+// 当前正在审核的调整单
+const currentAuditOrder = ref(null);
 
 // 仓库选择表单
 const warehouseForm = reactive({
@@ -440,6 +539,49 @@ const loadWarehouseList = async () => {
   }
 };
 
+
+// 确认审核
+const handleConfirmAudit = async () => {
+  if (!currentAuditOrder.value) {
+    ElMessage.error('未找到审核的调整单');
+    return;
+  }
+  
+  // 验证表单
+  if (auditForm.approveStatus === 4 && !auditForm.approveRemark.trim()) {
+    ElMessage.warning('审核拒绝时必须填写备注');
+    return;
+  }
+  
+  auditing.value = true;
+  try {
+    // 构造请求参数
+    const params = {
+      id: currentAuditOrder.value.id,
+      approveStatus: auditForm.approveStatus,
+      approveRemark: auditForm.approveRemark || '',
+      // 注意：这里需要获取当前登录用户的userId和tenantId
+      // 假设从localStorage或用户信息中获取
+      
+      
+    };
+    
+    const res = await post('/api/auth/adjust/approveOk', params);
+    if (res === true) {
+      ElMessage.success(auditForm.approveStatus === 2 ? '审核通过成功' : '审核拒绝成功');
+      auditDialogVisible.value = false;
+      refreshList();
+    } else {
+      ElMessage.error('审核操作失败');
+    }
+  } catch (error) {
+    console.error('审核操作失败:', error);
+    ElMessage.error('审核操作失败');
+  } finally {
+    auditing.value = false;
+  }
+};
+
 const loadAdjustOrderList = async () => {
   if (!selectedWarehouseId.value) {
     adjustOrderList.value = [];
@@ -494,6 +636,18 @@ const loadAdjustOrderList = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// 打开审核对话框
+const openAuditDialog = (adjustOrder) => {
+  // 重置审核表单
+  Object.assign(auditForm, {
+    approveStatus: 2,
+    approveRemark: ''
+  });
+  
+  currentAuditOrder.value = adjustOrder;
+  auditDialogVisible.value = true;
 };
 
 const handleWarehouseSelect = () => {
@@ -608,7 +762,7 @@ const handleSubmit = async (adjustOrder) => {
       { type: 'warning' }
     );
     
-    const res = await get('/api/auth/adjust/submit?id=' + adjustOrder.id);
+    const res = await get('/api/auth/adjust/submitApprove?id=' + adjustOrder.id);
     if (res) {
       ElMessage.success('提交成功');
       refreshList();
@@ -979,6 +1133,54 @@ onMounted(() => {
 
 .no-warehouse-tip .el-empty__description {
   margin-top: 10px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .adjust-order-manage-container {
+    padding: 10px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .warehouse-select-section,
+  .filter-section .el-form-item {
+    margin-bottom: 12px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+/* 动画效果 */
+.adjust-order-table :deep(.el-table__row) {
+  transition: all 0.3s;
+}
+
+.adjust-order-table :deep(.el-table__row:hover) {
+  background-color: #f5f7fa;
+}
+
+/* 审核对话框样式 */
+.audit-dialog-content {
+  padding: 10px 20px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 /* 响应式设计 */

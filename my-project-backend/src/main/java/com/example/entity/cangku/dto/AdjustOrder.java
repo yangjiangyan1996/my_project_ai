@@ -38,8 +38,8 @@ public class AdjustOrder extends BaseModel {
     @TableField("adjust_status")
     private Integer adjustStatus;
     
-    @TableField("approval_status")
-    private Integer approvalStatus;
+//    @TableField("approval_status")
+//    private Integer approvalStatus;
     
     private Integer totalItems;
     

@@ -1403,6 +1403,7 @@ const loadingStockTakeItems = ref(false);
 const stockTakeInfo = reactive({
   id: '',
   stockTakeNo: '',
+  warehouseId: '',
   warehouseName: '',
   takeType: 1,
   takeTypeName: '',
@@ -1441,8 +1442,8 @@ const manualAdjustmentForm = reactive({
   warehouseName: '',
   adjustType: 3, // 1: 盘点调整, 2: 报损调整, 3: 报溢调整, 4: 成本调整, 5: 库存转移, 6: 其他调整
   adjustReason: 'other',
-  stockTakeId: null, // 新增：盘点单ID
-  stockTakeNo: '', // 新增：盘点单号
+  stockTakeId: null,
+  stockTakeNo: '',
   isUrgent: false,
   isAffectCost: false,
   expectedCompleteTime: null,
@@ -1552,35 +1553,9 @@ const getTotalDiffClass = computed(() => {
 // 手动创建的计算属性
 const totalManualAdjustQuantity = computed(() => {
   if (manualAdjustmentForm.adjustType === 1) {
-    // 盘点调整：使用差异数量
     return manualAdjustmentItems.value.reduce((sum, item) => sum + Math.abs(item.diffQuantity || 0), 0);
   } else {
-    // 其他调整：使用调整数量
     return manualAdjustmentItems.value.reduce((sum, item) => sum + Math.abs(item.adjustQuantity || 0), 0);
-  }
-});
-
-const totalManualIncreaseQuantity = computed(() => {
-  if (manualAdjustmentForm.adjustType === 1) {
-    return manualAdjustmentItems.value.reduce((sum, item) => {
-      return item.diffQuantity > 0 ? sum + item.diffQuantity : sum;
-    }, 0);
-  } else {
-    return manualAdjustmentItems.value.reduce((sum, item) => {
-      return item.adjustQuantity > 0 ? sum + item.adjustQuantity : sum;
-    }, 0);
-  }
-});
-
-const totalManualDecreaseQuantity = computed(() => {
-  if (manualAdjustmentForm.adjustType === 1) {
-    return manualAdjustmentItems.value.reduce((sum, item) => {
-      return item.diffQuantity < 0 ? sum + Math.abs(item.diffQuantity) : sum;
-    }, 0);
-  } else {
-    return manualAdjustmentItems.value.reduce((sum, item) => {
-      return item.adjustQuantity < 0 ? sum + Math.abs(item.adjustQuantity) : sum;
-    }, 0);
   }
 });
 
@@ -1608,14 +1583,12 @@ const totalManualLossItems = computed(() => {
 
 const currentStep = computed(() => {
   if (createType.value === 'manual') {
-    // 手动创建：创建调整单 -> 审核调整 -> 执行调整 -> 调整完成
     if (currentAdjustment.value?.adjust_status === 5) return 5;
     if (currentAdjustment.value?.adjust_status === 4) return 4;
     if (currentAdjustment.value?.adjust_status === 2) return 3;
     if (currentAdjustment.value?.adjust_status === 1) return 2;
     return 1;
   } else {
-    // 基于盘点单创建
     if (pendingItems.value === 0 && processedItems.value > 0) return 5;
     if (processingItems.value > 0) return 3;
     if (selectedDiffItems.value.length > 0) return 2;
@@ -1643,7 +1616,6 @@ const protectionStatus = computed(() => {
     };
   }
   
-  // 计算剩余时间
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   
@@ -1663,8 +1635,6 @@ const getProtectionNoticeTitle = computed(() => {
 
 const showDetailActions = computed(() => {
   if (!currentAdjustment.value) return false;
-  // 根据用户权限和调整单状态显示操作按钮
-  // 这里简化处理，实际应根据用户角色判断
   return [1, 2, 3].includes(currentAdjustment.value.adjust_status);
 });
 
@@ -1674,22 +1644,18 @@ const getDetailTotalAmountClass = computed(() => {
 });
 
 // 方法定义
-// 初始化页面参数
 const initPage = async () => {
   const params = route.params;
   const query = route.query;
   
-  // 判断创建类型
   if (query.createType === 'manual') {
     createType.value = 'manual';
     
-    // 手动创建：加载仓库列表、货架列表、审核人列表
     await Promise.all([
       loadWarehouseList(),
       loadReviewerList()
     ]);
     
-    // 如果有仓库ID参数，设置仓库
     if (query.warehouseId) {
       manualAdjustmentForm.warehouseId = query.warehouseId;
       const warehouse = warehouseList.value.find(w => w.id === query.warehouseId);
@@ -1702,7 +1668,6 @@ const initPage = async () => {
   } else if (query.stockTakeId) {
     createType.value = 'stock_take';
     
-    // 基于盘点单创建：加载盘点单信息、差异项、调整单历史等
     await Promise.all([
       loadStockTakeInfo(query.stockTakeId),
       loadDiffItems(query.stockTakeId),
@@ -1712,13 +1677,11 @@ const initPage = async () => {
     ]);
     
   } else {
-    // 默认返回列表页
     ElMessage.error('缺少必要参数');
     goBack();
   }
 };
 
-// 加载仓库列表
 const loadWarehouseList = async () => {
   try {
     const res = await get('/api/auth/warehouse/list');
@@ -1729,7 +1692,6 @@ const loadWarehouseList = async () => {
   }
 };
 
-// 加载盘点单信息
 const loadStockTakeInfo = async (stockTakeId) => {
   if (!stockTakeId) return;
   
@@ -1739,6 +1701,7 @@ const loadStockTakeInfo = async (stockTakeId) => {
       Object.assign(stockTakeInfo, {
         id: res.id,
         stockTakeNo: res.stockTakeNo,
+        warehouseId: res.warehouseId,
         warehouseName: res.warehouseName,
         takeType: res.takeType,
         takeTypeName: res.takeTypeName,
@@ -1756,7 +1719,6 @@ const loadStockTakeInfo = async (stockTakeId) => {
   }
 };
 
-// 加载差异项
 const loadDiffItems = async (stockTakeId) => {
   loadingDiffItems.value = true;
   
@@ -1799,21 +1761,29 @@ const loadDiffItems = async (stockTakeId) => {
   }
 };
 
-// 加载调整单历史
 const loadAdjustmentOrders = async (stockTakeId) => {
   if (!stockTakeId) return;
   
   try {
-    const res = await get(`/api/auth/stock/adjustmentOrders?stockTakeId=${stockTakeId}`);
-    if (res) {
-      adjustmentOrders.value = res;
+    const res = await get(`/api/auth/adjust/list?sourceId=${stockTakeId}&sourceType=1`);
+    if (res && res.data) {
+      adjustmentOrders.value = res.data.map(order => ({
+        id: order.id,
+        adjustment_no: order.adjustNo,
+        adjust_type: order.adjustType,
+        adjust_status: order.adjustStatus,
+        total_items: order.totalItems,
+        created_at: order.createdAt,
+        creator_name: order.createdByName,
+        warehouse_name: order.warehouseName,
+        stock_take_no: order.sourceNo
+      }));
     }
   } catch (error) {
     console.error('加载调整单失败:', error);
   }
 };
 
-// 加载货架选项
 const loadShelfOptions = async (warehouseId) => {
   if (!warehouseId) return;
   
@@ -1826,40 +1796,26 @@ const loadShelfOptions = async (warehouseId) => {
   }
 };
 
-// 如果需要支持搜索的审核人选择，可以添加这个方法
-const searchReviewers = async (query) => {
-  try {
-    const res = await post('/api/auth/user/searchUser', {
-      keyword: query,
-      page: 1,
-      size: 20
-    });
-    if (res) {
+const loadReviewerList = async () => {
+ try {
+    // 改为调用用户搜索接口
+    const res = await post('/api/auth/user/searchUser');
+    if (res && Array.isArray(res)) {
       reviewerList.value = res.map(user => ({
         id: user.id,
-        name: user.username || user.name,
+        name: user.username || user.name, // 适配不同字段名
         username: user.username,
         department: user.department || '未分配部门',
         avatarUrl: user.avatarUrl || '/default-avatar.png'
       }));
     }
   } catch (error) {
-    console.error('搜索审核人失败:', error);
+    console.error('加载用户列表失败:', error);
+    ElMessage.error('加载用户列表失败');
+    reviewerList.value = [];
   }
 };
 
-// 然后在模板中的审核人选择器添加远程搜索功能
-// <el-select
-//   v-model="adjustmentForm.reviewer_id"
-//   placeholder="请选择审核人（可选）"
-//   filterable
-//   remote
-//   :remote-method="searchReviewers"
-//   clearable
-//   style="width: 100%"
-// >
-
-// 加载已完成盘点单列表
 const loadCompletedStockTakeList = async () => {
   if (!manualAdjustmentForm.warehouseId) {
     ElMessage.warning('请先选择仓库');
@@ -1893,7 +1849,6 @@ const loadCompletedStockTakeList = async () => {
   }
 };
 
-// 加载盘点单明细
 const loadStockTakeItems = async () => {
   if (!manualAdjustmentForm.stockTakeId) {
     ElMessage.warning('请先选择盘点单');
@@ -1903,20 +1858,15 @@ const loadStockTakeItems = async () => {
   loadingStockTakeItems.value = true;
   try {
     const params = {
-      stockTakeId: manualAdjustmentForm.stockTakeId,
-      userId: null, // 根据实际情况传递
-      tenantId: null // 根据实际情况传递
+      stockTakeId: manualAdjustmentForm.stockTakeId
     };
     
     const res = await post('/api/auth/stock/itemList', params);
     if (res && Array.isArray(res)) {
-      // 清空现有明细
       manualAdjustmentItems.value = [];
       
-      // 转换数据格式
       res.forEach(item => {
-        // 只添加有差异的项
-        if (item.diffQuantity !== 0 && item.hasStockItemTaskPermission) {
+        if (item.diffQuantity !== 0) {
           manualAdjustmentItems.value.push({
             stockTakeItemId: item.stockTakeItemId,
             productId: item.productId,
@@ -1930,7 +1880,7 @@ const loadStockTakeItems = async () => {
             beforeQuantity: item.systemQuantity || 0,
             countedQuantity: item.countedQuantity || 0,
             diffQuantity: item.diffQuantity || 0,
-            adjustQuantity: item.diffQuantity || 0, // 盘点调整时，调整数量等于差异数量
+            adjustQuantity: item.diffQuantity || 0,
             afterQuantity: item.countedQuantity || 0,
             unitCost: 0,
             adjustAmount: 0,
@@ -1941,7 +1891,7 @@ const loadStockTakeItems = async () => {
       });
       
       if (manualAdjustmentItems.value.length === 0) {
-        ElMessage.info('该盘点单没有差异项或您没有权限操作');
+        ElMessage.info('该盘点单没有差异项');
       } else {
         ElMessage.success(`已加载 ${manualAdjustmentItems.value.length} 个差异项`);
       }
@@ -1958,7 +1908,6 @@ const loadStockTakeItems = async () => {
   }
 };
 
-// 加载商品列表（手动创建时使用，仅当非盘点调整时）
 const loadManualProductList = async () => {
   if (!manualAdjustmentForm.warehouseId) {
     ElMessage.warning('请先选择仓库');
@@ -1978,23 +1927,20 @@ const loadManualProductList = async () => {
     if (res ) {
       manualProductList.value = res.map(item => ({
         id: item.productId || '',
-        productCode: item.sku || '', // 使用sku作为商品编码
+        productCode: item.sku || '',
         skuCode: item.sku || '',
         productName: item.productName || '',
-        specification: item.spec || '', // 后端字段是spec
+        specification: item.spec || '',
         unit: item.unitName || '',
-        currentQuantity: item.availableQuantity || 0, // 使用可用库存
+        currentQuantity: item.availableQuantity || 0,
         totalQuantity: item.quantity || 0,
         lockedQuantity: item.lockedQuantity || 0,
-        shelfId: '', // 这个接口没有返回货架信息，可能需要其他接口
+        shelfId: '',
         shelfName: '',
         locationCode: '',
         unitCost: item.price || 0,
         categoryName: item.categoryName || '',
-        outUnitName: item.outUnitName || '',
-        outUnitPerNum: item.outUnitPerNum || 0,
-        color: item.color || '',
-        priceUnitUsd: item.priceUnitUsd || 0
+        color: item.color || ''
       }));
       manualProductPagination.total = res.total || 0;
     } else {
@@ -2010,13 +1956,39 @@ const loadManualProductList = async () => {
   }
 };
 
-// 加载调整单详情
 const loadAdjustmentDetail = async (adjustmentId) => {
   try {
-    const res = await get(`/api/auth/stock/adjustmentDetail?id=${adjustmentId}`);
-    if (res) {
-      currentAdjustment.value = res;
-      adjustmentDetailItems.value = res.items || [];
+    const res = await get(`/api/auth/adjust/detail?id=${adjustmentId}`);
+    if (res && res.data) {
+      currentAdjustment.value = res.data;
+      adjustmentDetailItems.value = res.data.items || [];
+      
+      // 映射字段以匹配前端显示
+      if (currentAdjustment.value) {
+        currentAdjustment.value.adjustment_no = currentAdjustment.value.adjustNo;
+        currentAdjustment.value.warehouse_name = currentAdjustment.value.warehouseName;
+        currentAdjustment.value.adjust_type = currentAdjustment.value.adjustType;
+        currentAdjustment.value.adjust_reason = currentAdjustment.value.adjustReason;
+        currentAdjustment.value.stock_take_no = currentAdjustment.value.sourceNo;
+        currentAdjustment.value.expected_complete_time = currentAdjustment.value.expectExecuteTime;
+        currentAdjustment.value.creator_name = currentAdjustment.value.createdByName;
+        currentAdjustment.value.created_at = currentAdjustment.value.createdAt;
+        currentAdjustment.value.reviewer_name = currentAdjustment.value.reviewerName;
+        currentAdjustment.value.review_time = currentAdjustment.value.reviewTime;
+        currentAdjustment.value.executor_name = currentAdjustment.value.executorName;
+        currentAdjustment.value.execute_time = currentAdjustment.value.executeTime;
+        currentAdjustment.value.total_items = currentAdjustment.value.totalItems;
+        currentAdjustment.value.total_adjust_amount = currentAdjustment.value.totalAmount;
+        currentAdjustment.value.adjust_status = currentAdjustment.value.adjustStatus;
+        currentAdjustment.value.remark = currentAdjustment.value.remark;
+        
+        // 计算盘盈盘亏项数
+        if (adjustmentDetailItems.value.length > 0) {
+          currentAdjustment.value.gain_items = adjustmentDetailItems.value.filter(item => item.adjustQuantity > 0).length;
+          currentAdjustment.value.loss_items = adjustmentDetailItems.value.filter(item => item.adjustQuantity < 0).length;
+        }
+      }
+      
       detailDialogVisible.value = true;
       activeOrderId.value = adjustmentId;
     }
@@ -2026,27 +1998,25 @@ const loadAdjustmentDetail = async (adjustmentId) => {
   }
 };
 
-// 差异项选择相关（基于盘点单创建）
 const handleDiffSelectionChange = (selection) => {
   selectedDiffItems.value = selection;
   
-  // 自动判断调整类型
   if (selectedDiffItems.value.length > 0) {
     const hasGain = selectedDiffItems.value.some(item => item.diff_quantity > 0);
     const hasLoss = selectedDiffItems.value.some(item => item.diff_quantity < 0);
     
     if (hasGain && !hasLoss) {
-      adjustmentForm.adjust_type = 1; // 盘盈
+      adjustmentForm.adjust_type = 1;
     } else if (!hasGain && hasLoss) {
-      adjustmentForm.adjust_type = 2; // 盘亏
+      adjustmentForm.adjust_type = 2;
     } else {
-      adjustmentForm.adjust_type = 3; // 混合
+      adjustmentForm.adjust_type = 3;
     }
   }
 };
 
 const isDiffItemSelectable = (row) => {
-  return row.adjust_status === 0; // 只允许选择未处理的项
+  return row.adjust_status === 0;
 };
 
 const diffTableRowClassName = ({ row }) => {
@@ -2063,50 +2033,40 @@ const clearSelection = () => {
   selectedDiffItems.value = [];
 };
 
-// 仓库变更处理（手动创建）
 const handleWarehouseChange = (warehouseId) => {
   const warehouse = warehouseList.value.find(w => w.id === warehouseId);
   if (warehouse) {
     manualAdjustmentForm.warehouseName = warehouse.name;
     loadShelfOptions(warehouseId);
     
-    // 清空已选商品
     manualAdjustmentItems.value = [];
     
-    // 清空盘点单选择
     manualAdjustmentForm.stockTakeId = null;
     manualAdjustmentForm.stockTakeNo = '';
     completedStockTakeList.value = [];
     
-    // 如果是盘点调整类型，加载已完成盘点单列表
     if (manualAdjustmentForm.adjustType === 1) {
       loadCompletedStockTakeList();
     }
   }
 };
 
-// 调整类型变更处理
 const handleAdjustTypeChange = (type) => {
-  // 清空调整明细
   manualAdjustmentItems.value = [];
   
   if (type === 1) {
-    // 盘点调整：显示盘点单选择，隐藏商品选择
     if (manualAdjustmentForm.warehouseId) {
       loadCompletedStockTakeList();
     }
   }
 };
 
-// 盘点单选择处理
 const handleStockTakeSelect = (stockTakeId) => {
   if (stockTakeId) {
     const stockTake = completedStockTakeList.value.find(item => item.id === stockTakeId);
     if (stockTake) {
       manualAdjustmentForm.stockTakeNo = stockTake.stockTakeNo;
       manualAdjustmentForm.stockTakeId = stockTakeId;
-      
-      // 自动填充调整原因为盘点差异
       manualAdjustmentForm.adjustReason = 'stock_take_diff';
     }
   } else {
@@ -2116,37 +2076,28 @@ const handleStockTakeSelect = (stockTakeId) => {
   }
 };
 
-// 打开商品选择对话框（手动创建，仅当非盘点调整时）
 const openManualProductDialog = () => {
   if (!manualAdjustmentForm.warehouseId) {
     ElMessage.warning('请先选择仓库');
     return;
   }
   
-  // 清空已选商品
   selectedManualProducts.value = [];
   
-  // 重置商品筛选
   manualProductFilter.keyword = '';
   manualProductPagination.current = 1;
   
-  // 加载商品列表
   loadManualProductList();
   
-  // 显示商品选择对话框
   manualProductDialogVisible.value = true;
 };
 
-// 商品选择变更处理（手动创建）
 const handleManualProductSelectionChange = (selection) => {
   selectedManualProducts.value = selection;
 };
 
-// 确认选择商品（手动创建）
 const handleConfirmManualProducts = () => {
-  // 将选中的商品添加到调整明细中
   selectedManualProducts.value.forEach(product => {
-    // 检查是否已存在
     const exists = manualAdjustmentItems.value.some(item => item.productId === product.id);
     if (!exists) {
       manualAdjustmentItems.value.push({
@@ -2176,7 +2127,6 @@ const handleConfirmManualProducts = () => {
   selectedManualProducts.value = [];
 };
 
-// 删除调整明细项（手动创建）
 const removeManualItem = (item) => {
   const index = manualAdjustmentItems.value.indexOf(item);
   if (index > -1) {
@@ -2184,37 +2134,13 @@ const removeManualItem = (item) => {
   }
 };
 
-// 批次号变更处理（手动创建）
-const handleManualBatchNoChange = (item) => {
-  // 这里可以添加批次验证逻辑
-  console.log('批次号变更:', item.batchNo);
-};
-
-// 货架变更处理（手动创建）
-const handleManualShelfChange = (item) => {
-  const shelf = shelfOptions.value.find(s => s.id === item.shelfId);
-  if (shelf) {
-    item.shelfCode = shelf.code || shelf.name;
-  } else {
-    item.shelfCode = '';
-  }
-};
-
-// 调整数量变更处理（手动创建）
 const handleManualAdjustQuantityChange = (item) => {
-  // 计算调整后数量
   item.afterQuantity = (item.beforeQuantity || 0) + (item.adjustQuantity || 0);
-  
-  // 计算差异数量（对于非盘点调整，差异数量等于调整数量）
   item.diffQuantity = item.adjustQuantity || 0;
-  
-  // 计算调整金额
   item.adjustAmount = Math.abs((item.adjustQuantity || 0) * (item.unitCost || 0));
 };
 
-// 成本变更处理（手动创建）
 const handleManualCostChange = (item) => {
-  // 计算调整金额
   if (manualAdjustmentForm.adjustType === 1) {
     item.adjustAmount = Math.abs((item.diffQuantity || 0) * (item.unitCost || 0));
   } else {
@@ -2222,7 +2148,6 @@ const handleManualCostChange = (item) => {
   }
 };
 
-// 商品分页处理（手动创建）
 const handleManualProductSizeChange = (size) => {
   manualProductPagination.size = size;
   manualProductPagination.current = 1;
@@ -2234,7 +2159,7 @@ const handleManualProductCurrentChange = (page) => {
   loadManualProductList();
 };
 
-// 创建调整单（基于盘点单）
+// ==================== 创建调整单（基于盘点单）====================
 const handleCreateAdjustment = async () => {
   if (selectedDiffItems.value.length === 0) {
     ElMessage.warning('请先选择要调整的差异项');
@@ -2254,32 +2179,67 @@ const handleCreateAdjustment = async () => {
   creatingAdjustment.value = true;
   
   try {
-    const adjustmentData = {
-      stock_take_id: stockTakeInfo.id,
-      stock_take_no: stockTakeInfo.stockTakeNo,
-      adjust_type: adjustmentForm.adjust_type,
-      adjust_reason: adjustmentForm.adjust_reason,
-      expected_complete_time: adjustmentForm.expected_complete_time,
-      reviewer_id: adjustmentForm.reviewer_id,
-      remark: adjustmentForm.remark,
-      items: selectedDiffItems.value.map(item => ({
-        stock_take_item_id: item.id,
-        product_id: item.product_id,
-        batch_no: item.batch_no,
-        shelf_id: item.shelf_id,
-        location_code: item.location_code,
-        system_quantity: item.system_quantity,
-        counted_quantity: item.counted_quantity,
-        diff_quantity: item.diff_quantity,
-        adjust_type: item.diff_quantity > 0 ? 1 : 2
-      }))
+    const hasGain = selectedDiffItems.value.some(item => item.diff_quantity > 0);
+    const hasLoss = selectedDiffItems.value.some(item => item.diff_quantity < 0);
+    let adjustType;
+    if (hasGain && !hasLoss) {
+      adjustType = 3; // 报溢调整
+    } else if (!hasGain && hasLoss) {
+      adjustType = 2; // 报损调整
+    } else {
+      adjustType = 6; // 其他调整（混合）
+    }
+    
+    const items = selectedDiffItems.value.map(item => {
+      const adjustQuantity = item.diff_quantity;
+      const afterQuantity = item.counted_quantity;
+      const beforeQuantity = item.system_quantity;
+      
+      return {
+        productId: item.product_id,
+        productName: item.product_name,
+        productCode: item.sku_code,
+        skuCode: item.sku_code,
+        spec: item.specification || '',
+        unit: '',
+        batchNo: item.batch_no || null,
+        shelfId: item.shelf_id || null,
+        shelfCode: item.shelf_name || '',
+        locationCode: item.location_code || '',
+        beforeQuantity: beforeQuantity,
+        adjustQuantity: adjustQuantity,
+        afterQuantity: afterQuantity,
+        unitCost: 0,
+        unitPrice: 0,
+        adjustCostAmount: 0,
+        adjustAmount: 0,
+        itemReason: adjustmentForm.adjust_reason,
+        sourceItemId: item.id
+      };
+    });
+    
+    const adjustData = {
+      warehouseId: stockTakeInfo.warehouseId || '',
+      warehouseName: stockTakeInfo.warehouseName,
+      adjustType: adjustType,
+      sourceType: 1,
+      sourceId: stockTakeInfo.id,
+      sourceNo: stockTakeInfo.stockTakeNo,
+      adjustReason: adjustmentForm.adjust_reason,
+      isAffectCost: false,
+      isUrgent: false,
+      priority: 3,
+      remark: adjustmentForm.remark || '',
+      expectExecuteTime: adjustmentForm.expected_complete_time,
+      // 修改这里：将 reviewerId 改为 approvalUserId
+      approvalUserId: adjustmentForm.reviewer_id,
+      items: items
     };
     
-    const res = await post('/api/auth/stock/createAdjustment', adjustmentData);
-    if (res && res.code === 200) {
+    const res = await post('/api/auth/adjust/createManual', adjustData);
+    if (res ) {
       ElMessage.success('调整单创建成功');
       
-      // 重置表单
       if (adjustmentFormRef.value) {
         adjustmentFormRef.value.resetFields();
       }
@@ -2291,17 +2251,14 @@ const handleCreateAdjustment = async () => {
         remark: ''
       });
       
-      // 清空选择
       selectedDiffItems.value = [];
       
-      // 刷新数据
       await Promise.all([
         loadDiffItems(stockTakeInfo.id),
         loadAdjustmentOrders(stockTakeInfo.id),
         loadStockTakeInfo(stockTakeInfo.id)
       ]);
       
-      // 显示调整单详情
       if (res.data && res.data.id) {
         await loadAdjustmentDetail(res.data.id);
       }
@@ -2316,9 +2273,9 @@ const handleCreateAdjustment = async () => {
   }
 };
 
-// 创建调整单（手动创建）
+// ==================== 创建调整单（手动创建）====================
 const handleCreateManualAdjustment = async () => {
-  if (manualAdjustmentItems.length === 0) {
+  if (manualAdjustmentItems.value.length === 0) {
     ElMessage.warning('请至少添加一条调整明细');
     return;
   }
@@ -2338,7 +2295,6 @@ const handleCreateManualAdjustment = async () => {
     return;
   }
   
-  // 如果是盘点调整，需要检查是否选择了盘点单
   if (manualAdjustmentForm.adjustType === 1 && !manualAdjustmentForm.stockTakeId) {
     ElMessage.warning('请选择盘点单');
     return;
@@ -2347,60 +2303,74 @@ const handleCreateManualAdjustment = async () => {
   creatingManualAdjustment.value = true;
   
   try {
-    const adjustmentData = {
-      warehouse_id: manualAdjustmentForm.warehouseId,
-      warehouse_name: manualAdjustmentForm.warehouseName,
-      adjust_type: manualAdjustmentForm.adjustType,
-      adjust_reason: manualAdjustmentForm.adjustReason,
-      stock_take_id: manualAdjustmentForm.stockTakeId, // 新增：传递盘点单ID
-      stock_take_no: manualAdjustmentForm.stockTakeNo, // 新增：传递盘点单号
-      is_urgent: manualAdjustmentForm.isUrgent,
-      is_affect_cost: manualAdjustmentForm.isAffectCost,
-      expected_complete_time: manualAdjustmentForm.expectedCompleteTime,
-      reviewer_id: manualAdjustmentForm.reviewerId,
-      remark: manualAdjustmentForm.remark,
-      items: manualAdjustmentItems.value.map(item => ({
-        product_id: item.productId,
-        sku_code: item.skuCode,
-        product_name: item.productName,
-        specification: item.specification,
-        color: item.color,
-        batch_no: item.batchNo || null,
-        shelf_id: item.shelfId || null,
-        location_code: item.shelfCode || null,
-        before_quantity: item.beforeQuantity,
-        counted_quantity: item.countedQuantity || 0,
-        diff_quantity: item.diffQuantity,
-        adjust_quantity: manualAdjustmentForm.adjustType === 1 ? item.diffQuantity : item.adjustQuantity,
-        after_quantity: item.afterQuantity,
-        unit_cost: item.unitCost || 0,
-        adjust_amount: item.adjustAmount || 0,
-        item_reason: item.itemReason || manualAdjustmentForm.adjustReason,
-        source_item_id: item.sourceItemId || null // 新增：传递源明细ID（盘点明细ID）
-      }))
+    const items = manualAdjustmentItems.value.map(item => {
+      let adjustQuantity;
+      if (manualAdjustmentForm.adjustType === 1) {
+        adjustQuantity = item.diffQuantity;
+      } else {
+        adjustQuantity = item.adjustQuantity || 0;
+      }
+      
+      const afterQuantity = item.afterQuantity;
+      const beforeQuantity = item.beforeQuantity;
+      
+      return {
+        productId: item.productId,
+        productName: item.productName,
+        productCode: item.skuCode,
+        skuCode: item.skuCode,
+        spec: item.specification || '',
+        unit: item.unit || '',
+        batchNo: item.batchNo || null,
+        shelfId: item.shelfId || null,
+        shelfCode: item.shelfCode || '',
+        locationCode: item.locationCode || '',
+        beforeQuantity: beforeQuantity,
+        adjustQuantity: adjustQuantity,
+        afterQuantity: afterQuantity,
+        unitCost: item.unitCost || 0,
+        unitPrice: 0,
+        adjustCostAmount: 0,
+        adjustAmount: 0,
+        itemReason: item.itemReason || manualAdjustmentForm.adjustReason,
+        sourceItemId: item.sourceItemId || null
+      };
+    });
+    
+    const adjustData = {
+      warehouseId: manualAdjustmentForm.warehouseId,
+      warehouseName: manualAdjustmentForm.warehouseName,
+      adjustType: manualAdjustmentForm.adjustType,
+      sourceType: manualAdjustmentForm.adjustType === 1 ? 1 : null,
+      sourceId: manualAdjustmentForm.adjustType === 1 ? manualAdjustmentForm.stockTakeId : null,
+      sourceNo: manualAdjustmentForm.adjustType === 1 ? manualAdjustmentForm.stockTakeNo : null,
+      adjustReason: manualAdjustmentForm.adjustReason,
+      isAffectCost: manualAdjustmentForm.isAffectCost,
+      isUrgent: manualAdjustmentForm.isUrgent,
+      priority: manualAdjustmentForm.isUrgent ? 1 : 3,
+      remark: manualAdjustmentForm.remark || '',
+      expectExecuteTime: manualAdjustmentForm.expectedCompleteTime,
+      // 修改这里：将 reviewerId 改为 approvalUserId
+      approvalUserId: manualAdjustmentForm.reviewerId,
+      items: items
     };
     
-    const res = await post('/api/auth/adjust/createManual', adjustmentData);
-    if (res && res.code === 200) {
+    const res = await post('/api/auth/adjust/createManual', adjustData);
+    if (res ) {
       ElMessage.success('调整单创建成功');
       
-      // 重置表单
       if (manualAdjustmentFormRef.value) {
         manualAdjustmentFormRef.value.resetFields();
       }
       
-      // 清空调整明细
       manualAdjustmentItems.value = [];
       
-      // 刷新调整单历史
       if (createType.value === 'stock_take') {
         await loadAdjustmentOrders(stockTakeInfo.id);
       } else {
-        // 手动创建：重新加载页面
         await initPage();
       }
       
-      // 显示调整单详情
       if (res.data && res.data.id) {
         await loadAdjustmentDetail(res.data.id);
       }
@@ -2428,7 +2398,7 @@ const handleCreateAdjustmentForSelected = async () => {
   await handleCreateAdjustment();
 };
 
-// 批量处理所有剩余项（基于盘点单创建）
+// ==================== 批量创建调整单 ====================
 const handleBatchProcessAll = () => {
   if (availableDiffItems.value.length === 0) {
     ElMessage.warning('没有可处理的差异项');
@@ -2446,28 +2416,61 @@ const handleConfirmBatchProcess = async () => {
   creatingBatchAdjustment.value = true;
   
   try {
-    const adjustmentData = {
-      stock_take_id: stockTakeInfo.id,
-      stock_take_no: stockTakeInfo.stockTakeNo,
-      adjust_type: 3, // 混合调整
-      adjust_reason: batchAdjustmentForm.adjust_reason,
-      remark: batchAdjustmentForm.remark,
-      is_batch_all: true // 标记为批量处理所有
+    const items = availableDiffItems.value.map(item => {
+      const adjustQuantity = item.diff_quantity;
+      const afterQuantity = item.counted_quantity;
+      const beforeQuantity = item.system_quantity;
+      
+      return {
+        productId: item.product_id,
+        productName: item.product_name,
+        productCode: item.sku_code,
+        skuCode: item.sku_code,
+        spec: item.specification || '',
+        unit: '',
+        batchNo: item.batch_no || null,
+        shelfId: item.shelf_id || null,
+        shelfCode: item.shelf_name || '',
+        locationCode: item.location_code || '',
+        beforeQuantity: beforeQuantity,
+        adjustQuantity: adjustQuantity,
+        afterQuantity: afterQuantity,
+        unitCost: 0,
+        unitPrice: 0,
+        adjustCostAmount: 0,
+        adjustAmount: 0,
+        itemReason: batchAdjustmentForm.adjust_reason,
+        sourceItemId: item.id
+      };
+    });
+    
+    const adjustData = {
+      warehouseId: stockTakeInfo.warehouseId || '',
+      warehouseName: stockTakeInfo.warehouseName,
+      adjustType: 6,
+      sourceType: 1,
+      sourceId: stockTakeInfo.id,
+      sourceNo: stockTakeInfo.stockTakeNo,
+      adjustReason: batchAdjustmentForm.adjust_reason,
+      isAffectCost: false,
+      isUrgent: false,
+      priority: 3,
+      remark: batchAdjustmentForm.remark || '批量处理所有剩余差异项',
+      expectExecuteTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      items: items
     };
     
-    const res = await post('/api/auth/stock/createBatchAdjustment', adjustmentData);
-    if (res && res.code === 200) {
+    const res = await post('/api/auth/adjust/createManual', adjustData);
+    if (res ) {
       ElMessage.success('批量调整单创建成功');
       batchConfirmDialogVisible.value = false;
       
-      // 刷新数据
       await Promise.all([
         loadDiffItems(stockTakeInfo.id),
         loadAdjustmentOrders(stockTakeInfo.id),
         loadStockTakeInfo(stockTakeInfo.id)
       ]);
       
-      // 显示调整单详情
       if (res.data && res.data.id) {
         await loadAdjustmentDetail(res.data.id);
       }
@@ -2482,12 +2485,10 @@ const handleConfirmBatchProcess = async () => {
   }
 };
 
-// 查看调整单详情
 const viewAdjustmentDetail = async (adjustmentId) => {
   await loadAdjustmentDetail(adjustmentId);
 };
 
-// 审核调整单
 const handleReviewAdjustment = async (isApprove) => {
   const action = isApprove ? '通过' : '驳回';
   
@@ -2500,10 +2501,10 @@ const handleReviewAdjustment = async (isApprove) => {
     
     reviewing.value = true;
     
-    const res = await post('/api/auth/stock/reviewAdjustment', {
-      adjustment_id: currentAdjustment.value.id,
-      is_approve: isApprove,
-      review_remark: `审核${action}`
+    const res = await post('/api/auth/adjust/review', {
+      id: currentAdjustment.value.id,
+      isApprove: isApprove,
+      reviewRemark: `审核${action}`
     });
     
     if (res && res.code === 200) {
@@ -2522,7 +2523,6 @@ const handleReviewAdjustment = async (isApprove) => {
   }
 };
 
-// 执行调整
 const handleExecuteAdjustment = async () => {
   try {
     await ElMessageBox.confirm(
@@ -2533,8 +2533,8 @@ const handleExecuteAdjustment = async () => {
     
     executing.value = true;
     
-    const res = await post('/api/auth/stock/executeAdjustment', {
-      adjustment_id: currentAdjustment.value.id
+    const res = await post('/api/auth/adjust/execute', {
+      id: currentAdjustment.value.id
     });
     
     if (res && res.code === 200) {
@@ -2553,7 +2553,6 @@ const handleExecuteAdjustment = async () => {
   }
 };
 
-// 重新申请
 const handleReapplyAdjustment = async () => {
   try {
     await ElMessageBox.confirm(
@@ -2563,8 +2562,8 @@ const handleReapplyAdjustment = async () => {
     
     reapplying.value = true;
     
-    const res = await post('/api/auth/stock/reapplyAdjustment', {
-      adjustment_id: currentAdjustment.value.id
+    const res = await post('/api/auth/adjust/reapply', {
+      id: currentAdjustment.value.id
     });
     
     if (res && res.code === 200) {
@@ -2583,12 +2582,10 @@ const handleReapplyAdjustment = async () => {
   }
 };
 
-// 打印调整单
 const handlePrintAdjustment = () => {
   window.print();
 };
 
-// 刷新数据
 const refreshAllData = async () => {
   if (createType.value === 'stock_take' && stockTakeInfo.id) {
     await Promise.all([
@@ -2605,7 +2602,6 @@ const refreshAdjustmentOrders = async () => {
   }
 };
 
-// 分页处理
 const handleSizeChange = (size) => {
   pagination.size = size;
   pagination.current = 1;
@@ -2621,7 +2617,6 @@ const handleCurrentChange = (page) => {
   }
 };
 
-// 导出功能
 const exportAdjustmentReport = async () => {
   exporting.value = true;
   try {
@@ -2652,7 +2647,6 @@ const exportAdjustmentReport = async () => {
   }
 };
 
-// 返回
 const goBack = () => {
   if (createType.value === 'stock_take') {
     router.push('/stock/take-list');
@@ -2702,9 +2696,9 @@ const getDiffQuantityClass = (diff) => {
 
 const getTakeStatusTagType = (status) => {
   const mapping = {
-    3: 'primary',   // 待确认
-    4: 'warning',   // 已确认
-    6: 'success'    // 已关闭
+    3: 'primary',
+    4: 'warning',
+    6: 'success'
   };
   return mapping[status] || 'info';
 };
@@ -2720,9 +2714,9 @@ const getTakeStatusLabel = (status) => {
 
 const getAdjustStatusTagType = (status) => {
   const mapping = {
-    0: 'info',      // 未调整
-    1: 'warning',   // 调整中
-    2: 'success'    // 已调整
+    0: 'info',
+    1: 'warning',
+    2: 'success'
   };
   return mapping[status] || 'info';
 };
@@ -2738,34 +2732,34 @@ const getAdjustStatusLabel = (status) => {
 
 const getOrderStatusTagType = (status) => {
   const mapping = {
-    1: 'warning',   // 待审核
-    2: 'primary',   // 审核通过
-    3: 'danger',    // 审核驳回
-    4: 'success',   // 已执行
-    5: 'info'       // 已取消
+    1: 'warning',
+    2: 'primary',
+    3: 'danger',
+    4: 'success',
+    5: 'info'
   };
   return mapping[status] || 'info';
 };
 
 const getOrderStatusLabel = (status) => {
   const mapping = {
-    1: '待审核',
-    2: '审核通过',
+    1: '待提交',
+    2: '待审核',
     3: '审核驳回',
-    4: '已执行',
-    5: '已取消'
+    4: '审核通过',
+    5: '已执行'
   };
   return mapping[status] || '未知';
 };
 
 const getAdjustTypeTagType = (type) => {
   const mapping = {
-    1: 'primary',   // 盘点调整
-    2: 'danger',    // 报损调整
-    3: 'success',   // 报溢调整
-    4: 'warning',   // 成本调整
-    5: 'info',      // 库存转移
-    6: ''           // 其他调整
+    1: 'primary',
+    2: 'danger',
+    3: 'success',
+    4: 'warning',
+    5: 'info',
+    6: ''
   };
   return mapping[type] || 'info';
 };
@@ -2784,8 +2778,8 @@ const getAdjustTypeLabel = (type) => {
 
 const getItemStatusTagType = (status) => {
   const mapping = {
-    1: 'warning', // 待处理
-    2: 'success'  // 已调整
+    1: 'warning',
+    2: 'success'
   };
   return mapping[status] || 'info';
 };
@@ -2816,15 +2810,13 @@ const getAfterQuantityClass = (quantity) => {
 };
 
 const disabledPastDate = (time) => {
-  return time.getTime() < Date.now() - 24 * 60 * 60 * 1000; // 禁用24小时前的时间
+  return time.getTime() < Date.now() - 24 * 60 * 60 * 1000;
 };
 
-// 初始化
 onMounted(() => {
   initPage();
 });
 
-// 监听筛选状态变化（基于盘点单创建）
 watch(diffFilterStatus, () => {
   pagination.current = 1;
   if (stockTakeInfo.id) {
@@ -2832,16 +2824,13 @@ watch(diffFilterStatus, () => {
   }
 });
 
-// 监听仓库变化（手动创建）
 watch(() => manualAdjustmentForm.warehouseId, (newVal) => {
   if (newVal && manualAdjustmentForm.adjustType === 1) {
     loadCompletedStockTakeList();
   }
 });
 
-// 监听调整类型变化（手动创建）
 watch(() => manualAdjustmentForm.adjustType, (newVal) => {
-  // 清空调整明细
   manualAdjustmentItems.value = [];
   
   if (newVal === 1 && manualAdjustmentForm.warehouseId) {

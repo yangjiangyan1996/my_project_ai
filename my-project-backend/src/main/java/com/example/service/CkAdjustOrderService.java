@@ -13,4 +13,10 @@ import com.example.entity.cangku.req.AdjustListPageReq;
  */
 public interface CkAdjustOrderService extends IService<AdjustOrder> {
     Page<AdjustOrder> getStockPage(Page<AdjustOrder> page, AdjustListPageReq req);
+
+    AdjustOrder selectById(Long id, Long tenantId);
+
+    boolean updateStatusById(Long id, Long tenantId, Integer status);
+
+    boolean updateStatusAndRemarkById(Long id, Long tenantId, Integer status, String approveRemark);
 }
