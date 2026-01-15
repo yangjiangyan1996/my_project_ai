@@ -16,4 +16,5 @@ public interface CkInventoryTransactionService extends IService<InventoryTransac
     List<InventoryTransaction> selectByProductId(Long tenantId, Long productId);
 
     Page<InventoryTransaction> getPage(Page<InventoryTransaction> page, InventoryTransactionListPageReq req);
+
 }

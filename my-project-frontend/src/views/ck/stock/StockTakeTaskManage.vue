@@ -275,7 +275,7 @@
               </template>
 
                 <!-- 审核通过状态：可执行 -->
-                <template v-if="row.adjustStatus === 3">
+                <template v-if="row.adjustStatus === 2">
                   <el-button
                     type="primary"
                     link
@@ -287,7 +287,7 @@
                 </template>
 
                 <!-- 已执行状态：可查看执行结果 -->
-                <template v-if="row.adjustStatus === 5">
+                <template v-if="row.adjustStatus === 20 || row.adjustStatus === 29">
                   <el-button
                     type="info"
                     link
@@ -931,12 +931,14 @@ const getSourceTypeLabel = (type) => {
 
 const getStatusLabel = (status) => {
   const mapping = {
-    1: '待提交',
-    2: '待审核',
-    3: '审核通过',
+    0: '待提交',
+    1: '待审核',
+    2: '审核通过',
     4: '审核拒绝',
-    5: '已执行',
-    6: '已取消'
+    9: '已取消',
+    //20-调整完成 29-调整失败
+    20: '调整完成',
+    29: '调整失败'
   };
   return mapping[status] || '未知';
 };

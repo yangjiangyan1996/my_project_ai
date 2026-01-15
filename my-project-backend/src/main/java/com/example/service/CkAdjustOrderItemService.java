@@ -3,6 +3,8 @@ package com.example.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.AdjustOrderItem;
 
+import java.util.List;
+
 /**
  * @Author YangJian
  * @Description
@@ -10,4 +12,5 @@ import com.example.entity.cangku.dto.AdjustOrderItem;
  * @Date 2025/12/29 15:21
  */
 public interface CkAdjustOrderItemService  extends IService<AdjustOrderItem> {
+    List<AdjustOrderItem> selectByAdjustOrderId(Long id, Long tenantId);
 }

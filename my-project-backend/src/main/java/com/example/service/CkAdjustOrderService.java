@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.entity.cangku.dto.AdjustOrder;
 import com.example.entity.cangku.req.AdjustListPageReq;
 
+import java.util.Date;
+
 /**
  * @Author YangJian
  * @Description
@@ -16,7 +18,7 @@ public interface CkAdjustOrderService extends IService<AdjustOrder> {
 
     AdjustOrder selectById(Long id, Long tenantId);
 
-    boolean updateStatusById(Long id, Long tenantId, Integer status);
+    boolean updateStatusById(Long id, Long tenantId, Integer status, Long userId);
 
     boolean updateStatusAndRemarkById(Long id, Long tenantId, Integer status, String approveRemark);
 }

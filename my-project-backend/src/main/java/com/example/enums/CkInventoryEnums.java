@@ -12,6 +12,36 @@ import java.math.BigDecimal;
  */
 public class CkInventoryEnums {
 
+    //OrderTypeDetail 1-采购入库,2-生产入库,3-退货入库,4-调拨入库
+    //使用 CkInOutboundEnums#InBoundType
+    public enum OrderTypeDetail {
+
+    }
+
+
+    //OrderType 1=入库 2=出库
+    @Getter
+    public enum OrderType {
+        IN(1, "入库"),
+        OUT(2, "出库");
+
+        private final Integer code;
+        private final String desc;
+
+        OrderType(Integer code, String desc) {
+            this.code = code;
+            this.desc = desc;
+        }
+
+        public Integer getCode() {
+            return code;
+        }
+
+        public String getDesc() {
+            return desc;
+        }
+    }
+
     @Getter
     public enum ChartsWarningLevel {
         ALL("all", "全部",9),

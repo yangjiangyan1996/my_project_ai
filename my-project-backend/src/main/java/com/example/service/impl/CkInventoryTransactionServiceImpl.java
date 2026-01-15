@@ -44,6 +44,7 @@ public class CkInventoryTransactionServiceImpl extends ServiceImpl<CkInventoryTr
         );
     }
 
+
     @Override
     public Page<InventoryTransaction> getPage(Page<InventoryTransaction> page, InventoryTransactionListPageReq req) {
         return baseMapper.selectPage(page, new QueryWrapper<InventoryTransaction>()

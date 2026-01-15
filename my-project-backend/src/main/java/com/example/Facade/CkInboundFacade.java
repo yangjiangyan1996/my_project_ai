@@ -9,6 +9,7 @@ import com.example.entity.cangku.resp.InboundDetailResp;
 import com.example.entity.cangku.resp.InboundListPageResp;
 import com.example.entity.cangku.resp.InboundProductInDetailResp;
 import com.example.enums.CkInOutboundEnums;
+import com.example.enums.CkInventoryEnums;
 import com.example.holder.InventoryHolder;
 import com.example.holder.ProductTaskHolder;
 import com.example.service.*;
@@ -334,7 +335,7 @@ public class CkInboundFacade {
         InventoryTransaction transaction = new InventoryTransaction();
         transaction.setWarehouseId(req.getWarehouseId());
         transaction.setProductId(item.getProductId());
-        transaction.setOrderType(1); // 1-入库单
+        transaction.setOrderType(CkInventoryEnums.OrderType.IN.getCode()); // 1-入库单
         transaction.setOrderTypeDetail(req.getOrderType());
         transaction.setOrderId(orderId);
         transaction.setOrderItemId(item.getId());

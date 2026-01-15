@@ -91,6 +91,24 @@ public class CkAdjustOrderController {
         }
     }
 
+    @LogOperation(module = "调整单管理", operation = "调整单执行",
+            description = "调整单执行")
+    @GetMapping("/execute")
+    public RespBean<Boolean> execute(@RequestParam("id") Long id) {
+        try {
+            Long userId = UserUtil.getCurrentUser().getId();
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            Boolean result = ckAdjustOrderFacade.execute(id, userId, tenantId);
+            return RespBean.success(result);
+        }catch (ValidationException e) {
+            log.error("CkAdjustOrderController#execute,req:{}", JSON.toJSONString(id), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("CkAdjustOrderController#execute,req:{}", JSON.toJSONString(id), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
     /**
      * 分页查询
      *

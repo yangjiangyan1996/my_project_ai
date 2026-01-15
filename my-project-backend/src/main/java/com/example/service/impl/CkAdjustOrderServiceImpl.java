@@ -10,6 +10,8 @@ import com.example.service.CkAdjustOrderService;
 import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+
 /**
  * @Author YangJian
  * @Description
@@ -33,10 +35,10 @@ public class CkAdjustOrderServiceImpl extends ServiceImpl<CkAdjustOrderMapper, A
     }
 
     @Override
-    public boolean updateStatusById(Long id, Long tenantId, Integer status) {
+    public boolean updateStatusById(Long id, Long tenantId, Integer status, Long userId) {
         AdjustOrder adjustOrder = new AdjustOrder();
         adjustOrder.setAdjustStatus(status);
-        adjustOrder.setModifiedBy(id);
+        adjustOrder.setModifiedBy(userId);
         adjustOrder.setModifiedAt(new java.util.Date());
         return baseMapper.update( adjustOrder, new QueryWrapper<AdjustOrder>()
                 .eq("id", id)

@@ -10,6 +10,7 @@ import com.example.entity.cangku.req.excel.ProductBomExcelImportModel;
 import com.example.entity.cangku.req.excel.ProductCreateImportModel;
 import com.example.entity.cangku.resp.*;
 import com.example.enums.CkInOutboundEnums;
+import com.example.enums.CkInventoryEnums;
 import com.example.enums.CkProductEnums;
 import com.example.service.*;
 import com.example.utils.*;
@@ -1504,7 +1505,7 @@ public class CKProductFacade {
         inventoryTransaction.setTenantId(tenantId);
         inventoryTransaction.setWarehouseId(warehouseId);
         inventoryTransaction.setProductId(productId);
-        inventoryTransaction.setOrderType(1); // 1表示入库
+        inventoryTransaction.setOrderType(CkInventoryEnums.OrderType.IN.getCode()); // 1表示入库
         inventoryTransaction.setOrderTypeDetail(CkInOutboundEnums.InBoundType.PurchaseInbound.getCode());
         inventoryTransaction.setOrderId(orderId);
         inventoryTransaction.setOrderItemId(itemId);
@@ -1600,7 +1601,7 @@ public class CKProductFacade {
         inventoryTransaction.setTenantId(tenantId);
         inventoryTransaction.setWarehouseId(warehouseId);
         inventoryTransaction.setProductId(productId);
-        inventoryTransaction.setOrderType(2); // 2表示出库
+        inventoryTransaction.setOrderType(CkInventoryEnums.OrderType.OUT.getCode()); // 2表示出库
         inventoryTransaction.setOrderId(orderId);
         inventoryTransaction.setOrderItemId(itemId);
         inventoryTransaction.setChangeQuantity(quantity.negate()); // 出库数量为负

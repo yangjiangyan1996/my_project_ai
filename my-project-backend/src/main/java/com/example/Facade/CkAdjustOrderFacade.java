@@ -1,27 +1,37 @@
 package com.example.Facade;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.AdjustOrder;
 import com.example.entity.cangku.dto.AdjustOrderItem;
+import com.example.entity.cangku.dto.InventoryTransaction;
 import com.example.entity.cangku.req.AdjustApproveOkReq;
 import com.example.entity.cangku.req.AdjustListPageReq;
 import com.example.entity.cangku.req.AdjustRequest;
 import com.example.entity.cangku.req.AdjustSubmitApproveReq;
 import com.example.entity.cangku.resp.AdjustOrderResp;
 import com.example.enums.CkAdjustEnums;
+import com.example.enums.CkInOutboundEnums;
+import com.example.enums.CkInventoryEnums;
+import com.example.holder.InventoryUpdateHelper;
 import com.example.service.CkAdjustOrderItemService;
 import com.example.service.CkAdjustOrderService;
+import com.example.service.CkInventoryTransactionService;
 import com.example.utils.DateUtils;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -30,10 +40,15 @@ import java.util.stream.Collectors;
  * @Email 1776080295@qq.com
  * @Date 2025/12/29 15:23
  */
+@Slf4j
 @Service
 public class CkAdjustOrderFacade {
     @Resource
     CkAdjustOrderService adjustOrderService;
+    @Resource
+    CkInventoryTransactionService inventoryTransactionService;
+    @Resource
+    InventoryUpdateHelper inventoryUpdateHelper;
     @Resource
     CkAdjustOrderItemService adjustOrderItemService;
 
@@ -267,7 +282,7 @@ public class CkAdjustOrderFacade {
         adjustOrder.setAdjustStatus(CkAdjustEnums.AdjustOrderStatus.WaitAudit.getCode());
         adjustOrder.setModifiedBy(req.getUserId());
         adjustOrder.setModifiedAt(new Date());
-        boolean updated = adjustOrderService.updateStatusById(adjustOrder.getId(), adjustOrder.getTenantId(), CkAdjustEnums.AdjustOrderStatus.WaitAudit.getCode());
+        boolean updated = adjustOrderService.updateStatusById(adjustOrder.getId(), adjustOrder.getTenantId(), CkAdjustEnums.AdjustOrderStatus.WaitAudit.getCode(), req.getUserId());
         if (!updated) {
             throw new ValidationException("请求审核调整单失败");
         }
@@ -284,7 +299,7 @@ public class CkAdjustOrderFacade {
         if (!CkAdjustEnums.AdjustOrderStatus.WaitAudit.getCode().equals(adjustOrder.getAdjustStatus())) {
             throw new ValidationException("调整单状态错误");
         }
-        if (!(CkAdjustEnums.AdjustOrderStatus.AuditPass.getCode().equals(req.getApproveStatus())|| CkAdjustEnums.AdjustOrderStatus.Reject.getCode().equals(req.getApproveStatus()))){
+        if (!(CkAdjustEnums.AdjustOrderStatus.AuditPass.getCode().equals(req.getApproveStatus()) || CkAdjustEnums.AdjustOrderStatus.Reject.getCode().equals(req.getApproveStatus()))) {
             throw new ValidationException("提交状态错误");
         }
         adjustOrder.setApproveTime(new Date());
@@ -300,4 +315,233 @@ public class CkAdjustOrderFacade {
     }
 
 
+    /**
+     * 执行调整单
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean execute(Long id, Long userId, Long tenantId) {
+        log.info("开始执行调整单，id:{}, userId:{}, tenantId:{}", id, userId, tenantId);
+
+        // 1. 查询调整单并检查状态
+        AdjustOrder adjustOrder = adjustOrderService.selectById(id, tenantId);
+        if (adjustOrder == null) {
+            throw new ValidationException("调整单不存在");
+        }
+
+        // 检查状态：必须是审核通过状态
+        if (!CkAdjustEnums.AdjustOrderStatus.AuditPass.getCode().equals(adjustOrder.getAdjustStatus())) {
+            // 如果是开始执行状态，可能正在执行中，检查是否超时
+            if (CkAdjustEnums.AdjustOrderStatus.StartExecute.getCode().equals(adjustOrder.getAdjustStatus())) {
+                // 检查是否超时（超过30分钟视为超时）
+                Date now = new Date();
+                long diffMinutes = (now.getTime() - adjustOrder.getModifiedAt().getTime()) / (1000 * 60);
+                if (diffMinutes < 30) {
+                    throw new ValidationException("调整单正在执行中，请稍后重试");
+                } else {
+                    log.warn("调整单执行超时，重置为审核通过状态，id:{}", id);
+                    adjustOrder.setAdjustStatus(CkAdjustEnums.AdjustOrderStatus.AuditPass.getCode());
+                    adjustOrder.setModifiedBy(userId);
+                    adjustOrder.setModifiedAt(now);
+                    adjustOrderService.updateById(adjustOrder);
+                }
+            } else {
+                throw new ValidationException("调整单状态错误，当前状态:" + adjustOrder.getAdjustStatus());
+            }
+        }
+
+        // 2. 获取调整单明细
+        List<AdjustOrderItem> adjustOrderItems = adjustOrderItemService.selectByAdjustOrderId(adjustOrder.getId(), tenantId);
+        if (CollectionUtils.isEmpty(adjustOrderItems)) {
+            throw new ValidationException("调整单无明细");
+        }
+
+        // 3. 更新调整单状态为开始执行（乐观锁控制）
+        boolean updateToExecuteStatus = updateOrderToExecuteStatus(adjustOrder, userId);
+        if (!updateToExecuteStatus) {
+            throw new ValidationException("更新调整单状态失败，可能已被其他用户操作");
+        }
+
+        try {
+            // 4. 准备库存流水记录
+            List<InventoryTransaction> transactionList = new ArrayList<>();
+            Date executeTime = new Date();
+
+            for (AdjustOrderItem item : adjustOrderItems) {
+                // 检查明细状态
+                if (!CkAdjustEnums.AdjustOrderItemStatus.WaitExecute.getCode().equals(item.getStatus())) {
+                    if (CkAdjustEnums.AdjustOrderItemStatus.Executed.getCode().equals(item.getStatus())) {
+                        log.warn("调整单明细已执行，跳过，itemId:{}", item.getId());
+                        continue;
+                    }
+                    throw new ValidationException("调整单明细状态错误，itemId:" + item.getId());
+                }
+
+                // 5. 更新库存
+                boolean inventoryUpdated = inventoryUpdateHelper.updateInventoryByAdjustItem(tenantId, item);
+                if (!inventoryUpdated) {
+                    throw new RuntimeException("更新库存失败，itemId:" + item.getId());
+                }
+
+                // 6. 创建库存流水记录
+                InventoryTransaction transaction = buildInventoryTransaction(adjustOrder, item, executeTime, userId);
+                transactionList.add(transaction);
+
+                // 7. 更新明细状态为已执行
+                updateItemToExecuted(item, userId, executeTime);
+            }
+
+            // 8. 批量插入库存流水
+            if (!CollectionUtils.isEmpty(transactionList)) {
+                inventoryTransactionService.saveBatch(transactionList);
+            }
+
+            // 9. 更新调整单状态为调整完成
+            updateOrderToCompleted(adjustOrder, userId, executeTime);
+
+            log.info("调整单执行成功，id:{}, 共处理{}条明细", id, adjustOrderItems.size());
+            return true;
+
+        } catch (Exception e) {
+            log.error("调整单执行失败，id:{}", id, e);
+
+            // 更新调整单状态为调整失败
+            updateOrderToFailed(adjustOrder, userId, e.getMessage());
+
+            // 抛异常让事务回滚
+            throw new RuntimeException("调整单执行失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 更新调整单状态为开始执行
+     */
+    private boolean updateOrderToExecuteStatus(AdjustOrder order, Long userId) {
+        AdjustOrder updateEntity = new AdjustOrder();
+        updateEntity.setId(order.getId());
+        updateEntity.setAdjustStatus(CkAdjustEnums.AdjustOrderStatus.StartExecute.getCode());
+        updateEntity.setModifiedBy(userId);
+        updateEntity.setModifiedAt(new Date());
+        updateEntity.setVersion(order.getVersion()); // 乐观锁
+
+        return adjustOrderService.update(updateEntity, new QueryWrapper<AdjustOrder>()
+                .eq("id", order.getId())
+                .eq("tenant_id", order.getTenantId())
+                .eq("version", order.getVersion())
+                .eq("is_deleted", 0));
+    }
+
+    /**
+     * 构建库存流水记录
+     */
+    private InventoryTransaction buildInventoryTransaction(AdjustOrder order, AdjustOrderItem item,
+                                                           Date executeTime, Long userId) {
+        InventoryTransaction transaction = new InventoryTransaction();
+        transaction.setTenantId(order.getTenantId());
+        //如果变动前的数量 > 变动后的数量，则为出库
+        transaction.setOrderType(item.getBeforeQuantity().compareTo(item.getAfterQuantity()) > 0 ? CkInventoryEnums.OrderType.OUT.getCode() : CkInventoryEnums.OrderType.IN.getCode());
+        //TODO yang  setOrderTypeDetail ()
+        // CkInOutboundEnums#InBoundType
+        // 这个看看要不要把出入库的类型处理成一个枚举，或者保证int值不相同
+        transaction.setOrderTypeDetail(CkInOutboundEnums.InBoundType.TransferInbound.getCode());
+        transaction.setProductId(item.getProductId());
+        transaction.setWarehouseId(item.getWarehouseId());
+        transaction.setBatchNo(item.getBatchNo());
+        transaction.setShelfId(item.getShelfId());
+        transaction.setBeforBalanceQuantity(item.getBeforeQuantity());
+        transaction.setChangeQuantity(item.getAdjustQuantity());
+        transaction.setBalanceQuantity(item.getAfterQuantity());
+
+        // 成本信息
+        transaction.setPriceUnit(item.getUnitCost() != null ? item.getUnitCost() : BigDecimal.ZERO);
+        if (item.getUnitCost() != null
+                && !Objects.equals(item.getUnitCost(), BigDecimal.ZERO)
+                && item.getAdjustQuantity() != null
+                && !Objects.equals(item.getAdjustQuantity(), BigDecimal.ZERO)) {
+            transaction.setPriceTotal(item.getUnitCost().multiply(item.getAdjustQuantity()));
+        } else {
+            transaction.setPriceTotal(BigDecimal.ZERO);
+        }
+
+        transaction.setOrderId(order.getId());
+        transaction.setOrderItemId(item.getId());
+        transaction.setTransactionTime(executeTime);
+        transaction.setRemark("库存调整单:" + order.getAdjustNo() + " - " + item.getAdjustReason());
+        transaction.setCreatedBy(userId);
+        transaction.setCreatedAt(new Date());
+        transaction.setModifiedBy(userId);
+        transaction.setModifiedAt(new Date());
+        transaction.setIsDeleted(0);
+
+        return transaction;
+    }
+
+    /**
+     * 更新明细状态为已执行
+     */
+    private void updateItemToExecuted(AdjustOrderItem item, Long userId, Date executeTime) {
+        AdjustOrderItem updateItem = new AdjustOrderItem();
+        updateItem.setId(item.getId());
+        updateItem.setStatus(CkAdjustEnums.AdjustOrderItemStatus.Executed.getCode());
+        updateItem.setExecuteTime(executeTime);
+        updateItem.setExecuteBy(userId);
+        updateItem.setModifiedBy(userId);
+        updateItem.setModifiedAt(new Date());
+
+        boolean updated = adjustOrderItemService.update(updateItem, new QueryWrapper<AdjustOrderItem>()
+                .eq("id", item.getId())
+                .eq("tenant_id", item.getTenantId())
+                .eq("status", CkAdjustEnums.AdjustOrderItemStatus.WaitExecute.getCode())
+                .eq("is_deleted", 0));
+
+        if (!updated) {
+            throw new RuntimeException("更新调整单明细状态失败，itemId:" + item.getId());
+        }
+    }
+
+    /**
+     * 更新调整单状态为调整完成
+     */
+    private void updateOrderToCompleted(AdjustOrder order, Long userId, Date executeTime) {
+        AdjustOrder updateEntity = new AdjustOrder();
+        updateEntity.setId(order.getId());
+        updateEntity.setAdjustStatus(CkAdjustEnums.AdjustOrderStatus.AdjustComplete.getCode());
+        updateEntity.setActualExecuteTime(executeTime);
+        updateEntity.setModifiedBy(userId);
+        updateEntity.setModifiedAt(new Date());
+
+        boolean updated = adjustOrderService.update(updateEntity, new QueryWrapper<AdjustOrder>()
+                .eq("id", order.getId())
+                .eq("tenant_id", order.getTenantId())
+                .eq("adjust_status", CkAdjustEnums.AdjustOrderStatus.StartExecute.getCode())
+                .eq("is_deleted", 0));
+
+        if (!updated) {
+            throw new RuntimeException("更新调整单状态为完成失败");
+        }
+    }
+
+    /**
+     * 更新调整单状态为调整失败
+     */
+    private void updateOrderToFailed(AdjustOrder order, Long userId, String errorMsg) {
+        try {
+            AdjustOrder updateEntity = new AdjustOrder();
+            updateEntity.setId(order.getId());
+            updateEntity.setAdjustStatus(CkAdjustEnums.AdjustOrderStatus.AdjustFail.getCode());
+            updateEntity.setRemark((order.getRemark() != null ? order.getRemark() + "; " : "") +
+                    "执行失败:" + (errorMsg.length() > 200 ? errorMsg.substring(0, 200) : errorMsg));
+            updateEntity.setModifiedBy(userId);
+            updateEntity.setModifiedAt(new Date());
+
+            adjustOrderService.update(updateEntity, new QueryWrapper<AdjustOrder>()
+                    .eq("id", order.getId())
+                    .eq("tenant_id", order.getTenantId())
+                    .in("adjust_status",
+                            CkAdjustEnums.AdjustOrderStatus.StartExecute.getCode(),
+                            CkAdjustEnums.AdjustOrderStatus.AuditPass.getCode())
+                    .eq("is_deleted", 0));
+        } catch (Exception e) {
+            log.error("更新调整单为失败状态异常", e);
+        }
+    }
 }

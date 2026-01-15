@@ -11,7 +11,7 @@
           <el-breadcrumb-item to="/stock/take-list">库存管理</el-breadcrumb-item>
           <el-breadcrumb-item v-if="createType === 'manual'">调整单管理</el-breadcrumb-item>
           <el-breadcrumb-item v-else>盘点管理</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ createType === 'stock_take' ? '盘点差异调整' : '手动创建调整单' }}</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ createType === 'stock_take' ? '盘点差异调整' : '手动创建调整单1' }}</el-breadcrumb-item>
           <el-breadcrumb-item v-if="createType === 'stock_take' && stockTakeInfo.stockTakeNo">
             {{ stockTakeInfo.stockTakeNo }}
           </el-breadcrumb-item>

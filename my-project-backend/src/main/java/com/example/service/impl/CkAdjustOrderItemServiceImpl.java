@@ -1,10 +1,13 @@
 package com.example.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.AdjustOrderItem;
 import com.example.mapper.CkAdjustOrderItemMapper;
 import com.example.service.CkAdjustOrderItemService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @Author YangJian
@@ -14,4 +17,11 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class CkAdjustOrderItemServiceImpl extends ServiceImpl<CkAdjustOrderItemMapper, AdjustOrderItem> implements CkAdjustOrderItemService {
+    @Override
+    public List<AdjustOrderItem> selectByAdjustOrderId(Long adjustOrderId, Long tenantId) {
+        return this.baseMapper.selectList(new QueryWrapper<AdjustOrderItem>()
+                .eq("tenant_id", tenantId)
+                .eq("adjust_order_id", adjustOrderId)
+                .eq("is_deleted", 0));
+    }
 }

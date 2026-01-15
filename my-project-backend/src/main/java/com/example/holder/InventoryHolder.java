@@ -1,6 +1,7 @@
 package com.example.holder;
 
 import com.example.entity.cangku.dto.*;
+import com.example.enums.CkInventoryEnums;
 import com.example.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -152,7 +153,7 @@ public class InventoryHolder {
         transaction.setBatchNo(item.getBatchNo());
         transaction.setShelfId(item.getShelfLocationId());
         transaction.setProductId(item.getProductId());
-        transaction.setOrderType(1); // 1-入库单
+        transaction.setOrderType(CkInventoryEnums.OrderType.IN.getCode()); // 1-入库单
         transaction.setOrderTypeDetail(inboundOrder.getOrderType());
         transaction.setOrderId(inboundOrder.getId());
         transaction.setOrderItemId(item.getId());
@@ -208,7 +209,7 @@ public class InventoryHolder {
         transaction.setWarehouseId(outboundOrder.getWarehouseId());
         transaction.setShelfId(item.getShelfLocationId());
         transaction.setProductId(item.getProductId());
-        transaction.setOrderType(2); // 1-入库单
+        transaction.setOrderType(CkInventoryEnums.OrderType.OUT.getCode());
         transaction.setOrderTypeDetail(outboundOrder.getOrderType());
         transaction.setOrderId(outboundOrder.getId());
         transaction.setOrderItemId(item.getId());
