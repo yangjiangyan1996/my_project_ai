@@ -6,18 +6,18 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.entity.cangku.dto.AdjustOrder;
 import com.example.entity.cangku.dto.AdjustOrderItem;
 import com.example.entity.cangku.dto.InventoryTransaction;
+import com.example.entity.cangku.dto.Warehouse;
 import com.example.entity.cangku.req.AdjustApproveOkReq;
 import com.example.entity.cangku.req.AdjustListPageReq;
 import com.example.entity.cangku.req.AdjustRequest;
 import com.example.entity.cangku.req.AdjustSubmitApproveReq;
-import com.example.entity.cangku.resp.AdjustOrderResp;
+import com.example.entity.cangku.resp.*;
+import com.example.entity.dto.Account;
 import com.example.enums.CkAdjustEnums;
 import com.example.enums.CkInOutboundEnums;
 import com.example.enums.CkInventoryEnums;
 import com.example.holder.InventoryUpdateHelper;
-import com.example.service.CkAdjustOrderItemService;
-import com.example.service.CkAdjustOrderService;
-import com.example.service.CkInventoryTransactionService;
+import com.example.service.*;
 import com.example.utils.DateUtils;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -49,6 +49,10 @@ public class CkAdjustOrderFacade {
     CkInventoryTransactionService inventoryTransactionService;
     @Resource
     InventoryUpdateHelper inventoryUpdateHelper;
+    @Resource
+    AccountService accountService;
+    @Resource
+    CkWareHouseService warehouseService;
     @Resource
     CkAdjustOrderItemService adjustOrderItemService;
 
@@ -379,7 +383,7 @@ public class CkAdjustOrderFacade {
                 // 5. 更新库存
                 boolean inventoryUpdated = inventoryUpdateHelper.updateInventoryByAdjustItem(tenantId, item);
                 if (!inventoryUpdated) {
-                    throw new RuntimeException("更新库存失败，itemId:" + item.getId());
+                    throw new ValidationException("更新库存失败，itemId:" + item.getId());
                 }
 
                 // 6. 创建库存流水记录
@@ -401,14 +405,14 @@ public class CkAdjustOrderFacade {
             log.info("调整单执行成功，id:{}, 共处理{}条明细", id, adjustOrderItems.size());
             return true;
 
-        } catch (Exception e) {
+        }catch (ValidationException e) {
             log.error("调整单执行失败，id:{}", id, e);
 
             // 更新调整单状态为调整失败
             updateOrderToFailed(adjustOrder, userId, e.getMessage());
 
             // 抛异常让事务回滚
-            throw new RuntimeException("调整单执行失败: " + e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -494,7 +498,7 @@ public class CkAdjustOrderFacade {
                 .eq("is_deleted", 0));
 
         if (!updated) {
-            throw new RuntimeException("更新调整单明细状态失败，itemId:" + item.getId());
+            throw new ValidationException("更新调整单明细状态失败，itemId:" + item.getId());
         }
     }
 
@@ -516,7 +520,7 @@ public class CkAdjustOrderFacade {
                 .eq("is_deleted", 0));
 
         if (!updated) {
-            throw new RuntimeException("更新调整单状态为完成失败");
+            throw new ValidationException("更新调整单状态为完成失败");
         }
     }
 
@@ -543,5 +547,124 @@ public class CkAdjustOrderFacade {
         } catch (Exception e) {
             log.error("更新调整单为失败状态异常", e);
         }
+    }
+
+
+
+    //---------------------------查询--------------------------
+    /**
+     * 获取调整单详情（包含明细）
+     */
+    public AdjustDetailResp getAdjustOrderDetail(Long id, Long tenantId) {
+        log.info("获取调整单详情，id:{}, tenantId:{}", id, tenantId);
+
+        // 1. 查询调整单主表
+        AdjustOrder adjustOrder = adjustOrderService.selectById(id, tenantId);
+        if (adjustOrder == null) {
+            throw new ValidationException("调整单不存在");
+        }
+
+        // 2. 查询调整单明细
+        List<AdjustOrderItem> items = adjustOrderItemService.selectByAdjustOrderId(id, tenantId);
+
+        // 3. 构建响应对象
+        AdjustDetailResp resp = new AdjustDetailResp();
+        BeanUtils.copyProperties(adjustOrder, resp);
+
+        // 4. 设置扩展字段
+        resp.setWarehouseName(getWarehouseName(adjustOrder.getWarehouseId(), tenantId));
+        resp.setCreatedByName(getUserName(adjustOrder.getCreatedBy()));
+        resp.setModifiedByName(getUserName(adjustOrder.getModifiedBy()));
+        resp.setApproverName(getUserName(adjustOrder.getApproverId()));
+
+        // 5. 转换明细列表
+        List<AdjustItemDetail> itemDetails = items.stream().map(item -> {
+            AdjustItemDetail detail = new AdjustItemDetail();
+            BeanUtils.copyProperties(item, detail);
+            detail.setExecuteByName(getUserName(item.getExecuteBy()));
+            detail.setCreatedByName(getUserName(item.getCreatedBy()));
+            return detail;
+        }).collect(Collectors.toList());
+
+        resp.setItems(itemDetails);
+
+        return resp;
+    }
+
+    /**
+     * 获取调整单基本信息
+     */
+    public AdjustBasicResp getAdjustOrderBasic(Long id, Long tenantId) {
+        AdjustOrder adjustOrder = adjustOrderService.selectById(id, tenantId);
+        if (adjustOrder == null) {
+            throw new ValidationException("调整单不存在");
+        }
+
+        AdjustBasicResp resp = new AdjustBasicResp();
+        BeanUtils.copyProperties(adjustOrder, resp);
+        resp.setWarehouseName(getWarehouseName(adjustOrder.getWarehouseId(), tenantId));
+        resp.setCreatedByName(getUserName(adjustOrder.getCreatedBy()));
+        resp.setApproverName(getUserName(adjustOrder.getApproverId()));
+
+        return resp;
+    }
+
+    private String getWarehouseName(Long warehouseId, Long tenantId) {
+        try {
+            Warehouse warehouse = warehouseService.selectByTenantIdAndWareHouseId(tenantId, warehouseId);
+            if (warehouse == null) {
+                return "";
+            }
+            return warehouse.getName();
+        } catch (Exception e) {
+            log.warn("获取仓库名称失败，warehouseId:{}", warehouseId, e);
+            return "";
+        }
+    }
+
+    private String getUserName(Long userId) {
+        if (userId == null || userId <= 0) {
+            return "";
+        }
+        try {
+            Account account = accountService.selectById(userId);
+            if (account == null) {
+                return "";
+            }
+            return account.getNickname();
+        } catch (Exception e) {
+            log.warn("获取用户姓名失败，userId:{}", userId, e);
+            return "";
+        }
+    }
+
+
+    /**
+     * 查询执行结果
+     */
+    public AdjustExecuteResult queryExecuteResult(Long orderId, Long tenantId) {
+        AdjustOrder order = adjustOrderService.selectById(orderId, tenantId);
+        if (order == null) {
+            return null;
+        }
+
+        AdjustExecuteResult result = new AdjustExecuteResult();
+        result.setOrderId(orderId);
+        result.setOrderNo(order.getAdjustNo());
+        result.setStatus(order.getAdjustStatus());
+        result.setExecuteTime(order.getActualExecuteTime());
+
+        if (CkAdjustEnums.AdjustOrderStatus.AdjustComplete.getCode().equals(order.getAdjustStatus())) {
+            // 查询执行成功的明细
+            List<AdjustOrderItem> items = adjustOrderItemService
+                    .selectByAdjustOrderId(orderId, tenantId);
+            long successCount = items.stream()
+                    .filter(item -> CkAdjustEnums.AdjustOrderItemStatus.Executed.getCode().equals(item.getStatus()))
+                    .count();
+            result.setSuccessCount((int) successCount);
+            result.setTotalCount(items.size());
+        }
+
+        return result;
     }
 }

@@ -10,7 +10,10 @@ import com.example.entity.cangku.req.AdjustApproveOkReq;
 import com.example.entity.cangku.req.AdjustListPageReq;
 import com.example.entity.cangku.req.AdjustRequest;
 import com.example.entity.cangku.req.AdjustSubmitApproveReq;
+import com.example.entity.cangku.resp.AdjustBasicResp;
+import com.example.entity.cangku.resp.AdjustDetailResp;
 import com.example.entity.cangku.resp.AdjustOrderResp;
+import com.example.entity.cangku.resp.AdjustExecuteResult;
 import com.example.filter.UserUtil;
 import jakarta.annotation.Resource;
 import jakarta.validation.ValidationException;
@@ -130,6 +133,64 @@ public class CkAdjustOrderController {
             return RespBean.failure(999, e.getMessage());
         } catch (Exception e) {
             log.error("CkAdjustOrderController#pageList,req:{}", JSON.toJSONString(req), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+
+    /**
+     * 获取调整单详情（包括明细）
+     * GET /api/auth/adjust/detail?id={id}
+     */
+    @GetMapping("/detail")
+    public RespBean<AdjustDetailResp> getAdjustOrderDetail(@RequestParam("id") Long id) {
+        try {
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            AdjustDetailResp result = ckAdjustOrderFacade.getAdjustOrderDetail(id, tenantId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("CkAdjustOrderController#getAdjustOrderDetail,req:{}", JSON.toJSONString(id), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("CkAdjustOrderController#getAdjustOrderDetail,req:{}", JSON.toJSONString(id), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 获取调整单基本信息
+     * GET /api/auth/adjust/basic?id={id}
+     */
+    @GetMapping("/basic")
+    public RespBean<AdjustBasicResp> getAdjustOrderBasic(@RequestParam Long id) {
+        try {
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            AdjustBasicResp result = ckAdjustOrderFacade.getAdjustOrderBasic(id, tenantId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("CkAdjustOrderController#getAdjustOrderBasic,req:{}", JSON.toJSONString(id), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("CkAdjustOrderController#getAdjustOrderBasic,req:{}", JSON.toJSONString(id), e);
+            return RespBean.failure(999, "系统异常，请联系管理员");
+        }
+    }
+
+    /**
+     * 获取调整单执行结果
+     * GET /api/auth/adjust/execute-result?id={id}
+     */
+    @GetMapping("/execute-result")
+    public RespBean<AdjustExecuteResult> getExecuteResult(@RequestParam Long id) {
+        try {
+            Long tenantId = UserUtil.getCurrentUser().getTenantId();
+            AdjustExecuteResult result = ckAdjustOrderFacade.queryExecuteResult(id, tenantId);
+            return RespBean.success(result);
+        } catch (ValidationException e) {
+            log.error("CkAdjustOrderController#getExecuteResult,req:{}", JSON.toJSONString(id), e);
+            return RespBean.failure(999, e.getMessage());
+        } catch (Exception e) {
+            log.error("CkAdjustOrderController#getExecuteResult,req:{}", JSON.toJSONString(id), e);
             return RespBean.failure(999, "系统异常，请联系管理员");
         }
     }

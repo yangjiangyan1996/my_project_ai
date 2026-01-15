@@ -23,8 +23,10 @@ public class Account implements BaseData {
     Long id;
     Long tenantId;
     Long secrecyId;
+    // 真实用户名
     String username;
     String password;
+    // 昵称
     String nickname;
     Integer sex;
     Long industryCode;

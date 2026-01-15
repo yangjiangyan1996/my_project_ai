@@ -571,12 +571,13 @@ const handleConfirmAudit = async () => {
       ElMessage.success(auditForm.approveStatus === 2 ? '审核通过成功' : '审核拒绝成功');
       auditDialogVisible.value = false;
       refreshList();
-    } else {
-      ElMessage.error('审核操作失败');
     }
+    //  else {
+    //   ElMessage.error('审核操作失败');
+    // }
   } catch (error) {
     console.error('审核操作失败:', error);
-    ElMessage.error('审核操作失败');
+    // ElMessage.error('审核操作失败');
   } finally {
     auditing.value = false;
   }
@@ -725,8 +726,15 @@ const handleView = async (adjustOrder) => {
       path: `/index/ckStockAdjustment/${adjustOrder.id}`,
       query: {
         viewMode: 'detail',
+        // 如果调整单不是手动创建的，可能会有sourceType和sourceId
+        sourceType: adjustOrder.sourceType,
+        sourceId: adjustOrder.sourceId,
+        sourceNo: adjustOrder.sourceNo,
+        // 仓库信息用于页面显示
         warehouseId: adjustOrder.warehouseId,
-        warehouseName: adjustOrder.warehouseName
+        warehouseName: adjustOrder.warehouseName,
+        // 创建类型：如果是盘点单创建的，需要标识
+        createType: adjustOrder.sourceType === 1 ? 'stock_take' : 'adjust_detail'
       }
     });
   } catch (error) {

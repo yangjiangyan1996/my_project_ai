@@ -66,8 +66,12 @@ public class InventoryUpdateHelper {
             }
             
             return true;
-        } catch (Exception e) {
+        } catch (ValidationException e) {
             log.error("更新库存失败，tenantId:{}, productId:{}, warehouseId:{}, quantity:{}", 
+                    tenantId, productId, warehouseId, adjustQuantity, e);
+            throw e;
+        }catch (Exception e) {
+            log.error("更新库存失败，tenantId:{}, productId:{}, warehouseId:{}, quantity:{}",
                     tenantId, productId, warehouseId, adjustQuantity, e);
             throw new RuntimeException("库存更新失败", e);
         }
