@@ -14,6 +14,13 @@ public interface CkInboundOrderService extends IService<InboundOrder> {
 
     InboundOrder selectById(Long orderId, Long tenantId);
 
+    /**
+     * 审核通过状态 CAS：仅当当前 status=expectedStatus 时更新为 newStatus。
+     * @return true 当且仅当影响行数 == 1
+     */
+    boolean casUpdateStatusForApprove(Long id, Long tenantId, Integer expectedStatus,
+                                      Integer newStatus, Long userId, Date modifiedAt);
+
     List<InboundOrder> selectByInboundOrderIds(Long tenantId, List<Long> inboundOrderIds);
 
     List<InboundOrder> selectCountsByInboundListPageReq(InboundListPageReq tenantId);

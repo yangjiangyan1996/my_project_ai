@@ -369,14 +369,14 @@ public class CkOutboundFacade {
                 throw new ValidationException("出库单明细为空，无法审核");
             }
 
+            // 2.1 状态 CAS 必须在库存 Mutation 之前，保证重复审核无法再次扣库
+            casApproveOrderStatus(outboundOrder, approveOkReq.getUserId());
+
             // 处理库存锁定
             LockResult unlockResult = processInventoryLocking(approveOkReq, outboundOrder);
 
             // 扣减实际库存
             processInventoryDeduction(outboundOrder, orderItems, approveOkReq.getUserId());
-
-            // 更新出库单状态
-            updateOrderToApproved(outboundOrder, approveOkReq.getUserId());
 
             // 更新生产任务（如果是生产领料）
             processProductionTaskUpdate(outboundOrder, approveOkReq);
@@ -1430,9 +1430,43 @@ public class CkOutboundFacade {
 
         if (!CkInOutboundEnums.InOutBoundStatus.WaitAudit.getCode().equals(order.getStatus())) {
             String statusName = CkInOutboundEnums.InOutBoundStatus.getDescByCode(order.getStatus());
+            throw new ValidationException("当前状态不允许审核通过，当前状态: "
+                    + (statusName != null ? statusName : order.getStatus()));
         }
 
         return order;
+    }
+
+    /**
+     * 审核状态 CAS：WaitAudit → AuditPass。失败则不得进入库存 Mutation。
+     */
+    private void casApproveOrderStatus(OutboundOrder outboundOrder, Long userId) {
+        Date now = new Date();
+        String remark = StringUtils.isBlank(outboundOrder.getRemark())
+                ? "[审核通过]"
+                : outboundOrder.getRemark() + " [审核通过]";
+        if (remark.length() > 500) {
+            remark = remark.substring(0, 500);
+        }
+
+        boolean casOk = outboundOrderService.casUpdateStatusForApprove(
+                outboundOrder.getId(),
+                outboundOrder.getTenantId(),
+                CkInOutboundEnums.InOutBoundStatus.WaitAudit.getCode(),
+                CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode(),
+                userId,
+                now,
+                remark);
+
+        if (!casOk) {
+            throw new ValidationException("订单状态已变化，请刷新后重试");
+        }
+
+        outboundOrder.setStatus(CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode());
+        outboundOrder.setModifiedBy(userId);
+        outboundOrder.setModifiedAt(now);
+        outboundOrder.setRemark(remark);
+        log.info("订单{}状态 CAS 成功: WaitAudit → AuditPass", outboundOrder.getId());
     }
 
     /**
@@ -1484,38 +1518,6 @@ public class CkOutboundFacade {
         } catch (Exception e) {
             log.error("订单{}库存扣减异常", outboundOrder.getId(), e);
             throw new ValidationException("库存扣减异常: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 更新订单状态为已审核
-     */
-    private void updateOrderToApproved(OutboundOrder outboundOrder, Long userId) {
-        log.info("更新订单{}状态为已审核", outboundOrder.getId());
-
-        try {
-            outboundOrder.setStatus(CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode());
-            outboundOrder.setModifiedBy(userId);
-            outboundOrder.setModifiedAt(new Date());
-
-            String remark = StringUtils.isBlank(outboundOrder.getRemark()) ?
-                    "[审核通过]" : outboundOrder.getRemark() + " [审核通过]";
-
-            if (remark.length() > 500) {
-                remark = remark.substring(0, 500);
-            }
-            outboundOrder.setRemark(remark);
-
-            boolean updated = outboundOrderService.updateById(outboundOrder);
-            if (!updated) {
-                throw new ValidationException("订单状态更新失败");
-            }
-
-            log.info("订单{}状态更新成功", outboundOrder.getId());
-
-        } catch (Exception e) {
-            log.error("更新订单{}状态异常", outboundOrder.getId(), e);
-            throw new ValidationException("订单状态更新失败: " + e.getMessage());
         }
     }
 

@@ -869,7 +869,7 @@ public class CkInboundFacade {
             throw new ValidationException("入库单不存在");
         }
 
-        // 3. 检查状态是否允许审核通过
+        // 3. 检查状态是否允许审核通过（用户友好预检；并发安全依赖下方 CAS）
         validateOrderStatusForApprove(inboundOrder.getStatus());
 
         // 4. 查询入库单明细
@@ -878,19 +878,37 @@ public class CkInboundFacade {
             throw new ValidationException("入库单明细不能为空");
         }
 
-        // 5. 更新库存和流水记录
+        // 5. 状态 CAS 必须在库存 Mutation 之前，保证重复审核无法再次加库
+        casApproveOrderStatus(inboundOrder, req.getUserId());
+
+        // 6. 更新库存和流水记录
         inventoryHolder.updateAddInventoryForApprove(inboundOrder, orderItems, req.getUserId());
 
-        //更新生产任务
+        // 7. 更新生产任务
         updateProductionTask(orderItems);
 
-        // 6. 更新入库单状态为已完成 3-入库已完成
-        boolean statusUpdated = updateInboundOrderStatus(inboundOrder.getId(), CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode(), req.getUserId());
-        if (!statusUpdated) {
-            throw new ValidationException("更新入库单状态失败");
-        }
-
         return true;
+    }
+
+    /**
+     * 审核状态 CAS：WaitAudit → AuditPass。失败则不得进入库存 Mutation。
+     */
+    private void casApproveOrderStatus(InboundOrder inboundOrder, Long userId) {
+        Date now = new Date();
+        boolean casOk = inboundOrderService.casUpdateStatusForApprove(
+                inboundOrder.getId(),
+                inboundOrder.getTenantId(),
+                CkInOutboundEnums.InOutBoundStatus.WaitAudit.getCode(),
+                CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode(),
+                userId,
+                now);
+        if (!casOk) {
+            throw new ValidationException("订单状态已变化，请刷新后重试");
+        }
+        inboundOrder.setStatus(CkInOutboundEnums.InOutBoundStatus.AuditPass.getCode());
+        inboundOrder.setModifiedBy(userId);
+        inboundOrder.setModifiedAt(now);
+        log.info("入库单{}状态 CAS 成功: WaitAudit → AuditPass", inboundOrder.getId());
     }
 
     private void updateProductionTask(List<InboundOrderItem> orderItems) {
@@ -1000,14 +1018,15 @@ public class CkInboundFacade {
     }
 
     /**
-     * 检查订单状态是否允许审核通过
+     * 检查订单状态是否允许审核通过（仅 WaitAudit=1）。
+     * 真正并发安全依赖 casUpdateStatusForApprove。
      */
     private void validateOrderStatusForApprove(Integer currentStatus) {
-        // TODO yang 等审核流程完成后放开
-        //  审核已通过(2)状态允许入库操作
-//        if (currentStatus != 2) {
-//            throw new ValidationException("当前状态不允许审核通过，只能审核审核中或已通过的入库单");
-//        }
+        if (!CkInOutboundEnums.InOutBoundStatus.WaitAudit.getCode().equals(currentStatus)) {
+            String statusName = CkInOutboundEnums.InOutBoundStatus.getDescByCode(currentStatus);
+            throw new ValidationException("当前状态不允许审核通过，当前状态: "
+                    + (statusName != null ? statusName : currentStatus));
+        }
     }
 
 

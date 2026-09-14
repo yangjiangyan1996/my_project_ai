@@ -18,6 +18,13 @@ public interface CkOutboundOrderService extends IService<OutboundOrder> {
 
     OutboundOrder selectById(Long id, Long tenantId);
 
+    /**
+     * 审核通过状态 CAS：仅当当前 status=expectedStatus 时更新为 newStatus。
+     * @return true 当且仅当影响行数 == 1
+     */
+    boolean casUpdateStatusForApprove(Long id, Long tenantId, Integer expectedStatus,
+                                      Integer newStatus, Long userId, Date modifiedAt, String remark);
+
     List<OutboundOrder> selectByOutboundOrderIds(Long tenantId, List<Long> orderIds);
 
     List<OutboundOrder> selectByOutboundOrderNos(Long tenantId, List<String> outboundOrderNoList);

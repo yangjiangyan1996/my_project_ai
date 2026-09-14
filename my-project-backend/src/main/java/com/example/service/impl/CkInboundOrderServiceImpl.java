@@ -1,10 +1,12 @@
 package com.example.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.cangku.dto.InboundOrder;
 import com.example.entity.cangku.req.InboundListPageReq;
+import com.example.enums.CkCommonEnums;
 import com.example.enums.CkInOutboundEnums;
 import com.example.mapper.CkInboundOrderMapper;
 import com.example.service.CkInboundOrderService;
@@ -69,6 +71,20 @@ public class CkInboundOrderServiceImpl extends ServiceImpl<CkInboundOrderMapper,
                 .eq("id", orderId)
                 .eq("tenant_id", tenantId)
                 .one();
+    }
+
+    @Override
+    public boolean casUpdateStatusForApprove(Long id, Long tenantId, Integer expectedStatus,
+                                             Integer newStatus, Long userId, Date modifiedAt) {
+        UpdateWrapper<InboundOrder> uw = new UpdateWrapper<>();
+        uw.eq("id", id)
+                .eq("tenant_id", tenantId)
+                .eq("status", expectedStatus)
+                .eq("is_deleted", CkCommonEnums.IsDeleted.NoDelete.getCode())
+                .set("status", newStatus)
+                .set("modified_by", userId)
+                .set("modified_at", modifiedAt);
+        return this.update(uw);
     }
 
     @Override
