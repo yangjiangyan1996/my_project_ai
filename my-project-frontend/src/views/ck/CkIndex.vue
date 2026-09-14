@@ -168,6 +168,7 @@
 
     <!-- 主内容区域 - 根据 displayMode 显示不同组件 -->
     <div class="main-content" v-if="displayMode === 'dashboard'">
+      <AiDailyWorkspace />
       <!-- 数据概览 -->
        <div class="chart-stats">
           <div class="stat-item">
@@ -454,6 +455,7 @@ import CkCkUnitManage from '@/views/ck/CkUnitManage.vue';
 import CkRecommendRuleManage from '@/views/ck/CkRecommendRuleManage.vue';
 import StockManage from '@/views/ck/stock/StockManage.vue';
 import StockTakeTaskManage from '@/views/ck/stock/StockTakeTaskManage.vue';
+import AiDailyWorkspace from '@/components/ai-workspace/AiDailyWorkspace.vue';
 
 
 

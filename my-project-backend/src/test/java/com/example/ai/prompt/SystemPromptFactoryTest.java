@@ -14,6 +14,8 @@ class SystemPromptFactoryTest {
         assertTrue(p.contains("其他租户"));
         assertTrue(p.contains("L4"));
         assertTrue(p.contains(SystemPromptFactory.VERSION));
-        assertTrue(p.contains("只允许只读") || p.contains("只读查询"));
+        assertTrue(p.contains("只读查询") || p.contains("只允许只读"));
+        assertTrue(new SystemPromptFactory().buildDailyWorkspaceSummaryPrompt().contains("不得改写数字")
+                || new SystemPromptFactory().buildDailyWorkspaceSummaryPrompt().contains("禁止猜测"));
     }
 }

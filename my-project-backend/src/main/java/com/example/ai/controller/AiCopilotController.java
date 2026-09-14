@@ -1,12 +1,17 @@
 package com.example.ai.controller;
 
 import com.example.ai.application.WarehouseAiOrchestrator;
+import com.example.ai.context.AiExecutionContext;
 import com.example.ai.exception.AiException;
 import com.example.ai.exception.AiPermissionException;
 import com.example.ai.exception.AiValidationException;
 import com.example.ai.model.CopilotChatRequest;
 import com.example.ai.model.CopilotChatResponse;
 import com.example.ai.model.CopilotResponseType;
+import com.example.ai.permission.AiPermissionChecker;
+import com.example.ai.permission.AiUserContext;
+import com.example.ai.workspace.AiDailyWorkspaceResponse;
+import com.example.ai.workspace.DailyWorkspaceService;
 import com.example.entity.base.RespBean;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -28,14 +33,32 @@ public class AiCopilotController {
 
     @Resource
     private WarehouseAiOrchestrator warehouseAiOrchestrator;
+    @Resource
+    private DailyWorkspaceService dailyWorkspaceService;
+    @Resource
+    private AiUserContext aiUserContext;
+    @Resource
+    private AiPermissionChecker permissionChecker;
 
     @GetMapping("/health")
     public RespBean<Map<String, Object>> health() {
         return RespBean.success(Map.of(
                 "status", "UP",
                 "module", "ai-wms-copilot",
-                "phase", "D"
+                "phase", "F"
         ));
+    }
+
+    /**
+     * Daily Workspace: structured WMS facts + best-effort AI summary.
+     * LLM failure must not fail this endpoint when facts succeed.
+     */
+    @GetMapping("/daily-workspace")
+    public RespBean<AiDailyWorkspaceResponse> dailyWorkspace() {
+        AiExecutionContext ctx = aiUserContext.fromCurrentUser(null, Map.of("source", "daily-workspace"));
+        permissionChecker.requireAuthenticated(ctx);
+        AiDailyWorkspaceResponse body = dailyWorkspaceService.load(ctx);
+        return RespBean.success(body);
     }
 
     @PostMapping("/chat")

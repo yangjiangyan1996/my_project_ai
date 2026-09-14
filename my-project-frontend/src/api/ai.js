@@ -1,4 +1,4 @@
-import { post } from '@/net'
+import { post, get } from '@/net'
 
 /**
  * AI Copilot API — never send tenantId / userId / permissions.
@@ -9,4 +9,8 @@ export function chat({ conversationId, message, context }) {
     message,
     context: context || {}
   })
+}
+
+export function getDailyWorkspace() {
+  return get('/api/auth/ai/daily-workspace')
 }
