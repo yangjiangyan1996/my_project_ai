@@ -5,7 +5,6 @@ import com.example.config.TenXunConfig;
 import com.example.entity.base.RespBean;
 import com.example.entity.base.UserInfo;
 import com.example.filter.UserUtil;
-import com.example.mapper.ImagesMapper;
 import com.example.utils.FileUtils;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.exception.CosServiceException;
@@ -36,8 +35,6 @@ public class UploadController {
     TenXunConfig tenXunConfig;
     @Resource
     FsFacade fsFacade;
-    @Resource
-    private ImagesMapper imagesMapper;
 
     @PostMapping("/upload")
     public RespBean<String> uploadImage(@RequestParam("file") MultipartFile file) {

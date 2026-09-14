@@ -1,4 +1,4 @@
-// 修复后的路由配置结构
+// WMS-only router (community routes removed)
 import { createRouter, createWebHistory } from 'vue-router'
 import { unauthorized } from "@/net";
 
@@ -24,106 +24,8 @@ const router = createRouter({
                     component: () => import('@/views/welcome/ForgetPage.vue')
                 }
             ]
-        }, {
-            path: '/views/IndexView',
-            name: 'index',
-            component: () => import('@/views/IndexView.vue'),
-            meta: { requiresAuth: false },
-        }, {
-            path: '/name-generator',
-            name: 'name-generator',
-            component: () => import('@/views/NameGenerator.vue'),
-            //meta: { requiresAuth: true }
-            meta: { layout: 'EmptyLayout' } 
-        },{
-            path: '/taohua',
-            name: 'taohua',
-            component: () => import('@/views/TaohuaView.vue'),
-            meta: { layout: 'EmptyLayout' }
-        },{
-            path: '/index/detail/:id',
-            name: 'project-detail',
-            component: () => import('@/views/ProjectDetail.vue')
-          },{
-            path: '/index/my',
-            name: 'my',
-            component: () => import('@/views/My.vue'),
-            meta: { layout: 'EmptyLayout' }
-        },{
-            path: '/index/my/CreateOfFindColleague',
-            name: 'createOfFindColleague',
-            component: () => import('@/views/CreateOfFindColleague.vue')
-        },{
-            path: '/index/my/create-find-job',
-            name: 'createFindJob',
-            component: () => import('@/views/create-find-job.vue')
-        },{
-            path: '/SkillMatch.vue',
-            name: 'skillMatch',
-            component: () => import('@/views/SkillMatch.vue')
-        },{
-            path: '/index/my/applyList',
-            name: 'applyList',
-            component: () => import('@/views/ApplyList.vue'),
-            meta: { requiresAuth: true }
-        },{
-            path: '/index/my/applicationList',
-            name: 'applicationList',
-            component: () => import('@/views/ApplicationList.vue'),
-            meta: { requiresAuth: true }
-        },{
-            path: '/index/my/updateUserInfo',
-            name: 'updateUserInfo',
-            component: () => import('@/views/UpdateUserInfo.vue'),
-            meta: { requiresAuth: true }
-        },{
-            path: '/index/my/adminApplyList',
-            name: 'adminApplyList',
-            component: () => import('@/views/AdminApplyList.vue'),
-            meta: { requiresAuth: true }
-        },{
-            path: '/index/my/myMemberGroupDetail/:id',
-            name: 'myMemberGroupDetail',
-            component: () => import('@/views/MyMemberGroupDetail.vue'),
-            meta: { requiresAuth: true }
-        },{
-            path: '/index/user/:id',
-            name: 'userProfile',
-            component: () => import('@/views/UserProfile.vue'),
-            meta: { requiresAuth: true }
-        },{
-            path: '/index/talentMatch',
-            name: 'talentMatch',
-            component: () => import('@/views/TalentMatch.vue'),
-            meta: { requiresAuth: true }
-        },{
-            path: '/index/rankingList',
-            name: 'rankingList',
-            component: () => import('@/views/RankingList.vue'),
-            meta: { requiresAuth: true }
-        },{
-            path: '/index/QuanList',
-            name: 'quanList',
-            component: () => import('@/views/QuanList.vue'),
-            meta: { requiresAuth: true }
-        },{
-            path: '/index/quan/QuanDetail/:id',
-            name: 'quanDetail',
-            component: () => import('@/views/QuanDetail.vue'),
-            meta: { requiresAuth: true }
-        },{
-            path: '/index/quan/QuanTieDetail/:id',
-            name: 'quanTieDetail',
-            component: () => import('@/views/QuanTieDetail.vue'),
-            meta: { requiresAuth: true }
         },
-        {
-            path: '/index/Toolbox',
-            name: 'toolbox',
-            component: () => import('@/views/Toolbox.vue'),
-            meta: { requiresAuth: true }
-        },
-        {
+{
             path: '/',
             name: 'ckIndex',
             component: () => import('@/views/ck/CkIndex.vue'),
@@ -408,51 +310,36 @@ const router = createRouter({
             meta: { requiresAuth: false }
         },
         // 调整详情
-        // 路由配置示例
         {
             path: '/index/ckStockAdjustment/:id?',
             name: 'ckStockAdjustment',
             component: () => import('@/views/ck/stock/StockAdjustment.vue'),
-            props: (route) => ({
-                id: route.params.id,
-                createType: route.query.createType,
-                warehouseId: route.query.warehouseId,
-                warehouseName: route.query.warehouseName,
-                viewMode: route.query.viewMode,
-                editMode: route.query.editMode,
-                stockTakeId: route.query.stockTakeId
-            }),
+            // props: (route) => ({
+            //     id: route.params.id,
+            //     createType: route.query.createType,
+            //     warehouseId: route.query.warehouseId,
+            //     warehouseName: route.query.warehouseName,
+            //     viewMode: route.query.viewMode,
+            //     editMode: route.query.editMode,
+            //     stockTakeId: route.query.stockTakeId
+            // }),
             meta: { requiresAuth: false }
-        }
-        
+        },
     ]
 })
 
-// 导航守卫正确定义在路由实例之后
 router.beforeEach((to, from, next) => {
-    const isUnauthRoute = to.matched.some(record => {
-    // console.log("=======")
-    // console.log("path:",record.path)
-    console.log("name:",record.name)
-    return record.path.startsWith('/api/unauth') || 
-        record.name === 'welcome-login' || 
-        record.name === 'welcome-register' || 
-        record.name === 'welcome-forget' ||
-        record.name === 'quanDetail' ||
-        record.name === 'quanTieDetail' ||
-        // record.name === 'ckIndex' ||
-        record.name.startsWith('ck')
-});
-
-    // console.log("isUnauthRoute",isUnauthRoute)
-    if (to.matched.some(record => record.meta.requiresAuth) && unauthorized() && !isUnauthRoute) {
-        console.log("去登录3")
-        next({ name: 'welcome-login' });
-    } else if (to.name === 'welcome' && !unauthorized()) {
-        next('/');
-    } else {
-        next();
+    const publicNames = ['welcome', 'welcome-login', 'welcome-register', 'welcome-forget']
+    if (publicNames.includes(to.name)) {
+        next()
+        return
     }
-});
+    // WMS pages: require login (ck routes previously bypassed; tighten to auth)
+    if (unauthorized()) {
+        next({ name: 'welcome-login' })
+        return
+    }
+    next()
+})
 
 export default router

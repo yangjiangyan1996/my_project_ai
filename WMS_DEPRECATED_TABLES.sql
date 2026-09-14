@@ -1,0 +1,74 @@
+-- WMS_DEPRECATED_TABLES.sql
+-- 生成日期: 2026-09-14
+-- 分支: refactor/wms-ai-20260914
+-- 说明: 本文件仅为「待审核」废弃清单。禁止直接在生产执行。
+-- 本轮已删除对应 Java Entity/Mapper；物理 DROP 需单独 Change 审核。
+
+-- ========== 副业社区 / 项目 ==========
+-- 待确认:
+-- DROP TABLE IF EXISTS project_applications;
+-- DROP TABLE IF EXISTS project_comments;
+-- DROP TABLE IF EXISTS project_comment_like;
+-- DROP TABLE IF EXISTS project_favorite;
+-- DROP TABLE IF EXISTS project_like;
+-- DROP TABLE IF EXISTS project_members;
+-- DROP TABLE IF EXISTS project_rankings;
+-- DROP TABLE IF EXISTS project_review;
+-- DROP TABLE IF EXISTS project_watch;
+-- DROP TABLE IF EXISTS projects_detail;
+-- DROP TABLE IF EXISTS projects;
+-- DROP TABLE IF EXISTS partner_locations;
+-- DROP TABLE IF EXISTS forum_posts;
+-- DROP TABLE IF EXISTS ai_recommend_logs;
+
+-- ========== 圈子 ==========
+-- 待确认:
+-- DROP TABLE IF EXISTS quan_tie_comment_like;
+-- DROP TABLE IF EXISTS quan_tie_comments;
+-- DROP TABLE IF EXISTS quan_tie_favorite;
+-- DROP TABLE IF EXISTS quan_tie_watch;
+-- DROP TABLE IF EXISTS quan_bar_tie;
+-- DROP TABLE IF EXISTS quan_user_bar_follows;
+-- DROP TABLE IF EXISTS quan_posts;
+-- DROP TABLE IF EXISTS quan_bars;
+
+-- ========== 聊天 / 站内社交消息 ==========
+-- 待确认:
+-- DROP TABLE IF EXISTS chat_message_status;
+-- DROP TABLE IF EXISTS chat_message;
+-- DROP TABLE IF EXISTS chat_conversation_member;
+-- DROP TABLE IF EXISTS chat_conversation;
+-- DROP TABLE IF EXISTS message_user_settings;
+-- DROP TABLE IF EXISTS messages;
+
+-- ========== 成就 / 积分 / 徽章 ==========
+-- 待确认:
+-- DROP TABLE IF EXISTS task_user_badge;
+-- DROP TABLE IF EXISTS task_user_point;
+-- DROP TABLE IF EXISTS task_user_progress;
+-- DROP TABLE IF EXISTS task_badge;
+-- DROP TABLE IF EXISTS task_definition;
+
+-- ========== 社交关系 / 用户扩展（社区向） ==========
+-- 待确认:
+-- DROP TABLE IF EXISTS user_follow;
+-- DROP TABLE IF EXISTS user_favorites;
+-- DROP TABLE IF EXISTS user_skills;
+-- DROP TABLE IF EXISTS account_show;
+
+-- ========== 明确保留（禁止 DROP） ==========
+-- account
+-- redis                 -- MySQL 伪 KV，命名误导但可能仍有验证码用途，单独评估
+-- ck_*                  -- 全部仓储表
+-- ck_production_task
+-- ck_stock_take_task
+-- ck_approval_task
+-- ck_operation_log
+-- ck_tenant / ck_role / ck_menu / ck_user_role / ck_role_menu
+
+-- 执行前检查清单:
+-- 1. 备份全库
+-- 2. 确认无外部报表/脚本依赖上述表
+-- 3. 确认无只读从库任务引用
+-- 4. 在预发环境执行并观察 ≥7 天
+-- 5. 再生产分批 DROP

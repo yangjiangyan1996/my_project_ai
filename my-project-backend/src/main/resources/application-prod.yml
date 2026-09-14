@@ -13,11 +13,6 @@ deepseek:
     temperature: ${DEEPSEEK_TEMPERATURE:0.7}
     max-tokens: ${DEEPSEEK_MAX_TOKENS:2000}
 
-auto-publish:
-  enabled: true
-  schedule: 0 0 12-18 * * ?
-  max-daily: 3
-
 spring:
   mail:
     host: ${MAIL_HOST:smtp.qq.com}

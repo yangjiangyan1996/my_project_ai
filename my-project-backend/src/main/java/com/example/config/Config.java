@@ -14,15 +14,14 @@ public class Config {
             "/api/auth/login",
             "/api/auth/register",
             "/api/auth/ask-code",
+            "/api/auth/askPhoneCode",
             "/api/auth/verifyEmail",
             "/api/auth/sendVerifyEmail",
+            "/api/auth/reset-confirm",
+            "/api/auth/reset-password",
             "/api/unauth/**",
-            "/api/auth/project/simple",
-
-            "/api/unauth/project/**",
             "/api/auth/common/**",
             "/imgs/**",
             "/static/imgs/**"
-
     };
 }
