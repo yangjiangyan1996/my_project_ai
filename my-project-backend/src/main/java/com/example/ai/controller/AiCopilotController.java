@@ -34,7 +34,7 @@ public class AiCopilotController {
         return RespBean.success(Map.of(
                 "status", "UP",
                 "module", "ai-wms-copilot",
-                "phase", "A"
+                "phase", "D"
         ));
     }
 

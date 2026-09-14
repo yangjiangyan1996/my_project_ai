@@ -7,13 +7,22 @@ import com.example.ai.model.CopilotChatRequest;
 import com.example.ai.model.CopilotChatResponse;
 import com.example.ai.model.CopilotResponseType;
 import com.example.ai.permission.AiPermissionChecker;
+import com.example.ai.permission.AiToolPermissionGuard;
 import com.example.ai.permission.AiUserContext;
 import com.example.ai.prompt.SystemPromptFactory;
+import com.example.ai.tool.LlmToolSchemaAdapter;
+import com.example.ai.tool.ToolCallGuard;
+import com.example.ai.tool.ToolExecutor;
+import com.example.ai.tool.ToolInputValidator;
 import com.example.ai.tool.ToolRegistry;
+import com.example.ai.tool.ToolResultContextCompressor;
+import com.example.ai.tool.ToolRiskPolicy;
 import com.example.entity.base.UserInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -32,6 +41,31 @@ class WarehouseAiOrchestratorTest {
     void setUp() {
         fakeLlmClient = new FakeLlmClient("Phase A foundation OK");
         conversationStore = new InMemoryConversationStore();
+        ReflectionTestUtils.setField(conversationStore, "maxMessagesPerConversation", 40);
+        ReflectionTestUtils.setField(conversationStore, "maxSessions", 500);
+        ReflectionTestUtils.setField(conversationStore, "ttlHours", 24);
+
+        ToolRegistry registry = new ToolRegistry();
+        ToolCallGuard guard = new ToolCallGuard();
+        ReflectionTestUtils.setField(guard, "maxToolCalls", 6);
+        ReflectionTestUtils.setField(guard, "maxSameToolCalls", 2);
+        ReflectionTestUtils.setField(guard, "objectMapper", new ObjectMapper());
+
+        AiToolPermissionGuard permGuard = new AiToolPermissionGuard();
+        ReflectionTestUtils.setField(permGuard, "permissionChecker", new AiPermissionChecker());
+        ToolExecutor executor = new ToolExecutor();
+        ReflectionTestUtils.setField(executor, "toolRegistry", registry);
+        ReflectionTestUtils.setField(executor, "toolRiskPolicy", new ToolRiskPolicy());
+        ReflectionTestUtils.setField(executor, "permissionGuard", permGuard);
+        ReflectionTestUtils.setField(executor, "inputValidator", new ToolInputValidator());
+        ReflectionTestUtils.setField(executor, "auditRecorder", new LoggingAiAuditRecorder());
+
+        ToolResultContextCompressor compressor = new ToolResultContextCompressor();
+        ReflectionTestUtils.setField(compressor, "objectMapper", new ObjectMapper());
+
+        MockEnvironment env = new MockEnvironment();
+        env.setActiveProfiles("test");
+
         orchestrator = new WarehouseAiOrchestrator();
         ReflectionTestUtils.setField(orchestrator, "llmClient", fakeLlmClient);
         ReflectionTestUtils.setField(orchestrator, "aiUserContext", new AiUserContext());
@@ -39,7 +73,12 @@ class WarehouseAiOrchestratorTest {
         ReflectionTestUtils.setField(orchestrator, "systemPromptFactory", new SystemPromptFactory());
         ReflectionTestUtils.setField(orchestrator, "conversationStore", conversationStore);
         ReflectionTestUtils.setField(orchestrator, "auditRecorder", new LoggingAiAuditRecorder());
-        ReflectionTestUtils.setField(orchestrator, "toolRegistry", new ToolRegistry());
+        ReflectionTestUtils.setField(orchestrator, "toolRegistry", registry);
+        ReflectionTestUtils.setField(orchestrator, "toolExecutor", executor);
+        ReflectionTestUtils.setField(orchestrator, "toolCallGuard", guard);
+        ReflectionTestUtils.setField(orchestrator, "toolSchemaAdapter", new LlmToolSchemaAdapter());
+        ReflectionTestUtils.setField(orchestrator, "resultCompressor", compressor);
+        ReflectionTestUtils.setField(orchestrator, "environment", env);
 
         UserInfo user = new UserInfo(1L, null, "admin", "a", "ADMIN", null, null, 100L);
         SecurityContextHolder.getContext().setAuthentication(
@@ -55,10 +94,8 @@ class WarehouseAiOrchestratorTest {
     void chat_returnsStructuredText_andDoesNotBindDeepSeek() {
         CopilotChatResponse resp = orchestrator.chat(CopilotChatRequest.builder()
                 .message("hello")
-                .tenantId(999L) // spoof attempt
+                .tenantId(999L)
                 .build());
-        // spoof rejected before LLM
-        // wait - assertTenantNotSpoofed will throw and be caught as AiException -> ERROR
         assertEquals(CopilotResponseType.ERROR, resp.getType());
         assertTrue(resp.getMessage().contains("租户"));
         assertEquals(0, fakeLlmClient.getCallCount());
@@ -75,6 +112,7 @@ class WarehouseAiOrchestratorTest {
         assertEquals("conv-1", resp.getConversationId());
         assertEquals(1, fakeLlmClient.getCallCount());
         assertEquals(2, conversationStore.list("conv-1", 100L).size());
+        assertNull(resp.getDebugToolTrace()); // non-dev profile
     }
 
     @Test

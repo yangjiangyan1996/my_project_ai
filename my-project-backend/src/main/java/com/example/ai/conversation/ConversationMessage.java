@@ -14,9 +14,13 @@ import java.time.Instant;
 public class ConversationMessage {
     private String conversationId;
     private String messageId;
+    /** system | user | assistant | tool */
     private String role;
     private String content;
     private Instant createdAt;
     private Long userId;
     private Long tenantId;
+    /** When role=tool */
+    private String toolCallId;
+    private String toolName;
 }

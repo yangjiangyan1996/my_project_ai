@@ -35,10 +35,22 @@ public class DeepSeekUtils {
     }
 
     public String callDeepSeek(String userMessage, String systemPrompt) {
+        ChatRequest request = buildSimpleRequest(userMessage, systemPrompt);
+        DeepSeekResponse response = chatCompletions(request);
+        return extractContent(response);
+    }
+
+    /**
+     * Full chat completions (supports tools / multi-turn). Returns raw provider response.
+     */
+    public DeepSeekResponse chatCompletions(ChatRequest request) {
+        if (request == null) {
+            throw new RuntimeException("DeepSeek ChatRequest 不能为空");
+        }
+        if (request.getModel() == null || request.getModel().isBlank()) {
+            request.setModel(model);
+        }
         long startTime = System.currentTimeMillis();
-
-        ChatRequest request = buildRequest(userMessage, systemPrompt);
-
         try {
             DeepSeekResponse response = webClient.post()
                     .uri("/chat/completions")
@@ -48,40 +60,43 @@ public class DeepSeekUtils {
                     .bodyToMono(DeepSeekResponse.class)
                     .timeout(Duration.ofSeconds(timeoutSeconds))
                     .block();
-
-            return processResponse(response, startTime);
+            logDuration(startTime);
+            if (response == null || response.getChoices() == null || response.getChoices().isEmpty()) {
+                throw new RuntimeException("DeepSeek API 返回空响应");
+            }
+            return response;
+        } catch (RuntimeException e) {
+            log.error("调用 DeepSeek API 失败", e);
+            throw e;
         } catch (Exception e) {
             log.error("调用 DeepSeek API 失败", e);
             throw new RuntimeException("调用 DeepSeek API 失败: " + e.getMessage(), e);
         }
     }
 
-    private ChatRequest buildRequest(String userMessage, String systemPrompt) {
+    public String getDefaultModel() {
+        return model;
+    }
+
+    private ChatRequest buildSimpleRequest(String userMessage, String systemPrompt) {
         ChatRequest request = new ChatRequest();
         request.setModel(model);
         request.setTemperature(0.7);
         request.setMax_tokens(2000);
 
         ChatRequest.Message userMsg = new ChatRequest.Message("user", userMessage);
-
         if (systemPrompt != null && !systemPrompt.isEmpty()) {
             ChatRequest.Message systemMsg = new ChatRequest.Message("system", systemPrompt);
             request.setMessages(List.of(systemMsg, userMsg));
         } else {
             request.setMessages(List.of(userMsg));
         }
-
         return request;
     }
 
-    private String processResponse(DeepSeekResponse response, long startTime) {
-        if (response == null || response.getChoices() == null || response.getChoices().isEmpty()) {
-            throw new RuntimeException("DeepSeek API 返回空响应");
-        }
-
+    private String extractContent(DeepSeekResponse response) {
         String result = response.getChoices().get(0).getMessage().getContent();
-        logDuration(startTime);
-        return result;
+        return result == null ? "" : result;
     }
 
     private void logDuration(long startTime) {

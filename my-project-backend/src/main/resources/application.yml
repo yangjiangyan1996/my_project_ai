@@ -27,6 +27,16 @@ spring:
     filter:
       order: -100
 
+# AI WMS Copilot (Phase D)
+ai:
+  copilot:
+    max-tool-calls: 6
+    max-same-tool-calls: 2
+    conversation:
+      max-messages: 40
+      max-sessions: 500
+      ttl-hours: 24
+
 # 公共日志配置
 logging:
   level:
