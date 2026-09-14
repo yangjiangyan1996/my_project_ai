@@ -190,6 +190,26 @@ public class WarehouseAiOrchestrator {
                         return resp;
                     }
 
+                    if (isNeedClarification(result)) {
+                        CopilotChatResponse resp = clarificationResponse(ctx, result, records, debugTrace,
+                                model, inputTokens, outputTokens, llmCalls, toolCalls, start);
+                        // prefer tool message when present
+                        if (result.getMessage() != null && !result.getMessage().isBlank()) {
+                            resp.setMessage(result.getMessage());
+                        }
+                        audit(ctx, model, resp.getType().name(), llmCalls, toolCalls,
+                                inputTokens, outputTokens, start, true, "NEED_CLARIFICATION");
+                        return resp;
+                    }
+
+                    if (isDraftResult(result)) {
+                        CopilotChatResponse resp = draftResponse(ctx, result, records, debugTrace,
+                                model, inputTokens, outputTokens, llmCalls, toolCalls, start);
+                        audit(ctx, model, resp.getType().name(), llmCalls, toolCalls,
+                                inputTokens, outputTokens, start, true, "DRAFT");
+                        return resp;
+                    }
+
                     if (ToolErrorCode.PERMISSION_DENIED.name().equals(result.getErrorCode())) {
                         CopilotChatResponse resp = CopilotChatResponse.builder()
                                 .type(CopilotResponseType.PERMISSION_DENIED)
@@ -305,6 +325,53 @@ public class WarehouseAiOrchestrator {
         }
         Object items = result.getData().get("items");
         return items instanceof List<?> list && list.size() > 1;
+    }
+
+    private boolean isNeedClarification(ToolResult result) {
+        if (result == null || !result.isSuccess() || result.getData() == null) {
+            return false;
+        }
+        Object flag = result.getData().get("needClarification");
+        return Boolean.TRUE.equals(flag) || "true".equalsIgnoreCase(String.valueOf(flag));
+    }
+
+    private boolean isDraftResult(ToolResult result) {
+        if (result == null || !result.isSuccess() || result.getData() == null) {
+            return false;
+        }
+        Object type = result.getData().get("responseType");
+        return "DRAFT".equals(String.valueOf(type)) || result.getData().get("draft") != null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private CopilotChatResponse draftResponse(AiExecutionContext ctx,
+                                              ToolResult result,
+                                              List<CopilotChatResponse.ToolCallRecord> records,
+                                              List<String> debugTrace,
+                                              String model,
+                                              int inputTokens,
+                                              int outputTokens,
+                                              int llmCalls,
+                                              int toolCalls,
+                                              long start) {
+        Map<String, Object> draft = result.getData().get("draft") instanceof Map<?, ?> m
+                ? (Map<String, Object>) m
+                : Map.of();
+        String message = result.getMessage() == null ? "已生成单据草稿，请确认后创建。" : result.getMessage();
+        appendStore(ctx, "assistant", message, null, null);
+        List<Map<String, Object>> actions = draft.get("actions") instanceof List<?> list
+                ? (List<Map<String, Object>>) list
+                : List.of();
+        return CopilotChatResponse.builder()
+                .type(CopilotResponseType.DRAFT)
+                .message(message)
+                .conversationId(ctx.getConversationId())
+                .toolCalls(records)
+                .draft(draft)
+                .actions(actions)
+                .usage(usage(model, inputTokens, outputTokens, llmCalls, toolCalls, start))
+                .debugToolTrace(devTrace(debugTrace))
+                .build();
     }
 
     @SuppressWarnings("unchecked")

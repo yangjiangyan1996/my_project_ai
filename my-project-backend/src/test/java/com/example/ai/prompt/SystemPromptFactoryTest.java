@@ -12,9 +12,10 @@ class SystemPromptFactoryTest {
         assertTrue(p.contains("不得编造"));
         assertTrue(p.contains("未注册 Tool") || p.contains("未注册"));
         assertTrue(p.contains("其他租户"));
-        assertTrue(p.contains("L4"));
+        assertTrue(p.contains("L3") || p.contains("L4"));
         assertTrue(p.contains(SystemPromptFactory.VERSION));
-        assertTrue(p.contains("只读查询") || p.contains("只允许只读"));
+        assertTrue(p.contains("prepare_") || p.contains("确认创建"));
+        assertTrue(p.contains("好的") || p.contains("自然语言"));
         assertTrue(new SystemPromptFactory().buildDailyWorkspaceSummaryPrompt().contains("不得改写数字")
                 || new SystemPromptFactory().buildDailyWorkspaceSummaryPrompt().contains("禁止猜测"));
     }

@@ -40,6 +40,8 @@ function labelOf(opt) {
   return (
     opt.name ||
     opt.productName ||
+    opt.customerName ||
+    opt.supplierName ||
     opt.warehouseName ||
     opt.orderNo ||
     opt.stockTakeNo ||

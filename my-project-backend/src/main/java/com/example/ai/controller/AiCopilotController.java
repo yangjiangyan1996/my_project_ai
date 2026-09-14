@@ -2,6 +2,8 @@ package com.example.ai.controller;
 
 import com.example.ai.application.WarehouseAiOrchestrator;
 import com.example.ai.context.AiExecutionContext;
+import com.example.ai.draft.AiDraftConfirmResult;
+import com.example.ai.draft.AiDraftService;
 import com.example.ai.exception.AiException;
 import com.example.ai.exception.AiPermissionException;
 import com.example.ai.exception.AiValidationException;
@@ -14,8 +16,10 @@ import com.example.ai.workspace.AiDailyWorkspaceResponse;
 import com.example.ai.workspace.DailyWorkspaceService;
 import com.example.entity.base.RespBean;
 import jakarta.annotation.Resource;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +40,8 @@ public class AiCopilotController {
     @Resource
     private DailyWorkspaceService dailyWorkspaceService;
     @Resource
+    private AiDraftService aiDraftService;
+    @Resource
     private AiUserContext aiUserContext;
     @Resource
     private AiPermissionChecker permissionChecker;
@@ -45,7 +51,8 @@ public class AiCopilotController {
         return RespBean.success(Map.of(
                 "status", "UP",
                 "module", "ai-wms-copilot",
-                "phase", "F"
+                "phase", "G",
+                "draftStore", aiDraftService.storeMeta()
         ));
     }
 
@@ -80,5 +87,32 @@ public class AiCopilotController {
             log.error("AI Copilot error", e);
             return RespBean.failure(500, e.getMessage());
         }
+    }
+
+    /**
+     * Explicit UI confirmation only. Body must not carry rewritable business payload —
+     * server reloads Draft by draftId + tenant/user binding.
+     */
+    @PostMapping("/drafts/{draftId}/confirm")
+    public RespBean<AiDraftConfirmResult> confirmDraft(@PathVariable String draftId,
+                                                       @RequestBody ConfirmDraftRequest body) {
+        AiExecutionContext ctx = aiUserContext.fromCurrentUser(null, Map.of("source", "draft-confirm"));
+        permissionChecker.requireAuthenticated(ctx);
+        String token = body == null ? null : body.getConfirmToken();
+        // Always 200 with structured result so FE can refresh draft card (token rotate / OPEN retry).
+        return RespBean.success(aiDraftService.confirm(ctx, draftId, token));
+    }
+
+    @PostMapping("/drafts/{draftId}/cancel")
+    public RespBean<AiDraftConfirmResult> cancelDraft(@PathVariable String draftId) {
+        AiExecutionContext ctx = aiUserContext.fromCurrentUser(null, Map.of("source", "draft-cancel"));
+        permissionChecker.requireAuthenticated(ctx);
+        return RespBean.success(aiDraftService.cancel(ctx, draftId));
+    }
+
+    @Data
+    public static class ConfirmDraftRequest {
+        /** Only confirmToken — never accept business field overrides. */
+        private String confirmToken;
     }
 }

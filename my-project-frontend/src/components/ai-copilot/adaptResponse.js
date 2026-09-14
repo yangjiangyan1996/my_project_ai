@@ -73,6 +73,7 @@ export function adaptBackendResponse(raw, retryPayload = null) {
     cards: Array.isArray(raw.cards) ? raw.cards : [],
     actions: Array.isArray(raw.actions) ? raw.actions : [],
     toolCalls: Array.isArray(raw.toolCalls) ? raw.toolCalls : [],
+    draft: raw.draft || null,
     conversationId: raw.conversationId || null,
     usage: raw.usage || null,
     retryPayload: type === 'ERROR' ? retryPayload : null

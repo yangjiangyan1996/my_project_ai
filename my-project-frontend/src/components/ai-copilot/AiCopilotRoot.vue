@@ -6,6 +6,7 @@
       :visible="drawerVisible"
       :messages="messages"
       :sending="sending"
+      :draft-busy="draftBusy"
       :prefill="inputPrefill"
       @close="onClose"
       @send="onSend"
@@ -14,6 +15,9 @@
       @clarify="onClarify"
       @action="onAction"
       @new-chat="onNewChat"
+      @draft-edit="onDraftEdit"
+      @draft-cancel="onDraftCancel"
+      @draft-confirm="onDraftConfirm"
     />
   </div>
 </template>
@@ -21,8 +25,9 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { unauthorized } from '@/net'
-import { chat as aiChat } from '@/api/ai'
+import { chat as aiChat, confirmDraft, cancelDraft } from '@/api/ai'
 import { useAiCopilot } from '@/composables/useAiCopilot'
 import {
   adaptBackendResponse,
@@ -39,6 +44,7 @@ const route = useRoute()
 const router = useRouter()
 const drawerRef = ref(null)
 const inputPrefill = ref('')
+const draftBusy = ref(false)
 
 const {
   _state,
@@ -152,6 +158,8 @@ function onClarify({ label, option }) {
     const id =
       option.warehouseId ||
       option.productId ||
+      option.customerId ||
+      option.supplierId ||
       option.orderId ||
       option.stockTakeId ||
       option.id
@@ -166,5 +174,80 @@ function onAction(action) {
   const loc = resolveAction(action)
   if (!loc) return
   router.push(loc).catch(() => {})
+}
+
+function patchDraftMessage(draftId, nextDraft, content) {
+  const list = _state.messages || []
+  const idx = list.findIndex(
+    (m) => m.type === 'DRAFT' && m.draft && m.draft.draftId === draftId
+  )
+  if (idx < 0) return
+  const prev = list[idx]
+  list.splice(idx, 1, {
+    ...prev,
+    content: content || prev.content,
+    draft: nextDraft || prev.draft,
+    actions: (nextDraft && nextDraft.actions) || prev.actions
+  })
+}
+
+function onDraftEdit(draft) {
+  // V1: cancel+re-ask via input prefill — no inline editor
+  const hint = '请按我的修改重新生成草稿：'
+  drawerRef.value?.setDraft?.(hint)
+  inputPrefill.value = hint
+  ElMessage.info('请在输入框补充修改说明后发送，将重新生成草稿')
+}
+
+async function onDraftCancel(draft) {
+  if (!draft?.draftId || draftBusy.value) return
+  draftBusy.value = true
+  try {
+    const result = await cancelDraft(draft.draftId)
+    if (result?.draft) {
+      patchDraftMessage(draft.draftId, result.draft, result.message || '草稿已取消')
+    }
+    ElMessage.success(result?.message || '草稿已取消')
+  } catch (e) {
+    ElMessage.error(e?.message || '取消失败')
+  } finally {
+    draftBusy.value = false
+  }
+}
+
+async function onDraftConfirm(draft) {
+  if (!draft?.draftId || draftBusy.value) return
+  // Natural language confirmation is blocked by design — only this button path.
+  draftBusy.value = true
+  try {
+    const result = await confirmDraft(draft.draftId, draft.confirmToken)
+    if (result?.draft) {
+      patchDraftMessage(
+        draft.draftId,
+        result.draft,
+        result.message || (result.success ? '创建成功' : '创建失败')
+      )
+    }
+    if (result?.success) {
+      ElMessage.success(result.message || '创建成功')
+      addMessage({
+        id: `ok_${Date.now()}`,
+        role: 'assistant',
+        type: 'TEXT',
+        content: result.message || '单据创建成功',
+        createdAt: Date.now(),
+        cards: [],
+        actions: result.actions || [],
+        toolCalls: [],
+        draft: null
+      })
+    } else {
+      ElMessage.warning(result?.message || '创建失败')
+    }
+  } catch (e) {
+    ElMessage.error(e?.message || '确认失败')
+  } finally {
+    draftBusy.value = false
+  }
 }
 </script>

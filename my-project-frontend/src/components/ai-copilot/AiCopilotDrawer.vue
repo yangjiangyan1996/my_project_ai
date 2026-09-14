@@ -21,10 +21,14 @@
     <div class="ai-drawer-body">
       <AiMessageList
         :messages="messages"
+        :draft-busy="draftBusy"
         @pick="$emit('pick', $event)"
         @retry="$emit('retry', $event)"
         @clarify="$emit('clarify', $event)"
         @action="$emit('action', $event)"
+        @draft-edit="$emit('draft-edit', $event)"
+        @draft-cancel="$emit('draft-cancel', $event)"
+        @draft-confirm="$emit('draft-confirm', $event)"
       />
       <AiInputBox
         ref="inputBox"
@@ -45,9 +49,21 @@ const props = defineProps({
   visible: { type: Boolean, default: false },
   messages: { type: Array, default: () => [] },
   sending: { type: Boolean, default: false },
+  draftBusy: { type: Boolean, default: false },
   prefill: { type: String, default: '' }
 })
-defineEmits(['close', 'send', 'pick', 'retry', 'clarify', 'action', 'new-chat'])
+defineEmits([
+  'close',
+  'send',
+  'pick',
+  'retry',
+  'clarify',
+  'action',
+  'new-chat',
+  'draft-edit',
+  'draft-cancel',
+  'draft-confirm'
+])
 
 const draft = ref('')
 const inputBox = ref(null)

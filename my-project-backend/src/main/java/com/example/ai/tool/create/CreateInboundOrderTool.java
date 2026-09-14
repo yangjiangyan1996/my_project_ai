@@ -1,0 +1,42 @@
+package com.example.ai.tool.create;
+
+import com.example.ai.draft.DraftType;
+import org.springframework.stereotype.Component;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * L3 — create_inbound_order. Not exposed to LLM catalog (see WmsQueryToolRegistrar).
+ */
+@Component
+public class CreateInboundOrderTool extends AbstractL3CreateTool {
+
+    @Override
+    public String name() {
+        return "create_inbound_order";
+    }
+
+    @Override
+    public String description() {
+        return "确认创建入库单（L3）。仅允许 Draft Confirm 流程调用，禁止自然语言直接执行。";
+    }
+
+    @Override
+    public String requiredPermission() {
+        return "ck:inbound:create";
+    }
+
+    @Override
+    public Map<String, Object> inputSchema() {
+        Map<String, Object> props = new LinkedHashMap<>();
+        props.put("draftId", Map.of("type", "string"));
+        return schema(List.of("draftId"), props);
+    }
+
+    @Override
+    protected DraftType expectedType() {
+        return DraftType.INBOUND;
+    }
+}

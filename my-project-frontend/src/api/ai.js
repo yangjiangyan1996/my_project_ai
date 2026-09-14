@@ -14,3 +14,17 @@ export function chat({ conversationId, message, context }) {
 export function getDailyWorkspace() {
   return get('/api/auth/ai/daily-workspace')
 }
+
+/**
+ * Confirm draft — server reloads Draft; do not send business payload.
+ */
+export function confirmDraft(draftId, confirmToken) {
+  return post(`/api/auth/ai/drafts/${draftId}/confirm`, {
+    confirmToken
+  })
+}
+
+export function cancelDraft(draftId) {
+  return post(`/api/auth/ai/drafts/${draftId}/cancel`, {})
+}
+

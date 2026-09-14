@@ -31,3 +31,24 @@
 - Index page `todo*Approval` historically uses **WaitSubmit(0)** — may differ; see `dataWarnings`.
 - Stocktake pending post-filters `UNDER_REVIEW` due to service filter CAPABILITY_GAP.
 - Inventory risk V1 = `countsOfIndexPage.lowStock` (minStock rule), not demand forecast.
+
+## Phase G — AI Draft Assistant
+
+| ID | Scenario | Result |
+|----|----------|--------|
+| RT-G01 | 真实出库自然语言生成草稿 | NOT_TESTED |
+| RT-G02 | 草稿商品/客户/仓库解析正确 | NOT_TESTED |
+| RT-G03 | 点击确认真实创建出库单 | NOT_TESTED |
+| RT-G04 | 重复点击不会重复创建 | NOT_TESTED |
+| RT-G05 | 入库草稿 + 确认 | NOT_TESTED |
+| RT-G06 | 盘点草稿 + 确认 | NOT_TESTED |
+| RT-G07 | Draft TTL | NOT_TESTED |
+| RT-G08 | Draft tenant isolation | NOT_TESTED |
+| RT-G09 | Draft permission | NOT_TESTED |
+| RT-G10 | 创建失败后 Draft recovery（保持 OPEN） | NOT_TESTED |
+
+### Notes
+
+- NL “好的/确认” must **not** create orders; only Draft Card **确认创建**.
+- Confirm API body: `confirmToken` only (server reloads Draft).
+- Create failure → Draft stays OPEN (Phase G decision).

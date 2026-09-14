@@ -36,7 +36,17 @@
         {{ message.content }}
       </div>
 
+      <AiDraftCard
+        v-if="message.type === 'DRAFT' && message.draft"
+        :draft="message.draft"
+        :busy="draftBusy"
+        @edit="$emit('draft-edit', $event)"
+        @cancel="$emit('draft-cancel', $event)"
+        @confirm="$emit('draft-confirm', $event)"
+      />
+
       <AiCardRenderer
+        v-else
         :message="message"
         @clarify="$emit('clarify', $event)"
         @action="$emit('action', $event)"
@@ -53,11 +63,13 @@ import AiLoadingMessage from './AiLoadingMessage.vue'
 import AiPermissionCard from './AiPermissionCard.vue'
 import AiErrorCard from './AiErrorCard.vue'
 import AiCardRenderer from './AiCardRenderer.vue'
+import AiDraftCard from './AiDraftCard.vue'
 
 const props = defineProps({
-  message: { type: Object, required: true }
+  message: { type: Object, required: true },
+  draftBusy: { type: Boolean, default: false }
 })
-defineEmits(['retry', 'clarify', 'action'])
+defineEmits(['retry', 'clarify', 'action', 'draft-edit', 'draft-cancel', 'draft-confirm'])
 
 const html = computed(() =>
   props.message.role === 'user'

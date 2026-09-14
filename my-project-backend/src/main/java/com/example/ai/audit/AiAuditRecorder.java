@@ -41,4 +41,24 @@ public interface AiAuditRecorder {
                         + " outTok=" + outputTokens
                         + (errorSummary == null ? "" : " err=" + errorSummary));
     }
+
+    /**
+     * Draft lifecycle audit (Phase G). No full payload.
+     */
+    default void recordDraftEvent(AiExecutionContext ctx,
+                                  String event,
+                                  String draftId,
+                                  String draftType,
+                                  Long businessOrderId,
+                                  String businessOrderNo,
+                                  boolean success,
+                                  String errorSummary) {
+        recordChat(ctx, "draft", 0L, success,
+                "event=" + event
+                        + " draftId=" + draftId
+                        + " draftType=" + draftType
+                        + " orderId=" + businessOrderId
+                        + " orderNo=" + businessOrderNo
+                        + (errorSummary == null ? "" : " err=" + errorSummary));
+    }
 }

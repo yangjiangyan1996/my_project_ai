@@ -5,9 +5,13 @@
       v-for="m in messages"
       :key="m.id"
       :message="m"
+      :draft-busy="draftBusy"
       @retry="$emit('retry', $event)"
       @clarify="$emit('clarify', $event)"
       @action="$emit('action', $event)"
+      @draft-edit="$emit('draft-edit', $event)"
+      @draft-cancel="$emit('draft-cancel', $event)"
+      @draft-confirm="$emit('draft-confirm', $event)"
     />
   </div>
 </template>
@@ -18,9 +22,10 @@ import AiEmptyState from './AiEmptyState.vue'
 import AiMessageBubble from './AiMessageBubble.vue'
 
 const props = defineProps({
-  messages: { type: Array, default: () => [] }
+  messages: { type: Array, default: () => [] },
+  draftBusy: { type: Boolean, default: false }
 })
-defineEmits(['pick', 'retry', 'clarify', 'action'])
+defineEmits(['pick', 'retry', 'clarify', 'action', 'draft-edit', 'draft-cancel', 'draft-confirm'])
 
 const listEl = ref(null)
 
