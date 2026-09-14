@@ -5,24 +5,22 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 
 /**
- * Production catalog stays empty until Phase C. Fake tools must live in test sources only.
+ * Logs production ToolRegistry catalog size after Phase C WMS tools register.
  */
 @Slf4j
 @Configuration
+@DependsOn("wmsQueryToolRegistrar")
 public class AiCopilotConfiguration {
 
     @Resource
     private ToolRegistry toolRegistry;
 
     @PostConstruct
-    public void assertEmptyProductionCatalog() {
+    public void logProductionCatalog() {
         int size = toolRegistry.listAll().size();
-        if (size > 0) {
-            log.warn("AI ToolRegistry has {} tools at startup — ensure no Fake tools in production", size);
-        } else {
-            log.info("AI ToolRegistry production catalog empty (Phase B). Phase C will register WMS tools.");
-        }
+        log.info("AI ToolRegistry production catalog size={} (Phase C WMS query tools)", size);
     }
 }
