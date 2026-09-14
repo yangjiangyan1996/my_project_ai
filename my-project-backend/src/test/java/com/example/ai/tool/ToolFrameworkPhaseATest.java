@@ -2,10 +2,10 @@ package com.example.ai.tool;
 
 import com.example.ai.audit.LoggingAiAuditRecorder;
 import com.example.ai.context.AiExecutionContext;
-import com.example.ai.exception.AiPermissionException;
 import com.example.ai.exception.AiToolException;
 import com.example.ai.exception.AiValidationException;
 import com.example.ai.permission.AiPermissionChecker;
+import com.example.ai.permission.AiToolPermissionGuard;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -26,10 +26,14 @@ class ToolFrameworkPhaseATest {
     void setUp() {
         registry = new ToolRegistry();
         riskPolicy = new ToolRiskPolicy();
+        AiToolPermissionGuard guard = new AiToolPermissionGuard();
+        ReflectionTestUtils.setField(guard, "permissionChecker", new AiPermissionChecker());
+
         executor = new ToolExecutor();
         ReflectionTestUtils.setField(executor, "toolRegistry", registry);
         ReflectionTestUtils.setField(executor, "toolRiskPolicy", riskPolicy);
-        ReflectionTestUtils.setField(executor, "permissionChecker", new AiPermissionChecker());
+        ReflectionTestUtils.setField(executor, "permissionGuard", guard);
+        ReflectionTestUtils.setField(executor, "inputValidator", new ToolInputValidator());
         ReflectionTestUtils.setField(executor, "auditRecorder", new LoggingAiAuditRecorder());
 
         ctx = AiExecutionContext.builder()
@@ -79,17 +83,18 @@ class ToolFrameworkPhaseATest {
                 .build());
         assertTrue(r.isSuccess());
         assertEquals("hi", r.getData().get("echo"));
-        // tenant from context, not args
         assertEquals(10L, r.getData().get("tenantId"));
     }
 
     @Test
     void l3RequiresConfirm() {
         registry.register(TestEchoToolFactory.createL3Confirm());
-        assertThrows(AiPermissionException.class, () -> executor.execute(ToolRequest.builder()
+        ToolResult r = executor.execute(ToolRequest.builder()
                 .toolName("test_confirm_action")
                 .executionContext(ctx)
-                .build()));
+                .build());
+        assertFalse(r.isSuccess());
+        assertEquals(ToolErrorCode.PERMISSION_DENIED.name(), r.getErrorCode());
     }
 
     @Test
@@ -113,7 +118,7 @@ class ToolFrameworkPhaseATest {
     @Test
     void l4RiskPolicyRejectsEvenIfForced() {
         ToolDefinition l4 = TestEchoToolFactory.createL4Illegal();
-        assertThrows(AiPermissionException.class,
+        assertThrows(com.example.ai.exception.AiPermissionException.class,
                 () -> riskPolicy.assertExecutable(l4, ctx, null));
     }
 
@@ -127,9 +132,10 @@ class ToolFrameworkPhaseATest {
                 .requestId("r3")
                 .permissions(Set.of("ck:other"))
                 .build();
-        assertThrows(AiPermissionException.class, () -> executor.execute(ToolRequest.builder()
+        ToolResult r = executor.execute(ToolRequest.builder()
                 .toolName("test_echo")
                 .executionContext(limited)
-                .build()));
+                .build());
+        assertEquals(ToolErrorCode.PERMISSION_DENIED.name(), r.getErrorCode());
     }
 }

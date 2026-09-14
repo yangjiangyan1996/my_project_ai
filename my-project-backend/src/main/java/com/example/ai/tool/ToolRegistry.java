@@ -55,7 +55,18 @@ public class ToolRegistry {
     }
 
     /**
+     * Register via unified {@link AiTool} contract.
+     */
+    public void register(AiTool tool) {
+        if (tool == null) {
+            throw new AiValidationException("AiTool 不能为空");
+        }
+        register(tool.toDefinition());
+    }
+
+    /**
      * Metadata for LLM tool-calling (provider-agnostic maps).
+     * Prefer {@link LlmToolSchemaAdapter} for function-calling shape.
      */
     public List<Map<String, Object>> toLlmToolMetadata() {
         List<Map<String, Object>> list = new ArrayList<>();

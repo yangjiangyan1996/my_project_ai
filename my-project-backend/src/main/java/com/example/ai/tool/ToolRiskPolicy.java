@@ -18,8 +18,11 @@ public class ToolRiskPolicy {
         }
         ToolRiskLevel level = tool.getRiskLevel();
         switch (level) {
-            case L0_READ, L1_ANALYSIS, L2_DRAFT -> {
+            case L0_READ, L1_ANALYSIS -> {
                 // allowed after auth/permission
+            }
+            case L2_DRAFT -> {
+                // Draft boundary: prepare_* only via registry; never auto L3 create.
             }
             case L3_CONFIRM_REQUIRED -> {
                 if (confirmToken == null || confirmToken.isBlank()) {
