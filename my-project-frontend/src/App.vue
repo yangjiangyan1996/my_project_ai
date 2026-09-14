@@ -1,6 +1,7 @@
 <script setup>
 import { provide, reactive } from 'vue'
 import { get } from '@/net'
+import AiCopilotRoot from '@/components/ai-copilot/AiCopilotRoot.vue'
 
 const userInfo = reactive({
   data: null,
@@ -17,7 +18,8 @@ provide('userInfo', userInfo)
 <template>
   <header>
     <div class="wrapper">
-      <router-view/>
+      <router-view />
+      <AiCopilotRoot />
     </div>
   </header>
 </template>

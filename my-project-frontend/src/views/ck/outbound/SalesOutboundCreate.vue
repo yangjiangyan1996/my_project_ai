@@ -17,6 +17,12 @@
         <div class="card-header">
           <span class="card-title">{{ isEditMode ? '编辑销售出库单' : '新建销售出库单' }}</span>
           <div class="header-actions">
+            <AiContextActionButton
+              v-if="isEditMode && formData.orderNo"
+              label="AI 分析"
+              :prefill="`帮我分析这张出库单 ${formData.orderNo}，说明当前状态和可能的问题。`"
+              :context="{ pageType: 'OUTBOUND_DETAIL', entityId: String(route.params.id || ''), orderNo: formData.orderNo }"
+            />
             <el-button @click="handleReset">重置</el-button>
             <el-button 
               type="primary" 
@@ -1424,6 +1430,7 @@ import {
   ArrowRight, Promotion, Edit
 } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
+import AiContextActionButton from '@/components/ai-copilot/AiContextActionButton.vue';
 
 const router = useRouter();
 const route = useRoute();

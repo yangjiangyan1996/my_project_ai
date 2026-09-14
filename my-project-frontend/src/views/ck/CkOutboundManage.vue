@@ -5,6 +5,11 @@
         <div class="card-header">
           <span class="card-title">出库管理</span>
           <div class="header-actions">
+            <AiContextActionButton
+              label="AI 分析"
+              prefill="帮我看看当前待出库情况，有哪些需要优先处理？"
+              :context="{ pageType: 'OUTBOUND_LIST' }"
+            />
             <el-dropdown @command="handleCreate" trigger="click">
               <el-button type="primary">
                 <el-icon><Plus /></el-icon>
@@ -578,7 +583,8 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Refresh, Document, Clock, CircleCheck, Finished, ArrowDown, Download } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
 import axios from 'axios';
-import { accessHeader } from '@/net'; 
+import { accessHeader } from '@/net';
+import AiContextActionButton from '@/components/ai-copilot/AiContextActionButton.vue'; 
 
 const router = useRouter();
 const loading = ref(false);

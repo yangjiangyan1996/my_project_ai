@@ -5,6 +5,11 @@
         <div class="card-header">
           <span class="card-title">入库管理</span>
           <div class="header-actions">
+            <AiContextActionButton
+              label="AI 分析"
+              prefill="帮我看看当前待入库情况，有哪些需要关注？"
+              :context="{ pageType: 'INBOUND_LIST' }"
+            />
             <el-dropdown @command="handleCreate" trigger="click">
               <el-button type="primary">
                 <el-icon><Plus /></el-icon>
@@ -469,6 +474,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Refresh, Document, Clock, CircleCheck, Finished } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
+import AiContextActionButton from '@/components/ai-copilot/AiContextActionButton.vue';
 
 const router = useRouter();
 const loading = ref(false);

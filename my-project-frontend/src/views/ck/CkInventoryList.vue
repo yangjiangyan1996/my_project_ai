@@ -5,6 +5,11 @@
         <div class="card-header">
           <span class="card-title">库存查询</span>
           <div class="header-actions">
+            <AiContextActionButton
+              label="AI 分析库存"
+              prefill="帮我分析当前库存情况，有哪些需要关注的？"
+              :context="{ pageType: 'INVENTORY_LIST' }"
+            />
             <el-button 
               @click="refreshList"
               :loading="loading"
@@ -430,6 +435,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Refresh, Download, Box, CircleCheck, Warning, CloseBold } from '@element-plus/icons-vue';
 import { post, get } from '@/net';
+import AiContextActionButton from '@/components/ai-copilot/AiContextActionButton.vue';
 
 const router = useRouter();
 const loading = ref(false);
